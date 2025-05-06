@@ -5,9 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/hooks/use-auth";
 import AdminLayout from "@/components/admin/AdminLayout";
 import StatsCard from "@/components/admin/StatsCard";
-import { ShoppingBag, Users, CreditCard, TrendingUp } from "lucide-react";
+import { ShoppingBag, Users, CreditCard, TrendingUp, MousePointer, Eye } from "lucide-react";
 import RecentOrders from "@/components/admin/RecentOrders";
 import SalesByCategory from "@/components/admin/SalesByCategory";
+import TrafficAnalysis from "@/components/admin/TrafficAnalysis";
+import ProductClicksAnalysis from "@/components/admin/ProductClicksAnalysis";
 
 const Dashboard = () => {
   const { isAdmin, isLoading } = useAuth();
@@ -59,8 +61,8 @@ const Dashboard = () => {
             icon={<TrendingUp className="h-8 w-8" />} 
           />
         </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <Card>
             <CardHeader>
               <CardTitle>Recent Orders</CardTitle>
@@ -80,6 +82,29 @@ const Dashboard = () => {
               <SalesByCategory />
             </CardContent>
           </Card>
+        </div>
+
+        <div className="mb-6">
+          <TrafficAnalysis />
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 mb-6">
+          <ProductClicksAnalysis />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <StatsCard 
+            title="Page Views" 
+            value="12,567" 
+            change="+18%" 
+            icon={<Eye className="h-8 w-8" />} 
+          />
+          <StatsCard 
+            title="Product Clicks" 
+            value="3,890" 
+            change="+12%" 
+            icon={<MousePointer className="h-8 w-8" />} 
+          />
         </div>
       </div>
     </AdminLayout>
