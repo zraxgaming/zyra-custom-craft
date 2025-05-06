@@ -158,7 +158,7 @@ const Orders = () => {
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All statuses</SelectItem>
+              <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="processing">Processing</SelectItem>
               <SelectItem value="shipped">Shipped</SelectItem>
