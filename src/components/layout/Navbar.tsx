@@ -1,17 +1,42 @@
 
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ShoppingBag, User, Search, Menu, X } from "lucide-react";
+import { 
+  ShoppingBag, 
+  User, 
+  Search, 
+  Menu, 
+  X, 
+  LogOut, 
+  LayoutDashboard 
+} from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isMobile = useIsMobile();
+  const { user, isAdmin, signOut } = useAuth();
+  const navigate = useNavigate();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
   };
 
   return (
@@ -74,9 +99,54 @@ const Navbar = () => {
                 <Search className="h-4 w-4 text-gray-400" />
               </div>
             </div>
-            <Link to="/account" className="p-2 rounded-full hover:bg-gray-100 mr-2">
-              <User className="h-6 w-6 text-gray-500" />
-            </Link>
+            
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="p-2 rounded-full hover:bg-gray-100 mr-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.user_metadata?.avatar_url} />
+                      <AvatarFallback>
+                        {user.email?.charAt(0).toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate("/profile")}>
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/orders")}>
+                    <ShoppingBag className="mr-2 h-4 w-4" />
+                    Orders
+                  </DropdownMenuItem>
+                  
+                  {isAdmin && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => navigate("/admin")}>
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        Admin Dashboard
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/auth" className="p-2 rounded-full hover:bg-gray-100 mr-2">
+                <User className="h-6 w-6 text-gray-500" />
+              </Link>
+            )}
+            
             <Link to="/cart" className="p-2 rounded-full hover:bg-gray-100 relative">
               <ShoppingBag className="h-6 w-6 text-gray-500" />
               <span className="absolute top-0 right-0 bg-zyra-purple text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
@@ -87,6 +157,37 @@ const Navbar = () => {
           
           {isMobile && (
             <div className="flex items-center">
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="p-2 rounded-full hover:bg-gray-100 mr-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={user.user_metadata?.avatar_url} />
+                        <AvatarFallback>
+                          {user.email?.charAt(0).toUpperCase() || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => navigate("/profile")}>
+                      Profile
+                    </DropdownMenuItem>
+                    {isAdmin && (
+                      <DropdownMenuItem onClick={() => navigate("/admin")}>
+                        Admin Dashboard
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Link to="/auth" className="p-2 rounded-full hover:bg-gray-100 mr-2">
+                  <User className="h-6 w-6 text-gray-500" />
+                </Link>
+              )}
               <Link to="/cart" className="p-2 rounded-full hover:bg-gray-100 relative">
                 <ShoppingBag className="h-6 w-6 text-gray-500" />
                 <span className="absolute top-0 right-0 bg-zyra-purple text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
@@ -137,13 +238,26 @@ const Navbar = () => {
             >
               Contact
             </Link>
-            <Link
-              to="/account"
-              className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50"
-              onClick={toggleMenu}
-            >
-              My Account
-            </Link>
+            {user && (
+              <>
+                <Link
+                  to="/profile"
+                  className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50"
+                  onClick={toggleMenu}
+                >
+                  My Account
+                </Link>
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50"
+                    onClick={toggleMenu}
+                  >
+                    Admin Dashboard
+                  </Link>
+                )}
+              </>
+            )}
           </div>
           <div className="p-4 border-t">
             <div className="relative rounded-md shadow-sm">
