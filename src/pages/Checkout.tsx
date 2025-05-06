@@ -16,16 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useCart } from "@/components/cart/CartProvider";
 import { supabase } from "@/integrations/supabase/client";
-
-interface ShippingAddress {
-  fullName: string;
-  addressLine1: string;
-  addressLine2: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
-}
+import { ShippingAddress } from "@/types/checkout";
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -43,7 +34,7 @@ const Checkout = () => {
     state: "",
     zipCode: "",
     country: "US",
-    phone: "",
+    phone: ""
   });
 
   // Payment method state
@@ -84,7 +75,17 @@ const Checkout = () => {
               } 
               // Check if it's already an array
               else if (Array.isArray(data.shipping_addresses)) {
-                shippingAddresses = data.shipping_addresses;
+                // Ensure each item in the array conforms to ShippingAddress interface
+                shippingAddresses = data.shipping_addresses.map((addr: any) => ({
+                  fullName: addr.fullName || "",
+                  addressLine1: addr.addressLine1 || "",
+                  addressLine2: addr.addressLine2 || "",
+                  city: addr.city || "",
+                  state: addr.state || "",
+                  zipCode: addr.zipCode || "",
+                  country: addr.country || "US",
+                  phone: addr.phone || ""
+                }));
               }
             } catch (e) {
               console.error("Error parsing shipping addresses:", e);
@@ -100,7 +101,7 @@ const Checkout = () => {
                 state: defaultAddress.state || "",
                 zipCode: defaultAddress.zipCode || "",
                 country: defaultAddress.country || "US",
-                phone: data.phone || "",
+                phone: defaultAddress.phone || data.phone || "",
               });
             }
           }
@@ -135,7 +136,7 @@ const Checkout = () => {
       // Create order in Supabase
       const orderData = {
         user_id: user?.id || null,
-        shipping_address: address,
+        shipping_address: address as any, // Type cast to resolve type issue
         total_amount: subtotal,
         payment_method: paymentMethod,
         payment_status: "pending",
@@ -290,7 +291,7 @@ const Checkout = () => {
                   id="phone"
                   name="phone"
                   type="tel"
-                  value={address.phone}
+                  value={address.phone || ""}
                   onChange={handleInputChange}
                   required
                 />
