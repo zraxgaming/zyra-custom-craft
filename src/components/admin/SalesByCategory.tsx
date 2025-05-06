@@ -19,24 +19,48 @@ const SalesByCategory = () => {
   useEffect(() => {
     const fetchCategorySales = async () => {
       try {
-        // Fetch products grouped by category with counts
-        const { data: salesData, error } = await supabase
-          .from('products')
-          .select('category, id')
-          .order('category');
+        // First try to get data from orders
+        const { data: orderItems, error: orderError } = await supabase
+          .from('order_items')
+          .select(`
+            quantity,
+            product:product_id (
+              category
+            )
+          `);
         
-        if (error) throw error;
+        if (orderError) throw orderError;
         
         // Process data to get sales by category
         const categoryCounts: Record<string, number> = {};
         
-        salesData.forEach(item => {
-          if (categoryCounts[item.category]) {
-            categoryCounts[item.category]++;
-          } else {
-            categoryCounts[item.category] = 1;
-          }
-        });
+        if (orderItems && orderItems.length > 0) {
+          orderItems.forEach(item => {
+            const category = item.product?.category;
+            if (category) {
+              if (categoryCounts[category]) {
+                categoryCounts[category] += item.quantity;
+              } else {
+                categoryCounts[category] = item.quantity;
+              }
+            }
+          });
+        } else {
+          // Fallback to products if no orders
+          const { data: productsData, error: productsError } = await supabase
+            .from('products')
+            .select('category');
+          
+          if (productsError) throw productsError;
+          
+          productsData.forEach(item => {
+            if (categoryCounts[item.category]) {
+              categoryCounts[item.category]++;
+            } else {
+              categoryCounts[item.category] = 1;
+            }
+          });
+        }
         
         // Transform to proper format for chart
         const formattedData = Object.entries(categoryCounts).map(([name, value]) => ({
@@ -64,7 +88,7 @@ const SalesByCategory = () => {
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
-        table: 'orders' 
+        table: 'order_items' 
       }, () => {
         fetchCategorySales(); // Refresh data when orders change
       })
@@ -109,7 +133,7 @@ const SalesByCategory = () => {
             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
           ))}
         </Pie>
-        <Tooltip formatter={(value) => `${value} products`} />
+        <Tooltip formatter={(value) => `${value} items`} />
         <Legend />
       </PieChart>
     </ResponsiveContainer>

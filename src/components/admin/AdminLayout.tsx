@@ -3,7 +3,17 @@ import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { ShoppingBag, LayoutDashboard, Users, Settings, LogOut, Menu, X } from "lucide-react";
+import { 
+  ShoppingBag, 
+  LayoutDashboard, 
+  Users, 
+  Settings, 
+  LogOut, 
+  Menu, 
+  X, 
+  Tag,
+  ShoppingCart
+} from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -21,6 +31,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const navigation = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Products", href: "/admin/products", icon: ShoppingBag },
+    { name: "Categories", href: "/admin/categories", icon: Tag },
+    { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
     { name: "Customers", href: "/admin/customers", icon: Users },
     { name: "Settings", href: "/admin/settings", icon: Settings },
   ];
