@@ -1,4 +1,5 @@
 
+import { Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,39 +21,49 @@ import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import AdminRoute from "./components/admin/AdminRoute";
 
-const queryClient = new QueryClient();
+// Create React query client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1
+    }
+  }
+});
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <CartProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
+  <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div></div>}>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <CartProvider>
           <BrowserRouter>
-            <CartDrawer />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/shop" element={<Shop />} />
-              <Route path="/products/:slug" element={<ProductDetail />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
-              
-              {/* Admin routes with protection */}
-              <Route path="/admin" element={<AdminRoute><Dashboard /></AdminRoute>} />
-              <Route path="/admin/products" element={<AdminRoute><Products /></AdminRoute>} />
-              <Route path="/admin/categories" element={<AdminRoute><Categories /></AdminRoute>} />
-              <Route path="/admin/orders" element={<AdminRoute><Orders /></AdminRoute>} />
-              
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <CartDrawer />
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/shop" element={<Shop />} />
+                <Route path="/products/:slug" element={<ProductDetail />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
+                
+                {/* Admin routes with protection */}
+                <Route path="/admin" element={<AdminRoute><Dashboard /></AdminRoute>} />
+                <Route path="/admin/products" element={<AdminRoute><Products /></AdminRoute>} />
+                <Route path="/admin/categories" element={<AdminRoute><Categories /></AdminRoute>} />
+                <Route path="/admin/orders" element={<AdminRoute><Orders /></AdminRoute>} />
+                
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </TooltipProvider>
           </BrowserRouter>
-        </TooltipProvider>
-      </CartProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+        </CartProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </Suspense>
 );
 
 export default App;

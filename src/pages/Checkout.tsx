@@ -17,6 +17,16 @@ import { useAuth } from "@/hooks/use-auth";
 import { useCart } from "@/components/cart/CartProvider";
 import { supabase } from "@/integrations/supabase/client";
 
+interface ShippingAddress {
+  fullName: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+}
+
 const Checkout = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -25,7 +35,7 @@ const Checkout = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Shipping address state
-  const [address, setAddress] = useState({
+  const [address, setAddress] = useState<ShippingAddress>({
     fullName: "",
     addressLine1: "",
     addressLine2: "",
@@ -63,18 +73,36 @@ const Checkout = () => {
 
           if (error) throw error;
 
-          if (data && data.shipping_addresses && data.shipping_addresses.length > 0) {
-            const defaultAddress = data.shipping_addresses[0];
-            setAddress({
-              fullName: defaultAddress.fullName || "",
-              addressLine1: defaultAddress.addressLine1 || "",
-              addressLine2: defaultAddress.addressLine2 || "",
-              city: defaultAddress.city || "",
-              state: defaultAddress.state || "",
-              zipCode: defaultAddress.zipCode || "",
-              country: defaultAddress.country || "US",
-              phone: data.phone || "",
-            });
+          if (data && data.shipping_addresses) {
+            // Safely handle shipping addresses from JSON
+            let shippingAddresses: ShippingAddress[] = [];
+            
+            try {
+              // Check if it's a string that needs to be parsed
+              if (typeof data.shipping_addresses === 'string') {
+                shippingAddresses = JSON.parse(data.shipping_addresses);
+              } 
+              // Check if it's already an array
+              else if (Array.isArray(data.shipping_addresses)) {
+                shippingAddresses = data.shipping_addresses;
+              }
+            } catch (e) {
+              console.error("Error parsing shipping addresses:", e);
+            }
+
+            if (shippingAddresses.length > 0) {
+              const defaultAddress = shippingAddresses[0];
+              setAddress({
+                fullName: defaultAddress.fullName || "",
+                addressLine1: defaultAddress.addressLine1 || "",
+                addressLine2: defaultAddress.addressLine2 || "",
+                city: defaultAddress.city || "",
+                state: defaultAddress.state || "",
+                zipCode: defaultAddress.zipCode || "",
+                country: defaultAddress.country || "US",
+                phone: data.phone || "",
+              });
+            }
           }
         } catch (error) {
           console.error("Error loading user info:", error);
