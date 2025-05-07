@@ -10,6 +10,8 @@ import { CartProvider } from "@/components/cart/CartProvider";
 import CartDrawer from "@/components/cart/CartDrawer";
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
+import Categories from "./pages/Categories";
+import Contact from "./pages/Contact";
 import ProductDetail from "./pages/ProductDetail";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
@@ -17,6 +19,8 @@ import Dashboard from "./pages/admin/Dashboard";
 import Products from "./pages/admin/Products";
 import Categories from "./pages/admin/Categories";
 import Orders from "./pages/admin/Orders";
+import OrderDetail from "./pages/admin/OrderDetail";
+import ContactSubmissions from "./pages/admin/ContactSubmissions";
 import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import AdminRoute from "./components/admin/AdminRoute";
@@ -44,6 +48,8 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/shop" element={<Shop />} />
+                <Route path="/categories" element={<Categories />} />
+                <Route path="/contact" element={<Contact />} />
                 <Route path="/products/:slug" element={<ProductDetail />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/checkout" element={<Checkout />} />
@@ -54,6 +60,8 @@ const App = () => (
                 <Route path="/admin/products" element={<AdminRoute><Products /></AdminRoute>} />
                 <Route path="/admin/categories" element={<AdminRoute><Categories /></AdminRoute>} />
                 <Route path="/admin/orders" element={<AdminRoute><Orders /></AdminRoute>} />
+                <Route path="/admin/orders/:id" element={<AdminRoute><OrderDetail /></AdminRoute>} />
+                <Route path="/admin/contact" element={<AdminRoute><ContactSubmissions /></AdminRoute>} />
                 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

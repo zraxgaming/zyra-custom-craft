@@ -12,7 +12,8 @@ import {
   Menu, 
   X, 
   Tag,
-  ShoppingCart
+  ShoppingCart,
+  MessageSquare
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -33,6 +34,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     { name: "Products", href: "/admin/products", icon: ShoppingBag },
     { name: "Categories", href: "/admin/categories", icon: Tag },
     { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
+    { name: "Contact Submissions", href: "/admin/contact", icon: MessageSquare },
     { name: "Customers", href: "/admin/customers", icon: Users },
     { name: "Settings", href: "/admin/settings", icon: Settings },
   ];
