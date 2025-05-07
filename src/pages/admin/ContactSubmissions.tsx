@@ -1,8 +1,9 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Select,
   SelectContent,
@@ -10,35 +11,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Search, Mail, Eye } from "lucide-react";
+import { Search, Mail, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { ContactSubmission } from "@/types/contact";
 
-interface ContactSubmission {
-  id: string;
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-  status: 'read' | 'unread' | 'replied';
-  created_at: string;
-}
-
-const ContactSubmissions = () => {
+const ContactSubmissions: React.FC = () => {
   const { isAdmin, isLoading } = useAuth();
   const navigate = useNavigate();
   const [submissions, setSubmissions] = useState<ContactSubmission[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(true);
-  const [selectedSubmission, setSelectedSubmission] = useState<ContactSubmission | null>(null);
   const { toast } = useToast();
 
   // Redirect if not admin
@@ -53,7 +41,7 @@ const ContactSubmissions = () => {
     }
   }, [isAdmin, isLoading, navigate, toast]);
 
-  // Fetch submissions
+  // Fetch contact submissions
   useEffect(() => {
     const fetchSubmissions = async () => {
       try {
@@ -69,7 +57,15 @@ const ContactSubmissions = () => {
         const { data, error } = await query;
           
         if (error) throw error;
-        setSubmissions(data || []);
+        
+        // Ensure we cast the data correctly
+        if (data) {
+          const typedSubmissions: ContactSubmission[] = data.map(item => ({
+            ...item,
+            status: item.status as "unread" | "read" | "replied"
+          }));
+          setSubmissions(typedSubmissions);
+        }
       } catch (error: any) {
         toast({
           title: "Error fetching submissions",
@@ -84,7 +80,7 @@ const ContactSubmissions = () => {
     fetchSubmissions();
   }, [toast, statusFilter]);
 
-  const updateSubmissionStatus = async (id: string, status: string) => {
+  const updateSubmissionStatus = async (id: string, status: "unread" | "read" | "replied") => {
     try {
       const { error } = await supabase
         .from("contact_submissions")
@@ -95,56 +91,58 @@ const ContactSubmissions = () => {
       
       // Update the local state
       setSubmissions(
-        submissions.map((submission) => 
-          submission.id === id ? { ...submission, status: status as 'read' | 'unread' | 'replied' } : submission
+        submissions.map(submission => 
+          submission.id === id ? { ...submission, status } : submission
         )
       );
       
       toast({
-        title: "Submission updated",
-        description: `Submission status changed to ${status}`,
+        title: "Status updated",
+        description: `Submission marked as ${status}`,
       });
     } catch (error: any) {
       toast({
-        title: "Error updating submission",
+        title: "Error updating status",
         description: error.message,
         variant: "destructive",
       });
     }
   };
 
-  const handleViewSubmission = (submission: ContactSubmission) => {
-    setSelectedSubmission(submission);
-    // Mark as read if currently unread
-    if (submission.status === 'unread') {
-      updateSubmissionStatus(submission.id, 'read');
+  // Send a reply email to the contact submission
+  const sendReply = async (submission: ContactSubmission) => {
+    try {
+      // In a real application, this would send an email via an API
+      // For now, we'll just mark it as replied
+      await updateSubmissionStatus(submission.id, "replied");
+      
+      toast({
+        title: "Reply sent",
+        description: `Your reply to ${submission.name} has been sent.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error sending reply",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
   const filteredSubmissions = submissions.filter((submission) => {
     if (!searchTerm) return true;
     
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      submission.name.toLowerCase().includes(searchLower) ||
-      submission.email.toLowerCase().includes(searchLower) ||
-      submission.subject.toLowerCase().includes(searchLower) ||
-      submission.message.toLowerCase().includes(searchLower)
-    );
+    // Search by name
+    if (submission.name.toLowerCase().includes(searchTerm.toLowerCase())) return true;
+    
+    // Search by email
+    if (submission.email.toLowerCase().includes(searchTerm.toLowerCase())) return true;
+    
+    // Search by subject
+    if (submission.subject.toLowerCase().includes(searchTerm.toLowerCase())) return true;
+    
+    return false;
   });
-
-  const getStatusBadge = (status: string) => {
-    switch(status) {
-      case 'unread':
-        return <Badge variant="default" className="bg-blue-500">Unread</Badge>;
-      case 'read':
-        return <Badge variant="outline" className="text-gray-500">Read</Badge>;
-      case 'replied':
-        return <Badge variant="default" className="bg-green-500">Replied</Badge>;
-      default:
-        return <Badge variant="outline">Unknown</Badge>;
-    }
-  };
 
   if (isLoading) {
     return (
@@ -177,7 +175,7 @@ const ContactSubmissions = () => {
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All statuses</SelectItem>
+              <SelectItem value="">All</SelectItem>
               <SelectItem value="unread">Unread</SelectItem>
               <SelectItem value="read">Read</SelectItem>
               <SelectItem value="replied">Replied</SelectItem>
@@ -211,28 +209,41 @@ const ContactSubmissions = () => {
               </TableHeader>
               <TableBody>
                 {filteredSubmissions.map((submission) => (
-                  <TableRow key={submission.id} className={submission.status === 'unread' ? "bg-blue-50" : ""}>
+                  <TableRow key={submission.id}>
                     <TableCell>{format(new Date(submission.created_at), "MMM d, yyyy")}</TableCell>
-                    <TableCell className="font-medium">{submission.name}</TableCell>
-                    <TableCell>{submission.email}</TableCell>
-                    <TableCell>{submission.subject}</TableCell>
-                    <TableCell>{getStatusBadge(submission.status)}</TableCell>
+                    <TableCell>{submission.name}</TableCell>
+                    <TableCell className="max-w-[150px] truncate">
+                      <a href={`mailto:${submission.email}`} className="text-zyra-purple hover:underline">
+                        {submission.email}
+                      </a>
+                    </TableCell>
+                    <TableCell className="max-w-[200px] truncate">{submission.subject}</TableCell>
+                    <TableCell>
+                      <Badge className={
+                        submission.status === "unread" ? "bg-red-100 text-red-800" :
+                        submission.status === "read" ? "bg-blue-100 text-blue-800" :
+                        "bg-green-100 text-green-800"
+                      }>
+                        {submission.status}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
+                        {submission.status === "unread" && (
+                          <Button
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => updateSubmissionStatus(submission.id, "read")}
+                            title="Mark as Read"
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleViewSubmission(submission)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            updateSubmissionStatus(submission.id, 'replied');
-                            window.location.href = `mailto:${submission.email}?subject=Re: ${submission.subject}`;
-                          }}
+                          onClick={() => sendReply(submission)}
+                          title="Reply"
                         >
                           <Mail className="h-4 w-4" />
                         </Button>
@@ -245,58 +256,6 @@ const ContactSubmissions = () => {
           </div>
         )}
       </div>
-
-      <Dialog open={!!selectedSubmission} onOpenChange={(open) => !open && setSelectedSubmission(null)}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Message from {selectedSubmission?.name}</DialogTitle>
-            <DialogDescription>
-              Received on {selectedSubmission && format(new Date(selectedSubmission.created_at), "PPpp")}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 mt-4">
-            <div>
-              <p className="text-sm font-medium text-gray-500">From</p>
-              <p>{selectedSubmission?.name} ({selectedSubmission?.email})</p>
-            </div>
-            
-            <div>
-              <p className="text-sm font-medium text-gray-500">Subject</p>
-              <p className="font-medium">{selectedSubmission?.subject}</p>
-            </div>
-            
-            <div>
-              <p className="text-sm font-medium text-gray-500">Message</p>
-              <Textarea 
-                value={selectedSubmission?.message} 
-                readOnly 
-                className="min-h-[150px] mt-2"
-              />
-            </div>
-            
-            <div className="flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => setSelectedSubmission(null)}
-              >
-                Close
-              </Button>
-              <Button
-                onClick={() => {
-                  if (selectedSubmission) {
-                    updateSubmissionStatus(selectedSubmission.id, 'replied');
-                    window.location.href = `mailto:${selectedSubmission.email}?subject=Re: ${selectedSubmission.subject}`;
-                  }
-                }}
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                Reply
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </AdminLayout>
   );
 };

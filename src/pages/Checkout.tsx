@@ -20,10 +20,11 @@ import { ShippingAddress } from "@/types/checkout";
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const { state, clearCart, subtotal } = useCart();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paypalButtonsRendered, setPaypalButtonsRendered] = useState(false);
 
   // Shipping address state
   const [address, setAddress] = useState<ShippingAddress>({
@@ -40,6 +41,17 @@ const Checkout = () => {
   // Payment method state
   const [paymentMethod, setPaymentMethod] = useState("creditCard");
 
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate("/auth?redirect=/checkout");
+      toast({
+        title: "Login required",
+        description: "Please log in or create an account to checkout.",
+      });
+    }
+  }, [user, isLoading, navigate, toast]);
+
   // Redirect to cart if cart is empty
   useEffect(() => {
     if (state.items.length === 0) {
@@ -50,6 +62,24 @@ const Checkout = () => {
       });
     }
   }, [navigate, state.items.length, toast]);
+
+  // Initialize PayPal when payment method is PayPal
+  useEffect(() => {
+    if (paymentMethod === "paypal" && !paypalButtonsRendered && user) {
+      const renderPaypalButtons = async () => {
+        try {
+          // This would be replaced with the actual PayPal SDK initialization
+          console.log("Initializing PayPal buttons");
+          // Normally we would load the PayPal SDK here
+          setPaypalButtonsRendered(true);
+        } catch (error) {
+          console.error("PayPal initialization error:", error);
+        }
+      };
+      
+      renderPaypalButtons();
+    }
+  }, [paymentMethod, paypalButtonsRendered, user]);
 
   // Load user info if logged in
   useEffect(() => {
@@ -135,7 +165,7 @@ const Checkout = () => {
     try {
       // Create order in Supabase
       const orderData = {
-        user_id: user?.id || null,
+        user_id: user?.id,
         shipping_address: address as any, // Type cast to resolve type issue
         total_amount: subtotal,
         payment_method: paymentMethod,
@@ -166,6 +196,14 @@ const Checkout = () => {
 
       if (itemsError) throw itemsError;
 
+      // Send order confirmation email
+      try {
+        // In a real implementation, this would call an edge function to send an email
+        console.log("Sending order confirmation email");
+      } catch (emailError) {
+        console.error("Failed to send confirmation email:", emailError);
+      }
+
       // Clear cart after successful order
       await clearCart();
 
@@ -187,6 +225,15 @@ const Checkout = () => {
       setIsSubmitting(false);
     }
   };
+
+  // If loading or not authenticated, show loading spinner
+  if (isLoading || !user) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="container max-w-6xl py-8">
@@ -357,6 +404,20 @@ const Checkout = () => {
                 </p>
               </div>
             )}
+            
+            {paymentMethod === "paypal" && (
+              <div className="mt-4">
+                <div className="p-4 bg-gray-50 rounded-md mb-4">
+                  <p className="text-sm text-gray-500">
+                    Click the PayPal button below to complete your payment securely with PayPal.
+                  </p>
+                </div>
+                {/* PayPal button placeholder */}
+                <div id="paypal-button-container" className="bg-[#ffc439] p-3 rounded text-center text-blue-900 font-bold">
+                  PayPal Button Placeholder
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -401,14 +462,16 @@ const Checkout = () => {
               <span>${subtotal.toFixed(2)}</span>
             </div>
 
-            <Button
-              className="w-full mt-6"
-              size="lg"
-              onClick={handlePlaceOrder}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Processing..." : "Place Order"}
-            </Button>
+            {paymentMethod !== "paypal" && (
+              <Button
+                className="w-full mt-6"
+                size="lg"
+                onClick={handlePlaceOrder}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Processing..." : "Place Order"}
+              </Button>
+            )}
 
             <p className="text-xs text-center text-gray-500 mt-4">
               By placing your order, you agree to our Terms of Service and Privacy Policy.

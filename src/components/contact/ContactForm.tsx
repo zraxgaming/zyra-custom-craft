@@ -1,134 +1,123 @@
 
-import React from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { ContactFormData } from "@/types/contact";
 
-const formSchema = z.object({
-  name: z.string().min(2, { message: "Name must be at least 2 characters" }),
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  subject: z.string().min(5, { message: "Subject must be at least 5 characters" }),
-  message: z.string().min(10, { message: "Message must be at least 10 characters" }),
-});
-
-type FormData = z.infer<typeof formSchema>;
-
-const ContactForm = () => {
+const ContactForm: React.FC = () => {
   const { toast } = useToast();
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      subject: "",
-      message: "",
-    },
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState<ContactFormData>({
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
   });
-  
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
-  
-  const onSubmit = async (data: FormData) => {
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setIsSubmitting(true);
+
     try {
-      const { error } = await supabase
-        .from("contact_submissions")
-        .insert([data]);
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Message Sent",
-        description: "Thank you for your message. We'll get back to you soon!",
+      // Validate form
+      if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+        throw new Error("Please fill in all required fields");
+      }
+
+      // Submit to Supabase
+      const { error } = await supabase.from("contact_submissions").insert({
+        name: formData.name,
+        email: formData.email,
+        subject: formData.subject,
+        message: formData.message,
       });
-      
-      form.reset();
+
+      if (error) throw error;
+
+      toast({
+        title: "Message sent!",
+        description: "Thank you for contacting us. We'll be in touch soon.",
+      });
+
+      // Clear form
+      setFormData({
+        name: "",
+        email: "",
+        subject: "",
+        message: "",
+      });
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to send message. Please try again.",
+        title: "Error sending message",
+        description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
-  
+
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="name">Name</Label>
+          <Input
+            id="name"
             name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="Your name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <Input placeholder="your.email@example.com" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            value={formData.name}
+            onChange={handleChange}
+            required
           />
         </div>
-        
-        <FormField
-          control={form.control}
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+          />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="subject">Subject</Label>
+        <Input
+          id="subject"
           name="subject"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Subject</FormLabel>
-              <FormControl>
-                <Input placeholder="Subject of your message" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          value={formData.subject}
+          onChange={handleChange}
+          required
         />
-        
-        <FormField
-          control={form.control}
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="message">Message</Label>
+        <Textarea
+          id="message"
           name="message"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Message</FormLabel>
-              <FormControl>
-                <Textarea 
-                  placeholder="Please provide as much detail as possible..." 
-                  className="min-h-32"
-                  {...field} 
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          rows={5}
+          value={formData.message}
+          onChange={handleChange}
+          required
         />
-        
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Sending..." : "Send Message"}
-        </Button>
-      </form>
-    </Form>
+      </div>
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? "Sending..." : "Send Message"}
+      </Button>
+    </form>
   );
 };
 

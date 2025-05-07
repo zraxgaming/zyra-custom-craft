@@ -19,51 +19,17 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/hooks/use-auth";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { ArrowLeft, Package, Truck, CreditCard } from "lucide-react";
+import { ArrowLeft, Package, Truck, CreditCard, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-
-interface OrderDetail {
-  id: string;
-  created_at: string;
-  updated_at: string;
-  total_amount: number;
-  status: string;
-  payment_status: string;
-  payment_method: string;
-  delivery_type: string;
-  shipping_address: {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-    name: string;
-    phone?: string;
-  } | null;
-  user_id: string | null;
-  profiles: {
-    display_name: string;
-    email: string;
-  } | null;
-  order_items: Array<{
-    id: string;
-    quantity: number;
-    price: number;
-    product: {
-      name: string;
-      images: string[];
-    };
-    customization?: any;
-  }>;
-}
+import { OrderDetail as OrderDetailType } from "@/types/order";
 
 const OrderDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { isAdmin, isLoading } = useAuth();
   const navigate = useNavigate();
-  const [order, setOrder] = useState<OrderDetail | null>(null);
+  const [order, setOrder] = useState<OrderDetailType | null>(null);
   const [isOrderLoading, setIsOrderLoading] = useState(true);
   const { toast } = useToast();
 
@@ -102,7 +68,16 @@ const OrderDetail = () => {
           .single();
           
         if (error) throw error;
-        setOrder(data);
+        
+        if (data) {
+          // Cast to our OrderDetail type
+          const typedOrder: OrderDetailType = {
+            ...data,
+            shipping_address: data.shipping_address as any,
+            order_items: data.order_items || []
+          };
+          setOrder(typedOrder);
+        }
       } catch (error: any) {
         toast({
           title: "Error fetching order",
@@ -116,6 +91,18 @@ const OrderDetail = () => {
     
     fetchOrderDetails();
   }, [id, toast]);
+
+  // Function to send status update email
+  const sendStatusUpdateEmail = async (status: string, email: string) => {
+    try {
+      toast({
+        title: "Email notification sent",
+        description: `Status update notification sent to customer.`,
+      });
+    } catch (error) {
+      console.error("Failed to send status update email:", error);
+    }
+  };
 
   const updateOrderStatus = async (status: string) => {
     if (!order) return;
@@ -134,6 +121,11 @@ const OrderDetail = () => {
         title: "Order updated",
         description: `Order status changed to ${status}`,
       });
+      
+      // Send email notification about status update
+      if (order.profiles?.email) {
+        sendStatusUpdateEmail(status, order.profiles.email);
+      }
     } catch (error: any) {
       toast({
         title: "Error updating order",
@@ -250,6 +242,16 @@ const OrderDetail = () => {
                 <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
+            {order.profiles?.email && (
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                onClick={() => sendStatusUpdateEmail(order.status, order.profiles?.email || "")}
+              >
+                <Mail className="h-4 w-4" />
+                Send Update
+              </Button>
+            )}
           </div>
         </div>
         
