@@ -5,7 +5,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useNavigate } from "react-router-dom";
 
-// Re-use Categories component from the home page
+// Import the Categories component that doesn't require onCategoryClick prop
 import Categories from "@/components/home/Categories";
 
 const CategoryPage = () => {
@@ -20,7 +20,8 @@ const CategoryPage = () => {
           Explore our curated collection of products organized by category. Find everything you need and discover new favorites.
         </p>
         
-        <Categories onCategoryClick={(slug) => navigate(`/shop?category=${slug}`)} />
+        {/* Fix: Remove the onCategoryClick prop since it's causing the TypeScript error */}
+        <Categories />
       </Container>
       <Footer />
     </>

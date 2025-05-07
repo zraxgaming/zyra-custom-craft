@@ -24,6 +24,7 @@ import ContactSubmissions from "./pages/admin/ContactSubmissions";
 import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import AdminRoute from "./components/admin/AdminRoute";
+import Cart from "./pages/Cart"; // Import the new Cart page
 
 // Create React query client
 const queryClient = new QueryClient({
@@ -54,6 +55,7 @@ const App = () => (
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
+                <Route path="/cart" element={<Cart />} /> {/* Add the Cart route */}
                 
                 {/* Admin routes with protection */}
                 <Route path="/admin" element={<AdminRoute><Dashboard /></AdminRoute>} />

@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 
 const categories = [
@@ -35,6 +35,12 @@ const categories = [
 ];
 
 const Categories = () => {
+  const navigate = useNavigate();
+  
+  const handleCategoryClick = (slug: string) => {
+    navigate(`/shop?category=${slug}`);
+  };
+
   return (
     <section className="bg-zyra-soft-gray py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -47,10 +53,10 @@ const Categories = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {categories.map((category) => (
-            <Link
+            <div
               key={category.id}
-              to={`/categories/${category.slug}`}
-              className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300"
+              onClick={() => handleCategoryClick(category.slug)}
+              className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
             >
               <div className="aspect-square overflow-hidden">
                 <img
@@ -71,7 +77,7 @@ const Categories = () => {
                   <ArrowRight size={16} className="ml-2 transition-transform duration-300 group-hover:translate-x-1" />
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       </div>

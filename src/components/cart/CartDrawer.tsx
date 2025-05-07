@@ -23,6 +23,11 @@ const CartDrawer: React.FC = () => {
     navigate("/shop");
   };
 
+  const handleViewCart = () => {
+    toggleCart();
+    navigate("/cart");
+  };
+
   return (
     <Sheet open={state.isCartOpen} onOpenChange={toggleCart}>
       <SheetContent className="w-full sm:max-w-md flex flex-col">
@@ -131,6 +136,13 @@ const CartDrawer: React.FC = () => {
                   size="lg"
                 >
                   Checkout
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleViewCart}
+                  className="w-full"
+                >
+                  View Cart
                 </Button>
                 <Button
                   variant="outline"

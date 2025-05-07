@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -51,33 +50,52 @@ const OrderDetail = () => {
       if (!id) return;
       
       try {
-        const { data, error } = await supabase
+        // First get the order details
+        const { data: orderData, error: orderError } = await supabase
           .from("orders")
-          .select(`
-            *,
-            profiles:user_id (display_name, email),
-            order_items (
-              id,
-              quantity,
-              price,
-              product:product_id (name, images),
-              customization
-            )
-          `)
+          .select("*")
           .eq("id", id)
           .single();
           
-        if (error) throw error;
+        if (orderError) throw orderError;
         
-        if (data) {
-          // Cast to our OrderDetail type
-          const typedOrder: OrderDetailType = {
-            ...data,
-            shipping_address: data.shipping_address as any,
-            order_items: data.order_items || []
-          };
-          setOrder(typedOrder);
+        // Get the order items
+        const { data: orderItems, error: itemsError } = await supabase
+          .from("order_items")
+          .select(`
+            id,
+            quantity,
+            price,
+            product:product_id (name, images),
+            customization
+          `)
+          .eq("order_id", id);
+          
+        if (itemsError) throw itemsError;
+        
+        // Get user profile if exists
+        let profileData = null;
+        if (orderData.user_id) {
+          const { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select("display_name, email")
+            .eq("id", orderData.user_id)
+            .single();
+            
+          if (!profileError) {
+            profileData = profile;
+          }
         }
+        
+        // Cast to our OrderDetail type
+        const typedOrder: OrderDetailType = {
+          ...orderData,
+          shipping_address: orderData.shipping_address,
+          order_items: orderItems || [],
+          profiles: profileData
+        };
+        
+        setOrder(typedOrder);
       } catch (error: any) {
         toast({
           title: "Error fetching order",
@@ -215,34 +233,36 @@ const OrderDetail = () => {
         
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold">Order #{order.id.substring(0, 8)}</h1>
+            <h1 className="text-3xl font-bold">Order #{order?.id.substring(0, 8)}</h1>
             <p className="text-gray-500">
-              Placed on {format(new Date(order.created_at), "MMMM d, yyyy 'at' h:mm a")}
+              Placed on {order ? format(new Date(order.created_at), "MMMM d, yyyy 'at' h:mm a") : ''}
             </p>
           </div>
           <div className="flex gap-2">
-            <Select
-              value={order.status}
-              onValueChange={updateOrderStatus}
-            >
-              <SelectTrigger className="w-40">
-                <span className={`inline-block w-2 h-2 rounded-full mr-2 
-                  ${order.status === 'pending' ? 'bg-orange-500' : 
-                    order.status === 'processing' ? 'bg-blue-500' : 
-                    order.status === 'shipped' ? 'bg-yellow-500' : 
-                    order.status === 'delivered' ? 'bg-green-500' : 
-                    'bg-red-500'}`}></span>
-                <SelectValue>{order.status}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="processing">Processing</SelectItem>
-                <SelectItem value="shipped">Shipped</SelectItem>
-                <SelectItem value="delivered">Delivered</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-            {order.profiles?.email && (
+            {order && (
+              <Select
+                value={order.status}
+                onValueChange={updateOrderStatus}
+              >
+                <SelectTrigger className="w-40">
+                  <span className={`inline-block w-2 h-2 rounded-full mr-2 
+                    ${order.status === 'pending' ? 'bg-orange-500' : 
+                      order.status === 'processing' ? 'bg-blue-500' : 
+                      order.status === 'shipped' ? 'bg-yellow-500' : 
+                      order.status === 'delivered' ? 'bg-green-500' : 
+                      'bg-red-500'}`}></span>
+                  <SelectValue>{order.status}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="processing">Processing</SelectItem>
+                  <SelectItem value="shipped">Shipped</SelectItem>
+                  <SelectItem value="delivered">Delivered</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+            {order?.profiles?.email && (
               <Button 
                 variant="outline" 
                 className="flex items-center gap-2"
@@ -363,53 +383,55 @@ const OrderDetail = () => {
           </Card>
         </div>
         
-        <Card className="mb-6">
-          <CardHeader className="pb-2">
-            <CardTitle>Order Items</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Subtotal</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {order.order_items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <div className="h-12 w-12 rounded overflow-hidden bg-gray-100 mr-3">
-                          <img 
-                            src={item.product.images?.[0] || "/placeholder.svg"} 
-                            alt={item.product.name}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                        <div>
-                          <p className="font-medium">{item.product.name}</p>
-                          {item.customization && (
-                            <div className="text-xs text-gray-500">
-                              {Object.entries(item.customization).map(([key, value]) => (
-                                <p key={key}>{key}: {String(value)}</p>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell>${item.price.toFixed(2)}</TableCell>
-                    <TableCell>${(item.price * item.quantity).toFixed(2)}</TableCell>
+        {order && (
+          <Card className="mb-6">
+            <CardHeader className="pb-2">
+              <CardTitle>Order Items</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Subtotal</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                </TableHeader>
+                <TableBody>
+                  {order.order_items.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <div className="h-12 w-12 rounded overflow-hidden bg-gray-100 mr-3">
+                            <img 
+                              src={item.product.images?.[0] || "/placeholder.svg"} 
+                              alt={item.product.name}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <div>
+                            <p className="font-medium">{item.product.name}</p>
+                            {item.customization && (
+                              <div className="text-xs text-gray-500">
+                                {Object.entries(item.customization).map(([key, value]) => (
+                                  <p key={key}>{key}: {String(value)}</p>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{item.quantity}</TableCell>
+                      <TableCell>${item.price.toFixed(2)}</TableCell>
+                      <TableCell>${(item.price * item.quantity).toFixed(2)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AdminLayout>
   );
