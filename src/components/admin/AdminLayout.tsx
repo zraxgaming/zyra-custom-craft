@@ -1,190 +1,202 @@
 
-import React, { ReactNode, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   LayoutDashboard,
   Package,
-  Tags,
-  ShoppingBag,
+  ShoppingCart,
+  Users,
+  Settings,
+  Tag,
+  List,
   MessageSquare,
-  LogOut,
-  Menu,
-  X,
-  Bell,
-  Image,
+  LogOut
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
-import { useMobile } from "@/hooks/use-mobile";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
-interface AdminLayoutProps {
-  children: ReactNode;
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ReactNode;
 }
 
-const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+const navigation: NavItem[] = [
+  { name: "Dashboard", href: "/admin", icon: <LayoutDashboard className="h-5 w-5" /> },
+  { name: "Products", href: "/admin/products", icon: <Package className="h-5 w-5" /> },
+  { name: "Categories", href: "/admin/categories", icon: <List className="h-5 w-5" /> },
+  { name: "Orders", href: "/admin/orders", icon: <ShoppingCart className="h-5 w-5" /> },
+  { name: "Coupons", href: "/admin/coupons", icon: <Tag className="h-5 w-5" /> },
+  { name: "Promotions", href: "/admin/promotions", icon: <Tag className="h-5 w-5" /> },
+  { name: "Contact", href: "/admin/contact", icon: <MessageSquare className="h-5 w-5" /> },
+  { name: "Settings", href: "/admin/settings", icon: <Settings className="h-5 w-5" /> },
+];
+
+const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { isMobile } = useMobile();
+  const { pathname } = useLocation();
+  const isMobile = useIsMobile();
   
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
-  const closeSidebar = () => {
-    setIsSidebarOpen(false);
-  };
-
+  // Handle sign out
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
   };
-
-  const navItems = [
-    {
-      title: "Dashboard",
-      href: "/admin",
-      icon: <LayoutDashboard className="mr-2 h-4 w-4" />,
-    },
-    {
-      title: "Products",
-      href: "/admin/products",
-      icon: <Package className="mr-2 h-4 w-4" />,
-    },
-    {
-      title: "Categories",
-      href: "/admin/categories",
-      icon: <Tags className="mr-2 h-4 w-4" />,
-    },
-    {
-      title: "Orders",
-      href: "/admin/orders",
-      icon: <ShoppingBag className="mr-2 h-4 w-4" />,
-    },
-    {
-      title: "Promotions",
-      href: "/admin/promotions",
-      icon: <Image className="mr-2 h-4 w-4" />,
-    },
-    {
-      title: "Contact Submissions",
-      href: "/admin/contact",
-      icon: <MessageSquare className="mr-2 h-4 w-4" />,
-    },
-  ];
-
-  const isActive = (path: string) => {
-    if (path === "/admin" && location.pathname === "/admin") return true;
-    if (path !== "/admin" && location.pathname.startsWith(path)) return true;
-    return false;
+  
+  // Create user initials for avatar fallback
+  const getUserInitials = () => {
+    if (!user) return "U";
+    const name = user.user_metadata?.name || '';
+    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2);
   };
-
-  return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Mobile sidebar toggle */}
-      <div className="lg:hidden absolute top-4 left-4 z-50">
-        <Button size="icon" variant="ghost" onClick={toggleSidebar}>
-          {isSidebarOpen ? (
-            <X className="h-6 w-6" />
-          ) : (
-            <Menu className="h-6 w-6" />
-          )}
+  
+  // Get shortened display name
+  const getDisplayName = () => {
+    if (!user) return "User";
+    return user.user_metadata?.name || user.email || "User";
+  };
+  
+  // Mobile Navigation
+  const MobileNav = () => (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="outline" size="icon" className="md:hidden">
+          <List className="h-5 w-5" />
+          <span className="sr-only">Toggle navigation</span>
         </Button>
-      </div>
-
-      {/* Sidebar */}
-      <div
-        className={cn(
-          "bg-gray-100 w-64 flex-shrink-0 border-r transition-all duration-300 flex flex-col z-40",
-          isMobile ? "fixed inset-y-0 left-0 transform" : "",
-          isMobile && !isSidebarOpen ? "-translate-x-full" : "translate-x-0"
-        )}
-      >
-        {/* Logo */}
-        <div className="p-4 border-b bg-white">
-          <Link to="/" className="flex items-center">
-            <span className="text-xl font-bold text-zyra-purple">Zyra Admin</span>
-          </Link>
-        </div>
-
-        {/* Nav links */}
-        <ScrollArea className="flex-1 py-4">
-          <nav className="px-2 space-y-1">
-            {navItems.map((item) => (
+      </SheetTrigger>
+      <SheetContent side="left" className="w-72">
+        <div className="flex flex-col h-full py-4">
+          <div className="px-4 py-2">
+            <h2 className="text-lg font-semibold">Admin Dashboard</h2>
+          </div>
+          <nav className="flex-1 px-2 py-4 space-y-1">
+            {navigation.map((item) => (
               <Link
-                key={item.href}
+                key={item.name}
                 to={item.href}
-                className={cn(
-                  "flex items-center px-2 py-2 text-sm font-medium rounded-md w-full",
-                  isActive(item.href)
+                className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${
+                  pathname === item.href
                     ? "bg-zyra-purple text-white"
-                    : "text-gray-700 hover:bg-gray-200"
-                )}
-                onClick={isMobile ? closeSidebar : undefined}
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
               >
-                {item.icon}
-                {item.title}
+                <span className="mr-3">{item.icon}</span>
+                {item.name}
               </Link>
             ))}
           </nav>
-        </ScrollArea>
-
-        {/* User profile */}
-        <div className="p-4 border-t bg-white">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Avatar className="h-8 w-8">
-                <AvatarImage
-                  src="/placeholder.svg"
-                  alt={user?.display_name || "User"}
-                />
-                <AvatarFallback>
-                  {user?.display_name?.charAt(0) || "U"}
-                </AvatarFallback>
-              </Avatar>
-              <div className="ml-3">
-                <p className="text-sm font-medium">{user?.display_name || "Admin User"}</p>
-              </div>
-            </div>
+          <div className="px-4 py-2 mt-auto">
             <Button
               variant="ghost"
-              size="icon"
+              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
               onClick={handleSignOut}
-              title="Sign Out"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-5 w-5 mr-3" />
+              Sign out
             </Button>
           </div>
         </div>
-      </div>
+      </SheetContent>
+    </Sheet>
+  );
 
-      {/* Mobile overlay */}
-      {isMobile && isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-30"
-          onClick={closeSidebar}
-        />
-      )}
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white shadow-sm z-10 border-b">
-          <div className="px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-            <h1 className="text-xl font-semibold text-gray-900 ml-8 lg:ml-0">
-              Admin Panel
-            </h1>
-            <div className="flex items-center">
-              <Button variant="ghost" size="icon">
-                <Bell className="h-5 w-5" />
+  return (
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar for desktop */}
+      <div className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 z-10 border-r bg-white">
+        <div className="flex-1 flex flex-col min-h-0 pt-5">
+          <div className="px-4 flex items-center justify-between">
+            <Link to="/" className="flex items-center">
+              <span className="text-lg font-semibold">Zyra Admin</span>
+            </Link>
+          </div>
+          <nav className="mt-8 flex-1 px-4 space-y-1 overflow-y-auto">
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${
+                  pathname === item.href
+                    ? "bg-zyra-purple text-white"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                <span className="mr-3">{item.icon}</span>
+                {item.name}
+              </Link>
+            ))}
+          </nav>
+        </div>
+        <div className="flex-shrink-0 p-4 border-t">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <Avatar>
+                <AvatarImage src={user?.user_metadata?.avatar_url} />
+                <AvatarFallback>{getUserInitials()}</AvatarFallback>
+              </Avatar>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium">{getDisplayName()}</p>
+              <Button
+                variant="ghost"
+                className="text-xs text-red-600 hover:text-red-700 px-0 py-0"
+                onClick={handleSignOut}
+              >
+                Sign out
               </Button>
             </div>
           </div>
-        </header>
-        <main className="flex-1 overflow-auto bg-gray-50">{children}</main>
+        </div>
+      </div>
+      
+      {/* Mobile header */}
+      <div className="md:pl-64 flex flex-col flex-1">
+        <div className="sticky top-0 z-10 md:hidden bg-white border-b">
+          <div className="flex justify-between items-center px-4 h-14">
+            <MobileNav />
+            <Link to="/" className="text-lg font-semibold">
+              Zyra Admin
+            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user?.user_metadata?.avatar_url} />
+                    <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>{getDisplayName()}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/admin/settings')}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Sign out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+        
+        {/* Main content */}
+        <main className="flex-1 overflow-auto">{children}</main>
       </div>
     </div>
   );

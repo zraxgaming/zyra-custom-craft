@@ -17,15 +17,19 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/admin/Dashboard";
 import Products from "./pages/admin/Products";
+import ProductEdit from "./pages/admin/ProductEdit";
 import AdminCategories from "./pages/admin/Categories";
 import Orders from "./pages/admin/Orders";
 import OrderDetail from "./pages/admin/OrderDetail";
 import ContactSubmissions from "./pages/admin/ContactSubmissions";
 import Promotions from "./pages/admin/Promotions";
+import Coupons from "./pages/admin/Coupons";
+import Settings from "./pages/admin/Settings";
 import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import AdminRoute from "./components/admin/AdminRoute";
 import Cart from "./pages/Cart";
+import About from "./pages/About";
 
 // Create React query client
 const queryClient = new QueryClient({
@@ -52,6 +56,7 @@ const App = () => (
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/categories" element={<CategoryPage />} />
                 <Route path="/contact" element={<Contact />} />
+                <Route path="/about" element={<About />} />
                 <Route path="/products/:slug" element={<ProductDetail />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/checkout" element={<Checkout />} />
@@ -61,11 +66,15 @@ const App = () => (
                 {/* Admin routes with protection */}
                 <Route path="/admin" element={<AdminRoute><Dashboard /></AdminRoute>} />
                 <Route path="/admin/products" element={<AdminRoute><Products /></AdminRoute>} />
+                <Route path="/admin/products/new" element={<AdminRoute><ProductEdit /></AdminRoute>} />
+                <Route path="/admin/products/edit/:id" element={<AdminRoute><ProductEdit /></AdminRoute>} />
                 <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
                 <Route path="/admin/orders" element={<AdminRoute><Orders /></AdminRoute>} />
                 <Route path="/admin/orders/:id" element={<AdminRoute><OrderDetail /></AdminRoute>} />
                 <Route path="/admin/contact" element={<AdminRoute><ContactSubmissions /></AdminRoute>} />
                 <Route path="/admin/promotions" element={<AdminRoute><Promotions /></AdminRoute>} />
+                <Route path="/admin/coupons" element={<AdminRoute><Coupons /></AdminRoute>} />
+                <Route path="/admin/settings" element={<AdminRoute><Settings /></AdminRoute>} />
                 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

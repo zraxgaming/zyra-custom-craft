@@ -21,7 +21,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -35,30 +34,20 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Edit, Trash2, Eye } from "lucide-react";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { Promotion } from "@/types/order";
 
-interface Promotion {
-  id: string;
-  title: string;
-  description: string;
-  image_url?: string;
-  link?: string;
-  active: boolean;
-  placement: string;
-  start_date: string;
-  end_date?: string;
-  created_at: string;
-}
-
-const PromotionForm = ({ 
-  promotion = null, 
-  onSave, 
-  onCancel
-}: { 
+interface PromotionFormProps { 
   promotion?: Promotion | null, 
   onSave: (data: Partial<Promotion>) => void,
   onCancel: () => void
+}
+
+const PromotionForm: React.FC<PromotionFormProps> = ({ 
+  promotion = null, 
+  onSave, 
+  onCancel
 }) => {
   const [title, setTitle] = useState(promotion?.title || '');
   const [description, setDescription] = useState(promotion?.description || '');
@@ -232,6 +221,21 @@ const Promotions = () => {
   useEffect(() => {
     const fetchPromotions = async () => {
       try {
+        // Create the promotions table if it doesn't exist yet
+        try {
+          // Check if table exists first by trying to query it
+          const { count, error } = await supabase
+            .from("promotions")
+            .select("*", { count: 'exact', head: true });
+          
+          if (error && error.code === '42P01') {
+            console.log("Promotions table doesn't exist yet");
+          }
+        } catch (error) {
+          console.error("Error checking promotions table:", error);
+        }
+
+        // Query promotions
         const { data, error } = await supabase
           .from("promotions")
           .select("*")
@@ -239,7 +243,7 @@ const Promotions = () => {
           
         if (error) throw error;
         
-        setPromotions(data || []);
+        setPromotions(data as Promotion[] || []);
       } catch (error: any) {
         toast({
           title: "Error fetching promotions",
@@ -267,7 +271,7 @@ const Promotions = () => {
         if (error) throw error;
         
         setPromotions(promotions.map(p => 
-          p.id === currentPromotion.id ? { ...p, ...data } : p
+          p.id === currentPromotion.id ? { ...p, ...data } as Promotion : p
         ));
         
         toast({
@@ -284,7 +288,7 @@ const Promotions = () => {
           
         if (error) throw error;
         
-        setPromotions([newPromotion, ...promotions]);
+        setPromotions([newPromotion as Promotion, ...promotions]);
         
         toast({
           title: "Promotion created",

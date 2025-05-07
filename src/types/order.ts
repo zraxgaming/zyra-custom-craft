@@ -17,7 +17,7 @@ export interface OrderItem {
     name: string;
     images: string[];
   };
-  customization?: Record<string, any>;
+  customization?: Record<string, any> | null;
 }
 
 export interface OrderDetail {
@@ -36,4 +36,31 @@ export interface OrderDetail {
     email: string;
   } | null;
   order_items: OrderItem[];
+}
+
+export interface Promotion {
+  id: string;
+  title: string;
+  description: string;
+  image_url?: string;
+  link?: string;
+  active: boolean;
+  placement: string;
+  start_date: string;
+  end_date?: string;
+  created_at: string;
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: number;
+  min_purchase: number;
+  max_uses?: number;
+  used_count: number;
+  active: boolean;
+  starts_at: string;
+  expires_at?: string;
+  created_at: string;
 }

@@ -1,14 +1,8 @@
-
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Slider,
-  SliderTrack, 
-  SliderThumb, 
-  SliderRange 
-} from "@/components/ui/slider";
+import { Slider } from "@/components/ui/slider";
 import { 
   RotateCw, 
   Type, 
