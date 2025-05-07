@@ -17,7 +17,7 @@ export interface OrderItem {
     name: string;
     images: string[];
   };
-  customization?: any;
+  customization?: Record<string, any>;
 }
 
 export interface OrderDetail {

@@ -1,485 +1,659 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
+import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
+import { ArrowLeft, CreditCard, Truck } from "lucide-react";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 import { useCart } from "@/components/cart/CartProvider";
 import { supabase } from "@/integrations/supabase/client";
-import { ShippingAddress } from "@/types/checkout";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { ShippingAddress } from "@/types/order";
+
+// Define the form values interface
+interface CheckoutFormValues {
+  name: string;
+  email: string;
+  phone: string;
+  street: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  sameShipping: boolean;
+  deliveryType: "standard" | "express";
+  paymentMethod: "credit_card" | "paypal";
+}
 
 const Checkout = () => {
   const navigate = useNavigate();
+  const { state, subtotal, clearCart } = useCart();
   const { user, isLoading } = useAuth();
-  const { state, clearCart, subtotal } = useCart();
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [paypalButtonsRendered, setPaypalButtonsRendered] = useState(false);
-
-  // Shipping address state
-  const [address, setAddress] = useState<ShippingAddress>({
-    fullName: "",
-    addressLine1: "",
-    addressLine2: "",
+  
+  // Form state
+  const [formValues, setFormValues] = useState<CheckoutFormValues>({
+    name: "",
+    email: "",
+    phone: "",
+    street: "",
     city: "",
     state: "",
     zipCode: "",
-    country: "US",
-    phone: ""
+    country: "United States",
+    sameShipping: true,
+    deliveryType: "standard",
+    paymentMethod: "credit_card",
   });
-
-  // Payment method state
-  const [paymentMethod, setPaymentMethod] = useState("creditCard");
-
-  // Redirect to auth if not logged in
+  
+  // Additional state
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [existingAddresses, setExistingAddresses] = useState<ShippingAddress[]>([]);
+  const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
+  
+  // Calculate total with shipping
+  const shipping = formValues.deliveryType === "express" ? 15 : 5;
+  const total = subtotal + shipping;
+  
+  // Check for user and redirect if no items in cart
   useEffect(() => {
     if (!isLoading && !user) {
-      navigate("/auth?redirect=/checkout");
       toast({
         title: "Login required",
-        description: "Please log in or create an account to checkout.",
+        description: "Please login to continue to checkout",
       });
-    }
-  }, [user, isLoading, navigate, toast]);
-
-  // Redirect to cart if cart is empty
-  useEffect(() => {
-    if (state.items.length === 0) {
-      navigate("/shop");
-      toast({
-        title: "Empty cart",
-        description: "Your cart is empty. Please add items before checkout.",
-      });
-    }
-  }, [navigate, state.items.length, toast]);
-
-  // Initialize PayPal when payment method is PayPal
-  useEffect(() => {
-    if (paymentMethod === "paypal" && !paypalButtonsRendered && user) {
-      const renderPaypalButtons = async () => {
-        try {
-          // This would be replaced with the actual PayPal SDK initialization
-          console.log("Initializing PayPal buttons");
-          // Normally we would load the PayPal SDK here
-          setPaypalButtonsRendered(true);
-        } catch (error) {
-          console.error("PayPal initialization error:", error);
-        }
-      };
-      
-      renderPaypalButtons();
-    }
-  }, [paymentMethod, paypalButtonsRendered, user]);
-
-  // Load user info if logged in
-  useEffect(() => {
-    if (user) {
-      const loadUserInfo = async () => {
-        try {
-          const { data, error } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", user.id)
-            .single();
-
-          if (error) throw error;
-
-          if (data && data.shipping_addresses) {
-            // Safely handle shipping addresses from JSON
-            let shippingAddresses: ShippingAddress[] = [];
-            
-            try {
-              // Check if it's a string that needs to be parsed
-              if (typeof data.shipping_addresses === 'string') {
-                shippingAddresses = JSON.parse(data.shipping_addresses);
-              } 
-              // Check if it's already an array
-              else if (Array.isArray(data.shipping_addresses)) {
-                // Ensure each item in the array conforms to ShippingAddress interface
-                shippingAddresses = data.shipping_addresses.map((addr: any) => ({
-                  fullName: addr.fullName || "",
-                  addressLine1: addr.addressLine1 || "",
-                  addressLine2: addr.addressLine2 || "",
-                  city: addr.city || "",
-                  state: addr.state || "",
-                  zipCode: addr.zipCode || "",
-                  country: addr.country || "US",
-                  phone: addr.phone || ""
-                }));
-              }
-            } catch (e) {
-              console.error("Error parsing shipping addresses:", e);
-            }
-
-            if (shippingAddresses.length > 0) {
-              const defaultAddress = shippingAddresses[0];
-              setAddress({
-                fullName: defaultAddress.fullName || "",
-                addressLine1: defaultAddress.addressLine1 || "",
-                addressLine2: defaultAddress.addressLine2 || "",
-                city: defaultAddress.city || "",
-                state: defaultAddress.state || "",
-                zipCode: defaultAddress.zipCode || "",
-                country: defaultAddress.country || "US",
-                phone: defaultAddress.phone || data.phone || "",
-              });
-            }
-          }
-        } catch (error) {
-          console.error("Error loading user info:", error);
-        }
-      };
-
-      loadUserInfo();
-    }
-  }, [user]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setAddress((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handlePlaceOrder = async () => {
-    // Basic validation
-    if (!address.fullName || !address.addressLine1 || !address.city || !address.state || !address.zipCode) {
-      toast({
-        title: "Incomplete information",
-        description: "Please fill in all required fields.",
-        variant: "destructive",
-      });
+      navigate("/auth?redirect=/checkout");
       return;
     }
-
-    setIsSubmitting(true);
-
+    
+    if (state.items.length === 0) {
+      navigate("/cart");
+    }
+  }, [isLoading, user, state.items.length, navigate, toast]);
+  
+  // Fetch user's saved addresses
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("shipping_addresses")
+          .eq("id", user.id)
+          .single();
+          
+        if (error) throw error;
+        
+        if (data.shipping_addresses && data.shipping_addresses.length > 0) {
+          setExistingAddresses(data.shipping_addresses);
+        }
+      } catch (error) {
+        console.error("Error fetching addresses:", error);
+      }
+    };
+    
+    fetchAddresses();
+  }, [user]);
+  
+  // Fill form when selecting an existing address
+  useEffect(() => {
+    if (selectedAddress) {
+      const address = existingAddresses.find(addr => `${addr.street}-${addr.zipCode}` === selectedAddress);
+      if (address) {
+        setFormValues(prev => ({
+          ...prev,
+          name: address.name,
+          street: address.street,
+          city: address.city,
+          state: address.state,
+          zipCode: address.zipCode,
+          country: address.country,
+          phone: address.phone || prev.phone,
+        }));
+      }
+    }
+  }, [selectedAddress, existingAddresses]);
+  
+  // Update form values
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormValues(prev => ({ ...prev, [name]: value }));
+  };
+  
+  // Handle checkbox
+  const handleCheckboxChange = (checked: boolean) => {
+    setFormValues(prev => ({ ...prev, sameShipping: checked }));
+  };
+  
+  // Handle radio option changes
+  const handleRadioChange = (name: keyof CheckoutFormValues, value: string) => {
+    setFormValues(prev => ({ ...prev, [name]: value }));
+  };
+  
+  // Place order function
+  const placeOrder = async (paymentDetails?: any) => {
+    if (!user) {
+      toast({
+        title: "Login required",
+        description: "Please login to continue to checkout",
+      });
+      navigate("/auth?redirect=/checkout");
+      return;
+    }
+    
     try {
-      // Create order in Supabase
-      const orderData = {
-        user_id: user?.id,
-        shipping_address: address as any, // Type cast to resolve type issue
-        total_amount: subtotal,
-        payment_method: paymentMethod,
-        payment_status: "pending",
-        status: "pending",
+      setIsProcessing(true);
+      
+      // Create shipping address object
+      const shippingAddress: ShippingAddress = {
+        name: formValues.name,
+        street: formValues.street,
+        city: formValues.city,
+        state: formValues.state,
+        zipCode: formValues.zipCode,
+        country: formValues.country,
+        phone: formValues.phone,
       };
-
-      const { data: orderResult, error: orderError } = await supabase
+      
+      // Create order in database
+      const { data: orderData, error: orderError } = await supabase
         .from("orders")
-        .insert(orderData)
+        .insert({
+          user_id: user.id,
+          total_amount: total,
+          status: "pending",
+          payment_status: paymentDetails ? "paid" : "pending",
+          payment_method: formValues.paymentMethod,
+          delivery_type: formValues.deliveryType,
+          shipping_address: shippingAddress
+        })
         .select()
         .single();
-
+        
       if (orderError) throw orderError;
-
+      
       // Create order items
-      const orderItems = state.items.map((item) => ({
-        order_id: orderResult.id,
+      const orderItems = state.items.map(item => ({
+        order_id: orderData.id,
         product_id: item.productId,
         quantity: item.quantity,
         price: item.price,
-        customization: item.customization,
+        customization: item.customization
       }));
-
+      
       const { error: itemsError } = await supabase
         .from("order_items")
         .insert(orderItems);
-
+        
       if (itemsError) throw itemsError;
-
-      // Send order confirmation email
-      try {
-        // In a real implementation, this would call an edge function to send an email
-        console.log("Sending order confirmation email");
-      } catch (emailError) {
-        console.error("Failed to send confirmation email:", emailError);
+      
+      // Save address if it's new
+      if (!selectedAddress) {
+        try {
+          await supabase.rpc('add_shipping_address', {
+            user_id: user.id,
+            address: shippingAddress
+          });
+        } catch (error) {
+          console.error("Error saving address:", error);
+          // Non-critical error, can continue
+        }
       }
-
-      // Clear cart after successful order
+      
+      // Clear cart and redirect to confirmation
       await clearCart();
-
-      // Redirect to order confirmation
-      navigate(`/order-confirmation/${orderResult.id}`);
-
-      toast({
-        title: "Order placed!",
-        description: "Your order has been successfully placed.",
-      });
+      navigate(`/order-confirmation/${orderData.id}`);
+      
     } catch (error: any) {
       console.error("Error placing order:", error);
       toast({
-        title: "Error placing order",
-        description: error.message || "Something went wrong. Please try again.",
+        title: "Order failed",
+        description: error.message,
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
+      setIsProcessing(false);
     }
   };
-
-  // If loading or not authenticated, show loading spinner
-  if (isLoading || !user) {
+  
+  // Handle form submission (for credit card)
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // For credit card, just place the order
+    // In a real app, this would integrate with a payment processor
+    if (formValues.paymentMethod === "credit_card") {
+      placeOrder();
+    }
+  };
+  
+  // PayPal approval handler
+  const onPayPalApprove = async (data: any) => {
+    try {
+      // In a real app, you would verify the payment with PayPal here
+      const paymentDetails = {
+        paypal_order_id: data.orderID,
+        payment_status: "COMPLETED"
+      };
+      
+      // Place the order with payment details
+      await placeOrder(paymentDetails);
+    } catch (error) {
+      console.error("PayPal payment error:", error);
+      setIsProcessing(false);
+      toast({
+        title: "Payment failed",
+        description: "There was an error processing your PayPal payment",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex h-screen items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
       </div>
     );
   }
+  
+  if (!user) {
+    return null; // Will redirect via useEffect
+  }
 
   return (
-    <div className="container max-w-6xl py-8">
-      <h1 className="text-3xl font-bold mb-8">Checkout</h1>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left column - Shipping & Payment */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Shipping information */}
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h2 className="text-xl font-semibold mb-4">Shipping Information</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <Label htmlFor="fullName">Full Name *</Label>
-                <Input
-                  id="fullName"
-                  name="fullName"
-                  value={address.fullName}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <Label htmlFor="addressLine1">Address Line 1 *</Label>
-                <Input
-                  id="addressLine1"
-                  name="addressLine1"
-                  value={address.addressLine1}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <Label htmlFor="addressLine2">Address Line 2</Label>
-                <Input
-                  id="addressLine2"
-                  name="addressLine2"
-                  value={address.addressLine2}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="city">City *</Label>
-                <Input
-                  id="city"
-                  name="city"
-                  value={address.city}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="state">State/Province *</Label>
-                <Input
-                  id="state"
-                  name="state"
-                  value={address.state}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="zipCode">ZIP/Postal Code *</Label>
-                <Input
-                  id="zipCode"
-                  name="zipCode"
-                  value={address.zipCode}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="country">Country *</Label>
-                <Select
-                  value={address.country}
-                  onValueChange={(value) =>
-                    setAddress((prev) => ({ ...prev, country: value }))
-                  }
-                >
-                  <SelectTrigger id="country">
-                    <SelectValue placeholder="Select country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="US">United States</SelectItem>
-                    <SelectItem value="CA">Canada</SelectItem>
-                    <SelectItem value="GB">United Kingdom</SelectItem>
-                    <SelectItem value="AU">Australia</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="phone">Phone Number *</Label>
-                <Input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  value={address.phone || ""}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Payment method */}
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h2 className="text-xl font-semibold mb-4">Payment Method</h2>
-
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <input
-                  type="radio"
-                  id="creditCard"
-                  name="paymentMethod"
-                  value="creditCard"
-                  checked={paymentMethod === "creditCard"}
-                  onChange={() => setPaymentMethod("creditCard")}
-                  className="h-4 w-4 text-zyra-purple focus:ring-zyra-purple"
-                />
-                <Label htmlFor="creditCard" className="cursor-pointer">
-                  Credit Card
-                </Label>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <input
-                  type="radio"
-                  id="paypal"
-                  name="paymentMethod"
-                  value="paypal"
-                  checked={paymentMethod === "paypal"}
-                  onChange={() => setPaymentMethod("paypal")}
-                  className="h-4 w-4 text-zyra-purple focus:ring-zyra-purple"
-                />
-                <Label htmlFor="paypal" className="cursor-pointer">
-                  PayPal
-                </Label>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <input
-                  type="radio"
-                  id="cashOnDelivery"
-                  name="paymentMethod"
-                  value="cashOnDelivery"
-                  checked={paymentMethod === "cashOnDelivery"}
-                  onChange={() => setPaymentMethod("cashOnDelivery")}
-                  className="h-4 w-4 text-zyra-purple focus:ring-zyra-purple"
-                />
-                <Label htmlFor="cashOnDelivery" className="cursor-pointer">
-                  Cash on Delivery
-                </Label>
-              </div>
-            </div>
-
-            {paymentMethod === "creditCard" && (
-              <div className="mt-4 p-4 bg-gray-50 rounded-md">
-                <p className="text-sm text-gray-500">
-                  For demonstration purposes, no actual payment will be processed.
-                </p>
-              </div>
-            )}
-            
-            {paymentMethod === "paypal" && (
-              <div className="mt-4">
-                <div className="p-4 bg-gray-50 rounded-md mb-4">
-                  <p className="text-sm text-gray-500">
-                    Click the PayPal button below to complete your payment securely with PayPal.
-                  </p>
-                </div>
-                {/* PayPal button placeholder */}
-                <div id="paypal-button-container" className="bg-[#ffc439] p-3 rounded text-center text-blue-900 font-bold">
-                  PayPal Button Placeholder
-                </div>
-              </div>
-            )}
-          </div>
+    <>
+      <Navbar />
+      <Container className="py-12">
+        <div className="mb-8">
+          <Button 
+            variant="outline" 
+            className="mb-4"
+            onClick={() => navigate("/cart")}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Cart
+          </Button>
+          <h1 className="text-3xl font-bold">Checkout</h1>
+          <p className="text-gray-600 mt-2">Complete your purchase by providing shipping and payment details</p>
         </div>
-
-        {/* Right column - Order summary */}
-        <div className="lg:col-span-1">
-          <div className="bg-white p-6 rounded-lg shadow-sm sticky top-24">
-            <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
-
-            <div className="space-y-4">
-              {state.items.map((item) => (
-                <div key={item.id} className="flex justify-between">
-                  <div>
-                    <span className="font-medium">{item.name}</span>
-                    <span className="text-gray-500 ml-1">x{item.quantity}</span>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Checkout form */}
+          <div className="lg:col-span-2">
+            <form onSubmit={handleSubmit}>
+              {/* Shipping Information */}
+              <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
+                <h2 className="text-xl font-medium mb-6 flex items-center">
+                  <Truck className="h-5 w-5 mr-2" />
+                  Shipping Information
+                </h2>
+                
+                {/* Saved addresses */}
+                {existingAddresses.length > 0 && (
+                  <div className="mb-6">
+                    <Label className="mb-2 block">Select a saved address</Label>
+                    <RadioGroup 
+                      value={selectedAddress || ''} 
+                      onValueChange={setSelectedAddress}
+                      className="gap-4"
+                    >
+                      {existingAddresses.map((address, index) => (
+                        <div key={index} className="flex items-start space-x-2 border rounded-md p-3">
+                          <RadioGroupItem 
+                            value={`${address.street}-${address.zipCode}`} 
+                            id={`address-${index}`} 
+                          />
+                          <Label 
+                            htmlFor={`address-${index}`}
+                            className="font-normal cursor-pointer"
+                          >
+                            <div>
+                              <p className="font-medium">{address.name}</p>
+                              <p>{address.street}</p>
+                              <p>
+                                {address.city}, {address.state} {address.zipCode}
+                              </p>
+                              <p>{address.country}</p>
+                              {address.phone && <p>Phone: {address.phone}</p>}
+                            </div>
+                          </Label>
+                        </div>
+                      ))}
+                      <div className="flex items-start space-x-2 border rounded-md p-3 border-dashed">
+                        <RadioGroupItem 
+                          value="" 
+                          id="new-address" 
+                        />
+                        <Label 
+                          htmlFor="new-address"
+                          className="font-normal cursor-pointer"
+                        >
+                          <div className="font-medium">Add a new address</div>
+                        </Label>
+                      </div>
+                    </RadioGroup>
                   </div>
-                  <span>${(item.price * item.quantity).toFixed(2)}</span>
+                )}
+                
+                {/* Address form */}
+                {(!existingAddresses.length || selectedAddress === null || selectedAddress === '') && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="col-span-1 md:col-span-2">
+                      <Label htmlFor="name">Full Name</Label>
+                      <Input
+                        id="name"
+                        name="name"
+                        value={formValues.name}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="email">Email Address</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={formValues.email || user?.email || ''}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        value={formValues.phone}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    
+                    <div className="col-span-1 md:col-span-2">
+                      <Label htmlFor="street">Street Address</Label>
+                      <Input
+                        id="street"
+                        name="street"
+                        value={formValues.street}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="city">City</Label>
+                      <Input
+                        id="city"
+                        name="city"
+                        value={formValues.city}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="state">State / Province</Label>
+                      <Input
+                        id="state"
+                        name="state"
+                        value={formValues.state}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="zipCode">ZIP / Postal Code</Label>
+                      <Input
+                        id="zipCode"
+                        name="zipCode"
+                        value={formValues.zipCode}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="country">Country</Label>
+                      <Input
+                        id="country"
+                        name="country"
+                        value={formValues.country}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                {/* Same for billing */}
+                <div className="mt-6">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="sameShipping" 
+                      checked={formValues.sameShipping}
+                      onCheckedChange={handleCheckboxChange}
+                    />
+                    <Label htmlFor="sameShipping">
+                      Use this address for billing
+                    </Label>
+                  </div>
                 </div>
-              ))}
-            </div>
-
-            <Separator className="my-4" />
-
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
+                
+                {/* Delivery options */}
+                <div className="mt-6">
+                  <Label className="mb-2 block">Delivery Options</Label>
+                  <RadioGroup 
+                    value={formValues.deliveryType} 
+                    onValueChange={(value) => handleRadioChange("deliveryType", value)}
+                  >
+                    <div className="flex items-start space-x-2 border rounded-md p-3">
+                      <RadioGroupItem value="standard" id="standard-delivery" />
+                      <Label htmlFor="standard-delivery" className="font-normal cursor-pointer">
+                        <div className="font-medium">Standard Delivery</div>
+                        <div className="text-sm text-gray-500">5-7 business days</div>
+                        <div className="mt-1 font-medium text-sm">$5.00</div>
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-start space-x-2 border rounded-md p-3 mt-3">
+                      <RadioGroupItem value="express" id="express-delivery" />
+                      <Label htmlFor="express-delivery" className="font-normal cursor-pointer">
+                        <div className="font-medium">Express Delivery</div>
+                        <div className="text-sm text-gray-500">2-3 business days</div>
+                        <div className="mt-1 font-medium text-sm">$15.00</div>
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span>Shipping</span>
-                <span>Free</span>
+              
+              {/* Payment Information */}
+              <div className="bg-white p-6 rounded-lg shadow-sm">
+                <h2 className="text-xl font-medium mb-6 flex items-center">
+                  <CreditCard className="h-5 w-5 mr-2" />
+                  Payment Method
+                </h2>
+                
+                <RadioGroup 
+                  value={formValues.paymentMethod} 
+                  onValueChange={(value) => handleRadioChange("paymentMethod", value)}
+                  className="space-y-3"
+                >
+                  <div className="flex items-start space-x-2 border rounded-md p-3">
+                    <RadioGroupItem value="credit_card" id="credit-card" />
+                    <Label htmlFor="credit-card" className="font-normal cursor-pointer w-full">
+                      <div className="font-medium">Credit/Debit Card</div>
+                      <div className="flex items-center space-x-2 mt-2">
+                        <img src="https://img.icons8.com/color/48/000000/visa.png" alt="Visa" className="h-8" />
+                        <img src="https://img.icons8.com/color/48/000000/mastercard.png" alt="Mastercard" className="h-8" />
+                        <img src="https://img.icons8.com/color/48/000000/amex.png" alt="Amex" className="h-8" />
+                      </div>
+                      
+                      {formValues.paymentMethod === "credit_card" && (
+                        <div className="mt-4 grid grid-cols-1 gap-4">
+                          <div>
+                            <Label htmlFor="cardNumber">Card Number</Label>
+                            <Input 
+                              id="cardNumber" 
+                              placeholder="1234 5678 9012 3456" 
+                              required={formValues.paymentMethod === "credit_card"}
+                            />
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="expiry">Expiration Date</Label>
+                              <Input 
+                                id="expiry" 
+                                placeholder="MM/YY" 
+                                required={formValues.paymentMethod === "credit_card"}
+                              />
+                            </div>
+                            
+                            <div>
+                              <Label htmlFor="cvv">CVV</Label>
+                              <Input 
+                                id="cvv" 
+                                placeholder="123" 
+                                required={formValues.paymentMethod === "credit_card"}
+                              />
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="nameOnCard">Name on Card</Label>
+                            <Input 
+                              id="nameOnCard" 
+                              placeholder="John Doe" 
+                              required={formValues.paymentMethod === "credit_card"}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </Label>
+                  </div>
+                  
+                  <div className="flex items-start space-x-2 border rounded-md p-3">
+                    <RadioGroupItem value="paypal" id="paypal" />
+                    <Label htmlFor="paypal" className="font-normal cursor-pointer w-full">
+                      <div className="font-medium">PayPal</div>
+                      <div className="flex items-center mt-2">
+                        <img src="https://img.icons8.com/color/48/000000/paypal.png" alt="PayPal" className="h-8" />
+                      </div>
+                      <div className="text-sm text-gray-500 mt-1">
+                        You will be redirected to PayPal to complete your purchase.
+                      </div>
+                      
+                      {formValues.paymentMethod === "paypal" && (
+                        <div className="mt-4">
+                          <PayPalScriptProvider options={{ 
+                            "client-id": import.meta.env.VITE_PAYPAL_CLIENT_ID || 'test',
+                            currency: "USD" 
+                          }}>
+                            <PayPalButtons
+                              style={{ layout: "horizontal" }}
+                              createOrder={(_data, actions) => {
+                                return actions.order.create({
+                                  purchase_units: [
+                                    {
+                                      amount: {
+                                        value: total.toFixed(2),
+                                        currency_code: "USD"
+                                      },
+                                      description: `Order from Zyra Store - ${state.items.length} items`
+                                    }
+                                  ]
+                                });
+                              }}
+                              onApprove={onPayPalApprove}
+                            />
+                          </PayPalScriptProvider>
+                        </div>
+                      )}
+                    </Label>
+                  </div>
+                </RadioGroup>
+                
+                {formValues.paymentMethod === "credit_card" && (
+                  <Button 
+                    className="w-full mt-6" 
+                    size="lg" 
+                    type="submit"
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? "Processing..." : `Complete Order • $${total.toFixed(2)}`}
+                  </Button>
+                )}
               </div>
-              <div className="flex justify-between">
-                <span>Taxes</span>
-                <span>Calculated at next step</span>
+            </form>
+          </div>
+          
+          {/* Order Summary */}
+          <div>
+            <div className="bg-white p-6 rounded-lg shadow-sm sticky top-6">
+              <h2 className="text-xl font-medium mb-4">Order Summary</h2>
+              
+              <div className="space-y-4">
+                {state.items.map((item) => (
+                  <div key={item.id} className="flex items-center space-x-4">
+                    <div className="h-16 w-16 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center text-gray-400">
+                          No image
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">{item.name}</p>
+                      <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+                    </div>
+                    <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
+                  </div>
+                ))}
+              </div>
+              
+              <Separator className="my-4" />
+              
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <p>Subtotal</p>
+                  <p>${subtotal.toFixed(2)}</p>
+                </div>
+                <div className="flex justify-between">
+                  <p>Shipping</p>
+                  <p>${shipping.toFixed(2)}</p>
+                </div>
+                <div className="flex justify-between font-medium text-base mt-4">
+                  <p>Total</p>
+                  <p>${total.toFixed(2)}</p>
+                </div>
               </div>
             </div>
-
-            <Separator className="my-4" />
-
-            <div className="flex justify-between font-semibold text-lg">
-              <span>Total</span>
-              <span>${subtotal.toFixed(2)}</span>
-            </div>
-
-            {paymentMethod !== "paypal" && (
-              <Button
-                className="w-full mt-6"
-                size="lg"
-                onClick={handlePlaceOrder}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Processing..." : "Place Order"}
-              </Button>
-            )}
-
-            <p className="text-xs text-center text-gray-500 mt-4">
-              By placing your order, you agree to our Terms of Service and Privacy Policy.
-            </p>
           </div>
         </div>
-      </div>
-    </div>
+      </Container>
+      <Footer />
+    </>
   );
 };
 

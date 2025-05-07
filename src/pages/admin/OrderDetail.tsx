@@ -22,7 +22,7 @@ import { ArrowLeft, Package, Truck, CreditCard, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { OrderDetail as OrderDetailType } from "@/types/order";
+import { OrderDetail as OrderDetailType, ShippingAddress } from "@/types/order";
 
 const OrderDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -87,10 +87,26 @@ const OrderDetail = () => {
           }
         }
         
+        // Fix type issue - convert shipping_address to ShippingAddress type
+        let typedShippingAddress: ShippingAddress | null = null;
+        
+        if (orderData.shipping_address) {
+          const address = orderData.shipping_address as any;
+          typedShippingAddress = {
+            street: address.street || "",
+            city: address.city || "",
+            state: address.state || "",
+            zipCode: address.zipCode || "",
+            country: address.country || "",
+            name: address.name || "",
+            phone: address.phone || undefined
+          };
+        }
+        
         // Cast to our OrderDetail type
         const typedOrder: OrderDetailType = {
           ...orderData,
-          shipping_address: orderData.shipping_address,
+          shipping_address: typedShippingAddress,
           order_items: orderItems || [],
           profiles: profileData
         };
@@ -113,12 +129,35 @@ const OrderDetail = () => {
   // Function to send status update email
   const sendStatusUpdateEmail = async (status: string, email: string) => {
     try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-order-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          order_id: id,
+          customer_email: email,
+          status: status,
+          customer_name: order?.profiles?.display_name || 'Customer'
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to send email notification');
+      }
+      
       toast({
         title: "Email notification sent",
         description: `Status update notification sent to customer.`,
       });
     } catch (error) {
       console.error("Failed to send status update email:", error);
+      toast({
+        title: "Email notification failed",
+        description: "Could not send status update email.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -293,7 +332,28 @@ const OrderDetail = () => {
                   <p className="text-sm font-medium text-muted-foreground">Payment Status</p>
                   <Select
                     value={order.payment_status}
-                    onValueChange={updatePaymentStatus}
+                    onValueChange={(status) => {
+                      try {
+                        supabase
+                          .from("orders")
+                          .update({ payment_status: status })
+                          .eq("id", order.id)
+                          .then(({ error }) => {
+                            if (error) throw error;
+                            setOrder(prev => prev ? { ...prev, payment_status: status } : null);
+                            toast({
+                              title: "Payment updated",
+                              description: `Payment status changed to ${status}`,
+                            });
+                          });
+                      } catch (error: any) {
+                        toast({
+                          title: "Error updating payment",
+                          description: error.message,
+                          variant: "destructive",
+                        });
+                      }
+                    }}
                   >
                     <SelectTrigger className="w-full mt-1">
                       <span className={`inline-block w-2 h-2 rounded-full mr-2 

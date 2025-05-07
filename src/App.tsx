@@ -21,10 +21,11 @@ import AdminCategories from "./pages/admin/Categories";
 import Orders from "./pages/admin/Orders";
 import OrderDetail from "./pages/admin/OrderDetail";
 import ContactSubmissions from "./pages/admin/ContactSubmissions";
+import Promotions from "./pages/admin/Promotions";
 import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import AdminRoute from "./components/admin/AdminRoute";
-import Cart from "./pages/Cart"; // Import the new Cart page
+import Cart from "./pages/Cart";
 
 // Create React query client
 const queryClient = new QueryClient({
@@ -55,7 +56,7 @@ const App = () => (
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
-                <Route path="/cart" element={<Cart />} /> {/* Add the Cart route */}
+                <Route path="/cart" element={<Cart />} />
                 
                 {/* Admin routes with protection */}
                 <Route path="/admin" element={<AdminRoute><Dashboard /></AdminRoute>} />
@@ -64,6 +65,7 @@ const App = () => (
                 <Route path="/admin/orders" element={<AdminRoute><Orders /></AdminRoute>} />
                 <Route path="/admin/orders/:id" element={<AdminRoute><OrderDetail /></AdminRoute>} />
                 <Route path="/admin/contact" element={<AdminRoute><ContactSubmissions /></AdminRoute>} />
+                <Route path="/admin/promotions" element={<AdminRoute><Promotions /></AdminRoute>} />
                 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

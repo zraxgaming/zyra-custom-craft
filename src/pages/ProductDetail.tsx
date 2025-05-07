@@ -1,20 +1,29 @@
 
-import React, { useState } from "react";
-import { useParams } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { mockProducts } from "@/data/mockData";
 import { toast } from "sonner";
+import { useCart } from "@/components/cart/CartProvider";
+import ProductCustomizer from "@/components/products/ProductCustomizer";
+import { useAuth } from "@/hooks/use-auth";
 
 const ProductDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const product = mockProducts.find((p) => p.slug === slug);
+  const { addItem } = useCart();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [isCustomizing, setIsCustomizing] = useState(false);
+  const [customization, setCustomization] = useState<Record<string, any> | undefined>(undefined);
 
+  // Check if product exists
   if (!product) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -33,22 +42,67 @@ const ProductDetail = () => {
     );
   }
 
+  // Handle adding product to cart
   const handleAddToCart = () => {
-    // This would normally add the product to the cart
-    // For now, just show a toast notification
-    toast.success(`${product.name} added to cart!`, {
-      description: `Quantity: ${quantity}`,
+    if (product.customizationOptions.allowText || 
+        product.customizationOptions.allowImage) {
+      if (!customization) {
+        setIsCustomizing(true);
+        return;
+      }
+    }
+    
+    addItem({
+      productId: product.id.toString(),
+      name: product.name,
+      price: product.discountPercentage > 0 
+        ? product.price * (1 - product.discountPercentage / 100) 
+        : product.price,
+      quantity,
+      image: product.images[0],
+      customization
     });
   };
 
+  // Handle starting customization
   const handleCustomize = () => {
-    // This would normally navigate to the customization page
-    // For now, just show a toast notification
-    toast(`Let's customize your ${product.name}!`, {
-      description: "Customization feature coming soon.",
+    setIsCustomizing(true);
+  };
+  
+  // Handle customization save
+  const handleSaveCustomization = (customizationData: any) => {
+    setCustomization(customizationData);
+    setIsCustomizing(false);
+    toast.success("Customization saved!", {
+      description: "Your design has been saved. You can now add the product to your cart.",
     });
   };
+  
+  // Handle canceling customization
+  const handleCancelCustomization = () => {
+    setIsCustomizing(false);
+  };
 
+  // If in customization mode, show the customizer
+  if (isCustomizing) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow">
+          <ProductCustomizer 
+            productImage={product.images[selectedImage]}
+            customizationOptions={product.customizationOptions}
+            onSave={handleSaveCustomization}
+            onCancel={handleCancelCustomization}
+            initialCustomization={customization}
+          />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Regular product detail view
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -64,11 +118,11 @@ const ProductDetail = () => {
                   className="w-full h-auto object-cover"
                 />
               </div>
-              <div className="flex space-x-2">
+              <div className="flex space-x-2 overflow-x-auto pb-2">
                 {product.images.map((image, index) => (
                   <button
                     key={index}
-                    className={`border-2 rounded-md overflow-hidden ${
+                    className={`border-2 rounded-md overflow-hidden flex-shrink-0 ${
                       selectedImage === index
                         ? "border-zyra-purple"
                         : "border-transparent"
@@ -148,6 +202,19 @@ const ProductDetail = () => {
                     <li>• Resize and rotate elements</li>
                   )}
                 </ul>
+                
+                {customization && (
+                  <div className="mt-2 p-2 bg-green-50 border border-green-100 rounded-md">
+                    <p className="text-sm text-green-700 font-medium">Customization added</p>
+                    <Button 
+                      variant="link" 
+                      className="text-xs p-0 h-auto text-green-600"
+                      onClick={handleCustomize}
+                    >
+                      Edit customization
+                    </Button>
+                  </div>
+                )}
               </div>
               
               <div className="mb-6">
@@ -193,20 +260,22 @@ const ProductDetail = () => {
                 >
                   Add to Cart
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="border-zyra-purple text-zyra-purple hover:bg-zyra-purple hover:text-white flex-1 py-6"
-                  onClick={handleCustomize}
-                >
-                  Customize Now
-                </Button>
+                {(product.customizationOptions.allowText || product.customizationOptions.allowImage) && (
+                  <Button 
+                    variant="outline" 
+                    className="border-zyra-purple text-zyra-purple hover:bg-zyra-purple hover:text-white flex-1 py-6"
+                    onClick={handleCustomize}
+                  >
+                    Customize Now
+                  </Button>
+                )}
               </div>
               
               <div className="flex items-center text-sm text-gray-600">
                 <svg className="h-5 w-5 text-green-500 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span>In stock and ready to ship</span>
+                <span>{product.inStock ? "In stock and ready to ship" : "Out of stock"}</span>
               </div>
             </div>
           </div>
