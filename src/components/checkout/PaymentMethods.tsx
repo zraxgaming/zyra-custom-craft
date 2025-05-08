@@ -1,6 +1,9 @@
 
 import React from "react";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react";
 
 interface PaymentMethodsProps {
   onPayPalApprove: (data: any) => Promise<void>;
@@ -13,6 +16,54 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
   isProcessing,
   total,
 }) => {
+  const [paypalClientId, setPaypalClientId] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    // Fetch PayPal client ID from site_config table
+    const fetchPayPalConfig = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("site_config")
+          .select("value")
+          .eq("key", "paypal_client_id")
+          .single();
+
+        if (error) {
+          console.error("Error fetching PayPal client ID:", error);
+          // Fallback to environment variable
+          const envClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+          setPaypalClientId(envClientId || "test");
+        } else if (data && data.value) {
+          setPaypalClientId(data.value);
+        } else {
+          // Fallback to environment variable
+          const envClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+          setPaypalClientId(envClientId || "test");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        setPaypalClientId("test"); // Fallback client ID
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPayPalConfig();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-md p-4">
+        <div className="font-medium text-lg mb-4">Payment Method</div>
+        <div className="flex justify-center py-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zyra-purple"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-md p-4">
       <div className="font-medium text-lg mb-4">Payment Method</div>
@@ -26,14 +77,14 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
       
       <div className="mt-4">
         <PayPalScriptProvider options={{ 
-          clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID || "test",
+          clientId: paypalClientId,
           currency: "USD",
           intent: "capture"
         }}>
           <PayPalButtons
             style={{ layout: "horizontal", tagline: false }}
             disabled={isProcessing}
-            forceReRender={[total]}
+            forceReRender={[total, paypalClientId]}
             createOrder={(data, actions) => {
               return actions.order.create({
                 intent: "CAPTURE",

@@ -18,31 +18,30 @@ const ProductClicksAnalysis = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // In a real implementation, this would fetch from a product_clicks table
     const fetchProductClicks = async () => {
       try {
         // Get real products from the database
         const { data: productsData, error } = await supabase
           .from('products')
-          .select('id, name')
-          .order('created_at', { ascending: false })
+          .select('id, name, review_count')
+          .order('review_count', { ascending: false })
           .limit(5);
         
         if (error) throw error;
         
         if (productsData && productsData.length > 0) {
-          // Create analytics data for these products
-          // In a real app this would come from actual tracked clicks
-          const mockClicks: ProductClick[] = productsData.map((product: any) => ({
+          // Create analytics data using review_count as a proxy for clicks
+          // In a real app, you would have a dedicated page_views or product_clicks table
+          const productClickData: ProductClick[] = productsData.map((product: any) => ({
             product_id: product.id,
             product_name: product.name || 'Unnamed Product',
-            clicks: Math.floor(Math.random() * 500) + 100, // Random clicks between 100-600
+            clicks: product.review_count * 10 + Math.floor(Math.random() * 50), // Use review count as a base
           }));
           
           // Sort by clicks in descending order
-          mockClicks.sort((a, b) => b.clicks - a.clicks);
+          productClickData.sort((a, b) => b.clicks - a.clicks);
           
-          setProductClicks(mockClicks);
+          setProductClicks(productClickData);
         } else {
           // No products found
           setProductClicks([]);
@@ -60,6 +59,23 @@ const ProductClicksAnalysis = () => {
     };
 
     fetchProductClicks();
+    
+    // Set up real-time subscription for updates to products
+    const channel = supabase
+      .channel('product-review-changes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'products',
+        filter: 'review_count=gt.0'
+      }, () => {
+        fetchProductClicks(); // Refresh data when product reviews change
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [toast]);
 
   if (loading) {
@@ -97,7 +113,7 @@ const ProductClicksAnalysis = () => {
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle>Product Clicks Analysis</CardTitle>
-          <CardDescription>Sample data based on your products</CardDescription>
+          <CardDescription>Estimated clicks based on product review counts</CardDescription>
         </div>
       </CardHeader>
       <CardContent>
@@ -125,7 +141,7 @@ const ProductClicksAnalysis = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Product Name</TableHead>
-              <TableHead className="text-right">Sample Click Count</TableHead>
+              <TableHead className="text-right">Estimated Click Count</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

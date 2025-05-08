@@ -15,8 +15,6 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
 }
 
-const ADMIN_EMAIL = "zainabusal113@gmail.com";
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -24,7 +22,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [adminEmail, setAdminEmail] = useState<string>("zainabusal113@gmail.com");
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Fetch admin email from site_config
+    const fetchAdminEmail = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("site_config")
+          .select("value")
+          .eq("key", "admin_email")
+          .single();
+        
+        if (!error && data) {
+          setAdminEmail(data.value);
+        }
+      } catch (error) {
+        console.error("Error fetching admin email:", error);
+      }
+    };
+
+    fetchAdminEmail();
+  }, []);
 
   useEffect(() => {
     const initialize = async () => {
@@ -38,7 +58,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
           if (session?.user) {
             // Check if the user is an admin
-            setIsAdmin(session.user.email === ADMIN_EMAIL);
+            setIsAdmin(session.user.email === adminEmail);
           } else {
             setIsAdmin(false);
           }
@@ -52,7 +72,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (data.session?.user) {
         // Check if the user is an admin
-        setIsAdmin(data.session.user.email === ADMIN_EMAIL);
+        setIsAdmin(data.session.user.email === adminEmail);
       }
       
       setIsLoading(false);
@@ -63,7 +83,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
     
     initialize();
-  }, []);
+  }, [adminEmail]);
   
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -109,18 +129,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
   
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        }
-      },
-    });
-    
-    if (error) {
+    // Fetch Google Client ID from database if available
+    try {
+      const { data, error } = await supabase
+        .from("site_config")
+        .select("value")
+        .eq("key", "google_client_id")
+        .single();
+      
+      const { error: authError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        },
+      });
+      
+      if (authError) {
+        throw authError;
+      }
+    } catch (error) {
+      console.error("Error during Google sign in:", error);
       throw error;
     }
   };

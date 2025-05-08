@@ -19,7 +19,7 @@ const SalesByCategory = () => {
   useEffect(() => {
     const fetchCategorySales = async () => {
       try {
-        // Get all products grouped by category
+        // Get products grouped by category with counts
         const { data: productsData, error: productsError } = await supabase
           .from('products')
           .select('category');
@@ -35,9 +35,27 @@ const SalesByCategory = () => {
             categoryCounts[category] = (categoryCounts[category] || 0) + 1;
           });
           
+          // Get category names instead of slugs
+          const { data: categoryData, error: categoryError } = await supabase
+            .from('categories')
+            .select('slug, name');
+          
+          if (categoryError) throw categoryError;
+
+          // Map category slugs to names
+          const categoryMap: Record<string, string> = {};
+          if (categoryData) {
+            categoryData.forEach((cat: any) => {
+              categoryMap[cat.slug] = cat.name;
+            });
+          }
+          
           // Transform to proper format for chart
           const formattedData = Object.entries(categoryCounts)
-            .map(([name, value]) => ({ name, value }))
+            .map(([slug, value]) => ({ 
+              name: categoryMap[slug] || slug,
+              value 
+            }))
             .sort((a, b) => b.value - a.value);
           
           setData(formattedData);
