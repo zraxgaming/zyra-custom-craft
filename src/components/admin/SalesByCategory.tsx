@@ -19,59 +19,35 @@ const SalesByCategory = () => {
   useEffect(() => {
     const fetchCategorySales = async () => {
       try {
-        // First try to get data from orders
-        const { data: orderItems, error: orderError } = await supabase
-          .from('order_items')
-          .select(`
-            quantity,
-            product:product_id (
-              category
-            )
-          `);
+        // Get all products grouped by category
+        const { data: productsData, error: productsError } = await supabase
+          .from('products')
+          .select('category');
         
-        if (orderError) throw orderError;
+        if (productsError) throw productsError;
         
-        // Process data to get sales by category
+        // Process data to get counts by category
         const categoryCounts: Record<string, number> = {};
         
-        if (orderItems && orderItems.length > 0) {
-          orderItems.forEach(item => {
-            const category = item.product?.category;
-            if (category) {
-              if (categoryCounts[category]) {
-                categoryCounts[category] += item.quantity;
-              } else {
-                categoryCounts[category] = item.quantity;
-              }
-            }
+        if (productsData && productsData.length > 0) {
+          productsData.forEach((item: any) => {
+            const category = item.category || 'Uncategorized';
+            categoryCounts[category] = (categoryCounts[category] || 0) + 1;
           });
+          
+          // Transform to proper format for chart
+          const formattedData = Object.entries(categoryCounts)
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value);
+          
+          setData(formattedData);
         } else {
-          // Fallback to products if no orders
-          const { data: productsData, error: productsError } = await supabase
-            .from('products')
-            .select('category');
-          
-          if (productsError) throw productsError;
-          
-          productsData.forEach(item => {
-            if (categoryCounts[item.category]) {
-              categoryCounts[item.category]++;
-            } else {
-              categoryCounts[item.category] = 1;
-            }
-          });
+          setData([]);
         }
-        
-        // Transform to proper format for chart
-        const formattedData = Object.entries(categoryCounts).map(([name, value]) => ({
-          name,
-          value
-        }));
-        
-        setData(formattedData);
       } catch (error: any) {
+        console.error("Error fetching category data:", error);
         toast({
-          title: "Error fetching sales data",
+          title: "Error fetching category data",
           description: error.message,
           variant: "destructive",
         });
@@ -82,15 +58,15 @@ const SalesByCategory = () => {
 
     fetchCategorySales();
     
-    // Set up real-time subscription for updates
+    // Set up real-time subscription for updates to products
     const channel = supabase
-      .channel('schema-db-changes')
+      .channel('product-changes')
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
-        table: 'order_items' 
+        table: 'products' 
       }, () => {
-        fetchCategorySales(); // Refresh data when orders change
+        fetchCategorySales(); // Refresh data when products change
       })
       .subscribe();
     
@@ -110,7 +86,7 @@ const SalesByCategory = () => {
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-gray-500">No sales data available</p>
+        <p className="text-gray-500">No product category data available</p>
       </div>
     );
   }
@@ -133,7 +109,7 @@ const SalesByCategory = () => {
             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
           ))}
         </Pie>
-        <Tooltip formatter={(value) => `${value} items`} />
+        <Tooltip formatter={(value) => `${value} products`} />
         <Legend />
       </PieChart>
     </ResponsiveContainer>

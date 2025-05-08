@@ -26,10 +26,27 @@ const TrafficAnalysis = () => {
 
   useEffect(() => {
     // In a real implementation, this would fetch from a page_views table
-    // For demo purposes, we're creating mock data
     const fetchTrafficData = async () => {
       try {
-        // Mock data for demonstration
+        // Check if we have a page_views table
+        const { data: hasPageViewsTable, error: tableCheckError } = await supabase
+          .from('information_schema.tables')
+          .select('table_name')
+          .eq('table_name', 'page_views')
+          .eq('table_schema', 'public')
+          .single();
+        
+        if (tableCheckError) {
+          console.log("Error checking for page_views table:", tableCheckError);
+        }
+        
+        // If we have real page_views data, use it - otherwise use sample data
+        if (hasPageViewsTable) {
+          // TODO: Query real page_views data when table exists
+          console.log("Page views table exists, would query real data here");
+        }
+        
+        // Using mock data for demonstration
         const mockTrafficData: TrafficData[] = [
           { name: 'Mon', pageViews: 150, uniqueVisitors: 90 },
           { name: 'Tue', pageViews: 230, uniqueVisitors: 120 },
@@ -75,9 +92,11 @@ const TrafficAnalysis = () => {
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader>
-          <CardTitle>Website Traffic</CardTitle>
-          <CardDescription>Daily page views and unique visitors over the last week</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Website Traffic</CardTitle>
+            <CardDescription>Sample data - Daily page views and unique visitors</CardDescription>
+          </div>
         </CardHeader>
         <CardContent className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
@@ -114,9 +133,11 @@ const TrafficAnalysis = () => {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Most Visited Pages</CardTitle>
-          <CardDescription>Views by page path</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Most Visited Pages</CardTitle>
+            <CardDescription>Sample data - Views by page path</CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">

@@ -9,6 +9,13 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import { Plus, Search, Edit, Trash, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import ProductForm from "@/components/admin/ProductForm";
 
 const Products = () => {
   const { isAdmin, isLoading } = useAuth();
@@ -16,6 +23,7 @@ const Products = () => {
   const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isProductsLoading, setIsProductsLoading] = useState(true);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Redirect if not admin
@@ -26,32 +34,49 @@ const Products = () => {
   }, [isAdmin, isLoading, navigate]);
 
   // Fetch products
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setIsProductsLoading(true);
-        const { data, error } = await supabase
-          .from("products")
-          .select("*")
-          .order("created_at", { ascending: false });
+  const fetchProducts = async () => {
+    try {
+      setIsProductsLoading(true);
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("created_at", { ascending: false });
           
-        if (error) throw error;
-        
-        console.log("Products fetched:", data);
-        setProducts(data || []);
-      } catch (error: any) {
-        console.error("Error fetching products:", error);
-        toast({
-          title: "Error fetching products",
-          description: error.message,
-          variant: "destructive",
-        });
-      } finally {
-        setIsProductsLoading(false);
-      }
-    };
-    
+      if (error) throw error;
+      
+      console.log("Products fetched:", data);
+      setProducts(data || []);
+    } catch (error: any) {
+      console.error("Error fetching products:", error);
+      toast({
+        title: "Error fetching products",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsProductsLoading(false);
+    }
+  };
+  
+  // Initial fetch
+  useEffect(() => {
     fetchProducts();
+    
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('public:products')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'products' 
+      }, () => {
+        fetchProducts(); // Refresh data when products change
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [toast]);
 
   const deleteProduct = async (id: string) => {
@@ -65,7 +90,7 @@ const Products = () => {
         
       if (error) throw error;
       
-      setProducts(products.filter((product: any) => product.id !== id));
+      // Products will refresh via real-time subscription
       toast({
         title: "Product deleted",
         description: "The product has been deleted successfully.",
@@ -97,7 +122,7 @@ const Products = () => {
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Products</h1>
-          <Button onClick={() => navigate("/admin/products/new")}>
+          <Button onClick={() => setIsAddDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" /> Add Product
           </Button>
         </div>
@@ -122,7 +147,7 @@ const Products = () => {
             <p className="text-muted-foreground mb-6">
               {searchTerm ? "Try a different search term or" : "Start by"} adding a new product.
             </p>
-            <Button onClick={() => navigate("/admin/products/new")}>
+            <Button onClick={() => setIsAddDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" /> Add Product
             </Button>
           </div>
@@ -201,6 +226,20 @@ const Products = () => {
           </div>
         )}
       </div>
+      
+      {/* Add Product Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="sm:max-w-[800px]">
+          <DialogHeader>
+            <DialogTitle>Add New Product</DialogTitle>
+          </DialogHeader>
+          <ProductForm 
+            onSuccess={() => {
+              setIsAddDialogOpen(false);
+            }} 
+          />
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };

@@ -9,6 +9,13 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import { Plus, Search, Edit, Trash, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import CategoryForm from "@/components/admin/CategoryForm";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const Categories = () => {
   const { isAdmin, isLoading } = useAuth();
@@ -16,6 +23,7 @@ const Categories = () => {
   const [categories, setCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Redirect if not admin
@@ -31,28 +39,49 @@ const Categories = () => {
   }, [isAdmin, isLoading, navigate, toast]);
 
   // Fetch categories
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("categories")
-          .select("*")
-          .order("name", { ascending: true });
+  const fetchCategories = async () => {
+    try {
+      setIsCategoriesLoading(true);
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .order("name", { ascending: true });
           
-        if (error) throw error;
-        setCategories(data || []);
-      } catch (error: any) {
-        toast({
-          title: "Error fetching categories",
-          description: error.message,
-          variant: "destructive",
-        });
-      } finally {
-        setIsCategoriesLoading(false);
-      }
-    };
-    
+      if (error) throw error;
+      
+      console.log("Categories fetched:", data);
+      setCategories(data || []);
+    } catch (error: any) {
+      console.error("Error fetching categories:", error);
+      toast({
+        title: "Error fetching categories",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsCategoriesLoading(false);
+    }
+  };
+  
+  // Initial fetch
+  useEffect(() => {
     fetchCategories();
+    
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('public:categories')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'categories' 
+      }, () => {
+        fetchCategories(); // Refresh data when categories change
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [toast]);
 
   const deleteCategory = async (id: string) => {
@@ -66,7 +95,7 @@ const Categories = () => {
         
       if (error) throw error;
       
-      setCategories(categories.filter((category: any) => category.id !== id));
+      // Categories will refresh via real-time subscription
       toast({
         title: "Category deleted",
         description: "The category has been deleted successfully.",
@@ -81,7 +110,7 @@ const Categories = () => {
   };
 
   const filteredCategories = categories.filter((category: any) => 
-    category.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    category.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
     (category.description && category.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
@@ -98,7 +127,7 @@ const Categories = () => {
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Categories</h1>
-          <Button onClick={() => navigate("/admin/categories/new")}>
+          <Button onClick={() => setIsAddDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" /> Add Category
           </Button>
         </div>
@@ -123,7 +152,7 @@ const Categories = () => {
             <p className="text-muted-foreground mb-6">
               {searchTerm ? "Try a different search term or" : "Start by"} adding a new category.
             </p>
-            <Button onClick={() => navigate("/admin/categories/new")}>
+            <Button onClick={() => setIsAddDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" /> Add Category
             </Button>
           </div>
@@ -192,6 +221,21 @@ const Categories = () => {
           </div>
         )}
       </div>
+      
+      {/* Add Category Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle>Add Category</DialogTitle>
+          </DialogHeader>
+          <CategoryForm 
+            onSuccess={() => {
+              setIsAddDialogOpen(false);
+              // Categories will refresh via real-time subscription
+            }} 
+          />
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };

@@ -19,29 +19,36 @@ const ProductClicksAnalysis = () => {
 
   useEffect(() => {
     // In a real implementation, this would fetch from a product_clicks table
-    // For demo purposes, we're creating mock data
     const fetchProductClicks = async () => {
       try {
-        // Get some actual products from the database for more realistic mock data
+        // Get real products from the database
         const { data: productsData, error } = await supabase
           .from('products')
           .select('id, name')
+          .order('created_at', { ascending: false })
           .limit(5);
         
         if (error) throw error;
         
-        // Create mock click data for these products
-        const mockClicks: ProductClick[] = productsData.map((product, index) => ({
-          product_id: product.id,
-          product_name: product.name,
-          clicks: Math.floor(Math.random() * 500) + 100, // Random clicks between 100-600
-        }));
-        
-        // Sort by clicks in descending order
-        mockClicks.sort((a, b) => b.clicks - a.clicks);
-        
-        setProductClicks(mockClicks);
+        if (productsData && productsData.length > 0) {
+          // Create analytics data for these products
+          // In a real app this would come from actual tracked clicks
+          const mockClicks: ProductClick[] = productsData.map((product: any) => ({
+            product_id: product.id,
+            product_name: product.name || 'Unnamed Product',
+            clicks: Math.floor(Math.random() * 500) + 100, // Random clicks between 100-600
+          }));
+          
+          // Sort by clicks in descending order
+          mockClicks.sort((a, b) => b.clicks - a.clicks);
+          
+          setProductClicks(mockClicks);
+        } else {
+          // No products found
+          setProductClicks([]);
+        }
       } catch (error: any) {
+        console.error("Error fetching product clicks data:", error);
         toast({
           title: "Error fetching product clicks data",
           description: error.message,
@@ -63,6 +70,23 @@ const ProductClicksAnalysis = () => {
     );
   }
 
+  // Handle case where no products exist yet
+  if (productClicks.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Product Clicks Analysis</CardTitle>
+          <CardDescription>No products available for analysis</CardDescription>
+        </CardHeader>
+        <CardContent className="text-center py-12">
+          <p className="text-gray-500">
+            Add products to your store to see click analytics here.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const chartData = productClicks.map(item => ({
     name: item.product_name.length > 15 ? item.product_name.substring(0, 15) + '...' : item.product_name,
     clicks: item.clicks
@@ -70,9 +94,11 @@ const ProductClicksAnalysis = () => {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Product Clicks Analysis</CardTitle>
-        <CardDescription>Most viewed products by click count</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Product Clicks Analysis</CardTitle>
+          <CardDescription>Sample data based on your products</CardDescription>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="h-[300px] mb-6">
@@ -99,7 +125,7 @@ const ProductClicksAnalysis = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Product Name</TableHead>
-              <TableHead className="text-right">Click Count</TableHead>
+              <TableHead className="text-right">Sample Click Count</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
