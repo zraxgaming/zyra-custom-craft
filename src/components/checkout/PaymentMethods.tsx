@@ -36,6 +36,7 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
             forceReRender={[total]}
             createOrder={(data, actions) => {
               return actions.order.create({
+                intent: "CAPTURE", // Add this line to fix the TypeScript error
                 purchase_units: [
                   {
                     amount: {

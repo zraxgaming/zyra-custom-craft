@@ -29,14 +29,18 @@ const Products = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
+        setIsProductsLoading(true);
         const { data, error } = await supabase
           .from("products")
           .select("*")
           .order("created_at", { ascending: false });
           
         if (error) throw error;
+        
+        console.log("Products fetched:", data);
         setProducts(data || []);
       } catch (error: any) {
+        console.error("Error fetching products:", error);
         toast({
           title: "Error fetching products",
           description: error.message,
@@ -76,8 +80,8 @@ const Products = () => {
   };
 
   const filteredProducts = products.filter((product: any) => 
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    product.category.toLowerCase().includes(searchTerm.toLowerCase())
+    product.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    product.category?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (isLoading) {
