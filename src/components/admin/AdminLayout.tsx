@@ -37,6 +37,7 @@ const navigation: NavItem[] = [
   { name: "Products", href: "/admin/products", icon: <Package className="h-5 w-5" /> },
   { name: "Categories", href: "/admin/categories", icon: <List className="h-5 w-5" /> },
   { name: "Orders", href: "/admin/orders", icon: <ShoppingCart className="h-5 w-5" /> },
+  { name: "Customers", href: "/admin/customers", icon: <Users className="h-5 w-5" /> },
   { name: "Coupons", href: "/admin/coupons", icon: <Tag className="h-5 w-5" /> },
   { name: "Promotions", href: "/admin/promotions", icon: <Tag className="h-5 w-5" /> },
   { name: "Contact", href: "/admin/contact", icon: <MessageSquare className="h-5 w-5" /> },
@@ -129,7 +130,7 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 key={item.name}
                 to={item.href}
                 className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${
-                  pathname === item.href
+                  pathname === item.href || pathname.startsWith(item.href + "/")
                     ? "bg-zyra-purple text-white"
                     : "text-gray-600 hover:bg-gray-100"
                 }`}

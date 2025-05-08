@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, CreditCard, Truck } from "lucide-react";
+import { ArrowLeft, Truck } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useCart } from "@/components/cart/CartProvider";
@@ -30,7 +30,6 @@ interface CheckoutFormValues {
   country: string;
   sameShipping: boolean;
   deliveryType: "standard" | "express";
-  paymentMethod: "credit_card" | "paypal";
 }
 
 const Checkout = () => {
@@ -51,7 +50,6 @@ const Checkout = () => {
     country: "United States",
     sameShipping: true,
     deliveryType: "standard",
-    paymentMethod: "credit_card",
   });
   
   // Additional state
@@ -250,7 +248,7 @@ const Checkout = () => {
           total_amount: total,
           status: "pending",
           payment_status: paymentDetails ? "paid" : "pending",
-          payment_method: formValues.paymentMethod,
+          payment_method: "paypal",
           delivery_type: formValues.deliveryType,
           shipping_address: shippingAddress as any
         })
@@ -340,17 +338,6 @@ const Checkout = () => {
     }
   };
   
-  // Handle form submission (for credit card)
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // For credit card, just place the order
-    // In a real app, this would integrate with a payment processor
-    if (formValues.paymentMethod === "credit_card") {
-      placeOrder();
-    }
-  };
-  
   // PayPal approval handler
   const onPayPalApprove = async (data: any) => {
     try {
@@ -405,7 +392,7 @@ const Checkout = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Checkout form */}
           <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit}>
+            <form>
               {/* Shipping Information */}
               <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
                 <h2 className="text-xl font-medium mb-6 flex items-center">
@@ -429,18 +416,10 @@ const Checkout = () => {
               
               {/* Payment Information */}
               <div className="bg-white p-6 rounded-lg shadow-sm">
-                <h2 className="text-xl font-medium mb-6 flex items-center">
-                  <CreditCard className="h-5 w-5 mr-2" />
-                  Payment Method
-                </h2>
-                
                 <PaymentMethods
-                  selectedMethod={formValues.paymentMethod}
-                  onMethodChange={(value) => handleInputChange("paymentMethod", value)}
                   onPayPalApprove={onPayPalApprove}
                   isProcessing={isProcessing}
                   total={total}
-                  onCompleteOrder={() => placeOrder()}
                 />
               </div>
             </form>
