@@ -1,135 +1,165 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import AdminLayout from "@/components/admin/AdminLayout";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import {
   Card,
   CardContent,
+  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useAuth } from "@/hooks/use-auth";
-import AdminLayout from "@/components/admin/AdminLayout";
-import { ArrowLeft, Package, Truck, CreditCard, Mail } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { OrderDetail as OrderDetailType, ShippingAddress } from "@/types/order";
+import { ArrowLeft, Copy, ExternalLink, ChevronDown, Mail } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ShippingAddress, OrderItem } from "@/types/order";
 
-const OrderDetail = () => {
+interface OrderDetailProps {}
+
+const OrderDetail: React.FC<OrderDetailProps> = () => {
   const { id } = useParams<{ id: string }>();
-  const { isAdmin, isLoading } = useAuth();
   const navigate = useNavigate();
-  const [order, setOrder] = useState<OrderDetailType | null>(null);
-  const [isOrderLoading, setIsOrderLoading] = useState(true);
   const { toast } = useToast();
-
-  // Redirect if not admin
+  
+  const [order, setOrder] = useState<any | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  
+  // Fetch order data
   useEffect(() => {
-    if (!isLoading && !isAdmin) {
-      navigate("/");
-      toast({
-        title: "Access denied",
-        description: "You don't have permission to access this page.",
-        variant: "destructive",
-      });
-    }
-  }, [isAdmin, isLoading, navigate, toast]);
-
-  // Fetch order details
-  useEffect(() => {
-    const fetchOrderDetails = async () => {
-      if (!id) return;
-      
+    const fetchOrder = async () => {
       try {
-        // First get the order details
-        const { data: orderData, error: orderError } = await supabase
+        const { data, error } = await supabase
           .from("orders")
-          .select("*")
+          .select(`
+            *,
+            profiles:user_id (
+              display_name,
+              email:id
+            ),
+            order_items (
+              id, 
+              quantity, 
+              price,
+              customization,
+              product:product_id (
+                name,
+                images
+              )
+            )
+          `)
           .eq("id", id)
           .single();
-          
-        if (orderError) throw orderError;
+
+        if (error) throw error;
         
-        // Get the order items
-        const { data: orderItems, error: itemsError } = await supabase
-          .from("order_items")
-          .select(`
-            id,
-            quantity,
-            price,
-            product:product_id (name, images),
-            customization
-          `)
-          .eq("order_id", id);
-          
-        if (itemsError) throw itemsError;
-        
-        // Get user profile if exists
-        let profileData = null;
-        if (orderData.user_id) {
-          const { data: profile, error: profileError } = await supabase
-            .from("profiles")
-            .select("display_name, email")
-            .eq("id", orderData.user_id)
-            .single();
-            
-          if (!profileError) {
-            profileData = profile;
-          }
-        }
-        
-        // Fix type issue - convert shipping_address to ShippingAddress type
-        let typedShippingAddress: ShippingAddress | null = null;
-        
-        if (orderData.shipping_address) {
-          const address = orderData.shipping_address as any;
-          typedShippingAddress = {
-            street: address.street || "",
-            city: address.city || "",
-            state: address.state || "",
-            zipCode: address.zipCode || "",
-            country: address.country || "",
-            name: address.name || "",
-            phone: address.phone || undefined
-          };
-        }
-        
-        // Cast to our OrderDetail type
-        const typedOrder: OrderDetailType = {
-          ...orderData,
-          shipping_address: typedShippingAddress,
-          order_items: orderItems || [],
-          profiles: profileData
-        };
-        
-        setOrder(typedOrder);
+        // Transform the data to match the types we need
+        const orderItems: OrderItem[] = data.order_items.map((item: any) => ({
+          id: item.id,
+          quantity: item.quantity,
+          price: item.price,
+          product: {
+            name: item.product.name,
+            images: item.product.images,
+          },
+          customization: item.customization as Record<string, any> | null
+        }));
+
+        setOrder({
+          ...data,
+          order_items: orderItems
+        });
       } catch (error: any) {
+        console.error("Error fetching order:", error);
         toast({
-          title: "Error fetching order",
+          title: "Error",
           description: error.message,
           variant: "destructive",
         });
       } finally {
-        setIsOrderLoading(false);
+        setIsLoading(false);
       }
     };
     
-    fetchOrderDetails();
+    if (id) {
+      fetchOrder();
+    }
   }, [id, toast]);
-
-  // Function to send status update email
-  const sendStatusUpdateEmail = async (status: string, email: string) => {
+  
+  // Update order status
+  const updateOrder = async (field: string, value: string) => {
+    setIsUpdating(true);
+    
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-order-email`, {
+      const { error } = await supabase
+        .from("orders")
+        .update({ [field]: value })
+        .eq("id", id);
+        
+      if (error) throw error;
+      
+      setOrder({
+        ...order,
+        [field]: value
+      });
+      
+      toast({
+        title: "Order updated",
+        description: `Order ${field.replace('_', ' ')} updated to ${value}`,
+      });
+      
+      // Send status update email
+      if (field === "status") {
+        try {
+          await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-order-email`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+            },
+            body: JSON.stringify({
+              order_id: id,
+              customer_email: order.profiles?.email,
+              status: value,
+              customer_name: order.profiles?.display_name
+            })
+          });
+        } catch (error: any) {
+          console.error("Error sending update email:", error);
+        }
+      }
+      
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+  
+  // Copy order ID to clipboard
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied",
+      description: "Order ID copied to clipboard",
+    });
+  };
+  
+  // Send manual email
+  const sendManualEmail = async () => {
+    try {
+      await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-order-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -137,316 +167,148 @@ const OrderDetail = () => {
         },
         body: JSON.stringify({
           order_id: id,
-          customer_email: email,
-          status: status,
-          customer_name: order?.profiles?.display_name || 'Customer'
+          customer_email: order.profiles?.email,
+          status: order.status,
+          customer_name: order.profiles?.display_name
         })
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to send email notification');
-      }
-      
       toast({
-        title: "Email notification sent",
-        description: `Status update notification sent to customer.`,
-      });
-    } catch (error) {
-      console.error("Failed to send status update email:", error);
-      toast({
-        title: "Email notification failed",
-        description: "Could not send status update email.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const updateOrderStatus = async (status: string) => {
-    if (!order) return;
-    
-    try {
-      const { error } = await supabase
-        .from("orders")
-        .update({ status })
-        .eq("id", order.id);
-        
-      if (error) throw error;
-      
-      setOrder(prev => prev ? { ...prev, status } : null);
-      
-      toast({
-        title: "Order updated",
-        description: `Order status changed to ${status}`,
-      });
-      
-      // Send email notification about status update
-      if (order.profiles?.email) {
-        sendStatusUpdateEmail(status, order.profiles.email);
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error updating order",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const updatePaymentStatus = async (payment_status: string) => {
-    if (!order) return;
-    
-    try {
-      const { error } = await supabase
-        .from("orders")
-        .update({ payment_status })
-        .eq("id", order.id);
-        
-      if (error) throw error;
-      
-      setOrder(prev => prev ? { ...prev, payment_status } : null);
-      
-      toast({
-        title: "Payment updated",
-        description: `Payment status changed to ${payment_status}`,
+        title: "Email sent",
+        description: "Order confirmation email sent successfully",
       });
     } catch (error: any) {
       toast({
-        title: "Error updating payment",
-        description: error.message,
+        title: "Error",
+        description: "Failed to send email",
         variant: "destructive",
       });
     }
   };
-
-  if (isLoading || isOrderLoading) {
+  
+  if (isLoading) {
     return (
       <AdminLayout>
-        <div className="flex justify-center items-center h-[calc(100vh-64px)]">
+        <div className="p-6 flex justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
         </div>
       </AdminLayout>
     );
   }
-
+  
   if (!order) {
     return (
       <AdminLayout>
         <div className="p-6">
-          <Button 
-            variant="outline" 
-            className="mb-6"
-            onClick={() => navigate("/admin/orders")}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Orders
-          </Button>
-          
-          <div className="bg-muted rounded-lg p-12 text-center">
-            <h3 className="text-xl font-medium mb-2">Order not found</h3>
-            <p className="text-muted-foreground">
-              The order you're looking for does not exist or has been removed.
-            </p>
-            <Button 
-              className="mt-4"
-              onClick={() => navigate("/admin/orders")}
-            >
-              View All Orders
+          <div className="mb-6">
+            <Button variant="outline" onClick={() => navigate("/admin/orders")}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Orders
             </Button>
           </div>
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <p>Order not found</p>
+              <Button 
+                className="mt-4" 
+                onClick={() => navigate("/admin/orders")}
+              >
+                View All Orders
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </AdminLayout>
     );
   }
-
+  
+  // Calculate order total
+  const orderTotal = order.order_items.reduce((acc: number, item: any) => {
+    return acc + (item.price * item.quantity);
+  }, 0);
+  
+  const shippingAddress = order.shipping_address as ShippingAddress;
+  
   return (
     <AdminLayout>
       <div className="p-6">
-        <Button 
-          variant="outline" 
-          className="mb-6"
-          onClick={() => navigate("/admin/orders")}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Orders
-        </Button>
+        <div className="mb-6">
+          <Button variant="outline" onClick={() => navigate("/admin/orders")}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Orders
+          </Button>
+        </div>
         
         <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">Order #{order?.id.substring(0, 8)}</h1>
-            <p className="text-gray-500">
-              Placed on {order ? format(new Date(order.created_at), "MMMM d, yyyy 'at' h:mm a") : ''}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            {order && (
-              <Select
-                value={order.status}
-                onValueChange={updateOrderStatus}
-              >
-                <SelectTrigger className="w-40">
-                  <span className={`inline-block w-2 h-2 rounded-full mr-2 
-                    ${order.status === 'pending' ? 'bg-orange-500' : 
-                      order.status === 'processing' ? 'bg-blue-500' : 
-                      order.status === 'shipped' ? 'bg-yellow-500' : 
-                      order.status === 'delivered' ? 'bg-green-500' : 
-                      'bg-red-500'}`}></span>
-                  <SelectValue>{order.status}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="processing">Processing</SelectItem>
-                  <SelectItem value="shipped">Shipped</SelectItem>
-                  <SelectItem value="delivered">Delivered</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-            {order?.profiles?.email && (
+          <h1 className="text-3xl font-bold">
+            Order Details
+          </h1>
+          <div className="flex items-center gap-2">
+            <div className="text-gray-500 text-sm">
+              #{order.id.substring(0, 8)}
               <Button 
-                variant="outline" 
-                className="flex items-center gap-2"
-                onClick={() => sendStatusUpdateEmail(order.status, order.profiles?.email || "")}
+                variant="ghost" 
+                size="icon" 
+                className="h-5 w-5 ml-1" 
+                onClick={() => copyToClipboard(order.id)}
               >
-                <Mail className="h-4 w-4" />
-                Send Update
+                <Copy className="h-3 w-3" />
               </Button>
-            )}
+            </div>
+            <Badge className={
+              order.status === "delivered" ? "bg-green-500" :
+              order.status === "shipped" ? "bg-blue-500" :
+              order.status === "processing" ? "bg-yellow-500" :
+              order.status === "cancelled" ? "bg-red-500" :
+              "bg-gray-500"
+            }>
+              {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+            </Badge>
           </div>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center">
-                <CreditCard className="h-5 w-5 mr-2" />
-                Payment Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Payment Method</p>
-                  <p className="capitalize">{order.payment_method.replace('_', ' ')}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Payment Status</p>
-                  <Select
-                    value={order.payment_status}
-                    onValueChange={(status) => {
-                      try {
-                        supabase
-                          .from("orders")
-                          .update({ payment_status: status })
-                          .eq("id", order.id)
-                          .then(({ error }) => {
-                            if (error) throw error;
-                            setOrder(prev => prev ? { ...prev, payment_status: status } : null);
-                            toast({
-                              title: "Payment updated",
-                              description: `Payment status changed to ${status}`,
-                            });
-                          });
-                      } catch (error: any) {
-                        toast({
-                          title: "Error updating payment",
-                          description: error.message,
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-full mt-1">
-                      <span className={`inline-block w-2 h-2 rounded-full mr-2 
-                        ${order.payment_status === 'paid' ? 'bg-green-500' : 
-                          order.payment_status === 'pending' ? 'bg-orange-500' : 'bg-red-500'}`}></span>
-                      <SelectValue>{order.payment_status}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="paid">Paid</SelectItem>
-                      <SelectItem value="failed">Failed</SelectItem>
-                      <SelectItem value="refunded">Refunded</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Amount</p>
-                  <p className="text-xl font-bold">${order.total_amount.toFixed(2)}</p>
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Order Summary */}
+          <Card className="col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Order Summary</CardTitle>
+                <CardDescription>
+                  Placed on {format(new Date(order.created_at), "MMMM d, yyyy 'at' h:mm a")}
+                </CardDescription>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center">
-                <Package className="h-5 w-5 mr-2" />
-                Customer Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {order.profiles ? (
-                  <>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Name</p>
-                      <p>{order.profiles.display_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Email</p>
-                      <p>{order.profiles.email}</p>
-                    </div>
-                  </>
-                ) : (
-                  <div>
-                    <Badge variant="outline">Guest Checkout</Badge>
-                  </div>
-                )}
-                {order.shipping_address?.phone && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Phone</p>
-                    <p>{order.shipping_address.phone}</p>
-                  </div>
-                )}
+              <div className="flex space-x-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="flex items-center" disabled={isUpdating}>
+                      Update Status
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => updateOrder("status", "pending")}>
+                      Pending
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => updateOrder("status", "processing")}>
+                      Processing
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => updateOrder("status", "shipped")}>
+                      Shipped
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => updateOrder("status", "delivered")}>
+                      Delivered
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => updateOrder("status", "cancelled")}>
+                      Cancelled
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                
+                <Button variant="ghost" onClick={sendManualEmail} disabled={isUpdating}>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send Email
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center">
-                <Truck className="h-5 w-5 mr-2" />
-                Shipping Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {order.shipping_address ? (
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Delivery Type</p>
-                    <p className="capitalize">{order.delivery_type.replace('_', ' ')}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Shipping Address</p>
-                    <p>{order.shipping_address.name}</p>
-                    <p>{order.shipping_address.street}</p>
-                    <p>
-                      {order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.zipCode}
-                    </p>
-                    <p>{order.shipping_address.country}</p>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-gray-500">No shipping information provided.</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-        
-        {order && (
-          <Card className="mb-6">
-            <CardHeader className="pb-2">
-              <CardTitle>Order Items</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
@@ -455,29 +317,31 @@ const OrderDetail = () => {
                     <TableHead>Product</TableHead>
                     <TableHead>Quantity</TableHead>
                     <TableHead>Price</TableHead>
-                    <TableHead>Subtotal</TableHead>
+                    <TableHead>Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {order.order_items.map((item) => (
+                  {order.order_items.map((item: OrderItem) => (
                     <TableRow key={item.id}>
                       <TableCell>
-                        <div className="flex items-center">
-                          <div className="h-12 w-12 rounded overflow-hidden bg-gray-100 mr-3">
-                            <img 
-                              src={item.product.images?.[0] || "/placeholder.svg"} 
-                              alt={item.product.name}
-                              className="h-full w-full object-cover"
-                            />
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden">
+                            {item.product.images && item.product.images.length > 0 ? (
+                              <img 
+                                src={item.product.images[0]} 
+                                alt={item.product.name} 
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
+                                No img
+                              </div>
+                            )}
                           </div>
                           <div>
                             <p className="font-medium">{item.product.name}</p>
                             {item.customization && (
-                              <div className="text-xs text-gray-500">
-                                {Object.entries(item.customization).map(([key, value]) => (
-                                  <p key={key}>{key}: {String(value)}</p>
-                                ))}
-                              </div>
+                              <p className="text-xs text-gray-500">Customized</p>
                             )}
                           </div>
                         </div>
@@ -487,11 +351,105 @@ const OrderDetail = () => {
                       <TableCell>${(item.price * item.quantity).toFixed(2)}</TableCell>
                     </TableRow>
                   ))}
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-right font-medium">Subtotal</TableCell>
+                    <TableCell className="font-medium">${orderTotal.toFixed(2)}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-right font-medium">Shipping ({order.delivery_type})</TableCell>
+                    <TableCell className="font-medium">
+                      ${order.delivery_type === "express" ? "15.00" : "5.00"}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-right font-bold">Total</TableCell>
+                    <TableCell className="font-bold">${order.total_amount.toFixed(2)}</TableCell>
+                  </TableRow>
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
-        )}
+          
+          {/* Customer Info */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Customer Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="font-medium">
+                  {order.profiles?.display_name || "Guest Customer"}
+                </p>
+                <p className="text-gray-500">
+                  {order.profiles?.email || "No email provided"}
+                </p>
+                
+                <Separator className="my-4" />
+                
+                <div>
+                  <h4 className="font-medium mb-2">Shipping Address</h4>
+                  {shippingAddress ? (
+                    <div className="text-sm">
+                      <p>{shippingAddress.name}</p>
+                      <p>{shippingAddress.street}</p>
+                      <p>{shippingAddress.city}, {shippingAddress.state} {shippingAddress.zipCode}</p>
+                      <p>{shippingAddress.country}</p>
+                      {shippingAddress.phone && <p>Phone: {shippingAddress.phone}</p>}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">No shipping address provided</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Payment Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium">Payment Method</h4>
+                    <p>{order.payment_method === "credit_card" ? "Credit Card" : "PayPal"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium">Payment Status</h4>
+                    <div className="flex items-center mt-1">
+                      <Badge className={
+                        order.payment_status === "paid" ? "bg-green-500" :
+                        order.payment_status === "refunded" ? "bg-orange-500" :
+                        "bg-yellow-500"
+                      }>
+                        {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
+                      </Badge>
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-7 ml-2" disabled={isUpdating}>
+                            Change
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => updateOrder("payment_status", "pending")}>
+                            Pending
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => updateOrder("payment_status", "paid")}>
+                            Paid
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => updateOrder("payment_status", "refunded")}>
+                            Refunded
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </AdminLayout>
   );

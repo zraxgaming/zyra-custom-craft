@@ -265,7 +265,16 @@ const Promotions = () => {
         // Update existing promotion
         const { error } = await supabase
           .from("promotions")
-          .update(data)
+          .update({
+            title: data.title,
+            description: data.description,
+            image_url: data.image_url,
+            link: data.link,
+            active: data.active,
+            placement: data.placement,
+            start_date: data.start_date,
+            end_date: data.end_date
+          })
           .eq("id", currentPromotion.id);
           
         if (error) throw error;
@@ -282,7 +291,16 @@ const Promotions = () => {
         // Create new promotion
         const { data: newPromotion, error } = await supabase
           .from("promotions")
-          .insert(data)
+          .insert({
+            title: data.title,
+            description: data.description,
+            image_url: data.image_url,
+            link: data.link,
+            active: data.active,
+            placement: data.placement,
+            start_date: data.start_date,
+            end_date: data.end_date
+          })
           .select()
           .single();
           

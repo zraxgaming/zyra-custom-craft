@@ -98,13 +98,14 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
             {selectedMethod === "paypal" && (
               <div className="mt-4">
                 <PayPalScriptProvider options={{ 
-                  "client-id": import.meta.env.VITE_PAYPAL_CLIENT_ID || 'test',
+                  clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID || 'test',
                   currency: "USD" 
                 }}>
                   <PayPalButtons
                     style={{ layout: "horizontal" }}
                     createOrder={(_data, actions) => {
                       return actions.order.create({
+                        intent: "CAPTURE",
                         purchase_units: [
                           {
                             amount: {

@@ -100,7 +100,7 @@ const Checkout = () => {
         if (error) throw error;
         
         if (data.shipping_addresses && data.shipping_addresses.length > 0) {
-          setExistingAddresses(data.shipping_addresses as ShippingAddress[]);
+          setExistingAddresses(data.shipping_addresses as unknown as ShippingAddress[]);
         }
       } catch (error) {
         console.error("Error fetching addresses:", error);
