@@ -1,9 +1,7 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
 
 interface PaymentMethodsProps {
   onPayPalApprove: (data: any) => Promise<void>;
@@ -21,37 +19,23 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
   const { toast } = useToast();
 
   useEffect(() => {
-    // Fetch PayPal client ID from site_config table
-    const fetchPayPalConfig = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("site_config")
-          .select("value")
-          .eq("key", "paypal_client_id")
-          .single();
-
-        if (error) {
-          console.error("Error fetching PayPal client ID:", error);
-          // Fallback to environment variable
-          const envClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
-          setPaypalClientId(envClientId || "test");
-        } else if (data && data.value) {
-          setPaypalClientId(data.value);
-        } else {
-          // Fallback to environment variable
-          const envClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
-          setPaypalClientId(envClientId || "test");
-        }
-      } catch (error) {
-        console.error("Error:", error);
-        setPaypalClientId("test"); // Fallback client ID
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPayPalConfig();
-  }, []);
+    // Get the PayPal client ID from environment variables
+    const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+    
+    if (clientId) {
+      setPaypalClientId(clientId);
+      setLoading(false);
+    } else {
+      console.error("PayPal client ID not found in environment variables");
+      toast({
+        title: "Payment configuration error",
+        description: "PayPal client ID is missing. Please contact support.",
+        variant: "destructive",
+      });
+      setPaypalClientId("test"); // Use test as fallback
+      setLoading(false);
+    }
+  }, [toast]);
 
   if (loading) {
     return (

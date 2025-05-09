@@ -12,7 +12,6 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signOut: () => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -128,35 +127,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
   
-  const signInWithGoogle = async () => {
-    // Fetch Google Client ID from database if available
-    try {
-      const { data, error } = await supabase
-        .from("site_config")
-        .select("value")
-        .eq("key", "google_client_id")
-        .single();
-      
-      const { error: authError } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          }
-        },
-      });
-      
-      if (authError) {
-        throw authError;
-      }
-    } catch (error) {
-      console.error("Error during Google sign in:", error);
-      throw error;
-    }
-  };
-  
   const value = {
     user,
     session,
@@ -165,7 +135,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signIn,
     signUp,
     signOut,
-    signInWithGoogle,
   };
   
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
