@@ -1,43 +1,50 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
-import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, User, Shield, Key, LogOut } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 const ProfileSettings = () => {
-  const { user, signOut, isAdmin } = useAuth();
+  const { user, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [profile, setProfile] = useState<any>(null);
   
-  // Form states
+  const [profile, setProfile] = useState<any>(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Form values
   const [displayName, setDisplayName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [phone, setPhone] = useState("");
   
-  // Password states
+  // Password change form
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
+  
+  // Redirect if not logged in
   useEffect(() => {
-    if (!user) {
-      navigate("/auth");
-      return;
+    if (!isLoading && !user) {
+      navigate("/auth?redirect=/profile");
     }
-    
+  }, [user, isLoading, navigate]);
+
+  // Fetch profile data
+  useEffect(() => {
     const fetchProfile = async () => {
+      if (!user) return;
+      
       try {
         const { data, error } = await supabase
           .from("profiles")
@@ -49,46 +56,54 @@ const ProfileSettings = () => {
         
         setProfile(data);
         setDisplayName(data.display_name || "");
+        setAvatarUrl(data.avatar_url || "");
         setPhone(data.phone || "");
+        
       } catch (error: any) {
         console.error("Error fetching profile:", error);
         toast({
-          title: "Error",
-          description: "Could not load your profile information",
+          title: "Error fetching profile",
+          description: error.message,
           variant: "destructive",
         });
       } finally {
-        setIsLoading(false);
+        setIsProfileLoading(false);
       }
     };
     
-    fetchProfile();
-  }, [user, navigate, toast]);
+    if (user) {
+      fetchProfile();
+    }
+  }, [user, toast]);
 
-  const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Update profile
+  const handleUpdateProfile = async () => {
+    if (!user) return;
+    
     setIsSaving(true);
     
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({ 
+        .update({
           display_name: displayName,
+          avatar_url: avatarUrl,
           phone: phone,
+          updated_at: new Date()
         })
-        .eq("id", user?.id);
+        .eq("id", user.id);
         
       if (error) throw error;
       
       toast({
         title: "Profile updated",
-        description: "Your profile information has been saved successfully",
+        description: "Your profile has been updated successfully.",
       });
     } catch (error: any) {
       console.error("Error updating profile:", error);
       toast({
-        title: "Error",
-        description: "Could not update your profile information",
+        title: "Error updating profile",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
@@ -96,13 +111,23 @@ const ProfileSettings = () => {
     }
   };
 
-  const handleUpdatePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Update password
+  const handleUpdatePassword = async () => {
+    if (!user) return;
     
     if (newPassword !== confirmPassword) {
       toast({
         title: "Passwords don't match",
-        description: "Your new password and confirmation password do not match",
+        description: "Please ensure your new password and confirmation match.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters long.",
         variant: "destructive",
       });
       return;
@@ -112,25 +137,24 @@ const ProfileSettings = () => {
     
     try {
       const { error } = await supabase.auth.updateUser({
-        password: newPassword,
+        password: newPassword
       });
       
       if (error) throw error;
       
-      // Clear password fields
+      // Clear form
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
       
       toast({
         title: "Password updated",
-        description: "Your password has been changed successfully",
+        description: "Your password has been changed successfully.",
       });
     } catch (error: any) {
-      console.error("Error updating password:", error);
       toast({
-        title: "Error",
-        description: error.message || "Could not update your password",
+        title: "Error updating password",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
@@ -138,176 +162,217 @@ const ProfileSettings = () => {
     }
   };
 
-  const handleLogout = async () => {
-    await signOut();
-    navigate("/");
-  };
-
-  if (isLoading) {
+  if (isLoading || (user && isProfileLoading)) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <main className="flex-grow flex items-center justify-center">
-          <div className="flex flex-col items-center">
-            <Loader2 className="h-10 w-10 animate-spin text-zyra-purple" />
-            <p className="mt-4 text-lg">Loading your profile...</p>
-          </div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
         </main>
         <Footer />
       </div>
     );
   }
 
+  if (!user) {
+    return null; // Will redirect in useEffect
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="flex-grow py-12 bg-zyra-soft-gray">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-            <div className="md:col-span-3">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex flex-col items-center">
-                    <Avatar className="h-24 w-24 mb-4">
-                      <AvatarImage src={profile?.avatar_url || ""} />
-                      <AvatarFallback>{displayName?.substring(0, 2).toUpperCase() || "U"}</AvatarFallback>
-                    </Avatar>
-                    <h2 className="text-xl font-medium">{displayName || "User"}</h2>
-                    <p className="text-sm text-muted-foreground">{user?.email}</p>
-                    {isAdmin && (
-                      <div className="mt-2 flex items-center">
-                        <Shield className="h-4 w-4 text-zyra-purple mr-1" />
-                        <span className="text-sm font-medium text-zyra-purple">Admin</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="mt-6 space-y-4">
-                    <Button 
-                      variant="outline" 
-                      className="w-full justify-start" 
-                      onClick={() => navigate("/orders")}
-                    >
-                      My Orders
-                    </Button>
-                    {isAdmin && (
-                      <Button 
-                        variant="outline"
-                        className="w-full justify-start"
-                        onClick={() => navigate("/admin")}
-                      >
-                        Admin Dashboard
-                      </Button>
-                    )}
-                    <Button 
-                      variant="outline"
-                      className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={handleLogout}
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Sign Out
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+      <main className="flex-grow container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-3xl font-bold mb-6">Account Settings</h1>
+          
+          <Tabs defaultValue="profile" className="w-full">
+            <TabsList className="mb-6">
+              <TabsTrigger value="profile">Profile</TabsTrigger>
+              <TabsTrigger value="security">Security</TabsTrigger>
+              <TabsTrigger value="addresses">Addresses</TabsTrigger>
+              <TabsTrigger value="orders">Order History</TabsTrigger>
+            </TabsList>
             
-            <div className="md:col-span-9">
+            <TabsContent value="profile">
               <Card>
                 <CardHeader>
-                  <CardTitle>Account Settings</CardTitle>
+                  <CardTitle>Profile Information</CardTitle>
+                  <CardDescription>Update your account profile information.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-center mb-6">
+                    <Avatar className="h-24 w-24">
+                      <AvatarImage src={avatarUrl || ""} />
+                      <AvatarFallback>{displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                  </div>
+                  
+                  <div className="grid gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={user.email || ""}
+                        disabled
+                        className="bg-gray-100"
+                      />
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="name">Display Name</Label>
+                      <Input
+                        id="name"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="avatar">Avatar URL</Label>
+                      <Input
+                        id="avatar"
+                        type="url"
+                        value={avatarUrl}
+                        onChange={(e) => setAvatarUrl(e.target.value)}
+                        placeholder="https://example.com/your-avatar.jpg"
+                      />
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="+1 (555) 123-4567"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    onClick={handleUpdateProfile}
+                    disabled={isSaving}
+                    className="ml-auto"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </Button>
+                </CardFooter>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="security">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Security</CardTitle>
+                  <CardDescription>Update your password.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="current-password">Current Password</Label>
+                      <Input
+                        id="current-password"
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="new-password">New Password</Label>
+                      <Input
+                        id="new-password"
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="confirm-password">Confirm New Password</Label>
+                      <Input
+                        id="confirm-password"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    onClick={handleUpdatePassword}
+                    disabled={isSaving}
+                    className="ml-auto"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      "Update Password"
+                    )}
+                  </Button>
+                </CardFooter>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="addresses">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Shipping Addresses</CardTitle>
+                  <CardDescription>Manage your shipping addresses.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Tabs defaultValue="profile">
-                    <TabsList className="mb-6">
-                      <TabsTrigger value="profile">Profile</TabsTrigger>
-                      <TabsTrigger value="security">Security</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="profile">
-                      <form onSubmit={handleUpdateProfile} className="space-y-6">
-                        <div className="space-y-2">
-                          <Label htmlFor="displayName">Display Name</Label>
-                          <Input
-                            id="displayName"
-                            value={displayName}
-                            onChange={(e) => setDisplayName(e.target.value)}
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="email">Email Address</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            value={user?.email || ""}
-                            disabled
-                          />
-                          <p className="text-sm text-muted-foreground">
-                            Email cannot be changed directly. Contact support for assistance.
+                  {profile?.shipping_addresses && profile.shipping_addresses.length > 0 ? (
+                    <div className="grid gap-4">
+                      {profile.shipping_addresses.map((address: any, index: number) => (
+                        <div key={index} className="border p-4 rounded-md">
+                          <p className="font-semibold">{address.name}</p>
+                          <p>{address.street}</p>
+                          <p>
+                            {address.city}, {address.state} {address.zipCode}
                           </p>
+                          <p>{address.country}</p>
+                          {address.phone && <p>Phone: {address.phone}</p>}
                         </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="phone">Phone Number</Label>
-                          <Input
-                            id="phone"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            placeholder="Optional"
-                          />
-                        </div>
-                        
-                        <Button type="submit" className="bg-zyra-purple hover:bg-zyra-dark-purple" disabled={isSaving}>
-                          {isSaving ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Saving changes...
-                            </>
-                          ) : "Save Changes"}
-                        </Button>
-                      </form>
-                    </TabsContent>
-                    
-                    <TabsContent value="security">
-                      <form onSubmit={handleUpdatePassword} className="space-y-6">
-                        <div className="space-y-2">
-                          <Label htmlFor="newPassword">New Password</Label>
-                          <Input
-                            id="newPassword"
-                            type="password"
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            placeholder="Enter new password"
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                          <Input
-                            id="confirmPassword"
-                            type="password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="Confirm new password"
-                          />
-                        </div>
-                        
-                        <Button type="submit" className="bg-zyra-purple hover:bg-zyra-dark-purple" disabled={isSaving}>
-                          {isSaving ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Updating password...
-                            </>
-                          ) : "Update Password"}
-                        </Button>
-                      </form>
-                    </TabsContent>
-                  </Tabs>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500">
+                      You haven't added any shipping addresses yet. Addresses will be added when you place orders.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
-            </div>
-          </div>
+            </TabsContent>
+            
+            <TabsContent value="orders">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Order History</CardTitle>
+                  <CardDescription>View your past orders.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {/* We'll implement proper order history display later */}
+                  <p className="text-gray-500">
+                    Your order history will appear here.
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
       <Footer />
