@@ -33,6 +33,9 @@ import Cart from "./pages/Cart";
 import About from "./pages/About";
 import AuthCallback from "./pages/auth/callback";
 import Customers from "./pages/admin/Customers";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import ProfileSettings from "./pages/ProfileSettings";
 
 // Create React query client
 const queryClient = new QueryClient({
@@ -66,6 +69,9 @@ const App = () => (
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
                 <Route path="/cart" element={<Cart />} />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/profile" element={<ProfileSettings />} />
                 
                 {/* Admin routes with protection */}
                 <Route path="/admin" element={<AdminRoute><Dashboard /></AdminRoute>} />

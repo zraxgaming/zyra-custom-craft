@@ -84,7 +84,12 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
                 ]
               });
             }}
-            onApprove={onPayPalApprove}
+            onApprove={async (data, actions) => {
+              if (actions.order) {
+                const details = await actions.order.capture();
+                await onPayPalApprove(details);
+              }
+            }}
           />
         </PayPalScriptProvider>
       </div>

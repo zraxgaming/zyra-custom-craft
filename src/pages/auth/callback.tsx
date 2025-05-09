@@ -14,70 +14,78 @@ const AuthCallback = () => {
       try {
         setIsProcessing(true);
         
-        // Get the fragment or query parameters
-        const fragment = window.location.hash;
+        // Get the hash or query parameters from the URL
+        const hash = window.location.hash;
         const query = window.location.search;
         
-        // Process Google OAuth callback
-        const params = new URLSearchParams(query || fragment.substring(1));
-        const googleToken = params.get('id_token') || params.get('credential') || localStorage.getItem('google_token');
+        // Process the authentication callback
+        const { data, error } = await supabase.auth.getSession();
         
-        if (googleToken) {
-          console.log("Received Google token");
+        if (error) {
+          throw error;
+        }
+        
+        if (data?.session) {
+          // Show success message
+          toast({
+            title: "Sign-in successful",
+            description: "You have successfully signed in.",
+          });
+        } else {
+          // Try to process Google OAuth callback if no session found
+          const params = new URLSearchParams(query || hash.substring(1));
+          const googleToken = params.get('id_token') || params.get('credential') || localStorage.getItem('google_token');
           
-          try {
-            // Get user information from the token
-            const response = await fetch('https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=' + googleToken);
-            const userData = await response.json();
+          if (googleToken) {
+            console.log("Processing Google token");
             
-            if (userData.email) {
-              // Check if user exists in database
-              const { data: existingUser, error: checkError } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('id', userData.sub)
-                .maybeSingle();
+            try {
+              // Get user information from the token
+              const response = await fetch('https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=' + googleToken);
+              const userData = await response.json();
               
-              if (checkError) {
-                console.error("Error checking user:", checkError);
-              }
-              
-              if (!existingUser) {
-                // Create a new user profile if it doesn't exist
-                const { error: insertError } = await supabase
+              if (userData.email) {
+                // Check if user exists in database
+                const { data: existingUser, error: checkError } = await supabase
                   .from('profiles')
-                  .insert({
-                    id: userData.sub,
-                    display_name: userData.name || userData.email.split('@')[0],
-                  });
+                  .select('id')
+                  .eq('id', userData.sub)
+                  .maybeSingle();
                 
-                if (insertError) {
-                  console.error("Error creating profile:", insertError);
+                if (checkError) {
+                  console.error("Error checking user:", checkError);
                 }
+                
+                if (!existingUser) {
+                  // Create a new user profile if it doesn't exist
+                  const { error: insertError } = await supabase
+                    .from('profiles')
+                    .insert({
+                      id: userData.sub,
+                      display_name: userData.name || userData.email.split('@')[0],
+                    });
+                  
+                  if (insertError) {
+                    console.error("Error creating profile:", insertError);
+                  }
+                }
+                
+                // Show success message
+                toast({
+                  title: "Sign-in successful",
+                  description: "You have successfully signed in with Google.",
+                });
+              } else {
+                throw new Error("Could not retrieve user information from Google");
               }
-              
-              // Set authentication state
-              localStorage.setItem('user_authenticated', 'true');
-              localStorage.setItem('user_id', userData.sub);
-              localStorage.setItem('user_email', userData.email);
-              localStorage.setItem('user_name', userData.name || '');
-              localStorage.setItem('user_picture', userData.picture || '');
-              
-              // Show success message
+            } catch (error) {
+              console.error("Error processing Google token:", error);
               toast({
-                title: "Sign-in successful",
-                description: "You have successfully signed in with Google.",
+                title: "Authentication failed",
+                description: "Could not validate Google authentication.",
+                variant: "destructive",
               });
-            } else {
-              throw new Error("Could not retrieve user information from Google");
             }
-          } catch (error) {
-            console.error("Error processing Google token:", error);
-            toast({
-              title: "Authentication failed",
-              description: "Could not validate Google authentication.",
-              variant: "destructive",
-            });
           }
         }
         
