@@ -39,6 +39,25 @@ const Navbar = () => {
     navigate("/");
   };
 
+  // Get user avatar URL and initial safely
+  const getUserAvatar = () => {
+    if (!user) return "";
+    return localStorage.getItem('user_picture') || "";
+  };
+
+  const getUserInitial = () => {
+    if (!user) return "U";
+    const name = localStorage.getItem('user_name') || "";
+    const email = localStorage.getItem('user_email') || "";
+    
+    if (name) {
+      return name.charAt(0).toUpperCase();
+    } else if (email) {
+      return email.charAt(0).toUpperCase();
+    }
+    return "U";
+  };
+
   return (
     <nav className="bg-white border-b sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -105,9 +124,9 @@ const Navbar = () => {
                 <DropdownMenuTrigger asChild>
                   <button className="p-2 rounded-full hover:bg-gray-100 mr-2">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.user_metadata?.avatar_url} />
+                      <AvatarImage src={getUserAvatar()} />
                       <AvatarFallback>
-                        {user.email?.charAt(0).toUpperCase() || "U"}
+                        {getUserInitial()}
                       </AvatarFallback>
                     </Avatar>
                   </button>
@@ -162,9 +181,9 @@ const Navbar = () => {
                   <DropdownMenuTrigger asChild>
                     <button className="p-2 rounded-full hover:bg-gray-100 mr-2">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.user_metadata?.avatar_url} />
+                        <AvatarImage src={getUserAvatar()} />
                         <AvatarFallback>
-                          {user.email?.charAt(0).toUpperCase() || "U"}
+                          {getUserInitial()}
                         </AvatarFallback>
                       </Avatar>
                     </button>

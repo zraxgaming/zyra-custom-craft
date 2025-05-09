@@ -24,28 +24,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  const [adminEmail, setAdminEmail] = useState<string>("zainabusal113@gmail.com");
+  const [adminEmail, setAdminEmail] = useState<string>("");
   const { toast } = useToast();
 
   useEffect(() => {
-    // Fetch admin email from site_config
-    const fetchAdminEmail = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("site_config")
-          .select("value")
-          .eq("key", "admin_email")
-          .single();
-        
-        if (!error && data) {
-          setAdminEmail(data.value);
-        }
-      } catch (error) {
-        console.error("Error fetching admin email:", error);
-      }
-    };
-
-    fetchAdminEmail();
+    // Get admin email from environment variables
+    const configuredAdminEmail = import.meta.env.VITE_ADMIN_EMAIL;
+    if (configuredAdminEmail) {
+      setAdminEmail(configuredAdminEmail);
+    } else {
+      console.warn("Admin email not set in environment variables");
+    }
   }, []);
 
   useEffect(() => {
@@ -78,14 +67,72 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setIsAdmin(false);
         }
       } else {
-        setUser(null);
-        setIsAdmin(false);
+        // Try to get the session from Supabase as backup method
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session && session.user) {
+            const userEmail = session.user.email || '';
+            
+            // Store in localStorage for our custom auth
+            localStorage.setItem('user_authenticated', 'true');
+            localStorage.setItem('user_id', session.user.id);
+            localStorage.setItem('user_email', userEmail);
+            localStorage.setItem('user_name', session.user.user_metadata.name || '');
+            
+            setUser({
+              id: session.user.id,
+              email: userEmail, 
+              name: session.user.user_metadata.name
+            });
+            
+            setIsAdmin(userEmail === adminEmail);
+          } else {
+            setUser(null);
+            setIsAdmin(false);
+          }
+        } catch (error) {
+          console.error("Error getting Supabase session:", error);
+          setUser(null);
+          setIsAdmin(false);
+        }
       }
       
       setIsLoading(false);
     };
     
     initialize();
+    
+    // Set up auth listener
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        const userEmail = session.user.email || '';
+        
+        // Store in localStorage for our custom auth
+        localStorage.setItem('user_authenticated', 'true');
+        localStorage.setItem('user_id', session.user.id);
+        localStorage.setItem('user_email', userEmail);
+        if (session.user.user_metadata && session.user.user_metadata.name) {
+          localStorage.setItem('user_name', session.user.user_metadata.name);
+        }
+        
+        setUser({
+          id: session.user.id,
+          email: userEmail,
+          name: session.user.user_metadata?.name
+        });
+        
+        setIsAdmin(userEmail === adminEmail);
+      } else if (event === 'SIGNED_OUT') {
+        localStorage.removeItem('user_authenticated');
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('user_email');
+        localStorage.removeItem('user_name');
+        localStorage.removeItem('user_picture');
+        
+        setUser(null);
+        setIsAdmin(false);
+      }
+    });
     
     // Listen for storage changes in other tabs
     const handleStorageChange = (e: StorageEvent) => {
@@ -98,34 +145,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      authListener.subscription.unsubscribe();
     };
   }, [adminEmail]);
   
-  // Note: These functions would need to be implemented separately
-  // using your auth provider of choice. For now, they're placeholders.
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    if (error) {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Success is handled by the auth state listener
+    } catch (error: any) {
+      console.error("Sign in error:", error);
       throw error;
     }
   };
   
   const signUp = async (email: string, password: string, name: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+          },
         },
-      },
-    });
-    
-    if (error) {
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Success is handled by the auth state listener
+    } catch (error: any) {
+      console.error("Sign up error:", error);
       throw error;
     }
   };
@@ -139,7 +199,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       localStorage.removeItem('user_name');
       localStorage.removeItem('user_picture');
       
-      // Also sign out from Supabase if using that
+      // Also sign out from Supabase
       await supabase.auth.signOut();
       
       setUser(null);
@@ -150,6 +210,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         description: "You have been signed out successfully.",
       });
     } catch (error: any) {
+      console.error("Sign out error:", error);
       toast({
         title: "Error signing out",
         description: error.message,

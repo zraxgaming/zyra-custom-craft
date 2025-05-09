@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
 interface GoogleSignInProps {
@@ -16,31 +15,14 @@ const GoogleSignIn: React.FC<GoogleSignInProps> = ({ isSignUp = false }) => {
   const navigate = useNavigate();
   
   useEffect(() => {
-    // Get Google Client ID from site_config table
-    const fetchGoogleClientId = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('site_config')
-          .select('value')
-          .eq('key', 'google_client_id')
-          .single();
-        
-        if (error) {
-          console.error("Error fetching Google client ID:", error);
-          throw error;
-        }
-        
-        if (data && data.value) {
-          setGoogleClientId(data.value);
-        } else {
-          console.warn("Google Client ID not found in site_config");
-        }
-      } catch (error: any) {
-        console.error("Error fetching Google client ID:", error);
-      }
-    };
+    // Get Google Client ID from environment variables
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     
-    fetchGoogleClientId();
+    if (clientId) {
+      setGoogleClientId(clientId);
+    } else {
+      console.warn("Google Client ID not found in environment variables");
+    }
     
     // Load Google API script
     const script = document.createElement('script');

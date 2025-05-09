@@ -59,16 +59,21 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Create user initials for avatar fallback
   const getUserInitials = () => {
     if (!user) return "U";
-    const name = user.user_metadata?.name || '';
+    const name = localStorage.getItem('user_name') || '';
     return name.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2);
   };
   
   // Get shortened display name
   const getDisplayName = () => {
     if (!user) return "User";
-    return user.user_metadata?.name || user.email || "User";
+    return localStorage.getItem('user_name') || localStorage.getItem('user_email') || "User";
   };
   
+  // Get user avatar
+  const getUserAvatar = () => {
+    return localStorage.getItem('user_picture') || "";
+  };
+
   // Mobile Navigation
   const MobileNav = () => (
     <Sheet>
@@ -145,7 +150,7 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <Avatar>
-                <AvatarImage src={user?.user_metadata?.avatar_url} />
+                <AvatarImage src={getUserAvatar()} />
                 <AvatarFallback>{getUserInitials()}</AvatarFallback>
               </Avatar>
             </div>
@@ -175,7 +180,7 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.user_metadata?.avatar_url} />
+                    <AvatarImage src={getUserAvatar()} />
                     <AvatarFallback>{getUserInitials()}</AvatarFallback>
                   </Avatar>
                 </Button>
