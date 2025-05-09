@@ -13,7 +13,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/hooks/use-auth";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Search, Eye } from "lucide-react";
+import { Plus, Search, Edit, Trash, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -47,7 +47,7 @@ const Orders = () => {
           .from("orders")
           .select(`
             *,
-            profiles:user_id (display_name, email),
+            profiles (display_name, email),
             order_items (
               id,
               quantity,
@@ -57,7 +57,7 @@ const Orders = () => {
           `)
           .order("created_at", { ascending: false });
           
-        if (statusFilter) {
+        if (statusFilter && statusFilter !== "all") {
           query.eq("status", statusFilter);
         }
         
@@ -66,6 +66,7 @@ const Orders = () => {
         if (error) throw error;
         setOrders(data || []);
       } catch (error: any) {
+        console.error("Error fetching orders:", error);
         toast({
           title: "Error fetching orders",
           description: error.message,
@@ -158,7 +159,7 @@ const Orders = () => {
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="">All statuses</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="processing">Processing</SelectItem>
               <SelectItem value="shipped">Shipped</SelectItem>

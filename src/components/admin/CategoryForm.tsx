@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 
 interface CategoryFormProps {
@@ -21,7 +20,6 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ onSuccess }) => {
   const [image, setImage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   // Generate slug from name
   const handleNameChange = (value: string) => {
@@ -43,6 +41,28 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ onSuccess }) => {
     
     setIsSubmitting(true);
     try {
+      // First check if the slug already exists
+      const { data: existingCategory, error: checkError } = await supabase
+        .from("categories")
+        .select("slug")
+        .eq("slug", slug)
+        .maybeSingle();
+        
+      if (checkError) {
+        throw checkError;
+      }
+      
+      if (existingCategory) {
+        toast({
+          title: "Category exists",
+          description: `A category with the slug "${slug}" already exists. Please use a different name.`,
+          variant: "destructive"
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Create the category
       const { data, error } = await supabase
         .from("categories")
         .insert({

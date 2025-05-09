@@ -30,8 +30,13 @@ const Products = () => {
   useEffect(() => {
     if (!isLoading && !isAdmin) {
       navigate("/");
+      toast({
+        title: "Access denied",
+        description: "You don't have permission to access this page.",
+        variant: "destructive",
+      });
     }
-  }, [isAdmin, isLoading, navigate]);
+  }, [isAdmin, isLoading, navigate, toast]);
 
   // Fetch products
   const fetchProducts = async () => {
@@ -236,6 +241,7 @@ const Products = () => {
           <ProductForm 
             onSuccess={() => {
               setIsAddDialogOpen(false);
+              fetchProducts(); // Make sure to refresh the products list
             }} 
           />
         </DialogContent>

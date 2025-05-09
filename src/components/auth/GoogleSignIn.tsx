@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 interface GoogleSignInProps {
   isSignUp?: boolean;
@@ -11,15 +13,34 @@ const GoogleSignIn: React.FC<GoogleSignInProps> = ({ isSignUp = false }) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [googleClientId, setGoogleClientId] = useState<string>("");
+  const navigate = useNavigate();
   
   useEffect(() => {
-    // Try to get Google Client ID from environment
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if (clientId) {
-      setGoogleClientId(clientId);
-    } else {
-      console.warn("Google Client ID not found in environment variables");
-    }
+    // Get Google Client ID from site_config table
+    const fetchGoogleClientId = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('site_config')
+          .select('value')
+          .eq('key', 'google_client_id')
+          .single();
+        
+        if (error) {
+          console.error("Error fetching Google client ID:", error);
+          throw error;
+        }
+        
+        if (data && data.value) {
+          setGoogleClientId(data.value);
+        } else {
+          console.warn("Google Client ID not found in site_config");
+        }
+      } catch (error: any) {
+        console.error("Error fetching Google client ID:", error);
+      }
+    };
+    
+    fetchGoogleClientId();
     
     // Load Google API script
     const script = document.createElement('script');
@@ -29,16 +50,29 @@ const GoogleSignIn: React.FC<GoogleSignInProps> = ({ isSignUp = false }) => {
     document.body.appendChild(script);
     
     return () => {
-      document.body.removeChild(script);
+      // Clean up script only if it exists in the document
+      const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+      if (existingScript && document.body.contains(existingScript)) {
+        document.body.removeChild(existingScript);
+      }
     };
   }, []);
 
   const handleGoogleSignIn = async () => {
+    if (!googleClientId) {
+      toast({
+        title: "Configuration error",
+        description: "Google authentication is not properly configured.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
-      if (!window.google || !googleClientId) {
-        throw new Error("Google API not loaded or Client ID not configured");
+      if (!window.google) {
+        throw new Error("Google API not loaded");
       }
       
       window.google.accounts.id.initialize({
@@ -53,7 +87,7 @@ const GoogleSignIn: React.FC<GoogleSignInProps> = ({ isSignUp = false }) => {
           // Try rendering the button manually if auto prompt doesn't work
           window.google.accounts.id.renderButton(
             document.getElementById('google-signin-button') as HTMLElement,
-            { theme: 'outline', size: 'large', width: '100%' }
+            { theme: 'outline', size: 'large', width: '100%', text: isSignUp ? 'signup_with' : 'signin_with' }
           );
         }
       });
@@ -70,21 +104,13 @@ const GoogleSignIn: React.FC<GoogleSignInProps> = ({ isSignUp = false }) => {
   
   const handleCredentialResponse = async (response: any) => {
     try {
-      // Use token with your backend to authenticate user
-      console.log("Google ID token:", response.credential);
+      const token = response.credential;
       
-      // Here you would typically send this token to your backend
-      // For now, we'll just simulate a successful authentication
-      setTimeout(() => {
-        toast({
-          title: "Authentication successful",
-          description: "You have successfully signed in with Google.",
-        });
-        
-        // Redirect to home page
-        window.location.href = '/';
-        setIsLoading(false);
-      }, 1000);
+      // Send token to auth callback handler
+      localStorage.setItem('google_token', token);
+      
+      // Redirect to the callback page
+      navigate('/auth/callback?credential=' + token);
       
     } catch (error: any) {
       console.error("Error processing Google credential:", error);

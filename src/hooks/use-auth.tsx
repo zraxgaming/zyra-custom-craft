@@ -1,12 +1,16 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Session, User } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
+
+interface User {
+  id: string;
+  email: string;
+  name?: string;
+}
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
   isAdmin: boolean;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
@@ -18,7 +22,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [adminEmail, setAdminEmail] = useState<string>("zainabusal113@gmail.com");
@@ -49,41 +52,57 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const initialize = async () => {
       setIsLoading(true);
       
-      // First set up the auth state listener
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        (event, session) => {
-          setSession(session);
-          setUser(session?.user ?? null);
+      // Check if user is authenticated via localStorage
+      const isAuthenticated = localStorage.getItem('user_authenticated') === 'true';
+      
+      if (isAuthenticated) {
+        const userId = localStorage.getItem('user_id');
+        const userEmail = localStorage.getItem('user_email');
+        const userName = localStorage.getItem('user_name');
+        
+        if (userId && userEmail) {
+          const user = {
+            id: userId,
+            email: userEmail,
+            name: userName || undefined
+          };
           
-          if (session?.user) {
-            // Check if the user is an admin
-            setIsAdmin(session.user.email === adminEmail);
-          } else {
-            setIsAdmin(false);
-          }
+          setUser(user);
+          
+          // Check if the user is an admin
+          setIsAdmin(userEmail === adminEmail);
+        } else {
+          // Clear invalid authentication state
+          localStorage.removeItem('user_authenticated');
+          setUser(null);
+          setIsAdmin(false);
         }
-      );
-      
-      // Then check for existing session
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      
-      if (data.session?.user) {
-        // Check if the user is an admin
-        setIsAdmin(data.session.user.email === adminEmail);
+      } else {
+        setUser(null);
+        setIsAdmin(false);
       }
       
       setIsLoading(false);
-      
-      return () => {
-        subscription.unsubscribe();
-      };
     };
     
     initialize();
+    
+    // Listen for storage changes in other tabs
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'user_authenticated' || e.key === 'user_id' || e.key === 'user_email') {
+        initialize();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, [adminEmail]);
   
+  // Note: These functions would need to be implemented separately
+  // using your auth provider of choice. For now, they're placeholders.
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -113,7 +132,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   
   const signOut = async () => {
     try {
+      // For custom Google auth
+      localStorage.removeItem('user_authenticated');
+      localStorage.removeItem('user_id');
+      localStorage.removeItem('user_email');
+      localStorage.removeItem('user_name');
+      localStorage.removeItem('user_picture');
+      
+      // Also sign out from Supabase if using that
       await supabase.auth.signOut();
+      
+      setUser(null);
+      setIsAdmin(false);
+      
       toast({
         title: "Signed out",
         description: "You have been signed out successfully.",
@@ -129,7 +160,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   
   const value = {
     user,
-    session,
     isAdmin,
     isLoading,
     signIn,

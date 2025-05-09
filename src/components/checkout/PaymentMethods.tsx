@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PaymentMethodsProps {
   onPayPalApprove: (data: any) => Promise<void>;
@@ -19,22 +20,44 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
   const { toast } = useToast();
 
   useEffect(() => {
-    // Get the PayPal client ID from environment variables
-    const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+    // Get the PayPal client ID from the site_config table
+    const fetchPaypalClientId = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('site_config')
+          .select('value')
+          .eq('key', 'paypal_client_id')
+          .single();
+        
+        if (error) {
+          console.error("Error fetching PayPal client ID:", error);
+          throw error;
+        }
+        
+        if (data && data.value) {
+          setPaypalClientId(data.value);
+        } else {
+          toast({
+            title: "Payment configuration error",
+            description: "PayPal client ID is missing. Please contact support.",
+            variant: "destructive",
+          });
+          setPaypalClientId("test"); // Use test as fallback
+        }
+      } catch (error: any) {
+        console.error("Error fetching PayPal client ID:", error);
+        toast({
+          title: "Payment configuration error",
+          description: "Could not retrieve PayPal settings. Please try again later.",
+          variant: "destructive",
+        });
+        setPaypalClientId("test"); // Use test as fallback
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    if (clientId) {
-      setPaypalClientId(clientId);
-      setLoading(false);
-    } else {
-      console.error("PayPal client ID not found in environment variables");
-      toast({
-        title: "Payment configuration error",
-        description: "PayPal client ID is missing. Please contact support.",
-        variant: "destructive",
-      });
-      setPaypalClientId("test"); // Use test as fallback
-      setLoading(false);
-    }
+    fetchPaypalClientId();
   }, [toast]);
 
   if (loading) {
@@ -56,7 +79,7 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
         <span className="ml-2 font-medium">PayPal</span>
       </div>
       <div className="text-sm text-gray-500 mt-1 mb-4">
-        You will be redirected to PayPal to complete your purchase.
+        Complete your purchase securely with PayPal.
       </div>
       
       <div className="mt-4">
