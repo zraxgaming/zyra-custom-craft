@@ -32,6 +32,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const configuredAdminEmail = import.meta.env.VITE_ADMIN_EMAIL;
     if (configuredAdminEmail) {
       setAdminEmail(configuredAdminEmail);
+      console.log("Admin email configured:", configuredAdminEmail);
     } else {
       console.warn("Admin email not set in environment variables");
     }
@@ -41,63 +42,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const initialize = async () => {
       setIsLoading(true);
       
-      // Check if user is authenticated via localStorage
-      const isAuthenticated = localStorage.getItem('user_authenticated') === 'true';
-      
-      if (isAuthenticated) {
-        const userId = localStorage.getItem('user_id');
-        const userEmail = localStorage.getItem('user_email');
-        const userName = localStorage.getItem('user_name');
+      try {
+        // Check if user is authenticated via Supabase session
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (userId && userEmail) {
-          const user = {
-            id: userId,
+        if (session && session.user) {
+          const userEmail = session.user.email || '';
+          const userName = session.user.user_metadata?.name || '';
+          
+          setUser({
+            id: session.user.id,
             email: userEmail,
-            name: userName || undefined
-          };
+            name: userName
+          });
           
-          setUser(user);
+          // Check if user email matches admin email
+          const isUserAdmin = userEmail === adminEmail;
+          console.log("Checking admin status:", userEmail, adminEmail, isUserAdmin);
+          setIsAdmin(isUserAdmin);
           
-          // Check if the user is an admin
-          setIsAdmin(userEmail === adminEmail);
+          // Store in localStorage for persistence
+          localStorage.setItem('user_authenticated', 'true');
+          localStorage.setItem('user_id', session.user.id);
+          localStorage.setItem('user_email', userEmail);
+          localStorage.setItem('user_name', userName);
         } else {
-          // Clear invalid authentication state
+          // No active session
           localStorage.removeItem('user_authenticated');
+          localStorage.removeItem('user_id');
+          localStorage.removeItem('user_email');
+          localStorage.removeItem('user_name');
+          
           setUser(null);
           setIsAdmin(false);
         }
-      } else {
-        // Try to get the session from Supabase as backup method
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session && session.user) {
-            const userEmail = session.user.email || '';
-            
-            // Store in localStorage for our custom auth
-            localStorage.setItem('user_authenticated', 'true');
-            localStorage.setItem('user_id', session.user.id);
-            localStorage.setItem('user_email', userEmail);
-            localStorage.setItem('user_name', session.user.user_metadata.name || '');
-            
-            setUser({
-              id: session.user.id,
-              email: userEmail, 
-              name: session.user.user_metadata.name
-            });
-            
-            setIsAdmin(userEmail === adminEmail);
-          } else {
-            setUser(null);
-            setIsAdmin(false);
-          }
-        } catch (error) {
-          console.error("Error getting Supabase session:", error);
-          setUser(null);
-          setIsAdmin(false);
-        }
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+        setUser(null);
+        setIsAdmin(false);
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     };
     
     initialize();
@@ -106,45 +91,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
         const userEmail = session.user.email || '';
-        
-        // Store in localStorage for our custom auth
-        localStorage.setItem('user_authenticated', 'true');
-        localStorage.setItem('user_id', session.user.id);
-        localStorage.setItem('user_email', userEmail);
-        if (session.user.user_metadata && session.user.user_metadata.name) {
-          localStorage.setItem('user_name', session.user.user_metadata.name);
-        }
+        const userName = session.user.user_metadata?.name || '';
         
         setUser({
           id: session.user.id,
           email: userEmail,
-          name: session.user.user_metadata?.name
+          name: userName
         });
         
-        setIsAdmin(userEmail === adminEmail);
+        // Check if user is admin
+        const isUserAdmin = userEmail === adminEmail;
+        console.log("Auth state changed - checking admin:", userEmail, adminEmail, isUserAdmin);
+        setIsAdmin(isUserAdmin);
+        
+        // Store in localStorage
+        localStorage.setItem('user_authenticated', 'true');
+        localStorage.setItem('user_id', session.user.id);
+        localStorage.setItem('user_email', userEmail);
+        localStorage.setItem('user_name', userName);
       } else if (event === 'SIGNED_OUT') {
         localStorage.removeItem('user_authenticated');
         localStorage.removeItem('user_id');
         localStorage.removeItem('user_email');
         localStorage.removeItem('user_name');
-        localStorage.removeItem('user_picture');
         
         setUser(null);
         setIsAdmin(false);
       }
     });
     
-    // Listen for storage changes in other tabs
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'user_authenticated' || e.key === 'user_id' || e.key === 'user_email') {
-        initialize();
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
       authListener.subscription.unsubscribe();
     };
   }, [adminEmail]);
@@ -192,15 +168,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   
   const signOut = async () => {
     try {
-      // For custom Google auth
+      await supabase.auth.signOut();
+      
       localStorage.removeItem('user_authenticated');
       localStorage.removeItem('user_id');
       localStorage.removeItem('user_email');
       localStorage.removeItem('user_name');
-      localStorage.removeItem('user_picture');
-      
-      // Also sign out from Supabase
-      await supabase.auth.signOut();
       
       setUser(null);
       setIsAdmin(false);

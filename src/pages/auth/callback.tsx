@@ -40,7 +40,7 @@ const AuthCallback = () => {
         console.error("Error processing authentication callback:", error);
         toast({
           title: "Authentication error",
-          description: "An error occurred during the authentication process.",
+          description: error.message || "An error occurred during the authentication process.",
           variant: "destructive",
         });
         navigate("/auth");

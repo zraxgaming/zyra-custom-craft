@@ -33,3 +33,32 @@ export interface Order {
   updated_at: string;
   order_items: OrderItem[];
 }
+
+export interface Coupon {
+  id: string;
+  code: string;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: number;
+  starts_at: string;
+  expires_at?: string | null;
+  active: boolean;
+  min_purchase?: number;
+  max_uses?: number | null;
+  used_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Promotion {
+  id: string;
+  title: string;
+  description?: string;
+  image_url?: string;
+  link_url?: string;
+  start_date: string;
+  end_date?: string | null;
+  active: boolean;
+  placement: string;
+  created_at: string;
+  updated_at: string;
+}

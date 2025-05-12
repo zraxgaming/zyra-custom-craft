@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -241,7 +240,7 @@ const Auth = () => {
                     </div>
                     
                     <div className="mt-4">
-                      <GoogleSignIn isSignUp />
+                      <GoogleSignIn />
                     </div>
                   </div>
                 </TabsContent>

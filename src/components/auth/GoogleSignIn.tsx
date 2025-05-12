@@ -3,7 +3,6 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
-// This component is no longer used as we're removing Google Sign-In
 const GoogleSignIn: React.FC = () => {
   const { toast } = useToast();
   

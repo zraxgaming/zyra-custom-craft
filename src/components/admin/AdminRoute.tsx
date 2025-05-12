@@ -22,9 +22,10 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     } else if (!isLoading && user && !isAdmin) {
       toast({
         title: "Access denied",
-        description: "You don't have permission to access the admin panel.",
+        description: `You don't have permission to access the admin panel. Admin email is set to: ${import.meta.env.VITE_ADMIN_EMAIL}`,
         variant: "destructive",
       });
+      console.log("Admin access denied. Current user:", user.email, "Admin email:", import.meta.env.VITE_ADMIN_EMAIL);
     }
   }, [isLoading, user, isAdmin, toast]);
 
