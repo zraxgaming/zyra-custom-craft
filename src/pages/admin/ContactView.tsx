@@ -9,18 +9,26 @@ import { ArrowLeft, Mail, User, Calendar, Tag } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { ContactSubmission } from "@/types/contact";
 
 const ContactView = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [submission, setSubmission] = useState<any>(null);
+  const [submission, setSubmission] = useState<ContactSubmission | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     const fetchSubmission = async () => {
+      if (!id) {
+        setIsLoading(false);
+        return;
+      }
+      
       try {
+        console.log("Fetching contact submission with ID:", id);
+        
         const { data, error } = await supabase
           .from("contact_submissions")
           .select("*")
@@ -28,11 +36,14 @@ const ContactView = () => {
           .single();
 
         if (error) {
+          console.error("Error fetching contact submission:", error);
           throw error;
         }
 
-        setSubmission(data);
-      } catch (error) {
+        console.log("Contact submission data:", data);
+        setSubmission(data as ContactSubmission);
+        
+      } catch (error: any) {
         console.error("Error fetching contact submission:", error);
         toast({
           title: "Error",
@@ -45,22 +56,23 @@ const ContactView = () => {
       }
     };
 
-    if (id) {
-      fetchSubmission();
-    }
+    fetchSubmission();
   }, [id, navigate, toast]);
 
-  const updateStatus = async (status: string) => {
-    if (!submission) return;
+  const updateStatus = async (status: "unread" | "read" | "replied") => {
+    if (!submission || !id) return;
     
     setIsUpdating(true);
     try {
+      console.log("Updating contact submission status:", { id, status });
+      
       const { error } = await supabase
         .from("contact_submissions")
         .update({ status })
-        .eq("id", submission.id);
+        .eq("id", id);
 
       if (error) {
+        console.error("Error updating status:", error);
         throw error;
       }
 
@@ -69,7 +81,7 @@ const ContactView = () => {
         title: "Status updated",
         description: `Marked as ${status}`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating status:", error);
       toast({
         title: "Error",
@@ -195,6 +207,14 @@ const ContactView = () => {
                 >
                   Reply via Email
                 </Button>
+                {submission.status !== "replied" && (
+                  <Button 
+                    onClick={() => updateStatus("replied")}
+                    disabled={isUpdating}
+                  >
+                    Mark as Replied
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

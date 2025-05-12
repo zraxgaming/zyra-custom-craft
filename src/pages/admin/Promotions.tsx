@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -44,8 +43,17 @@ const Promotions = () => {
   const [selectedPromotion, setSelectedPromotion] = useState<Partial<Promotion> | null>(null);
   const { toast } = useToast();
 
-  // Form state
-  const [formData, setFormData] = useState<Partial<Promotion>>({
+  // Form state with default values to ensure required fields are always present
+  const [formData, setFormData] = useState<{
+    title: string;
+    description?: string;
+    image_url?: string;
+    link_url?: string;
+    start_date: string;
+    end_date?: string | null;
+    active: boolean;
+    placement: string; // Make sure this is always defined
+  }>({
     title: "",
     description: "",
     image_url: "",
@@ -53,7 +61,7 @@ const Promotions = () => {
     start_date: new Date().toISOString(),
     end_date: null,
     active: true,
-    placement: "homepage",
+    placement: "homepage", // Default value
   });
 
   useEffect(() => {
@@ -91,7 +99,7 @@ const Promotions = () => {
       start_date: promotion.start_date,
       end_date: promotion.end_date,
       active: promotion.active,
-      placement: promotion.placement,
+      placement: promotion.placement || "homepage", // Ensure placement is always defined
     });
     setIsDialogOpen(true);
   };
@@ -106,7 +114,7 @@ const Promotions = () => {
       start_date: new Date().toISOString(),
       end_date: null,
       active: true,
-      placement: "homepage",
+      placement: "homepage", // Default value
     });
     setIsDialogOpen(true);
   };
@@ -120,11 +128,18 @@ const Promotions = () => {
     setIsSubmitting(true);
 
     try {
+      // Ensure required fields are present
+      const dataToSubmit = {
+        ...formData,
+        title: formData.title || "",
+        placement: formData.placement || "homepage", // Default value if empty
+      };
+
       if (selectedPromotion?.id) {
         // Update existing promotion
         const { error } = await supabase
           .from("promotions")
-          .update(formData)
+          .update(dataToSubmit)
           .eq("id", selectedPromotion.id);
 
         if (error) throw error;
@@ -135,7 +150,7 @@ const Promotions = () => {
         });
       } else {
         // Create new promotion
-        const { error } = await supabase.from("promotions").insert(formData);
+        const { error } = await supabase.from("promotions").insert(dataToSubmit);
 
         if (error) throw error;
 

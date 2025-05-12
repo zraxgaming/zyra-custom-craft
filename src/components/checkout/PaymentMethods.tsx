@@ -53,10 +53,20 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
       <CardContent className="pt-6">
         <div className="font-medium text-lg mb-4">Payment Method</div>
         
-        <div className="flex items-center border rounded-md p-3 mb-4">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center border rounded-md p-3">
+            <div className="flex items-center">
+              <img src="https://img.icons8.com/color/48/000000/paypal.png" alt="PayPal" className="h-8 mr-2" />
+              <span>PayPal or Credit Card</span>
+            </div>
+          </div>
+          
           <div className="flex items-center">
-            <img src="https://img.icons8.com/color/48/000000/paypal.png" alt="PayPal" className="h-8 mr-2" />
-            <span>PayPal</span>
+            <div className="flex gap-2">
+              <img src="https://img.icons8.com/color/48/000000/visa.png" alt="Visa" className="h-8" />
+              <img src="https://img.icons8.com/color/48/000000/mastercard.png" alt="Mastercard" className="h-8" />
+              <img src="https://img.icons8.com/color/48/000000/amex.png" alt="American Express" className="h-8" />
+            </div>
           </div>
         </div>
 
@@ -66,7 +76,8 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
             currency: "USD",
             intent: "capture",
             components: "buttons",
-            'disable-funding': "card,credit"
+            // Allow credit/debit card payments through PayPal
+            'disable-funding': "paylater,venmo"
           }}>
             <PayPalButtons
               style={{ 
@@ -94,9 +105,18 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
               onApprove={async (data, actions) => {
                 console.log("PayPal payment approved:", data);
                 if (actions.order) {
-                  const details = await actions.order.capture();
-                  console.log("PayPal capture details:", details);
-                  await onPayPalApprove(details);
+                  try {
+                    const details = await actions.order.capture();
+                    console.log("PayPal capture details:", details);
+                    await onPayPalApprove(details);
+                  } catch (error) {
+                    console.error("Error capturing PayPal payment:", error);
+                    toast({
+                      title: "Payment Failed",
+                      description: "There was an error processing your payment. Please try again.",
+                      variant: "destructive",
+                    });
+                  }
                 }
               }}
               onError={(err) => {

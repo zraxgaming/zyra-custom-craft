@@ -24,13 +24,12 @@ const TrafficAnalysis = () => {
   useEffect(() => {
     const fetchTrafficData = async () => {
       try {
-        // Fetch page views from the database (if they exist)
+        // Fetch page views from the database using correct syntax
         const { data: pageViewsData, error: pageViewsError } = await supabase
           .from("page_views")
-          .select("path, count(*)")
-          .group("path")
-          .order("count", { ascending: false })
-          .limit(7);
+          .select('path, count')
+          .select('path')
+          .limit(10);
 
         // Generate daily traffic data - use real data if available or simulate
         const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -56,11 +55,18 @@ const TrafficAnalysis = () => {
         let pageVisitData: PageVisit[] = [];
         
         if (pageViewsData && pageViewsData.length > 0) {
-          // Use real page view data if available
-          pageVisitData = pageViewsData.map((view: any) => ({
-            path: view.path || '/',
-            count: parseInt(view.count, 10)
-          }));
+          // Count occurrences of each path
+          const pathCounts: Record<string, number> = {};
+          pageViewsData.forEach((view: any) => {
+            const path = view.path || '/';
+            pathCounts[path] = (pathCounts[path] || 0) + 1;
+          });
+          
+          // Convert to array of PageVisit objects
+          pageVisitData = Object.entries(pathCounts)
+            .map(([path, count]) => ({ path, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 7);
         } else if (categoryData && categoryData.length > 0) {
           // Otherwise use categories as a fallback
           pageVisitData = categoryData.map((category: any, index: number) => ({

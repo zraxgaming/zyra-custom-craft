@@ -10,14 +10,12 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Copy } from "lucide-react";
 import { ShippingAddress, OrderItem } from "@/types/order";
 
-// Import the new components
+// Import order components
 import OrderSummary from "@/components/admin/order/OrderSummary";
 import CustomerInfo from "@/components/admin/order/CustomerInfo";
 import PaymentInfo from "@/components/admin/order/PaymentInfo";
 
-interface OrderDetailProps {}
-
-const OrderDetail: React.FC<OrderDetailProps> = () => {
+const OrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -29,14 +27,21 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
   // Fetch order data
   useEffect(() => {
     const fetchOrder = async () => {
+      if (!id) {
+        setIsLoading(false);
+        return;
+      }
+      
       try {
+        console.log("Fetching order details for ID:", id);
+        
         const { data, error } = await supabase
           .from("orders")
           .select(`
             *,
-            profiles:user_id (
+            profiles (
               display_name,
-              email:id
+              id
             ),
             order_items (
               id, 
@@ -52,24 +57,31 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
           .eq("id", id)
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching order:", error);
+          throw error;
+        }
+        
+        console.log("Order data retrieved:", data);
         
         // Transform the data to match the types we need
-        const orderItems: OrderItem[] = data.order_items.map((item: any) => ({
-          id: item.id,
-          quantity: item.quantity,
-          price: item.price,
-          product: {
-            name: item.product.name,
-            images: item.product.images,
-          },
-          customization: item.customization as Record<string, any> | null
-        }));
+        if (data) {
+          const orderItems: OrderItem[] = data.order_items.map((item: any) => ({
+            id: item.id,
+            quantity: item.quantity,
+            price: item.price,
+            product: {
+              name: item.product?.name || "Product no longer available",
+              images: item.product?.images || [],
+            },
+            customization: item.customization as Record<string, any> | null
+          }));
 
-        setOrder({
-          ...data,
-          order_items: orderItems
-        });
+          setOrder({
+            ...data,
+            order_items: orderItems
+          });
+        }
       } catch (error: any) {
         console.error("Error fetching order:", error);
         toast({
@@ -82,16 +94,18 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
       }
     };
     
-    if (id) {
-      fetchOrder();
-    }
+    fetchOrder();
   }, [id, toast]);
   
   // Update order status
   const updateOrder = async (field: string, value: string) => {
+    if (!id) return;
+    
     setIsUpdating(true);
     
     try {
+      console.log("Updating order:", { field, value, id });
+      
       const { error } = await supabase
         .from("orders")
         .update({ [field]: value })
@@ -120,17 +134,19 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
             },
             body: JSON.stringify({
               order_id: id,
-              customer_email: order.profiles?.email,
+              customer_email: order.profiles?.id,
               status: value,
               customer_name: order.profiles?.display_name
             })
           });
+          console.log("Email notification sent for status update");
         } catch (error: any) {
           console.error("Error sending update email:", error);
         }
       }
       
     } catch (error: any) {
+      console.error("Error updating order:", error);
       toast({
         title: "Error",
         description: error.message,
@@ -152,7 +168,11 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
   
   // Send manual email
   const sendManualEmail = async () => {
+    if (!id || !order) return;
+    
     try {
+      console.log("Sending manual email for order:", id);
+      
       await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-order-email`, {
         method: 'POST',
         headers: {
@@ -161,7 +181,7 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
         },
         body: JSON.stringify({
           order_id: id,
-          customer_email: order.profiles?.email,
+          customer_email: order.profiles?.id,
           status: order.status,
           customer_name: order.profiles?.display_name
         })
@@ -172,6 +192,7 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
         description: "Order confirmation email sent successfully",
       });
     } catch (error: any) {
+      console.error("Error sending email:", error);
       toast({
         title: "Error",
         description: "Failed to send email",
