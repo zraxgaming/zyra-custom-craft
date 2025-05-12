@@ -1,4 +1,4 @@
-import { supabase } from 'src/integrations/supabase/client.ts';
+import { supabase } from 'src/integrations/supabase/client';
 
 export const fetchProducts = async () => {
   try {
