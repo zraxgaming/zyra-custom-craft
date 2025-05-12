@@ -31,9 +31,9 @@ const DeliveryOptions: React.FC<DeliveryOptionsProps> = ({
         <div className="flex items-start space-x-2 border rounded-md p-3 mt-3">
           <RadioGroupItem value="express" id="express-delivery" />
           <Label htmlFor="express-delivery" className="font-normal cursor-pointer">
-            <div className="font-medium">Express Delivery</div>
+            <div className="font-medium">Store PickUp</div>
             <div className="text-sm text-gray-500">2-3 business days</div>
-            <div className="mt-1 font-medium text-sm">$15.00</div>
+            <div className="mt-1 font-medium text-sm">$0.00</div>
           </Label>
         </div>
       </RadioGroup>
