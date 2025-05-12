@@ -21,9 +21,9 @@ const RecentOrders = () => {
             total_amount,
             status,
             created_at,
-            profiles (
-              display_name,
-              avatar_url
+            user_id,
+            profiles:user_id (
+              display_name
             )
           `)
           .order("created_at", { ascending: false })

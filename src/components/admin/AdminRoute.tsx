@@ -25,7 +25,11 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
         description: `You don't have permission to access the admin panel. Admin email is set to: ${import.meta.env.VITE_ADMIN_EMAIL}`,
         variant: "destructive",
       });
-      console.log("Admin access denied. Current user:", user.email, "Admin email:", import.meta.env.VITE_ADMIN_EMAIL);
+      console.log("Admin access check:", {
+        currentUserEmail: user.email,
+        adminEmail: import.meta.env.VITE_ADMIN_EMAIL,
+        isAdmin: isAdmin
+      });
     }
   }, [isLoading, user, isAdmin, toast]);
 

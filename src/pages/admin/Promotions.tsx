@@ -1,449 +1,226 @@
 
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import AdminLayout from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { 
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle 
-} from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
-import AdminLayout from "@/components/admin/AdminLayout";
-import { useAuth } from "@/hooks/use-auth";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Calendar as CalendarIcon, Loader2, Plus } from "lucide-react";
 import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 import { Promotion } from "@/types/order";
-
-interface PromotionFormProps { 
-  promotion?: Promotion | null, 
-  onSave: (data: Partial<Promotion>) => void,
-  onCancel: () => void
-}
-
-const PromotionForm: React.FC<PromotionFormProps> = ({ 
-  promotion = null, 
-  onSave, 
-  onCancel
-}) => {
-  const [title, setTitle] = useState(promotion?.title || '');
-  const [description, setDescription] = useState(promotion?.description || '');
-  const [imageUrl, setImageUrl] = useState(promotion?.image_url || '');
-  const [link, setLink] = useState(promotion?.link || '');
-  const [active, setActive] = useState(promotion?.active ?? true);
-  const [placement, setPlacement] = useState(promotion?.placement || 'home_hero');
-  const [startDate, setStartDate] = useState(promotion?.start_date ? promotion.start_date.split('T')[0] : new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(promotion?.end_date ? promotion.end_date.split('T')[0] : '');
-  
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!title || !description || !placement) {
-      return;
-    }
-    
-    onSave({
-      title,
-      description,
-      image_url: imageUrl || undefined,
-      link: link || undefined,
-      active,
-      placement,
-      start_date: startDate,
-      end_date: endDate || undefined
-    });
-  };
-  
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 gap-4">
-          <div>
-            <Label htmlFor="title">Title *</Label>
-            <Input 
-              id="title" 
-              value={title} 
-              onChange={(e) => setTitle(e.target.value)} 
-              required 
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="description">Description *</Label>
-            <Textarea 
-              id="description" 
-              value={description} 
-              onChange={(e) => setDescription(e.target.value)} 
-              required 
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="image_url">Image URL</Label>
-            <Input 
-              id="image_url" 
-              value={imageUrl} 
-              onChange={(e) => setImageUrl(e.target.value)} 
-              placeholder="https://example.com/image.jpg"
-            />
-            {imageUrl && (
-              <div className="mt-2 border rounded-md p-2 bg-gray-50">
-                <img 
-                  src={imageUrl} 
-                  alt="Banner preview" 
-                  className="h-20 object-contain mx-auto"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "/placeholder.svg";
-                  }}
-                />
-              </div>
-            )}
-          </div>
-          
-          <div>
-            <Label htmlFor="link">Link URL</Label>
-            <Input 
-              id="link" 
-              value={link} 
-              onChange={(e) => setLink(e.target.value)} 
-              placeholder="https://example.com/page"
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="placement">Placement *</Label>
-            <select 
-              id="placement"
-              value={placement}
-              onChange={(e) => setPlacement(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              required
-            >
-              <option value="home_hero">Home Page Hero</option>
-              <option value="shop_banner">Shop Page Banner</option>
-              <option value="popup">Popup Banner</option>
-              <option value="sidebar">Sidebar Banner</option>
-            </select>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="start_date">Start Date *</Label>
-              <Input 
-                id="start_date" 
-                type="date"
-                value={startDate} 
-                onChange={(e) => setStartDate(e.target.value)} 
-                required 
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="end_date">End Date (Optional)</Label>
-              <Input 
-                id="end_date" 
-                type="date"
-                value={endDate} 
-                onChange={(e) => setEndDate(e.target.value)} 
-              />
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Switch 
-              id="active" 
-              checked={active} 
-              onCheckedChange={setActive} 
-            />
-            <Label htmlFor="active">Active</Label>
-          </div>
-        </div>
-      </div>
-      
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit">
-          {promotion ? 'Update Promotion' : 'Create Promotion'}
-        </Button>
-      </DialogFooter>
-    </form>
-  );
-};
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const Promotions = () => {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentPromotion, setCurrentPromotion] = useState<Promotion | null>(null);
-  
-  const { isAdmin, user } = useAuth();
-  const navigate = useNavigate();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedPromotion, setSelectedPromotion] = useState<Partial<Promotion> | null>(null);
   const { toast } = useToast();
 
-  // Redirect if not admin
+  // Form state
+  const [formData, setFormData] = useState<Partial<Promotion>>({
+    title: "",
+    description: "",
+    image_url: "",
+    link_url: "",
+    start_date: new Date().toISOString(),
+    end_date: null,
+    active: true,
+    placement: "homepage",
+  });
+
   useEffect(() => {
-    if (user && !isAdmin) {
-      navigate("/");
+    fetchPromotions();
+  }, []);
+
+  const fetchPromotions = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from("promotions")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setPromotions(data || []);
+    } catch (error: any) {
       toast({
-        title: "Access denied",
-        description: "You don't have permission to access this page.",
+        title: "Error fetching promotions",
+        description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
-  }, [isAdmin, user, navigate, toast]);
+  };
 
-  // Fetch promotions
-  useEffect(() => {
-    const fetchPromotions = async () => {
-      try {
-        // Create the promotions table if it doesn't exist yet
-        try {
-          // Check if table exists first by trying to query it
-          const { count, error } = await supabase
-            .from("promotions")
-            .select("*", { count: 'exact', head: true });
-          
-          if (error && error.code === '42P01') {
-            console.log("Promotions table doesn't exist yet");
-          }
-        } catch (error) {
-          console.error("Error checking promotions table:", error);
-        }
+  const handleEditPromotion = (promotion: Promotion) => {
+    setSelectedPromotion(promotion);
+    setFormData({
+      title: promotion.title,
+      description: promotion.description,
+      image_url: promotion.image_url,
+      link_url: promotion.link_url,
+      start_date: promotion.start_date,
+      end_date: promotion.end_date,
+      active: promotion.active,
+      placement: promotion.placement,
+    });
+    setIsDialogOpen(true);
+  };
 
-        // Query promotions
-        const { data, error } = await supabase
-          .from("promotions")
-          .select("*")
-          .order("created_at", { ascending: false });
-          
-        if (error) throw error;
-        
-        setPromotions(data as Promotion[] || []);
-      } catch (error: any) {
-        toast({
-          title: "Error fetching promotions",
-          description: error.message,
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchPromotions();
-  }, [toast]);
+  const handleNewPromotion = () => {
+    setSelectedPromotion(null);
+    setFormData({
+      title: "",
+      description: "",
+      image_url: "",
+      link_url: "",
+      start_date: new Date().toISOString(),
+      end_date: null,
+      active: true,
+      placement: "homepage",
+    });
+    setIsDialogOpen(true);
+  };
 
-  // Create or update a promotion
-  const handleSavePromotion = async (data: Partial<Promotion>) => {
+  const handleInputChange = (field: string, value: string | boolean | null) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
     try {
-      if (currentPromotion) {
+      if (selectedPromotion?.id) {
         // Update existing promotion
         const { error } = await supabase
           .from("promotions")
-          .update({
-            title: data.title,
-            description: data.description,
-            image_url: data.image_url,
-            link: data.link,
-            active: data.active,
-            placement: data.placement,
-            start_date: data.start_date,
-            end_date: data.end_date
-          })
-          .eq("id", currentPromotion.id);
-          
+          .update(formData)
+          .eq("id", selectedPromotion.id);
+
         if (error) throw error;
-        
-        setPromotions(promotions.map(p => 
-          p.id === currentPromotion.id ? { ...p, ...data } as Promotion : p
-        ));
-        
+
         toast({
           title: "Promotion updated",
           description: "The promotion has been updated successfully.",
         });
       } else {
         // Create new promotion
-        const { data: newPromotion, error } = await supabase
-          .from("promotions")
-          .insert({
-            title: data.title,
-            description: data.description,
-            image_url: data.image_url,
-            link: data.link,
-            active: data.active,
-            placement: data.placement,
-            start_date: data.start_date,
-            end_date: data.end_date
-          })
-          .select()
-          .single();
-          
+        const { error } = await supabase.from("promotions").insert(formData);
+
         if (error) throw error;
-        
-        setPromotions([newPromotion as Promotion, ...promotions]);
-        
+
         toast({
           title: "Promotion created",
           description: "The new promotion has been created successfully.",
         });
       }
-      
-      // Close dialog and reset current promotion
+
       setIsDialogOpen(false);
-      setCurrentPromotion(null);
+      fetchPromotions();
     } catch (error: any) {
       toast({
-        title: "Error saving promotion",
-        description: error.message,
+        title: "Error",
+        description:
+          error.message || "There was an error processing your request",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Delete a promotion
-  const handleDeletePromotion = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this promotion?")) return;
-    
+  const handleDeleteClick = (promotion: Promotion) => {
+    setSelectedPromotion(promotion);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedPromotion?.id) return;
+
     try {
+      setIsSubmitting(true);
       const { error } = await supabase
         .from("promotions")
         .delete()
-        .eq("id", id);
-        
+        .eq("id", selectedPromotion.id);
+
       if (error) throw error;
-      
-      setPromotions(promotions.filter(p => p.id !== id));
-      
+
       toast({
         title: "Promotion deleted",
         description: "The promotion has been deleted successfully.",
       });
+
+      setIsDeleteDialogOpen(false);
+      fetchPromotions();
     } catch (error: any) {
       toast({
-        title: "Error deleting promotion",
-        description: error.message,
+        title: "Error",
+        description:
+          error.message || "There was an error processing your request",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
-  // Handle dialog open/close
-  const openNewPromotionDialog = () => {
-    setCurrentPromotion(null);
-    setIsDialogOpen(true);
-  };
-  
-  const openEditPromotionDialog = (promotion: Promotion) => {
-    setCurrentPromotion(promotion);
-    setIsDialogOpen(true);
-  };
-  
-  const closeDialog = () => {
-    setIsDialogOpen(false);
-    setCurrentPromotion(null);
-  };
-
-  // Toggle promotion active status
-  const togglePromotionActive = async (id: string, currentActive: boolean) => {
-    try {
-      const { error } = await supabase
-        .from("promotions")
-        .update({ active: !currentActive })
-        .eq("id", id);
-        
-      if (error) throw error;
-      
-      setPromotions(promotions.map(p => 
-        p.id === id ? { ...p, active: !currentActive } : p
-      ));
-      
-      toast({
-        title: "Promotion updated",
-        description: `Promotion is now ${!currentActive ? 'active' : 'inactive'}.`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error updating promotion",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getPlacementDisplayName = (placement: string) => {
-    switch (placement) {
-      case 'home_hero': return 'Home Page Hero';
-      case 'shop_banner': return 'Shop Page Banner';
-      case 'popup': return 'Popup Banner';
-      case 'sidebar': return 'Sidebar Banner';
-      default: return placement;
-    }
-  };
-
-  if (!user) {
-    return (
-      <AdminLayout>
-        <div className="flex justify-center items-center h-[calc(100vh-64px)]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
-        </div>
-      </AdminLayout>
-    );
-  }
 
   return (
     <AdminLayout>
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Promotions & Banners</h1>
-          <Button onClick={openNewPromotionDialog}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add New Banner
+          <h1 className="text-3xl font-bold">Promotions</h1>
+          <Button onClick={handleNewPromotion}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Promotion
           </Button>
         </div>
-        
+
         {isLoading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
           </div>
         ) : promotions.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <h3 className="text-xl font-medium mb-2">No promotions found</h3>
-              <p className="text-muted-foreground mb-6">
-                Create your first promotional banner to display on your store
-              </p>
-              <Button onClick={openNewPromotionDialog}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add New Banner
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="bg-muted rounded-lg p-12 text-center">
+            <h3 className="text-xl font-medium mb-2">No promotions found</h3>
+            <p className="text-muted-foreground mb-6">
+              Create your first promotion to display on your website.
+            </p>
+            <Button onClick={handleNewPromotion}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Promotion
+            </Button>
+          </div>
         ) : (
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <Table>
@@ -451,56 +228,47 @@ const Promotions = () => {
                 <TableRow>
                   <TableHead>Title</TableHead>
                   <TableHead>Placement</TableHead>
-                  <TableHead>Dates</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Date Range</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {promotions.map((promotion) => (
                   <TableRow key={promotion.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{promotion.title}</p>
-                        <p className="text-xs text-gray-500 truncate max-w-[200px]">{promotion.description}</p>
-                      </div>
+                    <TableCell className="font-medium">
+                      {promotion.title}
                     </TableCell>
-                    <TableCell>{getPlacementDisplayName(promotion.placement)}</TableCell>
+                    <TableCell>{promotion.placement}</TableCell>
                     <TableCell>
-                      <div>
-                        <p className="text-xs">Start: {format(new Date(promotion.start_date), "MMM d, yyyy")}</p>
-                        {promotion.end_date && (
-                          <p className="text-xs">End: {format(new Date(promotion.end_date), "MMM d, yyyy")}</p>
-                        )}
-                      </div>
+                      <Badge
+                        variant={promotion.active ? "default" : "outline"}
+                      >
+                        {promotion.active ? "Active" : "Inactive"}
+                      </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center">
-                        <Switch
-                          checked={promotion.active}
-                          onCheckedChange={() => togglePromotionActive(promotion.id, promotion.active)}
-                          className="mr-2"
-                        />
-                        <span className={promotion.active ? "text-green-600" : "text-gray-500"}>
-                          {promotion.active ? "Active" : "Inactive"}
-                        </span>
-                      </div>
+                      {format(new Date(promotion.start_date), "MMM d, yyyy")}
+                      {promotion.end_date && (
+                        <> - {format(new Date(promotion.end_date), "MMM d, yyyy")}</>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditPromotionDialog(promotion)}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditPromotion(promotion)}
                         >
-                          <Edit className="h-4 w-4" />
+                          Edit
                         </Button>
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeletePromotion(promotion.id)}
+                          variant="outline"
+                          size="sm"
+                          className="text-red-500 hover:text-red-700"
+                          onClick={() => handleDeleteClick(promotion)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          Delete
                         </Button>
                       </div>
                     </TableCell>
@@ -510,29 +278,230 @@ const Promotions = () => {
             </Table>
           </div>
         )}
-        
-        {/* Create/Edit Dialog */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>
-                {currentPromotion ? 'Edit Promotion' : 'Create New Promotion'}
-              </DialogTitle>
-              <DialogDescription>
-                {currentPromotion 
-                  ? 'Update the details of your promotional banner.'
-                  : 'Create a new promotional banner to display on your store.'}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <PromotionForm 
-              promotion={currentPromotion}
-              onSave={handleSavePromotion}
-              onCancel={closeDialog}
-            />
-          </DialogContent>
-        </Dialog>
       </div>
+
+      {/* Create/Edit Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedPromotion ? "Edit Promotion" : "Create Promotion"}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4 py-4">
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  value={formData.title || ""}
+                  onChange={(e) => handleInputChange("title", e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description || ""}
+                  onChange={(e) =>
+                    handleInputChange("description", e.target.value)
+                  }
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="image_url">Image URL</Label>
+                  <Input
+                    id="image_url"
+                    value={formData.image_url || ""}
+                    onChange={(e) =>
+                      handleInputChange("image_url", e.target.value)
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="link_url">Link URL</Label>
+                  <Input
+                    id="link_url"
+                    value={formData.link_url || ""}
+                    onChange={(e) =>
+                      handleInputChange("link_url", e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Start Date</Label>
+                  <div className="flex">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full justify-start text-left font-normal"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {formData.start_date
+                            ? format(new Date(formData.start_date), "PPP")
+                            : "Select date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={
+                            formData.start_date
+                              ? new Date(formData.start_date)
+                              : undefined
+                          }
+                          onSelect={(date) =>
+                            handleInputChange(
+                              "start_date",
+                              date ? date.toISOString() : null
+                            )
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>End Date</Label>
+                  <div className="flex">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full justify-start text-left font-normal"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {formData.end_date
+                            ? format(new Date(formData.end_date), "PPP")
+                            : "No end date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={
+                            formData.end_date
+                              ? new Date(formData.end_date)
+                              : undefined
+                          }
+                          onSelect={(date) =>
+                            handleInputChange(
+                              "end_date",
+                              date ? date.toISOString() : null
+                            )
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="placement">Placement</Label>
+                  <select
+                    id="placement"
+                    className="w-full border border-gray-300 rounded-md p-2"
+                    value={formData.placement || "homepage"}
+                    onChange={(e) =>
+                      handleInputChange("placement", e.target.value)
+                    }
+                    required
+                  >
+                    <option value="homepage">Homepage</option>
+                    <option value="shop">Shop Page</option>
+                    <option value="product">Product Pages</option>
+                    <option value="checkout">Checkout</option>
+                    <option value="banner">Top Banner</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <div className="flex items-center justify-between pt-2">
+                    <span>Active</span>
+                    <Switch
+                      checked={formData.active || false}
+                      onCheckedChange={(checked) =>
+                        handleInputChange("active", checked)
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                {selectedPromotion ? "Update Promotion" : "Create Promotion"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Promotion</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>
+              Are you sure you want to delete this promotion? This action cannot
+              be undone.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isSubmitting}
+            >
+              {isSubmitting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };

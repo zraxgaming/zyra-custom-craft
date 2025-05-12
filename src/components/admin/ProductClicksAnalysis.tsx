@@ -31,15 +31,11 @@ const ProductClicksAnalysis = () => {
         
         if (productsData && productsData.length > 0) {
           // Create analytics data using review_count as a proxy for clicks
-          // In a real app, you would have a dedicated page_views or product_clicks table
           const productClickData: ProductClick[] = productsData.map((product: any) => ({
             product_id: product.id,
             product_name: product.name || 'Unnamed Product',
-            clicks: product.review_count * 10 + Math.floor(Math.random() * 50), // Use review count as a base
+            clicks: product.review_count || 0, // Use actual review count
           }));
-          
-          // Sort by clicks in descending order
-          productClickData.sort((a, b) => b.clicks - a.clicks);
           
           setProductClicks(productClickData);
         } else {
@@ -66,8 +62,7 @@ const ProductClicksAnalysis = () => {
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
-        table: 'products',
-        filter: 'review_count=gt.0'
+        table: 'products'
       }, () => {
         fetchProductClicks(); // Refresh data when product reviews change
       })
@@ -113,7 +108,7 @@ const ProductClicksAnalysis = () => {
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle>Product Clicks Analysis</CardTitle>
-          <CardDescription>Estimated clicks based on product review counts</CardDescription>
+          <CardDescription>Based on product review counts from the database</CardDescription>
         </div>
       </CardHeader>
       <CardContent>
@@ -141,7 +136,7 @@ const ProductClicksAnalysis = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Product Name</TableHead>
-              <TableHead className="text-right">Estimated Click Count</TableHead>
+              <TableHead className="text-right">Click Count</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

@@ -64,13 +64,21 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
           <PayPalScriptProvider options={{ 
             clientId: paypalClientId,
             currency: "USD",
-            intent: "capture"
+            intent: "capture",
+            components: "buttons",
+            'disable-funding': "card,credit"
           }}>
             <PayPalButtons
-              style={{ layout: "horizontal" }}
+              style={{ 
+                layout: "horizontal",
+                color: "blue",
+                shape: "rect",
+                label: "pay"
+              }}
               disabled={isProcessing}
               forceReRender={[total, paypalClientId]}
               createOrder={(data, actions) => {
+                console.log("Creating PayPal order with total:", total.toFixed(2));
                 return actions.order.create({
                   purchase_units: [
                     {
@@ -84,8 +92,10 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
                 });
               }}
               onApprove={async (data, actions) => {
+                console.log("PayPal payment approved:", data);
                 if (actions.order) {
                   const details = await actions.order.capture();
+                  console.log("PayPal capture details:", details);
                   await onPayPalApprove(details);
                 }
               }}
@@ -95,6 +105,13 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
                   title: "Payment Error",
                   description: "There was an error processing your payment. Please try again.",
                   variant: "destructive",
+                });
+              }}
+              onCancel={() => {
+                toast({
+                  title: "Payment Cancelled",
+                  description: "You cancelled the payment process. Try again when you're ready.",
+                  variant: "default",
                 });
               }}
             />
