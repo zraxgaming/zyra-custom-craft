@@ -4,7 +4,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { fetchProducts } from "@/data/mockData"; // Import the fetchProducts function
+import { fetchProducts } from "@/data/mockData";
 import { toast } from "sonner";
 import { useCart } from "@/components/cart/CartProvider";
 import ProductCustomizer from "@/components/products/ProductCustomizer";
@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/use-auth";
 const ProductDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const [product, setProduct] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true); // Add loading state
   const { addItem } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -22,18 +23,35 @@ const ProductDetail = () => {
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [customization, setCustomization] = useState<Record<string, any> | undefined>(undefined);
 
-  // Fetch product data when the component mounts
   useEffect(() => {
     const loadProduct = async () => {
+      setLoading(true); // Set loading to true before fetching
       const products = await fetchProducts();
       const foundProduct = products.find((p: any) => p.slug === slug);
       setProduct(foundProduct);
+      setLoading(false); // Set loading to false after fetching
     };
 
     loadProduct();
   }, [slug]);
 
-  // If product is not found, display an error message
+  // Handle loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Loading...</h1>
+            <p className="text-gray-600">Fetching product details. Please wait.</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Handle product not found state
   if (!product) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -176,50 +194,6 @@ const ProductDetail = () => {
                 <span className="text-gray-600 ml-1">
                   {product.rating} ({product.reviewCount} reviews)
                 </span>
-              </div>
-
-              {/* Pricing */}
-              <div className="mb-6">
-                {product.discountPercentage > 0 ? (
-                  <div className="flex items-center">
-                    <span className="text-2xl font-bold text-gray-900">
-                      ${(
-                        product.price *
-                        (1 - product.discountPercentage / 100)
-                      ).toFixed(2)}
-                    </span>
-                    <span className="text-lg text-gray-500 line-through ml-2">
-                      ${product.price.toFixed(2)}
-                    </span>
-                    <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      {product.discountPercentage}% OFF
-                    </span>
-                  </div>
-                ) : (
-                  <span className="text-2xl font-bold text-gray-900">
-                    ${product.price.toFixed(2)}
-                  </span>
-                )}
-              </div>
-
-              {/* Add to cart and Customize */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <Button
-                  className="bg-zyra-purple hover:bg-zyra-dark-purple flex-1 py-6"
-                  onClick={handleAddToCart}
-                >
-                  Add to Cart
-                </Button>
-                {(product.customizationOptions.allowText ||
-                  product.customizationOptions.allowImage) && (
-                  <Button
-                    variant="outline"
-                    className="border-zyra-purple text-zyra-purple hover:bg-zyra-purple hover:text-white flex-1 py-6"
-                    onClick={handleCustomize}
-                  >
-                    Customize Now
-                  </Button>
-                )}
               </div>
             </div>
           </div>
