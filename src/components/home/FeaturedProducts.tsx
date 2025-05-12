@@ -1,13 +1,42 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import ProductCard from "../products/ProductCard";
-import { mockProducts } from "@/data/mockData";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const FeaturedProducts = () => {
-  // Get only 4 featured products
-  const featuredProducts = mockProducts.filter(product => product.featured).slice(0, 4);
+  const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    async function fetchFeaturedProducts() {
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from("products")
+          .select("*")
+          .eq("featured", true)
+          .limit(4);
+          
+        if (error) throw error;
+        setFeaturedProducts(data || []);
+      } catch (error: any) {
+        console.error("Error fetching featured products:", error);
+        toast({
+          title: "Error loading featured products",
+          description: error.message,
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    fetchFeaturedProducts();
+  }, [toast]);
 
   return (
     <section className="bg-white py-16">
@@ -24,11 +53,21 @@ const FeaturedProducts = () => {
           </Button>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
+          </div>
+        ) : featuredProducts.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-600">No featured products available at the moment</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {featuredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

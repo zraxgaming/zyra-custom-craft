@@ -3,14 +3,13 @@ import React from "react";
 import { Container } from "@/components/ui/container";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
-// Import the Categories component that doesn't require onCategoryClick prop
+// Import the updated Categories component that fetches from the database
 import Categories from "@/components/home/Categories";
 
 const CategoryPage = () => {
-  const navigate = useNavigate();
-
   return (
     <>
       <Navbar />
@@ -20,8 +19,13 @@ const CategoryPage = () => {
           Explore our curated collection of products organized by category. Find everything you need and discover new favorites.
         </p>
         
-        {/* Fix: Remove the onCategoryClick prop since it's causing the TypeScript error */}
         <Categories />
+        
+        <div className="mt-12 text-center">
+          <Button asChild size="lg">
+            <Link to="/shop">View All Products</Link>
+          </Button>
+        </div>
       </Container>
       <Footer />
     </>

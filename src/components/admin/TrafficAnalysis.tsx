@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
@@ -24,34 +25,48 @@ const TrafficAnalysis = () => {
   useEffect(() => {
     const fetchTrafficData = async () => {
       try {
-        // Fetch page views from the database using correct syntax
-        const { data: pageViewsData, error: pageViewsError } = await supabase
-          .from("page_views")
-          .select('path, count')
-          .select('path')
-          .limit(10);
-
-        // Generate daily traffic data - use real data if available or simulate
+        // Generate daily traffic data using date functions
         const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-        const mockTrafficData: TrafficData[] = days.map((day, index) => {
-          return {
+        
+        // Fetch page views data
+        const { data: pageViewsData, error: pageViewsError } = await supabase
+          .from('page_views')
+          .select('*');
+          
+        if (pageViewsError) throw pageViewsError;
+          
+        // Create synthetic traffic data based on real page view counts
+        let mockTrafficData: TrafficData[] = [];
+        
+        // Process page views into traffic data
+        if (pageViewsData && pageViewsData.length > 0) {
+          // Map page views to days of the week for a simple visualization
+          const viewsByDay = days.map((day, index) => {
+            const dayViews = pageViewsData.filter((view: any) => {
+              const viewDate = new Date(view.timestamp);
+              return viewDate.getDay() === (index + 1) % 7; // Monday is 1, Sunday is 0
+            });
+            
+            return {
+              name: day,
+              pageViews: dayViews.length,
+              uniqueVisitors: new Set(dayViews.map((view: any) => view.user_id)).size,
+            };
+          });
+          
+          mockTrafficData = viewsByDay;
+        } else {
+          // Fallback if no data
+          mockTrafficData = days.map(day => ({
             name: day,
-            pageViews: Math.round(100 + Math.random() * 100),
-            uniqueVisitors: Math.round(50 + Math.random() * 50),
-          };
-        });
-
+            pageViews: 0,
+            uniqueVisitors: 0,
+          }));
+        }
+        
         setTrafficData(mockTrafficData);
         
-        // For page visits, use actual categories from the database
-        const { data: categoryData, error: categoryError } = await supabase
-          .from("categories")
-          .select("slug, name")
-          .limit(5);
-
-        if (categoryError) throw categoryError;
-
-        // Create page visits data based on real categories
+        // Create page visits data based on actual page_views
         let pageVisitData: PageVisit[] = [];
         
         if (pageViewsData && pageViewsData.length > 0) {
@@ -67,28 +82,37 @@ const TrafficAnalysis = () => {
             .map(([path, count]) => ({ path, count }))
             .sort((a, b) => b.count - a.count)
             .slice(0, 7);
-        } else if (categoryData && categoryData.length > 0) {
-          // Otherwise use categories as a fallback
-          pageVisitData = categoryData.map((category: any, index: number) => ({
-            path: `/${category.slug}`,
-            count: 100 - (index * 15), // Descending counts for display
-          }));
-          
-          // Add homepage as most visited
-          pageVisitData.unshift({
-            path: '/',
-            count: 150,
-          });
-        } else {
-          // Fallback if no data at all
-          pageVisitData = [
-            { path: '/', count: 150 },
-            { path: '/shop', count: 120 },
-            { path: '/about', count: 85 },
-            { path: '/contact', count: 70 },
-          ];
         }
-
+        
+        // If no page views data, use categories as fallback
+        if (pageVisitData.length === 0) {
+          const { data: categoryData, error: categoryError } = await supabase
+            .from("categories")
+            .select("slug")
+            .limit(5);
+            
+          if (!categoryError && categoryData && categoryData.length > 0) {
+            pageVisitData = categoryData.map((category: any, index) => ({
+              path: `/${category.slug}`,
+              count: 5 - index, // Just some sample numbers
+            }));
+            
+            // Add homepage
+            pageVisitData.unshift({
+              path: '/',
+              count: 10,
+            });
+          } else {
+            // Absolute fallback
+            pageVisitData = [
+              { path: '/', count: 10 },
+              { path: '/shop', count: 7 },
+              { path: '/about', count: 5 },
+              { path: '/contact', count: 3 },
+            ];
+          }
+        }
+        
         setPageVisits(pageVisitData);
       } catch (error: any) {
         console.error("Error fetching analytics data:", error);
@@ -165,8 +189,8 @@ const TrafficAnalysis = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {pageVisits.map((page) => (
-              <div key={page.path} className="flex items-center justify-between">
+            {pageVisits.map((page, index) => (
+              <div key={index} className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className="h-2.5 w-2.5 rounded-full bg-zyra-purple mr-2" />
                   <span className="text-sm font-medium">{page.path}</span>

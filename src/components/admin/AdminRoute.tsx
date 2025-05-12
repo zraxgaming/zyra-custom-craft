@@ -13,26 +13,24 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!isLoading) {
-      if (!user) {
-        toast({
-          title: "Authentication required",
-          description: "Please login to access the admin panel.",
-          variant: "destructive",
-        });
-      } else if (!isAdmin) {
-        const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
-        toast({
-          title: "Access denied",
-          description: `You don't have permission to access the admin panel. Admin email is set to: ${adminEmail || 'Not configured'}`,
-          variant: "destructive",
-        });
-        console.log("Admin access check:", {
-          currentUserEmail: user.email,
-          adminEmail: adminEmail,
-          isAdmin: isAdmin
-        });
-      }
+    if (!isLoading && !user) {
+      toast({
+        title: "Authentication required",
+        description: "Please login to access the admin panel.",
+        variant: "destructive",
+      });
+    } else if (!isLoading && user && !isAdmin) {
+      const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
+      toast({
+        title: "Access denied",
+        description: `You don't have permission to access the admin panel. Admin email is set to: ${adminEmail || 'Not configured'}`,
+        variant: "destructive",
+      });
+      console.log("Admin access check:", {
+        currentUserEmail: user.email,
+        adminEmail: adminEmail,
+        isAdmin: isAdmin
+      });
     }
   }, [isLoading, user, isAdmin, toast]);
 

@@ -24,6 +24,7 @@ const Categories = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
+        setIsLoading(true);
         const { data, error } = await supabase
           .from("categories")
           .select("*")

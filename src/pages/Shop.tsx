@@ -1,49 +1,124 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import ProductCard from "@/components/products/ProductCard";
-import { mockProducts, mockCategories } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Shop = () => {
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [priceRange, setPriceRange] = useState<number[]>([0, 50]);
+  const [searchParams] = useSearchParams();
+  const categoryParam = searchParams.get("category");
+  
+  const [categories, setCategories] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam || "all");
+  const [priceRange, setPriceRange] = useState<number[]>([0, 100]);
+  const [maxPrice, setMaxPrice] = useState<number>(100);
   const [selectedFilters, setSelectedFilters] = useState({
     inStock: false,
     onSale: false,
     newArrivals: false,
   });
   
-  const filteredProducts = mockProducts.filter((product) => {
-    // Filter by category
-    if (selectedCategory !== "all" && product.category !== selectedCategory) {
-      return false;
+  const { toast } = useToast();
+  
+  // Fetch categories
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const { data, error } = await supabase
+          .from("categories")
+          .select("*")
+          .order("name");
+          
+        if (error) throw error;
+        setCategories(data || []);
+      } catch (error: any) {
+        console.error("Error fetching categories:", error);
+        toast({
+          title: "Error loading categories",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     }
     
-    // Filter by price
-    if (product.price < priceRange[0] || product.price > priceRange[1]) {
-      return false;
+    fetchCategories();
+  }, [toast]);
+  
+  // Fetch products with filters
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        setIsLoading(true);
+        
+        let query = supabase.from("products").select("*");
+        
+        // Apply category filter
+        if (selectedCategory !== "all") {
+          query = query.eq("category", selectedCategory);
+        }
+        
+        // Apply price filter
+        query = query.gte("price", priceRange[0]).lte("price", priceRange[1]);
+        
+        // Apply other filters
+        if (selectedFilters.inStock) {
+          query = query.eq("in_stock", true);
+        }
+        
+        if (selectedFilters.onSale) {
+          query = query.gt("discount_percentage", 0);
+        }
+        
+        if (selectedFilters.newArrivals) {
+          query = query.eq("is_new", true);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        setProducts(data || []);
+        
+        // Get max price for the slider
+        const { data: maxPriceData, error: maxPriceError } = await supabase
+          .from("products")
+          .select("price")
+          .order("price", { ascending: false })
+          .limit(1);
+          
+        if (!maxPriceError && maxPriceData && maxPriceData.length > 0) {
+          const calculatedMaxPrice = Math.ceil(maxPriceData[0].price / 10) * 10; // Round to next 10
+          setMaxPrice(calculatedMaxPrice);
+          setPriceRange([0, calculatedMaxPrice]);
+        }
+      } catch (error: any) {
+        console.error("Error fetching products:", error);
+        toast({
+          title: "Error loading products",
+          description: error.message,
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
     
-    // Filter by stock
-    if (selectedFilters.inStock && !product.inStock) {
-      return false;
+    fetchProducts();
+  }, [selectedCategory, selectedFilters, toast]);
+  
+  // Handle category change
+  useEffect(() => {
+    if (categoryParam) {
+      setSelectedCategory(categoryParam);
     }
-    
-    // Filter by sale
-    if (selectedFilters.onSale && product.discountPercentage === 0) {
-      return false;
-    }
-    
-    // Filter by new arrivals
-    if (selectedFilters.newArrivals && !product.isNew) {
-      return false;
-    }
-    
-    return true;
-  });
+  }, [categoryParam]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -77,7 +152,7 @@ const Shop = () => {
                         All Products
                       </Button>
                     </div>
-                    {mockCategories.map((category) => (
+                    {categories.map((category) => (
                       <div key={category.id} className="flex items-center">
                         <Button
                           variant={selectedCategory === category.slug ? "default" : "outline"}
@@ -96,8 +171,8 @@ const Shop = () => {
                 <div className="mb-6">
                   <h3 className="text-sm font-medium mb-3">Price Range</h3>
                   <Slider
-                    defaultValue={[0, 50]}
-                    max={50}
+                    defaultValue={[0, maxPrice]}
+                    max={maxPrice}
                     step={1}
                     value={priceRange}
                     onValueChange={setPriceRange}
@@ -167,13 +242,17 @@ const Shop = () => {
             <div className="lg:col-span-3">
               <div className="mb-6">
                 <p className="text-sm text-gray-600">
-                  Showing {filteredProducts.length} results
+                  Showing {products.length} results
                 </p>
               </div>
               
-              {filteredProducts.length > 0 ? (
+              {isLoading ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
+                </div>
+              ) : products.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredProducts.map((product) => (
+                  {products.map((product) => (
                     <ProductCard key={product.id} product={product} />
                   ))}
                 </div>

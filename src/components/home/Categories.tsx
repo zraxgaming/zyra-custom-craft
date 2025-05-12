@@ -1,45 +1,79 @@
 
-import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
-
-const categories = [
-  {
-    id: 1,
-    name: "Phone Cases",
-    description: "Protect and personalize your device",
-    image: "https://images.unsplash.com/photo-1607581072646-80a005fd7614?w=500&auto=format&fit=crop&q=60",
-    slug: "phone-cases",
-  },
-  {
-    id: 2,
-    name: "T-Shirts",
-    description: "Comfortable custom apparel",
-    image: "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=500&auto=format&fit=crop&q=60",
-    slug: "t-shirts",
-  },
-  {
-    id: 3,
-    name: "Hoodies",
-    description: "Stay warm with style",
-    image: "https://images.unsplash.com/photo-1607038233846-064b5142c885?w=500&auto=format&fit=crop&q=60",
-    slug: "hoodies",
-  },
-  {
-    id: 4,
-    name: "Mugs",
-    description: "For your morning coffee or tea",
-    image: "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=500&auto=format&fit=crop&q=60",
-    slug: "mugs",
-  },
-];
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Categories = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [categories, setCategories] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from("categories")
+          .select("*")
+          .order("name");
+          
+        if (error) throw error;
+        setCategories(data || []);
+      } catch (error: any) {
+        console.error("Error fetching categories:", error);
+        toast({
+          title: "Error loading categories",
+          description: error.message,
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    fetchCategories();
+  }, [toast]);
+
   const handleCategoryClick = (slug: string) => {
     navigate(`/shop?category=${slug}`);
   };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <section className="bg-zyra-soft-gray py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900">Shop By Category</h2>
+            <p className="mt-2 text-gray-600">Finding the perfect canvas for your creativity</p>
+          </div>
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Show a message if no categories are available
+  if (categories.length === 0) {
+    return (
+      <section className="bg-zyra-soft-gray py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900">Shop By Category</h2>
+            <p className="mt-2 text-gray-600">No categories available at the moment</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Limit to 4 categories for the homepage
+  const displayCategories = categories.slice(0, 4);
 
   return (
     <section className="bg-zyra-soft-gray py-16">
@@ -52,7 +86,7 @@ const Categories = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {categories.map((category) => (
+          {displayCategories.map((category) => (
             <div
               key={category.id}
               onClick={() => handleCategoryClick(category.slug)}
@@ -60,7 +94,7 @@ const Categories = () => {
             >
               <div className="aspect-square overflow-hidden">
                 <img
-                  src={category.image}
+                  src={category.image || "/placeholder.svg"}
                   alt={category.name}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
@@ -70,7 +104,7 @@ const Categories = () => {
                   {category.name}
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  {category.description}
+                  {category.description || "Explore our collection"}
                 </p>
                 <div className="mt-4 flex items-center text-zyra-purple font-medium text-sm">
                   <span>Shop now</span>

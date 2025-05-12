@@ -57,7 +57,7 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
           <div className="flex items-center border rounded-md p-3">
             <div className="flex items-center">
               <img src="https://img.icons8.com/color/48/000000/paypal.png" alt="PayPal" className="h-8 mr-2" />
-              <span>PayPal or Credit Card</span>
+              <span>PayPal or Credit/Debit Card</span>
             </div>
           </div>
           
@@ -76,7 +76,8 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
             currency: "USD",
             intent: "capture",
             components: "buttons",
-            // Allow credit/debit card payments through PayPal
+            // Enable credit/debit card payments through PayPal (disable paylater and venmo)
+            'enable-funding': "card",
             'disable-funding': "paylater,venmo"
           }}>
             <PayPalButtons
