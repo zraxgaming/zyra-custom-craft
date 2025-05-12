@@ -320,6 +320,41 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
         }
+        Relationships: [
+          {
+            foreignKeyName: "orders_user_id_fkey1"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      page_views: {
+        Row: {
+          id: string
+          metadata: Json | null
+          path: string | null
+          referrer: string | null
+          timestamp: string | null
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          metadata?: Json | null
+          path?: string | null
+          referrer?: string | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          metadata?: Json | null
+          path?: string | null
+          referrer?: string | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
         Relationships: []
       }
       products: {

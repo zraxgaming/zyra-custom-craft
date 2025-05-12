@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Select,
   SelectContent,
@@ -11,14 +10,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Search, Mail, CheckCircle } from "lucide-react";
+import { Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
 import { ContactSubmission } from "@/types/contact";
+import ContactList from "@/components/admin/contact/ContactList";
 
 const ContactSubmissions: React.FC = () => {
   const { isAdmin, isLoading } = useAuth();
@@ -195,65 +193,12 @@ const ContactSubmissions: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredSubmissions.map((submission) => (
-                  <TableRow key={submission.id}>
-                    <TableCell>{format(new Date(submission.created_at), "MMM d, yyyy")}</TableCell>
-                    <TableCell>{submission.name}</TableCell>
-                    <TableCell className="max-w-[150px] truncate">
-                      <a href={`mailto:${submission.email}`} className="text-zyra-purple hover:underline">
-                        {submission.email}
-                      </a>
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate">{submission.subject}</TableCell>
-                    <TableCell>
-                      <Badge className={
-                        submission.status === "unread" ? "bg-red-100 text-red-800" :
-                        submission.status === "read" ? "bg-blue-100 text-blue-800" :
-                        "bg-green-100 text-green-800"
-                      }>
-                        {submission.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        {submission.status === "unread" && (
-                          <Button
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => updateSubmissionStatus(submission.id, "read")}
-                            title="Mark as Read"
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => sendReply(submission)}
-                          title="Reply"
-                        >
-                          <Mail className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <ContactList 
+            submissions={filteredSubmissions} 
+            updateStatus={updateSubmissionStatus}
+            sendReply={sendReply}
+            navigate={navigate}
+          />
         )}
       </div>
     </AdminLayout>

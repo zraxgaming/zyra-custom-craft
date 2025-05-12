@@ -5,21 +5,15 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format } from "date-fns";
-import { ArrowLeft, Copy, ExternalLink, ChevronDown, Mail } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ArrowLeft, Copy } from "lucide-react";
 import { ShippingAddress, OrderItem } from "@/types/order";
+
+// Import the new components
+import OrderSummary from "@/components/admin/order/OrderSummary";
+import CustomerInfo from "@/components/admin/order/CustomerInfo";
+import PaymentInfo from "@/components/admin/order/PaymentInfo";
 
 interface OrderDetailProps {}
 
@@ -222,11 +216,6 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
     );
   }
   
-  // Calculate order total
-  const orderTotal = order.order_items.reduce((acc: number, item: any) => {
-    return acc + (item.price * item.quantity);
-  }, 0);
-  
   const shippingAddress = order.shipping_address as ShippingAddress;
   
   return (
@@ -270,183 +259,29 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Order Summary */}
           <Card className="col-span-2">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Order Summary</CardTitle>
-                <CardDescription>
-                  Placed on {format(new Date(order.created_at), "MMMM d, yyyy 'at' h:mm a")}
-                </CardDescription>
-              </div>
-              <div className="flex space-x-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="flex items-center" disabled={isUpdating}>
-                      Update Status
-                      <ChevronDown className="ml-2 h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => updateOrder("status", "pending")}>
-                      Pending
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => updateOrder("status", "processing")}>
-                      Processing
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => updateOrder("status", "shipped")}>
-                      Shipped
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => updateOrder("status", "delivered")}>
-                      Delivered
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => updateOrder("status", "cancelled")}>
-                      Cancelled
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                
-                <Button variant="ghost" onClick={sendManualEmail} disabled={isUpdating}>
-                  <Mail className="h-4 w-4 mr-2" />
-                  Send Email
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {order.order_items.map((item: OrderItem) => (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden">
-                            {item.product.images && item.product.images.length > 0 ? (
-                              <img 
-                                src={item.product.images[0]} 
-                                alt={item.product.name} 
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
-                                No img
-                              </div>
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-medium">{item.product.name}</p>
-                            {item.customization && (
-                              <p className="text-xs text-gray-500">Customized</p>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{item.quantity}</TableCell>
-                      <TableCell>${item.price.toFixed(2)}</TableCell>
-                      <TableCell>${(item.price * item.quantity).toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-right font-medium">Subtotal</TableCell>
-                    <TableCell className="font-medium">${orderTotal.toFixed(2)}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-right font-medium">Shipping ({order.delivery_type})</TableCell>
-                    <TableCell className="font-medium">
-                      ${order.delivery_type === "express" ? "15.00" : "5.00"}
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-right font-bold">Total</TableCell>
-                    <TableCell className="font-bold">${order.total_amount.toFixed(2)}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </CardContent>
+            <OrderSummary 
+              order={order}
+              isUpdating={isUpdating}
+              updateOrder={updateOrder}
+              sendManualEmail={sendManualEmail}
+            />
           </Card>
           
           {/* Customer Info */}
           <div className="space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle>Customer Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="font-medium">
-                  {order.profiles?.display_name || "Guest Customer"}
-                </p>
-                <p className="text-gray-500">
-                  {order.profiles?.email || "No email provided"}
-                </p>
-                
-                <Separator className="my-4" />
-                
-                <div>
-                  <h4 className="font-medium mb-2">Shipping Address</h4>
-                  {shippingAddress ? (
-                    <div className="text-sm">
-                      <p>{shippingAddress.name}</p>
-                      <p>{shippingAddress.street}</p>
-                      <p>{shippingAddress.city}, {shippingAddress.state} {shippingAddress.zipCode}</p>
-                      <p>{shippingAddress.country}</p>
-                      {shippingAddress.phone && <p>Phone: {shippingAddress.phone}</p>}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-500">No shipping address provided</p>
-                  )}
-                </div>
-              </CardContent>
+              <CustomerInfo 
+                profiles={order.profiles} 
+                shippingAddress={shippingAddress} 
+              />
             </Card>
             
             <Card>
-              <CardHeader>
-                <CardTitle>Payment Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium">Payment Method</h4>
-                    <p>{order.payment_method === "credit_card" ? "Credit Card" : "PayPal"}</p>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-sm font-medium">Payment Status</h4>
-                    <div className="flex items-center mt-1">
-                      <Badge className={
-                        order.payment_status === "paid" ? "bg-green-500" :
-                        order.payment_status === "refunded" ? "bg-orange-500" :
-                        "bg-yellow-500"
-                      }>
-                        {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
-                      </Badge>
-                      
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-7 ml-2" disabled={isUpdating}>
-                            Change
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => updateOrder("payment_status", "pending")}>
-                            Pending
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => updateOrder("payment_status", "paid")}>
-                            Paid
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => updateOrder("payment_status", "refunded")}>
-                            Refunded
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
+              <PaymentInfo 
+                order={order}
+                isUpdating={isUpdating}
+                updateOrder={updateOrder}
+              />
             </Card>
           </div>
         </div>
