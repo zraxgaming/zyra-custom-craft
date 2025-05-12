@@ -1,12 +1,19 @@
-useEffect(() => {
-  const loadProducts = async () => {
-    try {
-      const fetchedProducts = await fetchProducts();
-      setProducts(fetchedProducts);
-    } catch {
-      console.error("Failed to load products");
-    }
-  };
+import { supabase } from './supabaseClient';
 
-  loadProducts();
-}, []);
+export const fetchProducts = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('products') // Replace with your actual database table name
+      .select('*'); // Adjust columns as needed
+
+    if (error) {
+      console.error('Error fetching products from Supabase:', error);
+      return [];
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Unexpected error fetching products:', err);
+    return [];
+  }
+};
