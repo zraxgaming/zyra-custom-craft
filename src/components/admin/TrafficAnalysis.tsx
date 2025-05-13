@@ -1,131 +1,98 @@
 
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { supabase } from '@/integrations/supabase/client';
 
 const TrafficAnalysis = () => {
-  const [pageViews, setPageViews] = useState<any[]>([]);
+  const [trafficData, setTrafficData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchPageViews = async () => {
+    const fetchTrafficData = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        setError(null);
-        
-        // This query gets page views grouped by path
+        // Using the page_views table directly - make sure this exists in your database
         const { data, error } = await supabase
-          .rpc('get_path_page_views')
-          .limit(10);
-          
-        if (error) {
-          console.error("Error fetching page views:", error);
-          // Fallback to raw query if the function doesn't exist
-          const rawResult = await supabase
-            .from('page_views')
-            .select('path, count')
-            .order('count', { ascending: false })
-            .limit(10);
-            
-          if (rawResult.error) {
-            throw new Error(rawResult.error.message);
-          } else if (rawResult.data && rawResult.data.length > 0) {
-            setPageViews(rawResult.data);
-          } else {
-            // Generate sample data if no data exists
-            const sampleData = [
-              { path: "/", count: 120 },
-              { path: "/products/t-shirt", count: 86 },
-              { path: "/categories", count: 72 },
-              { path: "/about", count: 43 },
-              { path: "/contact", count: 38 }
-            ];
-            setPageViews(sampleData);
-          }
-        } else {
-          setPageViews(data || []);
-        }
-      } catch (err: any) {
-        console.error("Error in TrafficAnalysis:", err);
-        setError(err.message);
-        // Generate sample data as fallback
-        const sampleData = [
-          { path: "/", count: 120 },
-          { path: "/products/t-shirt", count: 86 },
-          { path: "/categories", count: 72 },
-          { path: "/about", count: 43 },
-          { path: "/contact", count: 38 }
-        ];
-        setPageViews(sampleData);
+          .from('page_views')
+          .select('path, timestamp')
+          .order('timestamp', { ascending: false })
+          .limit(500);
+
+        if (error) throw error;
+
+        // Process data to count visits per page path
+        const pageViews = (data || []).reduce((acc: any, item: any) => {
+          const path = item.path || 'unknown';
+          if (!acc[path]) acc[path] = 0;
+          acc[path]++;
+          return acc;
+        }, {});
+
+        // Convert to chart format
+        const chartData = Object.entries(pageViews).map(([path, count]) => ({
+          page: path.length > 15 ? path.substring(0, 15) + '...' : path,
+          views: count,
+          fullPath: path
+        })).sort((a, b) => (b.views as number) - (a.views as number)).slice(0, 10);
+
+        setTrafficData(chartData);
+      } catch (error) {
+        console.error('Error fetching traffic data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPageViews();
+    fetchTrafficData();
   }, []);
 
-  const formatPath = (path: string) => {
-    if (path === "/" || !path) return "Home";
-    return path.replace(/^\//, '').replace(/\/$/, '').replace(/-/g, ' ');
-  };
-
-  const chartData = pageViews.map((item) => ({
-    name: formatPath(item.path),
-    views: item.count,
-  }));
-
   return (
-    <Card className="col-span-2">
+    <Card className="col-span-full xl:col-span-2">
       <CardHeader>
-        <CardTitle>Page Traffic</CardTitle>
-        <CardDescription>Most visited pages in the last 30 days</CardDescription>
+        <CardTitle>Page Visit Analysis</CardTitle>
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="flex justify-center items-center h-80">
-            <Loader2 className="h-8 w-8 animate-spin text-zyra-purple" />
+          <div className="h-80 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
           </div>
-        ) : error ? (
-          <div className="text-center py-8 text-gray-500">
-            <p>Unable to load traffic data</p>
-            <p className="text-sm text-gray-400 mt-1">{error}</p>
-          </div>
-        ) : chartData.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <p>No traffic data available</p>
-            <p className="text-sm text-gray-400 mt-1">
-              Traffic data will appear here as visitors browse your store.
-            </p>
-          </div>
-        ) : (
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                margin={{
-                  top: 5,
-                  right: 30,
-                  left: 20,
-                  bottom: 60,
+        ) : trafficData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={350}>
+            <BarChart data={trafficData}>
+              <XAxis 
+                dataKey="page" 
+                tickLine={false}
+                axisLine={false}
+                fontSize={12}
+              />
+              <YAxis 
+                tickLine={false} 
+                axisLine={false}
+                fontSize={12}
+              />
+              <Tooltip 
+                contentStyle={{ 
+                  background: '#fff', 
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '0.375rem', 
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="name"
-                  angle={-45}
-                  textAnchor="end"
-                  height={70}
-                  tick={{ fontSize: 12 }}
-                />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="views" fill="#8A2BE2" name="Views" />
-              </BarChart>
-            </ResponsiveContainer>
+                formatter={(value, name, props) => [`${value} views`, props.payload.fullPath]}
+                labelFormatter={() => 'Page Path'}
+              />
+              <Bar 
+                dataKey="views" 
+                fill="#6a0dad" 
+                radius={[4, 4, 0, 0]} 
+                barSize={30}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-80 flex flex-col items-center justify-center text-gray-500">
+            <p>No traffic data available yet.</p>
+            <p className="text-sm mt-2">Page visits will be recorded as users browse your site.</p>
           </div>
         )}
       </CardContent>

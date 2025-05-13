@@ -1,9 +1,11 @@
+
 import { supabase } from '../integrations/supabase/client';
+
 export const fetchProducts = async () => {
   try {
     const { data, error } = await supabase
-      .from('products') // Replace with your actual database table name
-      .select('*'); // Adjust columns as needed
+      .from('products')
+      .select('*');
 
     if (error) {
       console.error('Error fetching products from Supabase:', error);

@@ -4,10 +4,10 @@ import { Link } from "react-router-dom";
 import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Product } from "@/types/product";
 
+// Update the ProductCard component to handle the Supabase database fields
 interface ProductCardProps {
-  product: Product;
+  product: any; // Using any since the Supabase schema may differ from our type definition
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
@@ -16,7 +16,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       <div className="relative overflow-hidden">
         <Link to={`/products/${product.slug}`}>
           <img
-            src={product.images[0]}
+            src={product.images?.[0] || "/placeholder.svg"}
             alt={product.name}
             className="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-105"
           />
@@ -27,14 +27,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         >
           <Heart className="h-4 w-4 text-gray-600" />
         </button>
-        {product.isNew && (
+        {product.is_new && (
           <Badge className="absolute top-3 left-3 bg-zyra-purple text-white">
             New
           </Badge>
         )}
-        {product.discountPercentage > 0 && (
+        {product.discount_percentage > 0 && (
           <Badge className="absolute top-3 left-3 bg-red-500 text-white">
-            {product.discountPercentage}% OFF
+            {product.discount_percentage}% OFF
           </Badge>
         )}
       </div>
@@ -50,7 +50,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               <svg
                 key={i}
                 className={`h-4 w-4 ${
-                  i < product.rating ? "text-yellow-400" : "text-gray-300"
+                  i < (product.rating || 0) ? "text-yellow-400" : "text-gray-300"
                 }`}
                 fill="currentColor"
                 viewBox="0 0 20 20"
@@ -59,16 +59,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               </svg>
             ))}
             <span className="text-xs text-gray-600 ml-1">
-              ({product.reviewCount})
+              ({product.review_count || 0})
             </span>
           </div>
         </div>
         <div className="flex justify-between items-center mt-2">
           <div>
-            {product.discountPercentage > 0 ? (
+            {product.discount_percentage > 0 ? (
               <div className="flex items-center">
                 <span className="text-lg font-semibold text-gray-900">
-                  ${(product.price * (1 - product.discountPercentage / 100)).toFixed(2)}
+                  ${(product.price * (1 - product.discount_percentage / 100)).toFixed(2)}
                 </span>
                 <span className="text-sm text-gray-500 line-through ml-2">
                   ${product.price.toFixed(2)}
@@ -76,14 +76,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               </div>
             ) : (
               <span className="text-lg font-semibold text-gray-900">
-                ${product.price.toFixed(2)}
+                ${product.price?.toFixed(2)}
               </span>
             )}
           </div>
         </div>
         <div className="mt-4 flex space-x-2">
           <Button asChild className="flex-1 bg-zyra-purple hover:bg-zyra-dark-purple text-white">
-            <Link to={`/products/${product.slug}`}>Customize</Link>
+            <Link to={`/products/${product.slug}`}>View Details</Link>
           </Button>
         </div>
       </div>
