@@ -33,6 +33,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
   const [categories, setCategories] = useState<any[]>([]);
   const { toast } = useToast();
 
+  // Advanced product options
+  const [allowCustomText, setAllowCustomText] = useState(false);
+  const [allowCustomImage, setAllowCustomImage] = useState(false);
+  const [maxTextLength, setMaxTextLength] = useState("100");
+  const [maxImageCount, setMaxImageCount] = useState("1");
+  const [allowResizeRotate, setAllowResizeRotate] = useState(false);
+
   // Fetch categories for the dropdown
   useEffect(() => {
     const fetchCategories = async () => {
@@ -68,25 +75,41 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
       const fetchProduct = async () => {
         setIsLoading(true);
         try {
-          const { data, error } = await supabase
+          // Fetch the product data
+          const { data: productData, error: productError } = await supabase
             .from("products")
             .select("*")
             .eq("id", productId)
             .single();
             
-          if (error) throw error;
+          if (productError) throw productError;
           
-          if (data) {
-            setName(data.name || "");
-            setSlug(data.slug || "");
-            setDescription(data.description || "");
-            setPrice(data.price?.toString() || "");
-            setDiscountPercentage(data.discount_percentage?.toString() || "0");
-            setCategory(data.category || "");
-            setImageUrls(data.images?.length ? data.images : [""]);
-            setFeatured(data.featured || false);
-            setIsNew(data.is_new || false);
-            setInStock(data.in_stock !== false); // Default to true if undefined
+          if (productData) {
+            setName(productData.name || "");
+            setSlug(productData.slug || "");
+            setDescription(productData.description || "");
+            setPrice(productData.price?.toString() || "");
+            setDiscountPercentage(productData.discount_percentage?.toString() || "0");
+            setCategory(productData.category || "");
+            setImageUrls(productData.images?.length ? productData.images : [""]);
+            setFeatured(productData.featured || false);
+            setIsNew(productData.is_new || false);
+            setInStock(productData.in_stock !== false); // Default to true if undefined
+          }
+
+          // Fetch customization options
+          const { data: customizationData, error: customizationError } = await supabase
+            .from("customization_options")
+            .select("*")
+            .eq("product_id", productId)
+            .single();
+
+          if (!customizationError && customizationData) {
+            setAllowCustomText(customizationData.allow_text || false);
+            setAllowCustomImage(customizationData.allow_image || false);
+            setMaxTextLength(customizationData.max_text_length?.toString() || "100");
+            setMaxImageCount(customizationData.max_image_count?.toString() || "1");
+            setAllowResizeRotate(customizationData.allow_resize_rotate || false);
           }
         } catch (error: any) {
           console.error("Error fetching product:", error);
@@ -149,26 +172,28 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
     // Filter out empty image URLs
     const filteredImages = imageUrls.filter(url => url.trim() !== "");
     
-    const productData = {
-      name,
-      slug,
-      description,
-      price: parseFloat(price),
-      discount_percentage: parseFloat(discountPercentage),
-      category,
-      images: filteredImages,
-      featured,
-      is_new: isNew,
-      in_stock: inStock
-    };
-    
     setIsSubmitting(true);
+
     try {
-      let response;
+      // First handle the product data
+      let productResult;
+      
+      const productData = {
+        name,
+        slug,
+        description,
+        price: parseFloat(price),
+        discount_percentage: parseFloat(discountPercentage),
+        category,
+        images: filteredImages,
+        featured,
+        is_new: isNew,
+        in_stock: inStock
+      };
       
       if (productId) {
         // Update existing product
-        response = await supabase
+        productResult = await supabase
           .from("products")
           .update(productData)
           .eq("id", productId)
@@ -176,15 +201,50 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
           .single();
       } else {
         // Create new product
-        response = await supabase
+        productResult = await supabase
           .from("products")
           .insert(productData)
           .select()
           .single();
       }
       
-      const { error } = response;
-      if (error) throw error;
+      const { data: productResultData, error: productError } = productResult;
+      if (productError) throw productError;
+      
+      // Now handle customization options
+      const customizationData = {
+        product_id: productResultData.id,
+        allow_text: allowCustomText,
+        allow_image: allowCustomImage,
+        max_text_length: parseInt(maxTextLength),
+        max_image_count: parseInt(maxImageCount),
+        allow_resize_rotate: allowResizeRotate
+      };
+
+      // Check if customization options already exist
+      const { data: existingCustomization, error: checkError } = await supabase
+        .from("customization_options")
+        .select()
+        .eq("product_id", productResultData.id);
+        
+      if (checkError) throw checkError;
+      
+      if (existingCustomization && existingCustomization.length > 0) {
+        // Update existing customization options
+        const { error } = await supabase
+          .from("customization_options")
+          .update(customizationData)
+          .eq("product_id", productResultData.id);
+          
+        if (error) throw error;
+      } else {
+        // Create new customization options
+        const { error } = await supabase
+          .from("customization_options")
+          .insert(customizationData);
+          
+        if (error) throw error;
+      }
       
       toast({
         title: productId ? "Product updated" : "Product created",
@@ -206,6 +266,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
         setFeatured(false);
         setIsNew(false);
         setInStock(true);
+        setAllowCustomText(false);
+        setAllowCustomImage(false);
+        setMaxTextLength("100");
+        setMaxImageCount("1");
+        setAllowResizeRotate(false);
       }
     } catch (error: any) {
       console.error(`Error ${productId ? "updating" : "creating"} product:`, error);
@@ -251,7 +316,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
               placeholder="my-awesome-product"
               required
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Used in URLs. Only lowercase letters, numbers, and hyphens.
             </p>
           </div>
@@ -346,10 +411,87 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
           </div>
           
           <Separator />
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Customization Options</h3>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="allow-text" className="cursor-pointer">Allow Custom Text</Label>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Enable customers to add personalized text</p>
+              </div>
+              <Switch 
+                id="allow-text" 
+                checked={allowCustomText}
+                onCheckedChange={setAllowCustomText}
+              />
+            </div>
+            
+            {allowCustomText && (
+              <div className="pl-4 border-l-2 border-gray-100 dark:border-gray-700 space-y-2">
+                <Label htmlFor="max-text-length">Max Text Length</Label>
+                <Input 
+                  id="max-text-length" 
+                  type="number"
+                  min="1"
+                  max="500"
+                  value={maxTextLength}
+                  onChange={(e) => setMaxTextLength(e.target.value)}
+                  className="max-w-[150px]"
+                />
+              </div>
+            )}
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="allow-image" className="cursor-pointer">Allow Custom Images</Label>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Enable customers to upload their own images</p>
+              </div>
+              <Switch 
+                id="allow-image" 
+                checked={allowCustomImage}
+                onCheckedChange={setAllowCustomImage}
+              />
+            </div>
+            
+            {allowCustomImage && (
+              <div className="pl-4 border-l-2 border-gray-100 dark:border-gray-700 space-y-2">
+                <Label htmlFor="max-image-count">Max Images Count</Label>
+                <Input 
+                  id="max-image-count" 
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={maxImageCount}
+                  onChange={(e) => setMaxImageCount(e.target.value)}
+                  className="max-w-[150px]"
+                />
+              </div>
+            )}
+            
+            {(allowCustomText || allowCustomImage) && (
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="allow-resize-rotate" className="cursor-pointer">Allow Resize & Rotate</Label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Enable customers to resize and rotate text/images</p>
+                </div>
+                <Switch 
+                  id="allow-resize-rotate" 
+                  checked={allowResizeRotate}
+                  onCheckedChange={setAllowResizeRotate}
+                />
+              </div>
+            )}
+          </div>
+          
+          <Separator />
           
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
-              <Label htmlFor="featured" className="cursor-pointer">Featured Product</Label>
+              <div>
+                <Label htmlFor="featured" className="cursor-pointer">Featured Product</Label>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Show on homepage and featured sections</p>
+              </div>
               <Switch 
                 id="featured" 
                 checked={featured}
@@ -358,7 +500,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
             </div>
             
             <div className="flex items-center justify-between">
-              <Label htmlFor="new" className="cursor-pointer">Mark as New</Label>
+              <div>
+                <Label htmlFor="new" className="cursor-pointer">Mark as New</Label>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Highlight as a new arrival</p>
+              </div>
               <Switch 
                 id="new" 
                 checked={isNew}
@@ -367,7 +512,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
             </div>
             
             <div className="flex items-center justify-between">
-              <Label htmlFor="stock" className="cursor-pointer">In Stock</Label>
+              <div>
+                <Label htmlFor="stock" className="cursor-pointer">In Stock</Label>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Product is available for purchase</p>
+              </div>
               <Switch 
                 id="stock" 
                 checked={inStock}
@@ -376,12 +524,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
             </div>
           </div>
           
-          <CardFooter className="px-0 pt-4">
-            <Button type="submit" disabled={isSubmitting} className="ml-auto">
+          <div className="pt-6 pb-2 flex justify-end">
+            <Button type="submit" disabled={isSubmitting} className="bg-zyra-purple hover:bg-zyra-dark-purple">
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {productId ? "Update Product" : "Create Product"}
             </Button>
-          </CardFooter>
+          </div>
         </form>
       </CardContent>
     </Card>

@@ -1,298 +1,285 @@
 
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { ShoppingCart, User, Menu, X, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  ShoppingBag, 
-  User, 
-  Search, 
-  Menu, 
-  X, 
-  LogOut, 
-  LayoutDashboard 
-} from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useCart } from "@/components/cart/CartProvider";
+import { supabase } from "@/integrations/supabase/client";
+import { ThemeToggleSimple } from "@/components/theme/ThemeToggle";
 
 const Navbar = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const isMobile = useIsMobile();
-  const { user, isAdmin, signOut } = useAuth();
-  const navigate = useNavigate();
+  const { user, isAdmin } = useAuth();
+  const { items, openCart } = useCart();
+  const location = useLocation();
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
 
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("categories")
+          .select("name, slug")
+          .order("name");
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/");
-  };
+        if (error) throw error;
+        setCategories(data || []);
+      } catch (err) {
+        console.error("Error fetching categories:", err);
+      }
+    };
 
-  // Get user avatar URL and initial safely
-  const getUserAvatar = () => {
-    if (!user) return "";
-    return localStorage.getItem('user_picture') || "";
-  };
+    fetchCategories();
+  }, []);
 
-  const getUserInitial = () => {
-    if (!user) return "U";
-    const name = localStorage.getItem('user_name') || "";
-    const email = localStorage.getItem('user_email') || "";
-    
-    if (name) {
-      return name.charAt(0).toUpperCase();
-    } else if (email) {
-      return email.charAt(0).toUpperCase();
-    }
-    return "U";
-  };
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 10) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
 
   return (
-    <nav className="bg-white border-b sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
-          <div className="flex items-center">
-            {isMobile && (
-              <button onClick={toggleMenu} className="mr-2">
-                {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-              </button>
-            )}
-            <Link to="/" className="flex-shrink-0 flex items-center">
-              <span className="text-2xl font-bold text-zyra-purple">ZYRA</span>
+    <header
+      className={`sticky top-0 z-50 w-full ${
+        isScrolled
+          ? "bg-white/90 dark:bg-gray-900/90 backdrop-blur-md shadow-sm"
+          : "bg-white dark:bg-gray-900"
+      } transition-all duration-200`}
+    >
+      <div className="container mx-auto px-4">
+        <div className="flex h-16 items-center justify-between">
+          {/* Logo */}
+          <div className="flex">
+            <Link to="/" className="flex items-center">
+              <span className="text-2xl font-bold text-zyra-purple">Zyra</span>
             </Link>
-            
-            {!isMobile && (
-              <div className="hidden md:block ml-10">
-                <div className="flex space-x-4">
-                  <Link to="/" className="px-3 py-2 rounded-md text-sm font-medium hover:text-zyra-purple">
-                    Home
-                  </Link>
-                  <Link
-                    to="/shop"
-                    className="px-3 py-2 rounded-md text-sm font-medium hover:text-zyra-purple"
-                  >
-                    Shop
-                  </Link>
-                  <Link
-                    to="/categories"
-                    className="px-3 py-2 rounded-md text-sm font-medium hover:text-zyra-purple"
-                  >
-                    Categories
-                  </Link>
-                  <Link
-                    to="/about"
-                    className="px-3 py-2 rounded-md text-sm font-medium hover:text-zyra-purple"
-                  >
-                    About
-                  </Link>
-                  <Link
-                    to="/contact"
-                    className="px-3 py-2 rounded-md text-sm font-medium hover:text-zyra-purple"
-                  >
-                    Contact
-                  </Link>
-                </div>
-              </div>
-            )}
           </div>
 
-          <div className="hidden md:flex items-center justify-end md:flex-1">
-            <div className="relative rounded-md shadow-sm mr-4 w-64">
-              <Input
-                type="text"
-                placeholder="Search products..."
-                className="pl-10 py-2"
-              />
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-gray-400" />
-              </div>
-            </div>
-            
-            {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="p-2 rounded-full hover:bg-gray-100 mr-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={getUserAvatar()} />
-                      <AvatarFallback>
-                        {getUserInitial()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate("/profile")}>
-                    <User className="mr-2 h-4 w-4" />
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/orders")}>
-                    <ShoppingBag className="mr-2 h-4 w-4" />
-                    Orders
-                  </DropdownMenuItem>
-                  
-                  {isAdmin && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => navigate("/admin")}>
-                        <LayoutDashboard className="mr-2 h-4 w-4" />
-                        Admin Dashboard
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                  
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Link to="/auth" className="p-2 rounded-full hover:bg-gray-100 mr-2">
-                <User className="h-6 w-6 text-gray-500" />
-              </Link>
-            )}
-            
-            <Link to="/cart" className="p-2 rounded-full hover:bg-gray-100 relative">
-              <ShoppingBag className="h-6 w-6 text-gray-500" />
-              <span className="absolute top-0 right-0 bg-zyra-purple text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
-                0
-              </span>
-            </Link>
-          </div>
-          
-          {isMobile && (
-            <div className="flex items-center">
-              {user ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="p-2 rounded-full hover:bg-gray-100 mr-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={getUserAvatar()} />
-                        <AvatarFallback>
-                          {getUserInitial()}
-                        </AvatarFallback>
-                      </Avatar>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => navigate("/profile")}>
-                      Profile
-                    </DropdownMenuItem>
-                    {isAdmin && (
-                      <DropdownMenuItem onClick={() => navigate("/admin")}>
-                        Admin Dashboard
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onClick={handleSignOut}>
-                      Sign out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <Link to="/auth" className="p-2 rounded-full hover:bg-gray-100 mr-2">
-                  <User className="h-6 w-6 text-gray-500" />
-                </Link>
-              )}
-              <Link to="/cart" className="p-2 rounded-full hover:bg-gray-100 relative">
-                <ShoppingBag className="h-6 w-6 text-gray-500" />
-                <span className="absolute top-0 right-0 bg-zyra-purple text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
-                  0
-                </span>
-              </Link>
-            </div>
-          )}
-        </div>
-      </div>
-      
-      {/* Mobile menu */}
-      {isMobile && isMenuOpen && (
-        <div className="md:hidden bg-white border-t shadow-lg animate-fade-in">
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center space-x-6">
             <Link
               to="/"
-              className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50"
-              onClick={toggleMenu}
+              className={`text-sm font-medium transition-colors hover:text-zyra-purple ${
+                location.pathname === "/"
+                  ? "text-zyra-purple"
+                  : "text-gray-600 dark:text-gray-300"
+              }`}
             >
               Home
             </Link>
             <Link
               to="/shop"
-              className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50"
-              onClick={toggleMenu}
+              className={`text-sm font-medium transition-colors hover:text-zyra-purple ${
+                location.pathname === "/shop"
+                  ? "text-zyra-purple"
+                  : "text-gray-600 dark:text-gray-300"
+              }`}
             >
               Shop
             </Link>
             <Link
               to="/categories"
-              className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50"
-              onClick={toggleMenu}
+              className={`text-sm font-medium transition-colors hover:text-zyra-purple ${
+                location.pathname === "/categories"
+                  ? "text-zyra-purple"
+                  : "text-gray-600 dark:text-gray-300"
+              }`}
             >
               Categories
             </Link>
             <Link
               to="/about"
-              className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50"
-              onClick={toggleMenu}
+              className={`text-sm font-medium transition-colors hover:text-zyra-purple ${
+                location.pathname === "/about"
+                  ? "text-zyra-purple"
+                  : "text-gray-600 dark:text-gray-300"
+              }`}
             >
               About
             </Link>
             <Link
               to="/contact"
-              className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50"
-              onClick={toggleMenu}
+              className={`text-sm font-medium transition-colors hover:text-zyra-purple ${
+                location.pathname === "/contact"
+                  ? "text-zyra-purple"
+                  : "text-gray-600 dark:text-gray-300"
+              }`}
             >
               Contact
             </Link>
-            {user && (
-              <>
-                <Link
-                  to="/profile"
-                  className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50"
-                  onClick={toggleMenu}
-                >
-                  My Account
-                </Link>
-                {isAdmin && (
-                  <Link
-                    to="/admin"
-                    className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50"
-                    onClick={toggleMenu}
-                  >
-                    Admin Dashboard
-                  </Link>
-                )}
-              </>
+          </nav>
+
+          {/* Desktop Right Actions */}
+          <div className="hidden md:flex items-center space-x-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="search"
+                placeholder="Search..."
+                className="w-[180px] lg:w-[260px] pl-9 rounded-full bg-gray-100 dark:bg-gray-800 border-none focus-visible:ring-zyra-purple"
+              />
+            </div>
+            
+            <ThemeToggleSimple />
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative"
+              onClick={openCart}
+            >
+              <ShoppingCart className="h-5 w-5" />
+              {items.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-zyra-purple text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {items.reduce((total, item) => total + item.quantity, 0)}
+                </span>
+              )}
+            </Button>
+
+            {user ? (
+              <Link to={isAdmin ? "/admin" : "/profile"}>
+                <Button variant="ghost" size="icon">
+                  <User className="h-5 w-5" />
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/auth">
+                <Button variant="outline" size="sm">
+                  Login
+                </Button>
+              </Link>
             )}
           </div>
-          <div className="p-4 border-t">
-            <div className="relative rounded-md shadow-sm">
-              <Input
-                type="text"
-                placeholder="Search products..."
-                className="pl-10 py-2 w-full"
-              />
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-gray-400" />
-              </div>
-            </div>
+
+          {/* Mobile Menu */}
+          <div className="md:hidden flex items-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative mr-2"
+              onClick={openCart}
+            >
+              <ShoppingCart className="h-5 w-5" />
+              {items.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-zyra-purple text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {items.reduce((total, item) => total + item.quantity, 0)}
+                </span>
+              )}
+            </Button>
+
+            <ThemeToggleSimple />
+
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="ml-2">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[300px] sm:w-[400px] p-0">
+                <div className="flex flex-col h-full">
+                  <div className="p-4 border-b">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl font-bold">Menu</h2>
+                      <SheetTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <X className="h-5 w-5" />
+                        </Button>
+                      </SheetTrigger>
+                    </div>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        type="search"
+                        placeholder="Search..."
+                        className="pl-9 w-full"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-auto p-4">
+                    <nav className="flex flex-col space-y-4">
+                      <Link
+                        to="/"
+                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                      >
+                        Home
+                      </Link>
+                      <Link
+                        to="/shop"
+                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                      >
+                        Shop All
+                      </Link>
+                      <div>
+                        <h3 className="font-medium mb-2 text-gray-500 dark:text-gray-400">Categories</h3>
+                        <div className="flex flex-col space-y-1 ml-2">
+                          {categories.map((category) => (
+                            <Link
+                              key={category.slug}
+                              to={`/shop?category=${category.slug}`}
+                              className="text-sm px-3 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                            >
+                              {category.name}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                      <Link
+                        to="/about"
+                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                      >
+                        About
+                      </Link>
+                      <Link
+                        to="/contact"
+                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                      >
+                        Contact
+                      </Link>
+                    </nav>
+                  </div>
+                  <div className="p-4 border-t">
+                    {user ? (
+                      <div className="flex flex-col space-y-2">
+                        <Link to="/profile">
+                          <Button variant="outline" className="w-full">
+                            My Account
+                          </Button>
+                        </Link>
+                        {isAdmin && (
+                          <Link to="/admin">
+                            <Button variant="outline" className="w-full">
+                              Admin Dashboard
+                            </Button>
+                          </Link>
+                        )}
+                      </div>
+                    ) : (
+                      <Link to="/auth">
+                        <Button className="w-full bg-zyra-purple hover:bg-zyra-dark-purple">
+                          Login / Register
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
-      )}
-    </nav>
+      </div>
+    </header>
   );
 };
 

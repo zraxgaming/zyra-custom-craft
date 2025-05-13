@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { ThemeToggleSimple } from "@/components/theme/ThemeToggle";
 
 interface NavItem {
   name: string;
@@ -96,7 +97,7 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${
                   pathname === item.href
                     ? "bg-zyra-purple text-white"
-                    : "text-gray-600 hover:bg-gray-100"
+                    : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                 }`}
               >
                 <span className="mr-3">{item.icon}</span>
@@ -107,7 +108,7 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <div className="px-4 py-2 mt-auto">
             <Button
               variant="ghost"
-              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900 dark:hover:text-red-400"
               onClick={handleSignOut}
             >
               <LogOut className="h-5 w-5 mr-3" />
@@ -120,13 +121,13 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   );
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       {/* Sidebar for desktop */}
-      <div className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 z-10 border-r bg-white">
+      <div className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 z-10 border-r bg-white dark:bg-gray-800 dark:border-gray-700">
         <div className="flex-1 flex flex-col min-h-0 pt-5">
           <div className="px-4 flex items-center justify-between">
             <Link to="/" className="flex items-center">
-              <span className="text-lg font-semibold">Zyra Admin</span>
+              <span className="text-lg font-semibold dark:text-white">Zyra Admin</span>
             </Link>
           </div>
           <nav className="mt-8 flex-1 px-4 space-y-1 overflow-y-auto">
@@ -137,7 +138,7 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${
                   pathname === item.href || pathname.startsWith(item.href + "/")
                     ? "bg-zyra-purple text-white"
-                    : "text-gray-600 hover:bg-gray-100"
+                    : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                 }`}
               >
                 <span className="mr-3">{item.icon}</span>
@@ -146,7 +147,7 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             ))}
           </nav>
         </div>
-        <div className="flex-shrink-0 p-4 border-t">
+        <div className="flex-shrink-0 p-4 border-t dark:border-gray-700">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <Avatar>
@@ -155,10 +156,10 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               </Avatar>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium">{getDisplayName()}</p>
+              <p className="text-sm font-medium dark:text-white">{getDisplayName()}</p>
               <Button
                 variant="ghost"
-                className="text-xs text-red-600 hover:text-red-700 px-0 py-0"
+                className="text-xs text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 px-0 py-0"
                 onClick={handleSignOut}
               >
                 Sign out
@@ -170,39 +171,49 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       
       {/* Mobile header */}
       <div className="md:pl-64 flex flex-col flex-1">
-        <div className="sticky top-0 z-10 md:hidden bg-white border-b">
+        <div className="sticky top-0 z-10 md:hidden bg-white dark:bg-gray-800 border-b dark:border-gray-700">
           <div className="flex justify-between items-center px-4 h-14">
             <MobileNav />
-            <Link to="/" className="text-lg font-semibold">
+            <Link to="/" className="text-lg font-semibold dark:text-white">
               Zyra Admin
             </Link>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={getUserAvatar()} />
-                    <AvatarFallback>{getUserInitials()}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>{getDisplayName()}</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/admin/settings')}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleSignOut}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center">
+              <ThemeToggleSimple />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full ml-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={getUserAvatar()} />
+                      <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>{getDisplayName()}</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/admin/settings')}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
         
+        {/* Add theme toggle for desktop */}
+        <div className="hidden md:block absolute top-4 right-4 z-50">
+          <ThemeToggleSimple />
+        </div>
+        
         {/* Main content */}
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+          {children}
+        </main>
       </div>
     </div>
   );
