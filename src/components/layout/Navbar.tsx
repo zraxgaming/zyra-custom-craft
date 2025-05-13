@@ -17,9 +17,9 @@ const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
 
-
+  // Safeguard for item count
   const itemCount = items?.length || 0;
-  
+
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -134,7 +134,7 @@ const Navbar = () => {
                 className="w-[180px] lg:w-[260px] pl-9 rounded-full bg-gray-100 dark:bg-gray-800 border-none focus-visible:ring-zyra-purple"
               />
             </div>
-            
+
             <ThemeToggleSimple />
 
             <Button
@@ -144,7 +144,7 @@ const Navbar = () => {
               onClick={openCart}
             >
               <ShoppingCart className="h-5 w-5" />
-              {items.length > 0 && (
+              {items?.length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-zyra-purple text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                   {items.reduce((total, item) => total + item.quantity, 0)}
                 </span>
@@ -175,7 +175,7 @@ const Navbar = () => {
               onClick={openCart}
             >
               <ShoppingCart className="h-5 w-5" />
-              {items.length > 0 && (
+              {items?.length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-zyra-purple text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                   {items.reduce((total, item) => total + item.quantity, 0)}
                 </span>
@@ -225,9 +225,11 @@ const Navbar = () => {
                         Shop All
                       </Link>
                       <div>
-                        <h3 className="font-medium mb-2 text-gray-500 dark:text-gray-400">Categories</h3>
+                        <h3 className="font-medium mb-2 text-gray-500 dark:text-gray-400">
+                          Categories
+                        </h3>
                         <div className="flex flex-col space-y-1 ml-2">
-                          {categories.map((category) => (
+                          {categories?.map((category) => (
                             <Link
                               key={category.slug}
                               to={`/shop?category=${category.slug}`}
