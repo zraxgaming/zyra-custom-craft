@@ -17,6 +17,9 @@ const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
 
+
+  const itemCount = items?.length || 0;
+  
   useEffect(() => {
     const fetchCategories = async () => {
       try {
