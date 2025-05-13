@@ -57,8 +57,8 @@ const Navbar = () => {
     <header
       className={`sticky top-0 z-50 w-full ${
         isScrolled
-          ? "bg-white/90 dark:bg-gray-900/90 backdrop-blur-md shadow-sm"
-          : "bg-white dark:bg-gray-900"
+          ? "bg-white dark:bg-gray-800 backdrop-blur-md shadow-sm"
+          : "bg-gray-100 dark:bg-gray-900"
       } transition-all duration-200`}
     >
       <div className="container mx-auto px-4">
@@ -77,7 +77,7 @@ const Navbar = () => {
               className={`text-sm font-medium transition-colors hover:text-zyra-purple ${
                 location.pathname === "/"
                   ? "text-zyra-purple"
-                  : "text-gray-600 dark:text-gray-300"
+                  : "text-gray-800 dark:text-gray-300"
               }`}
             >
               Home
@@ -87,7 +87,7 @@ const Navbar = () => {
               className={`text-sm font-medium transition-colors hover:text-zyra-purple ${
                 location.pathname === "/shop"
                   ? "text-zyra-purple"
-                  : "text-gray-600 dark:text-gray-300"
+                  : "text-gray-800 dark:text-gray-300"
               }`}
             >
               Shop
@@ -97,7 +97,7 @@ const Navbar = () => {
               className={`text-sm font-medium transition-colors hover:text-zyra-purple ${
                 location.pathname === "/categories"
                   ? "text-zyra-purple"
-                  : "text-gray-600 dark:text-gray-300"
+                  : "text-gray-800 dark:text-gray-300"
               }`}
             >
               Categories
@@ -107,7 +107,7 @@ const Navbar = () => {
               className={`text-sm font-medium transition-colors hover:text-zyra-purple ${
                 location.pathname === "/about"
                   ? "text-zyra-purple"
-                  : "text-gray-600 dark:text-gray-300"
+                  : "text-gray-800 dark:text-gray-300"
               }`}
             >
               About
@@ -117,7 +117,7 @@ const Navbar = () => {
               className={`text-sm font-medium transition-colors hover:text-zyra-purple ${
                 location.pathname === "/contact"
                   ? "text-zyra-purple"
-                  : "text-gray-600 dark:text-gray-300"
+                  : "text-gray-800 dark:text-gray-300"
               }`}
             >
               Contact
@@ -131,7 +131,7 @@ const Navbar = () => {
               <Input
                 type="search"
                 placeholder="Search..."
-                className="w-[180px] lg:w-[260px] pl-9 rounded-full bg-gray-100 dark:bg-gray-800 border-none focus-visible:ring-zyra-purple"
+                className="w-[180px] lg:w-[260px] pl-9 rounded-full bg-gray-100 dark:bg-gray-800 border dark:border-gray-700 focus-visible:ring-zyra-purple"
               />
             </div>
 
@@ -140,7 +140,7 @@ const Navbar = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="relative"
+              className="relative text-gray-800 dark:text-gray-200"
               onClick={openCart}
             >
               <ShoppingCart className="h-5 w-5" />
@@ -154,7 +154,7 @@ const Navbar = () => {
             {user ? (
               <Link to={isAdmin ? "/admin" : "/profile"}>
                 <Button variant="ghost" size="icon">
-                  <User className="h-5 w-5" />
+                  <User className="h-5 w-5 text-gray-800 dark:text-gray-200" />
                 </Button>
               </Link>
             ) : (
@@ -174,7 +174,7 @@ const Navbar = () => {
               className="relative mr-2"
               onClick={openCart}
             >
-              <ShoppingCart className="h-5 w-5" />
+              <ShoppingCart className="h-5 w-5 text-gray-800 dark:text-gray-200" />
               {items?.length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-zyra-purple text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                   {items.reduce((total, item) => total + item.quantity, 0)}
@@ -187,7 +187,7 @@ const Navbar = () => {
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="ml-2">
-                  <Menu className="h-5 w-5" />
+                  <Menu className="h-5 w-5 text-gray-800 dark:text-gray-200" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[400px] p-0">
@@ -197,7 +197,7 @@ const Navbar = () => {
                       <h2 className="text-xl font-bold">Menu</h2>
                       <SheetTrigger asChild>
                         <Button variant="ghost" size="icon">
-                          <X className="h-5 w-5" />
+                          <X className="h-5 w-5 text-gray-800 dark:text-gray-200" />
                         </Button>
                       </SheetTrigger>
                     </div>
@@ -206,7 +206,7 @@ const Navbar = () => {
                       <Input
                         type="search"
                         placeholder="Search..."
-                        className="pl-9 w-full"
+                        className="pl-9 w-full bg-gray-100 dark:bg-gray-800 border dark:border-gray-700"
                       />
                     </div>
                   </div>
@@ -214,13 +214,13 @@ const Navbar = () => {
                     <nav className="flex flex-col space-y-4">
                       <Link
                         to="/"
-                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200"
                       >
                         Home
                       </Link>
                       <Link
                         to="/shop"
-                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200"
                       >
                         Shop All
                       </Link>
@@ -233,7 +233,7 @@ const Navbar = () => {
                             <Link
                               key={category.slug}
                               to={`/shop?category=${category.slug}`}
-                              className="text-sm px-3 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                              className="text-sm px-3 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200"
                             >
                               {category.name}
                             </Link>
@@ -242,13 +242,13 @@ const Navbar = () => {
                       </div>
                       <Link
                         to="/about"
-                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200"
                       >
                         About
                       </Link>
                       <Link
                         to="/contact"
-                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200"
                       >
                         Contact
                       </Link>
