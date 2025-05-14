@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,9 +22,9 @@ const Settings = () => {
           </TabsList>
           
           <TabsContent value="general" className="mt-6">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div className="bg-background text-foreground rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold mb-4">General Settings</h2>
-              <p className="text-gray-500 dark:text-gray-400">
+              <p className="text-foreground">
                 Store configuration and settings will appear here.
               </p>
             </div>
@@ -40,18 +39,18 @@ const Settings = () => {
           </TabsContent>
           
           <TabsContent value="appearance" className="mt-6">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div className="bg-card text-card-foreground rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold mb-4">Appearance Settings</h2>
-              <p className="text-gray-500 dark:text-gray-400">
+              <p className="text-card-foreground">
                 Store appearance settings will appear here.
               </p>
             </div>
           </TabsContent>
           
           <TabsContent value="email" className="mt-6">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div className="bg-card text-card-foreground rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold mb-4">Email Template Settings</h2>
-              <p className="text-gray-500 dark:text-gray-400">
+              <p className="text-card-foreground">
                 Email template settings will appear here.
               </p>
             </div>

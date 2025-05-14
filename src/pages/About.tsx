@@ -1,4 +1,3 @@
-
 import React from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -25,26 +24,20 @@ const About = () => {
       <Navbar />
       <main>
         {/* Hero Section */}
-        <section className="bg-gradient-to-b from-gray-50 to-white py-16 md:py-24">
+        <section className="bg-background text-foreground py-16 md:py-24">
           <Container>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
               <div>
-                <h1 className="text-4xl md:text-5xl font-bold mb-4 text-gray-900">About Zyra Store</h1>
-                <p className="text-lg text-gray-700 mb-8">
+                <h1 className="text-4xl md:text-5xl font-bold mb-4 text-primary-foreground">About Zyra Store</h1>
+                <p className="text-lg text-foreground mb-8">
                   We're dedicated to providing high-quality customizable products that express your unique style and personality. Our mission is to make personalization accessible, fun, and affordable for everyone.
                 </p>
                 <div className="flex flex-wrap gap-4">
                   <Button 
-                    className="bg-zyra-purple hover:bg-zyra-dark-purple"
+                    className="bg-primary hover:bg-secondary text-primary-foreground"
                     onClick={() => navigate("/shop")}
                   >
                     Explore Products
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => navigate("/contact")}
-                  >
-                    Contact Us
                   </Button>
                 </div>
               </div>

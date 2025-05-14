@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Container } from "@/components/ui/container";
@@ -375,82 +374,90 @@ const Checkout = () => {
   return (
     <>
       <Navbar />
-      <Container className="py-12">
-        <div className="mb-8">
-          <Button 
-            variant="outline" 
-            className="mb-4"
-            onClick={() => navigate("/cart")}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Cart
-          </Button>
-          <h1 className="text-3xl font-bold">Checkout</h1>
-          <p className="text-gray-600 mt-2">Complete your purchase by providing shipping and payment details</p>
-        </div>
+      <Container className="py-12 bg-background text-foreground">
+        <h1 className="text-3xl font-bold mb-6 text-primary-foreground">Checkout</h1>
+        <Separator className="mb-8" />
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Checkout form */}
-          <div className="lg:col-span-2">
-            <form>
-              {/* Shipping Information */}
-              <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
-                <h2 className="text-xl font-medium mb-6 flex items-center">
-                  <Truck className="h-5 w-5 mr-2" />
-                  Shipping Information
-                </h2>
-                
-                <AddressForm 
-                  existingAddresses={existingAddresses}
-                  formValues={formValues}
-                  userEmail={user.email}
-                  onChange={handleInputChange}
-                  onAddressSelect={handleAddressSelect}
-                />
-                
-                <DeliveryOptions
-                  selectedOption={formValues.deliveryType}
-                  onOptionChange={(value) => handleInputChange("deliveryType", value)}
-                />
-              </div>
-              
-              {/* Payment Information */}
-              <div className="bg-white p-6 rounded-lg shadow-sm">
-                <PaymentMethods
-                  onPayPalApprove={onPayPalApprove}
-                  isProcessing={isProcessing}
-                  total={total}
-                />
-              </div>
-            </form>
+        {state.items.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="mx-auto w-24 h-24 bg-card rounded-full flex items-center justify-center mb-6">
+              <Truck className="h-12 w-12 text-card-foreground" />
+            </div>
+            <h2 className="text-2xl font-medium mb-2 text-primary-foreground">Your cart is empty</h2>
+            <p className="text-foreground">
+              Add items to your cart before proceeding to checkout.
+            </p>
+            <Button
+              className="mt-6 bg-primary hover:bg-secondary text-primary-foreground"
+              onClick={() => navigate("/shop")}
+            >
+              Start Shopping
+            </Button>
           </div>
-          
-          {/* Order Summary */}
-          <div>
-            <div className="space-y-6">
-              <OrderSummary
-                items={state.items}
-                subtotal={subtotal}
-                shipping={shipping}
-                discount={discount}
-                couponCode={appliedCoupon?.code}
-              />
-              
-              <div className="bg-white p-6 rounded-lg shadow-sm">
-                <CouponForm
-                  onApplyCoupon={handleApplyCoupon}
-                  isLoading={isApplyingCoupon}
-                  appliedCoupon={appliedCoupon ? {
-                    code: appliedCoupon.code,
-                    discountValue: appliedCoupon.discount_value,
-                    discountType: appliedCoupon.discount_type as 'percentage' | 'fixed'
-                  } : null}
-                  onRemoveCoupon={handleRemoveCoupon}
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Checkout form */}
+            <div className="lg:col-span-2">
+              <form>
+                {/* Shipping Information */}
+                <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
+                  <h2 className="text-xl font-medium mb-6 flex items-center">
+                    <Truck className="h-5 w-5 mr-2" />
+                    Shipping Information
+                  </h2>
+                  
+                  <AddressForm 
+                    existingAddresses={existingAddresses}
+                    formValues={formValues}
+                    userEmail={user.email}
+                    onChange={handleInputChange}
+                    onAddressSelect={handleAddressSelect}
+                  />
+                  
+                  <DeliveryOptions
+                    selectedOption={formValues.deliveryType}
+                    onOptionChange={(value) => handleInputChange("deliveryType", value)}
+                  />
+                </div>
+                
+                {/* Payment Information */}
+                <div className="bg-white p-6 rounded-lg shadow-sm">
+                  <PaymentMethods
+                    onPayPalApprove={onPayPalApprove}
+                    isProcessing={isProcessing}
+                    total={total}
+                  />
+                </div>
+              </form>
+            </div>
+            
+            {/* Order Summary */}
+            <div>
+              <div className="space-y-6">
+                <OrderSummary
+                  items={state.items}
+                  subtotal={subtotal}
+                  shipping={shipping}
+                  discount={discount}
+                  couponCode={appliedCoupon?.code}
                 />
+                
+                <div className="bg-white p-6 rounded-lg shadow-sm">
+                  <CouponForm
+                    onApplyCoupon={handleApplyCoupon}
+                    isLoading={isApplyingCoupon}
+                    appliedCoupon={appliedCoupon ? {
+                      code: appliedCoupon.code,
+                      discountValue: appliedCoupon.discount_value,
+                      discountType: appliedCoupon.discount_type as 'percentage' | 'fixed'
+                    } : null}
+                    onRemoveCoupon={handleRemoveCoupon}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </Container>
       <Footer />
     </>

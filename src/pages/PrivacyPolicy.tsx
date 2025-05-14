@@ -1,4 +1,3 @@
-
 import React from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -6,21 +5,21 @@ import { Separator } from "@/components/ui/separator";
 
 const PrivacyPolicy = () => {
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900">
+    <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
       <main className="flex-grow container mx-auto px-4 py-8 md:py-12 max-w-4xl">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8">
-          <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Privacy Policy</h1>
+        <div className="bg-card text-card-foreground rounded-lg shadow-sm p-8">
+          <h1 className="text-3xl font-bold mb-6 text-primary-foreground">Privacy Policy</h1>
           <Separator className="mb-8" />
           
-          <div className="prose max-w-none dark:prose-invert prose-headings:text-gray-900 dark:prose-headings:text-white prose-p:text-gray-600 dark:prose-p:text-gray-300">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">Last Updated: May 9, 2025</p>
+          <div className="prose max-w-none prose-headings:text-primary-foreground prose-p:text-foreground">
+            <p className="text-sm text-foreground mb-8">Last Updated: May 9, 2025</p>
             
             <h2 className="text-2xl font-semibold mt-8 mb-4">1. Information We Collect</h2>
             <p>
               We collect several types of information from and about users of our website, including:
             </p>
-            <ul className="list-disc pl-6 mb-6 space-y-2 text-gray-600 dark:text-gray-300">
+            <ul className="list-disc pl-6 mb-6 space-y-2 text-foreground">
               <li>Personal identifiable information (such as name, email address, mailing address, phone number)</li>
               <li>Order information and history</li>
               <li>Payment details (processed by our secure payment processors)</li>
@@ -31,7 +30,7 @@ const PrivacyPolicy = () => {
             
             <h2 className="text-2xl font-semibold mt-8 mb-4">2. How We Use Your Information</h2>
             <p>We use the information we collect to:</p>
-            <ul className="list-disc pl-6 mb-6 space-y-2 text-gray-600 dark:text-gray-300">
+            <ul className="list-disc pl-6 mb-6 space-y-2 text-foreground">
               <li>Fulfill and manage your orders</li>
               <li>Process your payments</li>
               <li>Communicate with you about orders, products, and services</li>
@@ -45,7 +44,7 @@ const PrivacyPolicy = () => {
             <p>
               We may share your personal information with:
             </p>
-            <ul className="list-disc pl-6 mb-6 space-y-2 text-gray-600 dark:text-gray-300">
+            <ul className="list-disc pl-6 mb-6 space-y-2 text-foreground">
               <li>Service providers who assist us in operating our website and business</li>
               <li>Payment processors to complete transactions</li>
               <li>Shipping and logistics companies to deliver your orders</li>
@@ -79,7 +78,7 @@ const PrivacyPolicy = () => {
             <p>
               Our security measures include:
             </p>
-            <ul className="list-disc pl-6 mb-6 space-y-2 text-gray-600 dark:text-gray-300">
+            <ul className="list-disc pl-6 mb-6 space-y-2 text-foreground">
               <li>Encryption of sensitive data</li>
               <li>Secure socket layer (SSL) technology</li>
               <li>Regular security assessments</li>
@@ -91,7 +90,7 @@ const PrivacyPolicy = () => {
             <p>
               Depending on your location, you may have certain rights regarding your personal information, including:
             </p>
-            <ul className="list-disc pl-6 mb-6 space-y-2 text-gray-600 dark:text-gray-300">
+            <ul className="list-disc pl-6 mb-6 space-y-2 text-foreground">
               <li>Right to access the personal information we hold about you</li>
               <li>Right to correct inaccurate information</li>
               <li>Right to delete your personal information</li>

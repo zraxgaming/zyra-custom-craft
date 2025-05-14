@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -19,17 +18,17 @@ const NotFound = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="flex-grow flex items-center justify-center bg-zyra-soft-gray py-20">
+      <main className="flex-grow flex items-center justify-center bg-background py-20">
         <div className="text-center max-w-md px-4">
           <div className="mb-8">
             <div className="mx-auto w-24 h-24 rounded-full bg-zyra-purple/10 flex items-center justify-center">
               <span className="text-6xl font-bold text-zyra-purple">404</span>
             </div>
           </div>
-          <h1 className="text-3xl font-semibold text-gray-900 mb-4">
+          <h1 className="text-3xl font-semibold text-primary-foreground mb-4">
             Page not found
           </h1>
-          <p className="text-gray-600 mb-8">
+          <p className="text-foreground mb-8">
             The page you are looking for might have been removed, had its name changed,
             or is temporarily unavailable. Sorry for the inconvenience.
           </p>

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Container } from "@/components/ui/container";
 import Navbar from "@/components/layout/Navbar";
@@ -31,23 +30,23 @@ const Cart = () => {
   return (
     <>
       <Navbar />
-      <Container className="py-12">
-        <h1 className="text-3xl font-bold mb-6">Your Shopping Cart</h1>
+      <Container className="py-12 bg-background text-foreground">
+        <h1 className="text-3xl font-bold mb-6 text-primary-foreground">Your Shopping Cart</h1>
         
         {state.items.length === 0 ? (
           <div className="text-center py-16">
-            <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-              <ShoppingBag className="h-12 w-12 text-gray-400" />
+            <div className="mx-auto w-24 h-24 bg-card rounded-full flex items-center justify-center mb-6">
+              <ShoppingBag className="h-12 w-12 text-card-foreground" />
             </div>
-            <h2 className="text-2xl font-medium mb-2">Your cart is empty</h2>
-            <p className="text-gray-500 mb-8">
+            <h2 className="text-2xl font-medium mb-2 text-primary-foreground">Your cart is empty</h2>
+            <p className="text-foreground">
               Looks like you haven't added any products to your cart yet.
             </p>
-            <Button 
-              onClick={() => navigate("/shop")} 
-              className="px-8"
+            <Button
+              className="mt-6 bg-primary hover:bg-secondary text-primary-foreground"
+              onClick={() => navigate("/shop")}
             >
-              Continue Shopping
+              Start Shopping
             </Button>
           </div>
         ) : (
