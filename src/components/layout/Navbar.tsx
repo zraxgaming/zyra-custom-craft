@@ -11,13 +11,14 @@ import { ThemeToggleSimple } from "@/components/theme/ThemeToggle";
 
 const Navbar = () => {
   const { user, isAdmin } = useAuth();
-  const { items, openCart } = useCart();
+  const { state, toggleCart, totalItems } = useCart();
+  const items = state.items;
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
 
   // Safeguard for item count
-  const itemCount = items?.length || 0;
+  const itemCount = Array.isArray(items) ? items.length : 0;
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -140,12 +141,12 @@ const Navbar = () => {
               variant="ghost"
               size="icon"
               className="relative text-gray-800 dark:text-gray-200"
-              onClick={openCart}
+              onClick={toggleCart}
             >
               <ShoppingCart className="h-5 w-5" />
-              {items?.length > 0 && (
+              {Array.isArray(items) && items.length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-zyra-purple text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                  {items.reduce((total, item) => total + item.quantity, 0)}
+                  {items.reduce((total, item) => total + (item.quantity || 0), 0)}
                 </span>
               )}
             </Button>
@@ -171,12 +172,12 @@ const Navbar = () => {
               variant="ghost"
               size="icon"
               className="relative mr-2"
-              onClick={openCart}
+              onClick={toggleCart}
             >
               <ShoppingCart className="h-5 w-5 text-gray-800 dark:text-gray-200" />
-              {items?.length > 0 && (
+              {Array.isArray(items) && items.length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-zyra-purple text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                  {items.reduce((total, item) => total + item.quantity, 0)}
+                  {items.reduce((total, item) => total + (item.quantity || 0), 0)}
                 </span>
               )}
             </Button>
