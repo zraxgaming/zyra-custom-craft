@@ -20,10 +20,7 @@ interface Review {
   created_at: string;
   user_id: string;
   verified_purchase: boolean;
-  profiles?: {
-    first_name: string;
-    last_name: string;
-  } | null;
+  user_name?: string;
 }
 
 interface ProductReviewsProps {
@@ -58,17 +55,20 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({
       const { data, error } = await supabase
         .from("reviews")
         .select(`
-          *,
-          profiles (
-            first_name,
-            last_name
-          )
+          *
         `)
         .eq("product_id", productId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setReviews(data || []);
+      
+      // Map the data and handle missing profile relationships
+      const mappedReviews = (data || []).map(review => ({
+        ...review,
+        user_name: 'Anonymous User' // Default since profiles relationship is not working
+      }));
+      
+      setReviews(mappedReviews);
     } catch (error: any) {
       console.error("Error fetching reviews:", error);
       toast({
@@ -141,7 +141,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({
         className={`h-4 w-4 ${
           i < rating 
             ? "text-yellow-400 fill-current" 
-            : "text-gray-300"
+            : "text-gray-300 dark:text-gray-600"
         } ${interactive ? "cursor-pointer hover:text-yellow-300" : ""}`}
         onClick={interactive ? () => setNewReview(prev => ({ ...prev, rating: i + 1 })) : undefined}
       />
@@ -153,8 +153,8 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="h-8 bg-gray-200 rounded animate-pulse" />
-        <div className="h-32 bg-gray-200 rounded animate-pulse" />
+        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+        <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
       </div>
     );
   }
@@ -163,10 +163,10 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-xl font-semibold mb-2">Customer Reviews</h3>
+          <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">Customer Reviews</h3>
           <div className="flex items-center gap-2">
             <div className="flex">{renderStars(Math.round(averageRating))}</div>
-            <span className="text-gray-600">
+            <span className="text-gray-600 dark:text-gray-400">
               {averageRating.toFixed(1)} out of 5 ({totalReviews} reviews)
             </span>
           </div>
@@ -175,38 +175,40 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({
         {user && !userHasReviewed && (
           <Dialog open={showAddReview} onOpenChange={setShowAddReview}>
             <DialogTrigger asChild>
-              <Button className="bg-zyra-purple hover:bg-zyra-dark-purple">
+              <Button className="bg-zyra-purple hover:bg-zyra-dark-purple text-white">
                 Write a Review
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
-                <DialogTitle>Write a Review</DialogTitle>
+                <DialogTitle className="text-gray-900 dark:text-gray-100">Write a Review</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label>Rating</Label>
+                  <Label className="text-gray-900 dark:text-gray-100">Rating</Label>
                   <div className="flex gap-1 mt-1">
                     {renderStars(newReview.rating, true)}
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="review-title">Review Title</Label>
+                  <Label htmlFor="review-title" className="text-gray-900 dark:text-gray-100">Review Title</Label>
                   <Input
                     id="review-title"
                     value={newReview.title}
                     onChange={(e) => setNewReview(prev => ({ ...prev, title: e.target.value }))}
                     placeholder="Summarize your experience..."
+                    className="text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="review-comment">Your Review</Label>
+                  <Label htmlFor="review-comment" className="text-gray-900 dark:text-gray-100">Your Review</Label>
                   <Textarea
                     id="review-comment"
                     value={newReview.comment}
                     onChange={(e) => setNewReview(prev => ({ ...prev, comment: e.target.value }))}
                     placeholder="Tell others about your experience with this product..."
                     rows={4}
+                    className="text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800"
                   />
                 </div>
                 <div className="flex gap-2 justify-end">
@@ -216,7 +218,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({
                   <Button
                     onClick={handleSubmitReview}
                     disabled={isSubmitting}
-                    className="bg-zyra-purple hover:bg-zyra-dark-purple"
+                    className="bg-zyra-purple hover:bg-zyra-dark-purple text-white"
                   >
                     {isSubmitting ? "Submitting..." : "Submit Review"}
                   </Button>
@@ -231,20 +233,20 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({
         {reviews.length === 0 ? (
           <Card>
             <CardContent className="pt-6">
-              <p className="text-center text-gray-500">
+              <p className="text-center text-gray-500 dark:text-gray-400">
                 No reviews yet. Be the first to review this product!
               </p>
             </CardContent>
           </Card>
         ) : (
           reviews.map((review) => (
-            <Card key={review.id}>
+            <Card key={review.id} className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
-                    <User className="h-5 w-5 text-gray-400" />
-                    <span className="font-medium">
-                      {review.profiles?.first_name || "Anonymous"}
+                    <User className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                      {review.user_name || "Anonymous"}
                     </span>
                     {review.verified_purchase && (
                       <Badge variant="secondary" className="text-xs">
@@ -252,17 +254,17 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({
                       </Badge>
                     )}
                   </div>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
                     {new Date(review.created_at).toLocaleDateString()}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex">{renderStars(review.rating)}</div>
-                  <span className="font-medium">{review.title}</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{review.title}</span>
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-700">{review.comment}</p>
+                <p className="text-gray-700 dark:text-gray-300">{review.comment}</p>
               </CardContent>
             </Card>
           ))

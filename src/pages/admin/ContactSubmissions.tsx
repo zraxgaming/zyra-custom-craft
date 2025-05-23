@@ -1,42 +1,43 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/hooks/use-auth";
-import AdminLayout from "@/components/admin/AdminLayout";
-import { Search, Mail, CheckCircle, Eye } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
+import {
+  Card,
+  CardContent
+} from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import AdminLayout from "@/components/admin/AdminLayout";
+import { useAuth } from "@/hooks/use-auth";
+import { Search, Eye, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
+import { ContactSubmission } from "@/types/contact";
 
-interface ContactSubmission {
-  id: string;
-  created_at: string;
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-  status: "unread" | "read" | "replied";
-  admin_reply?: string;
-}
-
-const ContactSubmissions: React.FC = () => {
-  const { isAdmin, isLoading } = useAuth();
-  const navigate = useNavigate();
+const ContactSubmissions = () => {
   const [submissions, setSubmissions] = useState<ContactSubmission[]>([]);
+  const [filteredSubmissions, setFilteredSubmissions] = useState<ContactSubmission[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  
+  const { isAdmin, user } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
 
   // Redirect if not admin
   useEffect(() => {
-    if (!isLoading && !isAdmin) {
+    if (user && !isAdmin) {
       navigate("/");
       toast({
         title: "Access denied",
@@ -44,246 +45,216 @@ const ContactSubmissions: React.FC = () => {
         variant: "destructive",
       });
     }
-  }, [isAdmin, isLoading, navigate, toast]);
+  }, [isAdmin, user, navigate, toast]);
 
-  // Fetch contact submissions
+  // Fetch submissions
   useEffect(() => {
     const fetchSubmissions = async () => {
       try {
-        let query = supabase
+        const { data, error } = await supabase
           .from("contact_submissions")
           .select("*")
           .order("created_at", { ascending: false });
           
-        if (statusFilter) {
-          query = query.eq("status", statusFilter);
-        }
-        
-        const { data, error } = await query;
-          
         if (error) throw error;
-        setSubmissions(data || []);
+        
+        // Map the data to ensure proper typing
+        const mappedSubmissions: ContactSubmission[] = (data || []).map(submission => ({
+          ...submission,
+          status: submission.status as 'unread' | 'read' | 'replied'
+        }));
+        
+        setSubmissions(mappedSubmissions);
+        setFilteredSubmissions(mappedSubmissions);
       } catch (error: any) {
         toast({
-          title: "Error fetching submissions",
+          title: "Error fetching contact submissions",
           description: error.message,
           variant: "destructive",
         });
       } finally {
-        setIsSubmissionsLoading(false);
+        setIsLoading(false);
       }
     };
     
     fetchSubmissions();
-  }, [toast, statusFilter]);
+  }, [toast]);
 
-  const updateSubmissionStatus = async (id: string, status: "unread" | "read" | "replied") => {
-    try {
-      const { error } = await supabase
-        .from("contact_submissions")
-        .update({ status })
-        .eq("id", id);
-        
-      if (error) throw error;
-      
-      setSubmissions(submissions.map(submission => 
-        submission.id === id ? { ...submission, status } : submission
-      ));
-      
-      toast({
-        title: "Status updated",
-        description: `Submission marked as ${status}`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error updating status",
-        description: error.message,
-        variant: "destructive",
-      });
+  // Filter submissions based on search and status
+  useEffect(() => {
+    let filtered = submissions;
+    
+    if (searchTerm) {
+      filtered = filtered.filter(submission =>
+        submission.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        submission.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        submission.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        submission.message.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    if (filterStatus !== "all") {
+      filtered = filtered.filter(submission => submission.status === filterStatus);
+    }
+    
+    setFilteredSubmissions(filtered);
+  }, [submissions, searchTerm, filterStatus]);
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'unread':
+        return <Badge variant="destructive">Unread</Badge>;
+      case 'read':
+        return <Badge variant="secondary">Read</Badge>;
+      case 'replied':
+        return <Badge variant="default" className="bg-green-500">Replied</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
-  const sendReply = async (submission: ContactSubmission) => {
-    try {
-      // Mark as replied
-      await updateSubmissionStatus(submission.id, "replied");
-      
-      // Open email client
-      const subject = `Re: ${submission.subject}`;
-      const mailtoLink = `mailto:${submission.email}?subject=${encodeURIComponent(subject)}`;
-      window.open(mailtoLink);
-      
-      toast({
-        title: "Email client opened",
-        description: `Opening email to reply to ${submission.name}`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
+  const getStatusCount = (status: string) => {
+    if (status === "all") return submissions.length;
+    return submissions.filter(s => s.status === status).length;
   };
 
-  const filteredSubmissions = submissions.filter((submission) => {
-    if (!searchTerm) return true;
+  if (!user) {
     return (
-      submission.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      submission.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      submission.subject.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  });
-
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
-      </div>
+      <AdminLayout>
+        <div className="flex justify-center items-center h-[calc(100vh-64px)]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
     <AdminLayout>
-      <div className="p-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Contact Submissions</h1>
-          <div className="text-sm text-muted-foreground">
-            {submissions.length} total submissions
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Contact Submissions</h1>
+        </div>
+        
+        {/* Filters and Search */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+          <Card 
+            className={`cursor-pointer transition-colors ${filterStatus === 'all' ? 'ring-2 ring-zyra-purple' : ''} bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700`}
+            onClick={() => setFilterStatus('all')}
+          >
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{getStatusCount('all')}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">All Submissions</div>
+            </CardContent>
+          </Card>
+          
+          <Card 
+            className={`cursor-pointer transition-colors ${filterStatus === 'unread' ? 'ring-2 ring-zyra-purple' : ''} bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700`}
+            onClick={() => setFilterStatus('unread')}
+          >
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-red-600">{getStatusCount('unread')}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">Unread</div>
+            </CardContent>
+          </Card>
+          
+          <Card 
+            className={`cursor-pointer transition-colors ${filterStatus === 'read' ? 'ring-2 ring-zyra-purple' : ''} bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700`}
+            onClick={() => setFilterStatus('read')}
+          >
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-gray-600">{getStatusCount('read')}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">Read</div>
+            </CardContent>
+          </Card>
+          
+          <Card 
+            className={`cursor-pointer transition-colors ${filterStatus === 'replied' ? 'ring-2 ring-zyra-purple' : ''} bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700`}
+            onClick={() => setFilterStatus('replied')}
+          >
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-green-600">{getStatusCount('replied')}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">Replied</div>
+            </CardContent>
+          </Card>
+          
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search submissions..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800"
+            />
           </div>
         </div>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Filter & Search</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="relative flex-grow">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name, email, or subject..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
+          </div>
+        ) : filteredSubmissions.length === 0 ? (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <div className="mb-4 mx-auto bg-muted w-16 h-16 rounded-full flex items-center justify-center">
+                <MessageSquare className="h-8 w-8 text-muted-foreground" />
               </div>
-              
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full md:w-[200px]">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Statuses</SelectItem>
-                  <SelectItem value="unread">Unread</SelectItem>
-                  <SelectItem value="read">Read</SelectItem>
-                  <SelectItem value="replied">Replied</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Submissions List</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isSubmissionsLoading ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
-              </div>
-            ) : filteredSubmissions.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-muted-foreground">
-                  {searchTerm || statusFilter ? "No submissions found matching your criteria." : "No contact submissions yet."}
-                </div>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Subject</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredSubmissions.map((submission) => (
-                      <TableRow
-                        key={submission.id}
-                        className="cursor-pointer hover:bg-muted/50"
+              <h3 className="text-xl font-medium mb-2 text-gray-900 dark:text-gray-100">
+                {searchTerm || filterStatus !== 'all' ? 'No matching submissions' : 'No contact submissions found'}
+              </h3>
+              <p className="text-muted-foreground">
+                {searchTerm || filterStatus !== 'all' 
+                  ? 'Try adjusting your search or filter criteria.' 
+                  : 'Contact submissions will appear here when customers reach out.'
+                }
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-gray-200 dark:border-gray-700">
+                  <TableHead className="text-gray-900 dark:text-gray-100">Name</TableHead>
+                  <TableHead className="text-gray-900 dark:text-gray-100">Email</TableHead>
+                  <TableHead className="text-gray-900 dark:text-gray-100">Subject</TableHead>
+                  <TableHead className="text-gray-900 dark:text-gray-100">Status</TableHead>
+                  <TableHead className="text-gray-900 dark:text-gray-100">Date</TableHead>
+                  <TableHead className="text-gray-900 dark:text-gray-100">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredSubmissions.map((submission) => (
+                  <TableRow key={submission.id} className="border-gray-200 dark:border-gray-700">
+                    <TableCell className="font-medium text-gray-900 dark:text-gray-100">{submission.name}</TableCell>
+                    <TableCell className="text-gray-600 dark:text-gray-400">{submission.email}</TableCell>
+                    <TableCell className="text-gray-600 dark:text-gray-400">
+                      {submission.subject ? (
+                        <span className="max-w-xs truncate block">{submission.subject}</span>
+                      ) : (
+                        <span className="text-gray-400 italic">No subject</span>
+                      )}
+                    </TableCell>
+                    <TableCell>{getStatusBadge(submission.status)}</TableCell>
+                    <TableCell className="text-gray-600 dark:text-gray-400">
+                      {format(new Date(submission.created_at), "MMM d, yyyy")}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => navigate(`/admin/contact/${submission.id}`)}
+                        className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                       >
-                        <TableCell>
-                          {format(new Date(submission.created_at), "MMM d, yyyy")}
-                        </TableCell>
-                        <TableCell className="font-medium">{submission.name}</TableCell>
-                        <TableCell>
-                          <a
-                            href={`mailto:${submission.email}`}
-                            className="text-zyra-purple hover:underline"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {submission.email}
-                          </a>
-                        </TableCell>
-                        <TableCell className="max-w-[200px] truncate">
-                          {submission.subject}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              submission.status === "unread" ? "destructive" :
-                              submission.status === "read" ? "secondary" :
-                              "default"
-                            }
-                          >
-                            {submission.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <div className="flex space-x-2">
-                            {submission.status === "unread" && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => updateSubmissionStatus(submission.id, "read")}
-                                title="Mark as Read"
-                              >
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => sendReply(submission)}
-                              title="Reply via Email"
-                            >
-                              <Mail className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => navigate(`/admin/contact/${submission.id}`)}
-                              title="View Details"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

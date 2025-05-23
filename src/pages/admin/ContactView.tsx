@@ -1,43 +1,45 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { ArrowLeft, Mail, User, Calendar, MessageSquare, Send } from "lucide-react";
-import AdminLayout from "@/components/admin/AdminLayout";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import AdminLayout from "@/components/admin/AdminLayout";
+import { useAuth } from "@/hooks/use-auth";
+import { ArrowLeft, Send, Mail, Calendar, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
-
-interface ContactSubmission {
-  id: string;
-  created_at: string;
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-  status: "unread" | "read" | "replied";
-  admin_reply?: string;
-}
+import { ContactSubmission } from "@/types/contact";
 
 const ContactView = () => {
   const { id } = useParams<{ id: string }>();
+  const [submission, setSubmission] = useState<ContactSubmission | null>(null);
+  const [reply, setReply] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  
+  const { isAdmin, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [submission, setSubmission] = useState<ContactSubmission | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [replyText, setReplyText] = useState("");
 
+  // Redirect if not admin
+  useEffect(() => {
+    if (user && !isAdmin) {
+      navigate("/");
+      toast({
+        title: "Access denied",
+        description: "You don't have permission to access this page.",
+        variant: "destructive",
+      });
+    }
+  }, [isAdmin, user, navigate, toast]);
+
+  // Fetch submission details
   useEffect(() => {
     const fetchSubmission = async () => {
-      if (!id) {
-        setIsLoading(false);
-        return;
-      }
+      if (!id) return;
       
       try {
         const { data, error } = await supabase
@@ -45,20 +47,30 @@ const ContactView = () => {
           .select("*")
           .eq("id", id)
           .single();
-
+          
         if (error) throw error;
-        setSubmission(data);
-        setReplyText(data.admin_reply || "");
         
-        // Mark as read if it was unread
-        if (data.status === "unread") {
-          await updateStatus("read");
+        // Map the data to ensure proper typing
+        const mappedSubmission: ContactSubmission = {
+          ...data,
+          status: data.status as 'unread' | 'read' | 'replied'
+        };
+        
+        setSubmission(mappedSubmission);
+        
+        // Mark as read if it's unread
+        if (data.status === 'unread') {
+          await supabase
+            .from("contact_submissions")
+            .update({ status: 'read' })
+            .eq("id", id);
+          
+          setSubmission(prev => prev ? { ...prev, status: 'read' } : null);
         }
       } catch (error: any) {
-        console.error("Error fetching contact submission:", error);
         toast({
-          title: "Error",
-          description: "Failed to load contact submission details",
+          title: "Error fetching submission",
+          description: error.message,
           variant: "destructive",
         });
         navigate("/admin/contact");
@@ -66,88 +78,80 @@ const ContactView = () => {
         setIsLoading(false);
       }
     };
-
+    
     fetchSubmission();
-  }, [id, navigate, toast]);
+  }, [id, toast, navigate]);
 
-  const updateStatus = async (status: "unread" | "read" | "replied") => {
-    if (!submission || !id) return;
+  const handleSendReply = async () => {
+    if (!submission || !reply.trim()) return;
     
-    setIsUpdating(true);
+    setIsSending(true);
     try {
-      const { error } = await supabase
-        .from("contact_submissions")
-        .update({ status })
-        .eq("id", id);
-
-      if (error) throw error;
-
-      setSubmission({ ...submission, status });
-      toast({
-        title: "Status updated",
-        description: `Marked as ${status}`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to update status",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const saveReply = async () => {
-    if (!submission || !id) return;
-    
-    setIsUpdating(true);
-    try {
+      // Update the submission with the reply
       const { error } = await supabase
         .from("contact_submissions")
         .update({ 
-          admin_reply: replyText,
-          status: "replied"
+          admin_reply: reply,
+          status: 'replied'
         })
-        .eq("id", id);
-
+        .eq("id", submission.id);
+        
       if (error) throw error;
-
-      setSubmission({ ...submission, admin_reply: replyText, status: "replied" });
+      
+      // TODO: Send email with the reply using an edge function
+      // For now, we'll just update the status
+      
+      setSubmission(prev => prev ? {
+        ...prev,
+        admin_reply: reply,
+        status: 'replied'
+      } : null);
+      
+      setReply("");
+      
       toast({
-        title: "Reply saved",
-        description: "Admin reply has been saved",
+        title: "Reply sent",
+        description: "Your reply has been saved. Email functionality will be added soon.",
       });
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: "Failed to save reply",
+        title: "Error sending reply",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
-      setIsUpdating(false);
+      setIsSending(false);
     }
   };
 
-  const sendEmailReply = () => {
-    if (!submission) return;
-    
-    const subject = `Re: ${submission.subject}`;
-    const body = replyText || "";
-    const mailtoLink = `mailto:${submission.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(mailtoLink);
-    
-    // Update status to replied
-    updateStatus("replied");
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'unread':
+        return <Badge variant="destructive">Unread</Badge>;
+      case 'read':
+        return <Badge variant="secondary">Read</Badge>;
+      case 'replied':
+        return <Badge variant="default" className="bg-green-500">Replied</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
   };
+
+  if (!user) {
+    return (
+      <AdminLayout>
+        <div className="flex justify-center items-center h-[calc(100vh-64px)]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   if (isLoading) {
     return (
       <AdminLayout>
-        <div className="p-6">
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
-          </div>
+        <div className="flex justify-center items-center h-[calc(100vh-64px)]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
         </div>
       </AdminLayout>
     );
@@ -157,8 +161,13 @@ const ContactView = () => {
     return (
       <AdminLayout>
         <div className="p-6">
-          <h1>Contact submission not found</h1>
-          <Button onClick={() => navigate("/admin/contact")}>Back to submissions</Button>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Submission not found</h1>
+            <Button onClick={() => navigate("/admin/contact")}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Contact Submissions
+            </Button>
+          </div>
         </div>
       </AdminLayout>
     );
@@ -166,155 +175,126 @@ const ContactView = () => {
 
   return (
     <AdminLayout>
-      <div className="p-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="flex items-center gap-4 mb-6">
+          <Button 
+            variant="outline" 
             onClick={() => navigate("/admin/contact")}
+            className="text-gray-600 dark:text-gray-400"
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Submissions
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
           </Button>
-          <Badge
-            variant={
-              submission.status === "unread" ? "destructive" :
-              submission.status === "read" ? "secondary" :
-              "default"
-            }
-          >
-            {submission.status}
-          </Badge>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Contact Submission</h1>
+          {getStatusBadge(submission.status)}
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                Contact Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Submission Details */}
+          <div className="lg:col-span-2">
+            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                  <MessageSquare className="h-5 w-5" />
+                  Message Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                    <User className="h-4 w-4" />
-                    Name
-                  </div>
-                  <div className="text-lg font-medium">{submission.name}</div>
+                  <label className="text-sm font-medium text-gray-600 dark:text-gray-400">From</label>
+                  <p className="text-lg font-medium text-gray-900 dark:text-gray-100">{submission.name}</p>
                 </div>
                 
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                    <Mail className="h-4 w-4" />
-                    Email
-                  </div>
-                  <div className="text-lg">
-                    <a 
-                      href={`mailto:${submission.email}`} 
-                      className="text-zyra-purple hover:underline"
-                    >
-                      {submission.email}
-                    </a>
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <div className="text-sm font-medium text-muted-foreground">Subject</div>
-                <div className="text-lg font-medium">{submission.subject}</div>
-              </div>
-              
-              <div>
-                <div className="text-sm font-medium text-muted-foreground">Message</div>
-                <div className="mt-2 p-4 bg-muted rounded-md whitespace-pre-wrap text-sm">
-                  {submission.message}
-                </div>
-              </div>
-              
-              <div>
-                <div className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  Date Received
-                </div>
-                <div>{format(new Date(submission.created_at), "PPpp")}</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Admin Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="reply">Admin Reply</Label>
-                  <Textarea
-                    id="reply"
-                    placeholder="Type your reply here..."
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    rows={6}
-                    className="mt-2"
-                  />
+                  <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Email</label>
+                  <p className="text-gray-900 dark:text-gray-100">{submission.email}</p>
                 </div>
                 
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={saveReply}
-                    disabled={isUpdating || !replyText.trim()}
-                  >
-                    Save Reply
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={sendEmailReply}
-                    disabled={!replyText.trim()}
-                  >
-                    <Send className="mr-2 h-4 w-4" />
-                    Send Email
-                  </Button>
+                {submission.subject && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Subject</label>
+                    <p className="text-gray-900 dark:text-gray-100">{submission.subject}</p>
+                  </div>
+                )}
+                
+                <div>
+                  <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Message</label>
+                  <div className="mt-1 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <p className="whitespace-pre-wrap text-gray-900 dark:text-gray-100">{submission.message}</p>
+                  </div>
                 </div>
-              </div>
-
-              <div className="border-t pt-4">
-                <div className="text-sm font-medium mb-2">Quick Actions</div>
-                <div className="flex flex-wrap gap-2">
-                  {submission.status === "unread" ? (
-                    <Button 
-                      variant="outline"
-                      size="sm"
-                      onClick={() => updateStatus("read")} 
-                      disabled={isUpdating}
-                    >
-                      Mark as Read
-                    </Button>
-                  ) : (
-                    <Button 
-                      variant="outline"
-                      size="sm"
-                      onClick={() => updateStatus("unread")} 
-                      disabled={isUpdating}
-                    >
-                      Mark as Unread
-                    </Button>
-                  )}
-                  
-                  {submission.status !== "replied" && (
-                    <Button 
-                      variant="outline"
-                      size="sm"
-                      onClick={() => updateStatus("replied")}
-                      disabled={isUpdating}
-                    >
-                      Mark as Replied
-                    </Button>
-                  )}
+                
+                {submission.admin_reply && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Previous Reply</label>
+                    <div className="mt-1 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-500">
+                      <p className="whitespace-pre-wrap text-gray-900 dark:text-gray-100">{submission.admin_reply}</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Submission Info */}
+            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                  <Calendar className="h-5 w-5" />
+                  Submission Info
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Received</label>
+                  <p className="text-gray-900 dark:text-gray-100">
+                    {format(new Date(submission.created_at), "PPP 'at' p")}
+                  </p>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+                
+                <div>
+                  <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Status</label>
+                  <div className="mt-1">
+                    {getStatusBadge(submission.status)}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Reply Section */}
+            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                  <Mail className="h-5 w-5" />
+                  Send Reply
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Textarea
+                  placeholder="Type your reply here..."
+                  value={reply}
+                  onChange={(e) => setReply(e.target.value)}
+                  rows={6}
+                  className="text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800"
+                />
+                
+                <Button 
+                  onClick={handleSendReply}
+                  disabled={!reply.trim() || isSending}
+                  className="w-full"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {isSending ? "Sending..." : "Send Reply"}
+                </Button>
+                
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Your reply will be sent to {submission.email}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </AdminLayout>

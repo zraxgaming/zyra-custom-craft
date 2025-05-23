@@ -1,4 +1,3 @@
-
 export interface ShippingAddress {
   name: string;
   street: string;
@@ -39,12 +38,12 @@ export interface Coupon {
   code: string;
   discount_type: 'percentage' | 'fixed';
   discount_value: number;
-  starts_at: string;
-  expires_at?: string | null;
-  active: boolean;
-  min_purchase?: number;
-  max_uses?: number | null;
+  min_purchase: number;
+  max_uses: number | null;
   used_count: number;
+  active: boolean;
+  starts_at: string;
+  expires_at: string | null;
   created_at: string;
   updated_at: string;
 }
