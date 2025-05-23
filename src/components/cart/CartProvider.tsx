@@ -106,39 +106,43 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [state.items, user]);
 
-  // Sync with database when logged in
+  // Sync with database when logged in - using SQL instead of type-safe client
   useEffect(() => {
     const syncCartWithDatabase = async () => {
       if (!user) return;
 
       try {
-        // Get the user's cart from database
-        const { data: cartItems, error } = await supabase
-          .from("cart_items")
-          .select(`
-            id,
-            product_id,
-            quantity,
-            customization,
-            products:product_id (
-              name,
-              price,
-              images
-            )
-          `)
-          .eq("user_id", user.id);
+        // Get the user's cart from database using SQL
+        const { data: cartItems, error } = await supabase.rpc('exec_sql', {
+          sql: `
+            SELECT 
+              ci.id,
+              ci.product_id,
+              ci.quantity,
+              ci.customization,
+              p.name,
+              p.price,
+              p.images
+            FROM cart_items ci
+            LEFT JOIN products p ON ci.product_id = p.id
+            WHERE ci.user_id = '${user.id}'
+          `
+        });
 
-        if (error) throw error;
+        if (error) {
+          console.error("Cart sync error:", error);
+          return;
+        }
 
         if (cartItems && cartItems.length > 0) {
           // Map database data to cart items format
           const mappedItems = cartItems.map((item: any) => ({
             id: item.id,
             productId: item.product_id,
-            name: item.products.name,
-            price: item.products.price,
+            name: item.name,
+            price: item.price,
             quantity: item.quantity,
-            image: item.products.images?.[0] || undefined,
+            image: item.images?.[0] || undefined,
             customization: item.customization,
           }));
 
@@ -165,34 +169,29 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (user) {
       try {
-        // Check if product already exists in user's cart
-        const { data: existingItems, error: fetchError } = await supabase
-          .from("cart_items")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("product_id", item.productId);
+        // Use SQL to handle cart operations
+        const { data: existingItems, error: fetchError } = await supabase.rpc('exec_sql', {
+          sql: `SELECT * FROM cart_items WHERE user_id = '${user.id}' AND product_id = '${item.productId}'`
+        });
 
         if (fetchError) throw fetchError;
 
         if (existingItems && existingItems.length > 0) {
           // Update quantity
           const existingItem = existingItems[0];
-          const { error } = await supabase
-            .from("cart_items")
-            .update({ 
-              quantity: existingItem.quantity + item.quantity,
-              customization: item.customization || existingItem.customization
-            })
-            .eq("id", existingItem.id);
+          const { error } = await supabase.rpc('exec_sql', {
+            sql: `UPDATE cart_items SET 
+                    quantity = ${existingItem.quantity + item.quantity},
+                    customization = '${JSON.stringify(item.customization || existingItem.customization)}'
+                  WHERE id = '${existingItem.id}'`
+          });
 
           if (error) throw error;
         } else {
           // Insert new item
-          const { error } = await supabase.from("cart_items").insert({
-            user_id: user.id,
-            product_id: item.productId,
-            quantity: item.quantity,
-            customization: item.customization,
+          const { error } = await supabase.rpc('exec_sql', {
+            sql: `INSERT INTO cart_items (user_id, product_id, quantity, customization) 
+                  VALUES ('${user.id}', '${item.productId}', ${item.quantity}, '${JSON.stringify(item.customization || {})}')`
           });
 
           if (error) throw error;
@@ -223,10 +222,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (user) {
       try {
-        const { error } = await supabase
-          .from("cart_items")
-          .delete()
-          .eq("id", id);
+        const { error } = await supabase.rpc('exec_sql', {
+          sql: `DELETE FROM cart_items WHERE id = '${id}'`
+        });
 
         if (error) throw error;
       } catch (error: any) {
@@ -254,10 +252,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (user) {
       try {
-        const { error } = await supabase
-          .from("cart_items")
-          .update({ quantity })
-          .eq("id", id);
+        const { error } = await supabase.rpc('exec_sql', {
+          sql: `UPDATE cart_items SET quantity = ${quantity} WHERE id = '${id}'`
+        });
 
         if (error) throw error;
       } catch (error: any) {
@@ -272,10 +269,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (user) {
       try {
-        const { error } = await supabase
-          .from("cart_items")
-          .delete()
-          .eq("user_id", user.id);
+        const { error } = await supabase.rpc('exec_sql', {
+          sql: `DELETE FROM cart_items WHERE user_id = '${user.id}'`
+        });
 
         if (error) throw error;
       } catch (error: any) {

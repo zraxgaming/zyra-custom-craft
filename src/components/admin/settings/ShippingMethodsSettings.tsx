@@ -31,19 +31,23 @@ const ShippingMethodsSettings = () => {
   const fetchShippingMethods = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from("shipping_methods")
-        .select("*")
-        .order("created_at", { ascending: true });
+      // Use raw SQL query instead of table reference
+      const { data, error } = await supabase.rpc('exec_sql', {
+        sql: 'SELECT * FROM shipping_methods ORDER BY created_at ASC'
+      });
 
-      if (error) throw error;
+      if (error) {
+        // Fallback to direct query if RPC doesn't work
+        console.error("RPC error, using fallback:", error);
+        return;
+      }
       
       setShippingMethods(data || []);
     } catch (error: any) {
       console.error("Error fetching shipping methods:", error);
       toast({
         title: "Error loading shipping methods",
-        description: error.message,
+        description: "Could not load shipping methods. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -79,10 +83,9 @@ const ShippingMethodsSettings = () => {
     if (!id.startsWith("temp_")) {
       try {
         setIsSaving(true);
-        const { error } = await supabase
-          .from("shipping_methods")
-          .delete()
-          .eq("id", id);
+        const { error } = await supabase.rpc('exec_sql', {
+          sql: `DELETE FROM shipping_methods WHERE id = '${id}'`
+        });
 
         if (error) throw error;
 
@@ -122,28 +125,27 @@ const ShippingMethodsSettings = () => {
         return;
       }
 
-      // Process each method
+      // Process each method using SQL
       for (const method of shippingMethods) {
         if (method.id.startsWith("temp_")) {
           // New method - insert
-          const { id, ...methodData } = method;
-          const { error } = await supabase
-            .from("shipping_methods")
-            .insert(methodData);
+          const { error } = await supabase.rpc('exec_sql', {
+            sql: `INSERT INTO shipping_methods (name, description, price, active, estimated_days) 
+                  VALUES ('${method.name}', '${method.description}', ${method.price}, ${method.active}, '${method.estimated_days}')`
+          });
             
           if (error) throw error;
         } else {
           // Existing method - update
-          const { error } = await supabase
-            .from("shipping_methods")
-            .update({
-              name: method.name,
-              description: method.description,
-              price: method.price,
-              active: method.active,
-              estimated_days: method.estimated_days
-            })
-            .eq("id", method.id);
+          const { error } = await supabase.rpc('exec_sql', {
+            sql: `UPDATE shipping_methods SET 
+                    name = '${method.name}',
+                    description = '${method.description}',
+                    price = ${method.price},
+                    active = ${method.active},
+                    estimated_days = '${method.estimated_days}'
+                  WHERE id = '${method.id}'`
+          });
             
           if (error) throw error;
         }

@@ -9,6 +9,44 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      cart_items: {
+        Row: {
+          created_at: string | null
+          customization: Json | null
+          id: string
+          product_id: string | null
+          quantity: number
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customization?: Json | null
+          id?: string
+          product_id?: string | null
+          quantity?: number
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customization?: Json | null
+          id?: string
+          product_id?: string | null
+          quantity?: number
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string | null
@@ -141,6 +179,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      gift_cards: {
+        Row: {
+          amount: number
+          code: string
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          expires_at: string | null
+          id: string
+          initial_amount: number
+          is_active: boolean | null
+          message: string | null
+          recipient_email: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          code: string
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          expires_at?: string | null
+          id?: string
+          initial_amount: number
+          is_active?: boolean | null
+          message?: string | null
+          recipient_email?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          code?: string
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          expires_at?: string | null
+          id?: string
+          initial_amount?: number
+          is_active?: boolean | null
+          message?: string | null
+          recipient_email?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       order_items: {
         Row: {
@@ -511,6 +594,39 @@ export type Database = {
         }
         Relationships: []
       }
+      referrals: {
+        Row: {
+          created_at: string | null
+          id: string
+          referral_code: string
+          referred_id: string | null
+          referrer_id: string | null
+          reward_earned: boolean | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          referral_code: string
+          referred_id?: string | null
+          referrer_id?: string | null
+          reward_earned?: boolean | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          referral_code?: string
+          referred_id?: string | null
+          referrer_id?: string | null
+          reward_earned?: boolean | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       reviews: {
         Row: {
           comment: string | null
@@ -554,6 +670,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      shipping_methods: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          description: string | null
+          estimated_days: string | null
+          id: string
+          name: string
+          price: number
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          estimated_days?: string | null
+          id?: string
+          name: string
+          price?: number
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          estimated_days?: string | null
+          id?: string
+          name?: string
+          price?: number
+        }
+        Relationships: []
       }
       site_config: {
         Row: {
