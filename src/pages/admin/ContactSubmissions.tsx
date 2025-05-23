@@ -3,20 +3,27 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Search } from "lucide-react";
+import { Search, Mail, CheckCircle, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ContactSubmission } from "@/types/contact";
-import ContactList from "@/components/admin/contact/ContactList";
+import { format } from "date-fns";
+
+interface ContactSubmission {
+  id: string;
+  created_at: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  status: "unread" | "read" | "replied";
+  admin_reply?: string;
+}
 
 const ContactSubmissions: React.FC = () => {
   const { isAdmin, isLoading } = useAuth();
@@ -43,27 +50,19 @@ const ContactSubmissions: React.FC = () => {
   useEffect(() => {
     const fetchSubmissions = async () => {
       try {
-        const query = supabase
+        let query = supabase
           .from("contact_submissions")
           .select("*")
           .order("created_at", { ascending: false });
           
         if (statusFilter) {
-          query.eq("status", statusFilter);
+          query = query.eq("status", statusFilter);
         }
         
         const { data, error } = await query;
           
         if (error) throw error;
-        
-        // Ensure we cast the data correctly
-        if (data) {
-          const typedSubmissions: ContactSubmission[] = data.map(item => ({
-            ...item,
-            status: item.status as "unread" | "read" | "replied"
-          }));
-          setSubmissions(typedSubmissions);
-        }
+        setSubmissions(data || []);
       } catch (error: any) {
         toast({
           title: "Error fetching submissions",
@@ -87,12 +86,9 @@ const ContactSubmissions: React.FC = () => {
         
       if (error) throw error;
       
-      // Update the local state
-      setSubmissions(
-        submissions.map(submission => 
-          submission.id === id ? { ...submission, status } : submission
-        )
-      );
+      setSubmissions(submissions.map(submission => 
+        submission.id === id ? { ...submission, status } : submission
+      ));
       
       toast({
         title: "Status updated",
@@ -107,20 +103,23 @@ const ContactSubmissions: React.FC = () => {
     }
   };
 
-  // Send a reply email to the contact submission
   const sendReply = async (submission: ContactSubmission) => {
     try {
-      // In a real application, this would send an email via an API
-      // For now, we'll just mark it as replied
+      // Mark as replied
       await updateSubmissionStatus(submission.id, "replied");
       
+      // Open email client
+      const subject = `Re: ${submission.subject}`;
+      const mailtoLink = `mailto:${submission.email}?subject=${encodeURIComponent(subject)}`;
+      window.open(mailtoLink);
+      
       toast({
-        title: "Reply sent",
-        description: `Your reply to ${submission.name} has been sent.`,
+        title: "Email client opened",
+        description: `Opening email to reply to ${submission.name}`,
       });
     } catch (error: any) {
       toast({
-        title: "Error sending reply",
+        title: "Error",
         description: error.message,
         variant: "destructive",
       });
@@ -129,17 +128,11 @@ const ContactSubmissions: React.FC = () => {
 
   const filteredSubmissions = submissions.filter((submission) => {
     if (!searchTerm) return true;
-    
-    // Search by name
-    if (submission.name.toLowerCase().includes(searchTerm.toLowerCase())) return true;
-    
-    // Search by email
-    if (submission.email.toLowerCase().includes(searchTerm.toLowerCase())) return true;
-    
-    // Search by subject
-    if (submission.subject.toLowerCase().includes(searchTerm.toLowerCase())) return true;
-    
-    return false;
+    return (
+      submission.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      submission.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      submission.subject.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   });
 
   if (isLoading) {
@@ -152,54 +145,145 @@ const ContactSubmissions: React.FC = () => {
 
   return (
     <AdminLayout>
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
+      <div className="p-6 space-y-6">
+        <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Contact Submissions</h1>
+          <div className="text-sm text-muted-foreground">
+            {submissions.length} total submissions
+          </div>
         </div>
         
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="relative flex-grow">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search submissions..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full md:w-[200px]">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All</SelectItem>
-              <SelectItem value="unread">Unread</SelectItem>
-              <SelectItem value="read">Read</SelectItem>
-              <SelectItem value="replied">Replied</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Filter & Search</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-grow">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name, email, or subject..."
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full md:w-[200px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Statuses</SelectItem>
+                  <SelectItem value="unread">Unread</SelectItem>
+                  <SelectItem value="read">Read</SelectItem>
+                  <SelectItem value="replied">Replied</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
         
-        {isSubmissionsLoading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
-          </div>
-        ) : filteredSubmissions.length === 0 ? (
-          <div className="bg-muted rounded-lg p-12 text-center">
-            <h3 className="text-xl font-medium mb-2">No submissions found</h3>
-            <p className="text-muted-foreground">
-              {searchTerm || statusFilter ? "Try changing your search or filter." : "No contact form submissions yet."}
-            </p>
-          </div>
-        ) : (
-          <ContactList 
-            submissions={filteredSubmissions} 
-            updateStatus={updateSubmissionStatus}
-            sendReply={sendReply}
-            navigate={navigate}
-          />
-        )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Submissions List</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isSubmissionsLoading ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
+              </div>
+            ) : filteredSubmissions.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-muted-foreground">
+                  {searchTerm || statusFilter ? "No submissions found matching your criteria." : "No contact submissions yet."}
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredSubmissions.map((submission) => (
+                      <TableRow
+                        key={submission.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => navigate(`/admin/contact/${submission.id}`)}
+                      >
+                        <TableCell>
+                          {format(new Date(submission.created_at), "MMM d, yyyy")}
+                        </TableCell>
+                        <TableCell className="font-medium">{submission.name}</TableCell>
+                        <TableCell>
+                          <a
+                            href={`mailto:${submission.email}`}
+                            className="text-zyra-purple hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {submission.email}
+                          </a>
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate">
+                          {submission.subject}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              submission.status === "unread" ? "destructive" :
+                              submission.status === "read" ? "secondary" :
+                              "default"
+                            }
+                          >
+                            {submission.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <div className="flex space-x-2">
+                            {submission.status === "unread" && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => updateSubmissionStatus(submission.id, "read")}
+                                title="Mark as Read"
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => sendReply(submission)}
+                              title="Reply via Email"
+                            >
+                              <Mail className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => navigate(`/admin/contact/${submission.id}`)}
+                              title="View Details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </AdminLayout>
   );

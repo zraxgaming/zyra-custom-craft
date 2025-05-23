@@ -90,7 +90,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
             setPrice(productData.price?.toString() || "");
             setDiscountPercentage(productData.discount_percentage?.toString() || "0");
             setCategory(productData.category || "");
-            setImageUrls(productData.images && Array.isArray(productData.images) ? productData.images : [""]);
+            
+            // Handle images array properly
+            if (productData.images && Array.isArray(productData.images)) {
+              setImageUrls(productData.images.map(img => String(img)));
+            } else {
+              setImageUrls([""]);
+            }
+            
             setFeatured(productData.featured || false);
             setIsNew(productData.is_new || false);
             setInStock(productData.in_stock !== false);

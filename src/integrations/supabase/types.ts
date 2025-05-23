@@ -238,6 +238,36 @@ export type Database = {
         }
         Relationships: []
       }
+      page_views: {
+        Row: {
+          id: string
+          path: string
+          referrer: string | null
+          session_id: string | null
+          timestamp: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          path: string
+          referrer?: string | null
+          session_id?: string | null
+          timestamp?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          path?: string
+          referrer?: string | null
+          session_id?: string | null
+          timestamp?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       product_images: {
         Row: {
           alt_text: string | null
@@ -440,6 +470,8 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string | null
+          display_name: string | null
+          email: string | null
           first_name: string | null
           id: string
           last_name: string | null
@@ -452,6 +484,8 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string | null
+          display_name?: string | null
+          email?: string | null
           first_name?: string | null
           id: string
           last_name?: string | null
@@ -464,6 +498,8 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string | null
+          display_name?: string | null
+          email?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
@@ -518,6 +554,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      site_config: {
+        Row: {
+          created_at: string | null
+          id: string
+          key: string
+          updated_at: string | null
+          value: Json
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          key: string
+          updated_at?: string | null
+          value: Json
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          key?: string
+          updated_at?: string | null
+          value?: Json
+        }
+        Relationships: []
       }
     }
     Views: {
