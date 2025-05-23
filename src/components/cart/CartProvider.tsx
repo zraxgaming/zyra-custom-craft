@@ -91,27 +91,28 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Sync with localStorage for non-logged in users
   useEffect(() => {
-    const savedCart = localStorage.getItem("cart");
-    
-    if (savedCart) {
-      dispatch({ type: "SET_CART", payload: JSON.parse(savedCart) });
+    if (!user) {
+      const savedCart = localStorage.getItem("cart");
+      if (savedCart) {
+        dispatch({ type: "SET_CART", payload: JSON.parse(savedCart) });
+      }
     }
-  }, []);
+  }, [user]);
 
-  // Save to localStorage when cart changes
+  // Save to localStorage when cart changes (for non-logged in users)
   useEffect(() => {
     if (!user) {
       localStorage.setItem("cart", JSON.stringify(state.items));
     }
   }, [state.items, user]);
 
-  // Sync with Supabase when logged in
+  // Sync with database when logged in
   useEffect(() => {
-    const syncCartWithSupabase = async () => {
+    const syncCartWithDatabase = async () => {
       if (!user) return;
 
       try {
-        // Get the user's cart from Supabase
+        // Get the user's cart from database
         const { data: cartItems, error } = await supabase
           .from("cart_items")
           .select(`
@@ -130,7 +131,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (error) throw error;
 
         if (cartItems && cartItems.length > 0) {
-          // Map Supabase data to cart items format
+          // Map database data to cart items format
           const mappedItems = cartItems.map((item: any) => ({
             id: item.id,
             productId: item.product_id,
@@ -144,12 +145,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           dispatch({ type: "SET_CART", payload: mappedItems });
         }
       } catch (error: any) {
-        console.error("Error fetching cart from Supabase:", error);
+        console.error("Error fetching cart from database:", error);
       }
     };
 
     if (user) {
-      syncCartWithSupabase();
+      syncCartWithDatabase();
     }
   }, [user]);
 
@@ -197,7 +198,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (error) throw error;
         }
       } catch (error: any) {
-        console.error("Error adding item to Supabase cart:", error);
+        console.error("Error adding item to database cart:", error);
         toast({
           title: "Error adding to cart",
           description: error.message,
@@ -229,7 +230,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (error) throw error;
       } catch (error: any) {
-        console.error("Error removing item from Supabase cart:", error);
+        console.error("Error removing item from database cart:", error);
         toast({
           title: "Error removing from cart",
           description: error.message,
@@ -260,7 +261,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (error) throw error;
       } catch (error: any) {
-        console.error("Error updating quantity in Supabase cart:", error);
+        console.error("Error updating quantity in database cart:", error);
       }
     }
   };
@@ -278,7 +279,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (error) throw error;
       } catch (error: any) {
-        console.error("Error clearing Supabase cart:", error);
+        console.error("Error clearing database cart:", error);
       }
     }
   };

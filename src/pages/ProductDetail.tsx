@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useCart } from "@/components/cart/CartProvider";
 import ProductCustomizer from "@/components/products/ProductCustomizer";
+import ProductReviews from "@/components/reviews/ProductReviews";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -29,7 +30,10 @@ const ProductDetail = () => {
       try {
         const { data, error } = await supabase
           .from("products")
-          .select("*")
+          .select(`
+            *,
+            customization_options (*)
+          `)
           .eq("slug", slug)
           .single();
           
@@ -53,12 +57,13 @@ const ProductDetail = () => {
   // Handle loading state
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col bg-background">
         <Navbar />
         <main className="flex-grow flex items-center justify-center">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Loading...</h1>
-            <p className="text-gray-600">Fetching product details. Please wait.</p>
+            <div className="zyra-spinner w-12 h-12 mx-auto mb-4"></div>
+            <h1 className="text-2xl font-bold text-foreground mb-2">Loading...</h1>
+            <p className="text-muted-foreground">Fetching product details. Please wait.</p>
           </div>
         </main>
         <Footer />
@@ -69,12 +74,12 @@ const ProductDetail = () => {
   // Handle product not found state
   if (!product) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col bg-background">
         <Navbar />
         <main className="flex-grow flex items-center justify-center">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Product not found</h1>
-            <p className="text-gray-600 mb-6">The product you're looking for doesn't exist or has been removed.</p>
+            <h1 className="text-2xl font-bold text-foreground mb-2">Product not found</h1>
+            <p className="text-muted-foreground mb-6">The product you're looking for doesn't exist or has been removed.</p>
             <Button asChild className="bg-zyra-purple hover:bg-zyra-dark-purple">
               <a href="/shop">Back to Shop</a>
             </Button>
@@ -88,14 +93,14 @@ const ProductDetail = () => {
   // Handle adding product to cart
   const handleAddToCart = () => {
     // Check if customization is available and required
-    const customizationOptions = product.customization_options || { 
-      allowText: false, 
-      allowImage: false 
+    const customizationOptions = product.customization_options?.[0] || { 
+      allow_text: false, 
+      allow_image: false 
     };
     
     if (
-      customizationOptions.allowText ||
-      customizationOptions.allowImage
+      customizationOptions.allow_text ||
+      customizationOptions.allow_image
     ) {
       if (!customization) {
         setIsCustomizing(true);
@@ -147,7 +152,7 @@ const ProductDetail = () => {
         <main className="flex-grow">
           <ProductCustomizer
             productImage={product.images?.[selectedImage] || ""}
-            customizationOptions={product.customization_options || {}}
+            customizationOptions={product.customization_options?.[0] || {}}
             onSave={handleSaveCustomization}
             onCancel={handleCancelCustomization}
             initialCustomization={customization}
@@ -167,7 +172,7 @@ const ProductDetail = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             {/* Product images */}
             <div>
-              <div className="mb-4 rounded-lg overflow-hidden border border-gray-200">
+              <div className="mb-4 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                 <img
                   src={product.images?.[selectedImage] || "/placeholder.svg"}
                   alt={product.name}
@@ -178,10 +183,10 @@ const ProductDetail = () => {
                 {(product.images || []).map((image: string, index: number) => (
                   <button
                     key={index}
-                    className={`border-2 rounded-md overflow-hidden flex-shrink-0 ${
+                    className={`border-2 rounded-md overflow-hidden flex-shrink-0 transition-all ${
                       selectedImage === index
-                        ? "border-zyra-purple"
-                        : "border-transparent"
+                        ? "border-zyra-purple shadow-lg"
+                        : "border-transparent hover:border-zyra-light-purple"
                     }`}
                     onClick={() => setSelectedImage(index)}
                   >
@@ -197,7 +202,7 @@ const ProductDetail = () => {
 
             {/* Product details */}
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
+              <h1 className="text-3xl font-bold text-foreground mb-2">{product.name}</h1>
 
               <div className="flex items-center mb-4">
                 <div className="flex">
@@ -216,7 +221,7 @@ const ProductDetail = () => {
                     </svg>
                   ))}
                 </div>
-                <span className="text-gray-600 ml-1">
+                <span className="text-muted-foreground ml-1">
                   {product.rating || 0} ({product.review_count || 0} reviews)
                 </span>
               </div>
@@ -224,39 +229,39 @@ const ProductDetail = () => {
               <div className="mb-6">
                 {product.discount_percentage > 0 ? (
                   <div className="flex items-center">
-                    <span className="text-2xl font-semibold text-gray-900">
+                    <span className="text-2xl font-semibold text-foreground">
                       ${(product.price * (1 - product.discount_percentage / 100)).toFixed(2)}
                     </span>
-                    <span className="text-lg text-gray-500 line-through ml-2">
+                    <span className="text-lg text-muted-foreground line-through ml-2">
                       ${product.price.toFixed(2)}
                     </span>
-                    <span className="ml-2 bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded">
+                    <span className="ml-2 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100 text-xs font-medium px-2 py-0.5 rounded">
                       {product.discount_percentage}% OFF
                     </span>
                   </div>
                 ) : (
-                  <span className="text-2xl font-semibold text-gray-900">
+                  <span className="text-2xl font-semibold text-foreground">
                     ${product.price?.toFixed(2)}
                   </span>
                 )}
               </div>
               
               <div className="mb-6">
-                <p className="text-gray-600">{product.description}</p>
+                <p className="text-muted-foreground">{product.description}</p>
               </div>
               
               <div className="mb-6">
                 <div className="flex items-center">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                     product.in_stock 
-                      ? "bg-green-100 text-green-800" 
-                      : "bg-red-100 text-red-800"
+                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100" 
+                      : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
                   }`}>
                     {product.in_stock ? "In Stock" : "Out of Stock"}
                   </span>
                   
                   {product.is_new && (
-                    <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
                       New
                     </span>
                   )}
@@ -264,13 +269,13 @@ const ProductDetail = () => {
               </div>
               
               <div className="mb-6">
-                <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="quantity" className="block text-sm font-medium text-foreground mb-1">
                   Quantity
                 </label>
                 <div className="flex items-center">
                   <button
                     type="button"
-                    className="p-2 border border-gray-300 rounded-l-md"
+                    className="p-2 border border-gray-300 dark:border-gray-600 rounded-l-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     onClick={() => quantity > 1 && setQuantity(quantity - 1)}
                   >
                     -
@@ -282,11 +287,11 @@ const ProductDetail = () => {
                     min="1"
                     value={quantity}
                     onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                    className="p-2 w-16 text-center border-t border-b border-gray-300"
+                    className="p-2 w-16 text-center border-t border-b border-gray-300 dark:border-gray-600 bg-background"
                   />
                   <button
                     type="button"
-                    className="p-2 border border-gray-300 rounded-r-md"
+                    className="p-2 border border-gray-300 dark:border-gray-600 rounded-r-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     onClick={() => setQuantity(quantity + 1)}
                   >
                     +
@@ -296,18 +301,19 @@ const ProductDetail = () => {
               
               <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
                 <Button 
-                  className="bg-zyra-purple hover:bg-zyra-dark-purple"
+                  className="bg-zyra-purple hover:bg-zyra-dark-purple btn-animate"
                   onClick={handleAddToCart}
                   disabled={!product.in_stock}
                 >
                   Add to Cart
                 </Button>
                 
-                {(product.customization_options?.allowText || product.customization_options?.allowImage) && (
+                {(product.customization_options?.[0]?.allow_text || product.customization_options?.[0]?.allow_image) && (
                   <Button 
                     variant="outline"
                     onClick={handleCustomize}
                     disabled={!product.in_stock}
+                    className="border-zyra-purple text-zyra-purple hover:bg-zyra-purple hover:text-white btn-animate"
                   >
                     Customize
                   </Button>
@@ -317,30 +323,36 @@ const ProductDetail = () => {
           </div>
           
           <div className="mt-16">
-            <Tabs defaultValue="description">
-              <TabsList>
+            <Tabs defaultValue="description" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="description">Description</TabsTrigger>
                 <TabsTrigger value="reviews">Reviews</TabsTrigger>
                 <TabsTrigger value="shipping">Shipping</TabsTrigger>
               </TabsList>
               <TabsContent value="description" className="pt-4">
-                <div className="prose max-w-none">
+                <div className="prose max-w-none dark:prose-invert">
                   <p>{product.description}</p>
                 </div>
               </TabsContent>
               <TabsContent value="reviews" className="pt-4">
-                <p className="text-gray-600">No reviews yet. Be the first to leave a review!</p>
+                <ProductReviews 
+                  productId={product.id}
+                  averageRating={product.rating || 0}
+                  totalReviews={product.review_count || 0}
+                />
               </TabsContent>
               <TabsContent value="shipping" className="pt-4">
-                <div className="prose max-w-none">
+                <div className="prose max-w-none dark:prose-invert">
                   <h4>Shipping Information</h4>
                   <p>We offer various shipping options to meet your needs:</p>
                   <ul>
-                    <li>Standard Shipping (3-5 business days)</li>
-                    <li>Express Shipping (1-2 business days)</li>
-                    <li>International Shipping (7-10 business days)</li>
+                    <li>Standard Shipping (3-5 business days) - Free on orders over $50</li>
+                    <li>Express Shipping (1-2 business days) - $9.99</li>
+                    <li>International Shipping (7-10 business days) - Calculated at checkout</li>
                   </ul>
                   <p>Shipping costs are calculated at checkout based on your location and chosen shipping method.</p>
+                  <h4>Return Policy</h4>
+                  <p>We offer a 30-day return policy for all products. Items must be returned in original condition.</p>
                 </div>
               </TabsContent>
             </Tabs>

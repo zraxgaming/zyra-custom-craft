@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -91,10 +90,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
             setPrice(productData.price?.toString() || "");
             setDiscountPercentage(productData.discount_percentage?.toString() || "0");
             setCategory(productData.category || "");
-            setImageUrls(productData.images?.length ? productData.images : [""]);
+            setImageUrls(productData.images && Array.isArray(productData.images) ? productData.images : [""]);
             setFeatured(productData.featured || false);
             setIsNew(productData.is_new || false);
-            setInStock(productData.in_stock !== false); // Default to true if undefined
+            setInStock(productData.in_stock !== false);
           }
 
           // Fetch customization options
@@ -222,12 +221,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
       };
 
       // Check if customization options already exist
-      const { data: existingCustomization, error: checkError } = await supabase
+      const { data: existingCustomization } = await supabase
         .from("customization_options")
         .select()
         .eq("product_id", productResultData.id);
-        
-      if (checkError) throw checkError;
       
       if (existingCustomization && existingCustomization.length > 0) {
         // Update existing customization options
@@ -287,7 +284,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
+        <div className="zyra-spinner w-12 h-12"></div>
       </div>
     );
   }
