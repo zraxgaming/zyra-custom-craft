@@ -1,8 +1,8 @@
 
 import React, { createContext, useContext, useReducer, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { executeSql } from "@/lib/sql-helper";
 
 export type CartItem = {
   id: string;
@@ -48,12 +48,10 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       );
 
       if (existingItemIndex >= 0) {
-        // Item exists, increase quantity
         const updatedItems = [...state.items];
         updatedItems[existingItemIndex].quantity += action.payload.quantity;
         return { ...state, items: updatedItems };
       } else {
-        // New item
         return { ...state, items: [...state.items, action.payload] };
       }
     }
@@ -106,43 +104,34 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [state.items, user]);
 
-  // Sync with database when logged in - using SQL instead of type-safe client
+  // Sync with database when logged in
   useEffect(() => {
     const syncCartWithDatabase = async () => {
       if (!user) return;
 
       try {
-        // Get the user's cart from database using SQL
-        const { data: cartItems, error } = await supabase.rpc('exec_sql', {
-          sql: `
-            SELECT 
-              ci.id,
-              ci.product_id,
-              ci.quantity,
-              ci.customization,
-              p.name,
-              p.price,
-              p.images
-            FROM cart_items ci
-            LEFT JOIN products p ON ci.product_id = p.id
-            WHERE ci.user_id = '${user.id}'
-          `
-        });
+        const cartItems = await executeSql(`
+          SELECT 
+            ci.id,
+            ci.product_id,
+            ci.quantity,
+            ci.customization,
+            p.name,
+            p.price,
+            p.images
+          FROM cart_items ci
+          LEFT JOIN products p ON ci.product_id = p.id
+          WHERE ci.user_id = '${user.id}'
+        `);
 
-        if (error) {
-          console.error("Cart sync error:", error);
-          return;
-        }
-
-        if (cartItems && cartItems.length > 0) {
-          // Map database data to cart items format
+        if (cartItems && Array.isArray(cartItems) && cartItems.length > 0) {
           const mappedItems = cartItems.map((item: any) => ({
             id: item.id,
             productId: item.product_id,
             name: item.name,
             price: item.price,
             quantity: item.quantity,
-            image: item.images?.[0] || undefined,
+            image: Array.isArray(item.images) && item.images.length > 0 ? item.images[0] : undefined,
             customization: item.customization,
           }));
 
@@ -169,32 +158,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (user) {
       try {
-        // Use SQL to handle cart operations
-        const { data: existingItems, error: fetchError } = await supabase.rpc('exec_sql', {
-          sql: `SELECT * FROM cart_items WHERE user_id = '${user.id}' AND product_id = '${item.productId}'`
-        });
+        const existingItems = await executeSql(`SELECT * FROM cart_items WHERE user_id = '${user.id}' AND product_id = '${item.productId}'`);
 
-        if (fetchError) throw fetchError;
-
-        if (existingItems && existingItems.length > 0) {
-          // Update quantity
+        if (existingItems && Array.isArray(existingItems) && existingItems.length > 0) {
           const existingItem = existingItems[0];
-          const { error } = await supabase.rpc('exec_sql', {
-            sql: `UPDATE cart_items SET 
+          await executeSql(`UPDATE cart_items SET 
                     quantity = ${existingItem.quantity + item.quantity},
                     customization = '${JSON.stringify(item.customization || existingItem.customization)}'
-                  WHERE id = '${existingItem.id}'`
-          });
-
-          if (error) throw error;
+                  WHERE id = '${existingItem.id}'`);
         } else {
-          // Insert new item
-          const { error } = await supabase.rpc('exec_sql', {
-            sql: `INSERT INTO cart_items (user_id, product_id, quantity, customization) 
-                  VALUES ('${user.id}', '${item.productId}', ${item.quantity}, '${JSON.stringify(item.customization || {})}')`
-          });
-
-          if (error) throw error;
+          await executeSql(`INSERT INTO cart_items (user_id, product_id, quantity, customization) 
+                  VALUES ('${user.id}', '${item.productId}', ${item.quantity}, '${JSON.stringify(item.customization || {})}')`);
         }
       } catch (error: any) {
         console.error("Error adding item to database cart:", error);
@@ -222,11 +196,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (user) {
       try {
-        const { error } = await supabase.rpc('exec_sql', {
-          sql: `DELETE FROM cart_items WHERE id = '${id}'`
-        });
-
-        if (error) throw error;
+        await executeSql(`DELETE FROM cart_items WHERE id = '${id}'`);
       } catch (error: any) {
         console.error("Error removing item from database cart:", error);
         toast({
@@ -252,11 +222,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (user) {
       try {
-        const { error } = await supabase.rpc('exec_sql', {
-          sql: `UPDATE cart_items SET quantity = ${quantity} WHERE id = '${id}'`
-        });
-
-        if (error) throw error;
+        await executeSql(`UPDATE cart_items SET quantity = ${quantity} WHERE id = '${id}'`);
       } catch (error: any) {
         console.error("Error updating quantity in database cart:", error);
       }
@@ -269,11 +235,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (user) {
       try {
-        const { error } = await supabase.rpc('exec_sql', {
-          sql: `DELETE FROM cart_items WHERE user_id = '${user.id}'`
-        });
-
-        if (error) throw error;
+        await executeSql(`DELETE FROM cart_items WHERE user_id = '${user.id}'`);
       } catch (error: any) {
         console.error("Error clearing database cart:", error);
       }

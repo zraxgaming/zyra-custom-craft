@@ -1,37 +1,50 @@
-<!DOCTYPE html>
+
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>zyra-custom-craft</title>
-    <meta name="description" content="Zyra Store offers high-quality customizable products to express your unique style and personality. Shop now for personalized items!" />
-    <meta name="author" content="Zyra Store Team" />
-    <meta name="keywords" content="custom products, personalization, ecommerce, Zyra Store" />
-    <link rel="canonical" href="https://zyra-store.com/" />
-
-    <!-- Open Graph and Twitter Card updates -->
-    <meta property="og:title" content="Zyra Store - Customizable Products" />
-    <meta property="og:description" content="Shop high-quality customizable products at Zyra Store. Personalize your items today!" />
-    <meta property="og:url" content="https://zyra-store.com/" />
-    <meta property="og:image" content="https://zyra-store.com/assets/og-image.png" />
-
-    <meta name="twitter:title" content="Zyra Store - Customizable Products" />
-    <meta name="twitter:description" content="Shop high-quality customizable products at Zyra Store. Personalize your items today!" />
-    <meta name="twitter:image" content="https://zyra-store.com/assets/twitter-image.png" />
-
+    <title>Zyra Custom Craft</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#8B5CF6" />
+    
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="/favicon.ico" />
+    
+    <!-- Meta tags for SEO -->
+    <meta name="description" content="Custom e-commerce platform for personalized products and ready-made items" />
+    <meta name="keywords" content="custom products, e-commerce, personalization, shopping" />
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="Zyra Custom Craft" />
+    <meta property="og:description" content="Custom e-commerce platform for personalized products" />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@lovable_dev" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-    <meta name="google-site-verification" content="1b3ltdA018HcziJwt1kGwR7Jj8by1q3nxLUchprUph8" />
+    
+    <!-- PWA iOS Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Zyra" />
   </head>
-
   <body>
     <div id="root"></div>
-    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- PWA Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js')
+            .then(function(registration) {
+              console.log('SW registered: ', registration);
+            })
+            .catch(function(registrationError) {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+    </script>
   </body>
 </html>

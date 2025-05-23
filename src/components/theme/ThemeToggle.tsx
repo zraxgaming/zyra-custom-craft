@@ -32,4 +32,32 @@ const ThemeToggle = () => {
   );
 };
 
+export const ThemeToggleSimple = () => {
+  const { theme, setTheme, actualTheme } = useTheme();
+
+  const handleToggle = () => {
+    if (actualTheme === "light") {
+      setTheme("dark");
+    } else {
+      setTheme("light");
+    }
+  };
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={handleToggle}
+      className="w-8 h-8"
+      aria-label="Toggle theme"
+    >
+      {actualTheme === "light" ? (
+        <Moon className="h-4 w-4" />
+      ) : (
+        <Sun className="h-4 w-4" />
+      )}
+    </Button>
+  );
+};
+
 export default ThemeToggle;

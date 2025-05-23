@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,8 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Plus, Trash } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { executeSql } from "@/lib/sql-helper";
 
 interface ShippingMethod {
   id: string;
@@ -31,17 +32,7 @@ const ShippingMethodsSettings = () => {
   const fetchShippingMethods = async () => {
     try {
       setIsLoading(true);
-      // Use raw SQL query instead of table reference
-      const { data, error } = await supabase.rpc('exec_sql', {
-        sql: 'SELECT * FROM shipping_methods ORDER BY created_at ASC'
-      });
-
-      if (error) {
-        // Fallback to direct query if RPC doesn't work
-        console.error("RPC error, using fallback:", error);
-        return;
-      }
-      
+      const data = await executeSql('SELECT * FROM shipping_methods ORDER BY created_at ASC');
       setShippingMethods(data || []);
     } catch (error: any) {
       console.error("Error fetching shipping methods:", error);
@@ -79,16 +70,10 @@ const ShippingMethodsSettings = () => {
   };
 
   const removeShippingMethod = async (index: number, id: string) => {
-    // If it's a real DB entry, delete it
     if (!id.startsWith("temp_")) {
       try {
         setIsSaving(true);
-        const { error } = await supabase.rpc('exec_sql', {
-          sql: `DELETE FROM shipping_methods WHERE id = '${id}'`
-        });
-
-        if (error) throw error;
-
+        await executeSql(`DELETE FROM shipping_methods WHERE id = '${id}'`);
         toast({
           title: "Shipping method removed",
           description: "The shipping method has been successfully removed."
@@ -106,7 +91,6 @@ const ShippingMethodsSettings = () => {
       }
     }
 
-    // Remove from state
     setShippingMethods(shippingMethods.filter((_, i) => i !== index));
   };
 
@@ -114,7 +98,6 @@ const ShippingMethodsSettings = () => {
     try {
       setIsSaving(true);
       
-      // Validate
       const invalidMethod = shippingMethods.find(m => !m.name.trim());
       if (invalidMethod) {
         toast({
@@ -125,33 +108,21 @@ const ShippingMethodsSettings = () => {
         return;
       }
 
-      // Process each method using SQL
       for (const method of shippingMethods) {
         if (method.id.startsWith("temp_")) {
-          // New method - insert
-          const { error } = await supabase.rpc('exec_sql', {
-            sql: `INSERT INTO shipping_methods (name, description, price, active, estimated_days) 
-                  VALUES ('${method.name}', '${method.description}', ${method.price}, ${method.active}, '${method.estimated_days}')`
-          });
-            
-          if (error) throw error;
+          await executeSql(`INSERT INTO shipping_methods (name, description, price, active, estimated_days) 
+                  VALUES ('${method.name}', '${method.description}', ${method.price}, ${method.active}, '${method.estimated_days}')`);
         } else {
-          // Existing method - update
-          const { error } = await supabase.rpc('exec_sql', {
-            sql: `UPDATE shipping_methods SET 
+          await executeSql(`UPDATE shipping_methods SET 
                     name = '${method.name}',
                     description = '${method.description}',
                     price = ${method.price},
                     active = ${method.active},
                     estimated_days = '${method.estimated_days}'
-                  WHERE id = '${method.id}'`
-          });
-            
-          if (error) throw error;
+                  WHERE id = '${method.id}'`);
         }
       }
       
-      // Refresh data
       await fetchShippingMethods();
       
       toast({

@@ -9,6 +9,7 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { ThemeProvider } from "@/hooks/use-theme";
 import CartDrawer from "@/components/cart/CartDrawer";
+import PWAInstallPrompt from "@/components/pwa/PWAInstallPrompt";
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
 import CategoryPage from "./pages/CategoryPage";
@@ -37,6 +38,9 @@ import Customers from "./pages/admin/Customers";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import ProfileSettings from "./pages/ProfileSettings";
+import GiftCards from "./pages/GiftCards";
+import FAQ from "./pages/FAQ";
+import OrderTracking from "./pages/OrderTracking";
 
 // Create React query client
 const queryClient = new QueryClient({
@@ -59,12 +63,16 @@ const App = () => (
                 <Toaster />
                 <Sonner />
                 <CartDrawer />
+                <PWAInstallPrompt />
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/shop" element={<Shop />} />
                   <Route path="/categories" element={<CategoryPage />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/about" element={<About />} />
+                  <Route path="/gift-cards" element={<GiftCards />} />
+                  <Route path="/faq" element={<FAQ />} />
+                  <Route path="/track-order" element={<OrderTracking />} />
                   <Route path="/products/:slug" element={<ProductDetail />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/auth/callback" element={<AuthCallback />} />

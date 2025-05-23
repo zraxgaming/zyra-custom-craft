@@ -2,13 +2,18 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export const executeSql = async (sql: string) => {
-  const { data, error } = await supabase.rpc('exec_sql', { sql });
-  
-  if (error) {
+  try {
+    const { data, error } = await supabase.rpc('exec_sql', { sql });
+    
+    if (error) {
+      throw error;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('SQL execution error:', error);
     throw error;
   }
-  
-  return data;
 };
 
 export const insertShippingMethod = async (method: {
