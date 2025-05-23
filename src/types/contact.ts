@@ -11,3 +11,10 @@ export interface ContactSubmission {
   created_at: string;
   updated_at: string;
 }
+
+export interface ContactFormData {
+  name: string;
+  email: string;
+  subject?: string;
+  message: string;
+}

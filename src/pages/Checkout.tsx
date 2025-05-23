@@ -18,7 +18,6 @@ import OrderSummary from "@/components/checkout/OrderSummary";
 import PaymentMethods from "@/components/checkout/PaymentMethods";
 import CouponForm from "@/components/checkout/CouponForm";
 
-// Define the form values interface
 interface CheckoutFormValues {
   name: string;
   email: string;
@@ -38,7 +37,6 @@ const Checkout = () => {
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
   
-  // Form state
   const [formValues, setFormValues] = useState<CheckoutFormValues>({
     name: "",
     email: "",
@@ -52,19 +50,20 @@ const Checkout = () => {
     deliveryType: "standard",
   });
   
-  // Additional state
   const [isProcessing, setIsProcessing] = useState(false);
   const [existingAddresses, setExistingAddresses] = useState<ShippingAddress[]>([]);
   const [couponCode, setCouponCode] = useState<string | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   
-  // Calculate total with shipping and discount
   const shipping = formValues.deliveryType === "express" ? 15 : 5;
-  const discount = 0; // Simplified for now since coupons table doesn't exist
+  const discount = 0;
   const total = subtotal + shipping - discount;
+
+  // Check if address is valid
+  const hasValidAddress = formValues.name && formValues.street && formValues.city && 
+                         formValues.state && formValues.zipCode && formValues.country;
   
-  // Check for user and redirect if no items in cart
   useEffect(() => {
     if (!isLoading && !user) {
       toast({
@@ -80,12 +79,10 @@ const Checkout = () => {
     }
   }, [isLoading, user, state.items.length, navigate, toast]);
   
-  // Update form values
   const handleInputChange = (name: string, value: string | boolean) => {
     setFormValues(prev => ({ ...prev, [name]: value }));
   };
   
-  // Handle address selection
   const handleAddressSelect = (address: ShippingAddress | null) => {
     if (address) {
       setFormValues(prev => ({
@@ -101,22 +98,18 @@ const Checkout = () => {
     }
   };
   
-  // Apply coupon code (simplified)
   const handleApplyCoupon = async (code: string) => {
-    // Simplified - just show a message for now
     toast({
       title: "Coupon feature coming soon",
       description: "Coupon functionality will be available in a future update.",
     });
   };
   
-  // Remove applied coupon
   const handleRemoveCoupon = () => {
     setAppliedCoupon(null);
     setCouponCode(null);
   };
   
-  // Place order function
   const placeOrder = async (paymentDetails?: any) => {
     if (!user) {
       toast({
@@ -126,11 +119,19 @@ const Checkout = () => {
       navigate("/auth?redirect=/checkout");
       return;
     }
+
+    if (!hasValidAddress) {
+      toast({
+        title: "Invalid address",
+        description: "Please complete your shipping address",
+        variant: "destructive",
+      });
+      return;
+    }
     
     try {
       setIsProcessing(true);
       
-      // Create shipping address object
       const shippingAddress: ShippingAddress = {
         name: formValues.name,
         street: formValues.street,
@@ -141,7 +142,6 @@ const Checkout = () => {
         phone: formValues.phone,
       };
       
-      // Create order in database
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
         .insert({
@@ -149,7 +149,7 @@ const Checkout = () => {
           total_amount: total,
           status: "pending",
           payment_status: paymentDetails ? "paid" : "pending",
-          payment_method: "paypal",
+          payment_method: paymentDetails?.transactionId ? "ziina" : "paypal",
           delivery_type: formValues.deliveryType,
           shipping_address: shippingAddress as any
         })
@@ -158,7 +158,6 @@ const Checkout = () => {
         
       if (orderError) throw orderError;
       
-      // Create order items
       const orderItems = state.items.map(item => ({
         order_id: orderData.id,
         product_id: item.productId,
@@ -173,9 +172,13 @@ const Checkout = () => {
         
       if (itemsError) throw itemsError;
       
-      // Clear cart and redirect to confirmation
       await clearCart();
-      navigate(`/order-confirmation/${orderData.id}`);
+      
+      if (paymentDetails) {
+        navigate(`/order-success/${orderData.id}`);
+      } else {
+        navigate(`/order-failed/${orderData.id}`);
+      }
       
     } catch (error: any) {
       console.error("Error placing order:", error);
@@ -184,20 +187,18 @@ const Checkout = () => {
         description: error.message,
         variant: "destructive",
       });
+      navigate(`/order-failed`);
       setIsProcessing(false);
     }
   };
   
-  // PayPal approval handler
   const onPayPalApprove = async (data: any) => {
     try {
-      // In a real app, you would verify the payment with PayPal here
       const paymentDetails = {
         paypal_order_id: data.orderID,
         payment_status: "COMPLETED"
       };
       
-      // Place the order with payment details
       await placeOrder(paymentDetails);
     } catch (error) {
       console.error("PayPal payment error:", error);
@@ -209,33 +210,47 @@ const Checkout = () => {
       });
     }
   };
+
+  const onZiinaApprove = async (data: any) => {
+    try {
+      await placeOrder(data);
+    } catch (error) {
+      console.error("Ziina payment error:", error);
+      setIsProcessing(false);
+      toast({
+        title: "Payment failed",
+        description: "There was an error processing your Ziina payment",
+        variant: "destructive",
+      });
+    }
+  };
   
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
   
   if (!user) {
-    return null; // Will redirect via useEffect
+    return null;
   }
 
   return (
-    <>
+    <div className="min-h-screen bg-background">
       <Navbar />
       <Container className="py-12">
-        <h1 className="text-3xl font-bold mb-6">Checkout</h1>
+        <h1 className="text-3xl font-bold mb-6 text-foreground">Checkout</h1>
         <Separator className="mb-8" />
         
         {state.items.length === 0 ? (
           <div className="text-center py-16">
-            <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-              <Truck className="h-12 w-12 text-gray-400" />
+            <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-6">
+              <Truck className="h-12 w-12 text-muted-foreground" />
             </div>
-            <h2 className="text-2xl font-medium mb-2">Your cart is empty</h2>
-            <p className="text-gray-600">
+            <h2 className="text-2xl font-medium mb-2 text-foreground">Your cart is empty</h2>
+            <p className="text-muted-foreground">
               Add items to your cart before proceeding to checkout.
             </p>
             <Button
@@ -247,12 +262,10 @@ const Checkout = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Checkout form */}
             <div className="lg:col-span-2">
               <form>
-                {/* Shipping Information */}
-                <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
-                  <h2 className="text-xl font-medium mb-6 flex items-center">
+                <div className="bg-card p-6 rounded-lg shadow-sm mb-6 border">
+                  <h2 className="text-xl font-medium mb-6 flex items-center text-foreground">
                     <Truck className="h-5 w-5 mr-2" />
                     Shipping Information
                   </h2>
@@ -271,18 +284,18 @@ const Checkout = () => {
                   />
                 </div>
                 
-                {/* Payment Information */}
-                <div className="bg-white p-6 rounded-lg shadow-sm">
+                <div className="bg-card p-6 rounded-lg shadow-sm border">
                   <PaymentMethods
                     onPayPalApprove={onPayPalApprove}
+                    onZiinaApprove={onZiinaApprove}
                     isProcessing={isProcessing}
                     total={total}
+                    hasValidAddress={hasValidAddress}
                   />
                 </div>
               </form>
             </div>
             
-            {/* Order Summary */}
             <div>
               <div className="space-y-6">
                 <OrderSummary
@@ -293,7 +306,7 @@ const Checkout = () => {
                   couponCode={appliedCoupon?.code}
                 />
                 
-                <div className="bg-white p-6 rounded-lg shadow-sm">
+                <div className="bg-card p-6 rounded-lg shadow-sm border">
                   <CouponForm
                     onApplyCoupon={handleApplyCoupon}
                     isLoading={isApplyingCoupon}
@@ -307,7 +320,7 @@ const Checkout = () => {
         )}
       </Container>
       <Footer />
-    </>
+    </div>
   );
 };
 

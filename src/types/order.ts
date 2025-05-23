@@ -1,3 +1,4 @@
+
 export interface ShippingAddress {
   name: string;
   street: string;
@@ -31,6 +32,28 @@ export interface Order {
   created_at: string;
   updated_at: string;
   order_items: OrderItem[];
+  profiles?: {
+    display_name?: string;
+    email?: string;
+  };
+}
+
+export interface OrderDetail {
+  id: string;
+  user_id?: string;
+  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+  payment_status: "pending" | "paid" | "refunded";
+  payment_method: string;
+  total_amount: number;
+  delivery_type: string;
+  shipping_address: ShippingAddress | null;
+  created_at: string;
+  updated_at: string;
+  order_items: OrderItem[];
+  profiles?: {
+    display_name?: string;
+    email?: string;
+  };
 }
 
 export interface Coupon {
@@ -60,4 +83,14 @@ export interface Promotion {
   placement: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface ShippingMethod {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  active: boolean;
+  estimated_days: string;
+  created_at: string;
 }

@@ -1,4 +1,3 @@
-
 import { Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -41,6 +40,8 @@ import ProfileSettings from "./pages/ProfileSettings";
 import GiftCards from "./pages/GiftCards";
 import FAQ from "./pages/FAQ";
 import OrderTracking from "./pages/OrderTracking";
+import OrderSuccess from "./pages/OrderSuccess";
+import OrderFailed from "./pages/OrderFailed";
 
 // Create React query client
 const queryClient = new QueryClient({
@@ -58,7 +59,7 @@ const App = () => (
       <ThemeProvider>
         <CartProvider>
           <BrowserRouter>
-            <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div></div>}>
+            <Suspense fallback={<div className="flex h-screen items-center justify-center bg-background"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>}>
               <TooltipProvider>
                 <Toaster />
                 <Sonner />
@@ -78,6 +79,8 @@ const App = () => (
                   <Route path="/auth/callback" element={<AuthCallback />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
+                  <Route path="/order-success/:orderId" element={<OrderSuccess />} />
+                  <Route path="/order-failed/:orderId?" element={<OrderFailed />} />
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/terms" element={<TermsOfService />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
