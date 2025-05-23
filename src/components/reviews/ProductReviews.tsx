@@ -23,7 +23,7 @@ interface Review {
   profiles?: {
     first_name: string;
     last_name: string;
-  };
+  } | null;
 }
 
 interface ProductReviewsProps {
@@ -59,7 +59,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({
         .from("reviews")
         .select(`
           *,
-          profiles:user_id (
+          profiles (
             first_name,
             last_name
           )

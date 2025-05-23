@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Container } from "@/components/ui/container";
@@ -10,7 +11,7 @@ import { useCart } from "@/components/cart/CartProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { ShippingAddress, Coupon } from "@/types/order";
+import { ShippingAddress } from "@/types/order";
 import AddressForm from "@/components/checkout/AddressForm";
 import DeliveryOptions from "@/components/checkout/DeliveryOptions";
 import OrderSummary from "@/components/checkout/OrderSummary";
@@ -55,15 +56,12 @@ const Checkout = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [existingAddresses, setExistingAddresses] = useState<ShippingAddress[]>([]);
   const [couponCode, setCouponCode] = useState<string | null>(null);
-  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   
   // Calculate total with shipping and discount
   const shipping = formValues.deliveryType === "express" ? 15 : 5;
-  const discount = appliedCoupon ? 
-    (appliedCoupon.discount_type === 'percentage' 
-      ? (subtotal * appliedCoupon.discount_value / 100) 
-      : appliedCoupon.discount_value) : 0;
+  const discount = 0; // Simplified for now since coupons table doesn't exist
   const total = subtotal + shipping - discount;
   
   // Check for user and redirect if no items in cart
@@ -81,31 +79,6 @@ const Checkout = () => {
       navigate("/cart");
     }
   }, [isLoading, user, state.items.length, navigate, toast]);
-  
-  // Fetch user's saved addresses
-  useEffect(() => {
-    const fetchAddresses = async () => {
-      if (!user) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("shipping_addresses")
-          .eq("id", user.id)
-          .single();
-          
-        if (error) throw error;
-        
-        if (data.shipping_addresses && data.shipping_addresses.length > 0) {
-          setExistingAddresses(data.shipping_addresses as unknown as ShippingAddress[]);
-        }
-      } catch (error) {
-        console.error("Error fetching addresses:", error);
-      }
-    };
-    
-    fetchAddresses();
-  }, [user]);
   
   // Update form values
   const handleInputChange = (name: string, value: string | boolean) => {
@@ -128,84 +101,13 @@ const Checkout = () => {
     }
   };
   
-  // Apply coupon code
+  // Apply coupon code (simplified)
   const handleApplyCoupon = async (code: string) => {
-    if (!user) return;
-    
-    try {
-      setIsApplyingCoupon(true);
-      setCouponCode(code);
-      
-      const { data, error } = await supabase
-        .from("coupons")
-        .select("*")
-        .eq("code", code)
-        .eq("active", true)
-        .single();
-      
-      if (error) {
-        toast({
-          title: "Invalid coupon",
-          description: "The coupon code you entered is invalid or expired.",
-          variant: "destructive",
-        });
-        setCouponCode(null);
-        return;
-      }
-      
-      // Validate coupon requirements
-      const now = new Date();
-      const expiryDate = data.expires_at ? new Date(data.expires_at) : null;
-      const startDate = new Date(data.starts_at);
-      
-      if (startDate > now || (expiryDate && expiryDate < now)) {
-        toast({
-          title: "Expired coupon",
-          description: "This coupon is not valid for the current date.",
-          variant: "destructive",
-        });
-        setCouponCode(null);
-        return;
-      }
-      
-      if (data.max_uses && data.used_count >= data.max_uses) {
-        toast({
-          title: "Coupon limit reached",
-          description: "This coupon has reached its usage limit.",
-          variant: "destructive",
-        });
-        setCouponCode(null);
-        return;
-      }
-      
-      if (data.min_purchase && subtotal < data.min_purchase) {
-        toast({
-          title: "Minimum purchase not met",
-          description: `This coupon requires a minimum purchase of $${data.min_purchase}.`,
-          variant: "destructive",
-        });
-        setCouponCode(null);
-        return;
-      }
-      
-      // Apply the valid coupon
-      setAppliedCoupon(data as Coupon);
-      toast({
-        title: "Coupon applied",
-        description: "The discount has been applied to your order.",
-      });
-      
-    } catch (error) {
-      console.error("Error applying coupon:", error);
-      toast({
-        title: "Error",
-        description: "There was a problem applying your coupon.",
-        variant: "destructive",
-      });
-      setCouponCode(null);
-    } finally {
-      setIsApplyingCoupon(false);
-    }
+    // Simplified - just show a message for now
+    toast({
+      title: "Coupon feature coming soon",
+      description: "Coupon functionality will be available in a future update.",
+    });
   };
   
   // Remove applied coupon
@@ -271,57 +173,6 @@ const Checkout = () => {
         
       if (itemsError) throw itemsError;
       
-      // Update coupon usage if applied
-      if (appliedCoupon) {
-        await supabase
-          .from("coupons")
-          .update({ used_count: appliedCoupon.used_count + 1 })
-          .eq("id", appliedCoupon.id);
-      }
-      
-      // Save address if it's new
-      if (!existingAddresses.some(addr => 
-        addr.street === shippingAddress.street && 
-        addr.zipCode === shippingAddress.zipCode
-      )) {
-        try {
-          await supabase.rpc('add_shipping_address', {
-            user_id: user.id,
-            address: shippingAddress as any
-          });
-        } catch (error) {
-          console.error("Error saving address:", error);
-          // Non-critical error, can continue
-        }
-      }
-      
-      // Send order confirmation email
-      try {
-        // Get user profile info for the email
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("display_name, email: id")
-          .eq("id", user.id)
-          .single();
-        
-        await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-order-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-          },
-          body: JSON.stringify({
-            order_id: orderData.id,
-            customer_email: profile?.email || user.email,
-            status: "pending",
-            customer_name: profile?.display_name || formValues.name
-          })
-        });
-      } catch (error) {
-        console.error("Error sending confirmation email:", error);
-        // Non-critical error, can continue
-      }
-      
       // Clear cart and redirect to confirmation
       await clearCart();
       navigate(`/order-confirmation/${orderData.id}`);
@@ -374,21 +225,21 @@ const Checkout = () => {
   return (
     <>
       <Navbar />
-      <Container className="py-12 bg-background text-foreground">
-        <h1 className="text-3xl font-bold mb-6 text-primary-foreground">Checkout</h1>
+      <Container className="py-12">
+        <h1 className="text-3xl font-bold mb-6">Checkout</h1>
         <Separator className="mb-8" />
         
         {state.items.length === 0 ? (
           <div className="text-center py-16">
-            <div className="mx-auto w-24 h-24 bg-card rounded-full flex items-center justify-center mb-6">
-              <Truck className="h-12 w-12 text-card-foreground" />
+            <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+              <Truck className="h-12 w-12 text-gray-400" />
             </div>
-            <h2 className="text-2xl font-medium mb-2 text-primary-foreground">Your cart is empty</h2>
-            <p className="text-foreground">
+            <h2 className="text-2xl font-medium mb-2">Your cart is empty</h2>
+            <p className="text-gray-600">
               Add items to your cart before proceeding to checkout.
             </p>
             <Button
-              className="mt-6 bg-primary hover:bg-secondary text-primary-foreground"
+              className="mt-6"
               onClick={() => navigate("/shop")}
             >
               Start Shopping
@@ -409,7 +260,7 @@ const Checkout = () => {
                   <AddressForm 
                     existingAddresses={existingAddresses}
                     formValues={formValues}
-                    userEmail={user.email}
+                    userEmail={user.email || ""}
                     onChange={handleInputChange}
                     onAddressSelect={handleAddressSelect}
                   />
@@ -446,11 +297,7 @@ const Checkout = () => {
                   <CouponForm
                     onApplyCoupon={handleApplyCoupon}
                     isLoading={isApplyingCoupon}
-                    appliedCoupon={appliedCoupon ? {
-                      code: appliedCoupon.code,
-                      discountValue: appliedCoupon.discount_value,
-                      discountType: appliedCoupon.discount_type as 'percentage' | 'fixed'
-                    } : null}
+                    appliedCoupon={null}
                     onRemoveCoupon={handleRemoveCoupon}
                   />
                 </div>

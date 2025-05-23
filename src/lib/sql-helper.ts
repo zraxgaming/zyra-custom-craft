@@ -23,13 +23,14 @@ export const insertShippingMethod = async (method: {
   active: boolean;
   estimated_days: string;
 }) => {
-  const sql = `
-    INSERT INTO shipping_methods (name, description, price, active, estimated_days) 
-    VALUES ('${method.name}', '${method.description}', ${method.price}, ${method.active}, '${method.estimated_days}')
-    RETURNING *
-  `;
+  const { data, error } = await supabase
+    .from('shipping_methods')
+    .insert(method)
+    .select()
+    .single();
   
-  return executeSql(sql);
+  if (error) throw error;
+  return data;
 };
 
 export const updateShippingMethod = async (id: string, method: {
@@ -39,26 +40,33 @@ export const updateShippingMethod = async (id: string, method: {
   active: boolean;
   estimated_days: string;
 }) => {
-  const sql = `
-    UPDATE shipping_methods SET 
-      name = '${method.name}',
-      description = '${method.description}',
-      price = ${method.price},
-      active = ${method.active},
-      estimated_days = '${method.estimated_days}'
-    WHERE id = '${id}'
-    RETURNING *
-  `;
+  const { data, error } = await supabase
+    .from('shipping_methods')
+    .update(method)
+    .eq('id', id)
+    .select()
+    .single();
   
-  return executeSql(sql);
+  if (error) throw error;
+  return data;
 };
 
 export const deleteShippingMethod = async (id: string) => {
-  const sql = `DELETE FROM shipping_methods WHERE id = '${id}'`;
-  return executeSql(sql);
+  const { error } = await supabase
+    .from('shipping_methods')
+    .delete()
+    .eq('id', id);
+  
+  if (error) throw error;
+  return true;
 };
 
 export const getShippingMethods = async () => {
-  const sql = `SELECT * FROM shipping_methods ORDER BY created_at ASC`;
-  return executeSql(sql);
+  const { data, error } = await supabase
+    .from('shipping_methods')
+    .select('*')
+    .order('created_at', { ascending: true });
+  
+  if (error) throw error;
+  return data;
 };

@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { executeSql } from "@/lib/sql-helper";
+import { supabase } from "@/integrations/supabase/client";
 
 export type CartItem = {
   id: string;
@@ -92,7 +92,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) {
       const savedCart = localStorage.getItem("cart");
       if (savedCart) {
-        dispatch({ type: "SET_CART", payload: JSON.parse(savedCart) });
+        try {
+          const parsedCart = JSON.parse(savedCart);
+          dispatch({ type: "SET_CART", payload: parsedCart });
+        } catch (error) {
+          console.error("Error parsing saved cart:", error);
+        }
       }
     }
   }, [user]);
@@ -110,28 +115,33 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!user) return;
 
       try {
-        const cartItems = await executeSql(`
-          SELECT 
-            ci.id,
-            ci.product_id,
-            ci.quantity,
-            ci.customization,
-            p.name,
-            p.price,
-            p.images
-          FROM cart_items ci
-          LEFT JOIN products p ON ci.product_id = p.id
-          WHERE ci.user_id = '${user.id}'
-        `);
+        const { data: cartItems, error } = await supabase
+          .from('cart_items')
+          .select(`
+            id,
+            product_id,
+            quantity,
+            customization,
+            products!inner (
+              name,
+              price,
+              images
+            )
+          `)
+          .eq('user_id', user.id);
 
-        if (cartItems && Array.isArray(cartItems) && cartItems.length > 0) {
-          const mappedItems = cartItems.map((item: any) => ({
+        if (error) throw error;
+
+        if (cartItems && cartItems.length > 0) {
+          const mappedItems: CartItem[] = cartItems.map((item: any) => ({
             id: item.id,
             productId: item.product_id,
-            name: item.name,
-            price: item.price,
+            name: item.products?.name || 'Unknown Product',
+            price: item.products?.price || 0,
             quantity: item.quantity,
-            image: Array.isArray(item.images) && item.images.length > 0 ? item.images[0] : undefined,
+            image: Array.isArray(item.products?.images) && item.products.images.length > 0 
+              ? item.products.images[0] 
+              : undefined,
             customization: item.customization,
           }));
 
@@ -158,17 +168,36 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (user) {
       try {
-        const existingItems = await executeSql(`SELECT * FROM cart_items WHERE user_id = '${user.id}' AND product_id = '${item.productId}'`);
+        const { data: existingItems, error: fetchError } = await supabase
+          .from('cart_items')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('product_id', item.productId);
 
-        if (existingItems && Array.isArray(existingItems) && existingItems.length > 0) {
+        if (fetchError) throw fetchError;
+
+        if (existingItems && existingItems.length > 0) {
           const existingItem = existingItems[0];
-          await executeSql(`UPDATE cart_items SET 
-                    quantity = ${existingItem.quantity + item.quantity},
-                    customization = '${JSON.stringify(item.customization || existingItem.customization)}'
-                  WHERE id = '${existingItem.id}'`);
+          const { error: updateError } = await supabase
+            .from('cart_items')
+            .update({ 
+              quantity: existingItem.quantity + item.quantity,
+              customization: item.customization || existingItem.customization
+            })
+            .eq('id', existingItem.id);
+
+          if (updateError) throw updateError;
         } else {
-          await executeSql(`INSERT INTO cart_items (user_id, product_id, quantity, customization) 
-                  VALUES ('${user.id}', '${item.productId}', ${item.quantity}, '${JSON.stringify(item.customization || {})}')`);
+          const { error: insertError } = await supabase
+            .from('cart_items')
+            .insert({
+              user_id: user.id,
+              product_id: item.productId,
+              quantity: item.quantity,
+              customization: item.customization || {}
+            });
+
+          if (insertError) throw insertError;
         }
       } catch (error: any) {
         console.error("Error adding item to database cart:", error);
@@ -196,7 +225,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (user) {
       try {
-        await executeSql(`DELETE FROM cart_items WHERE id = '${id}'`);
+        const { error } = await supabase
+          .from('cart_items')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
       } catch (error: any) {
         console.error("Error removing item from database cart:", error);
         toast({
@@ -222,7 +256,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (user) {
       try {
-        await executeSql(`UPDATE cart_items SET quantity = ${quantity} WHERE id = '${id}'`);
+        const { error } = await supabase
+          .from('cart_items')
+          .update({ quantity })
+          .eq('id', id);
+
+        if (error) throw error;
       } catch (error: any) {
         console.error("Error updating quantity in database cart:", error);
       }
@@ -235,7 +274,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (user) {
       try {
-        await executeSql(`DELETE FROM cart_items WHERE user_id = '${user.id}'`);
+        const { error } = await supabase
+          .from('cart_items')
+          .delete()
+          .eq('user_id', user.id);
+
+        if (error) throw error;
       } catch (error: any) {
         console.error("Error clearing database cart:", error);
       }
