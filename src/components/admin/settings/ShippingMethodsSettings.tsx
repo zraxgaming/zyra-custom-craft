@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Plus, Trash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { executeSql } from "@/lib/sql-helper";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ShippingMethod {
   id: string;
@@ -32,7 +32,12 @@ const ShippingMethodsSettings = () => {
   const fetchShippingMethods = async () => {
     try {
       setIsLoading(true);
-      const data = await executeSql('SELECT * FROM shipping_methods ORDER BY created_at ASC');
+      const { data, error } = await supabase
+        .from('shipping_methods')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
       setShippingMethods(data || []);
     } catch (error: any) {
       console.error("Error fetching shipping methods:", error);
@@ -73,7 +78,13 @@ const ShippingMethodsSettings = () => {
     if (!id.startsWith("temp_")) {
       try {
         setIsSaving(true);
-        await executeSql(`DELETE FROM shipping_methods WHERE id = '${id}'`);
+        const { error } = await supabase
+          .from('shipping_methods')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+        
         toast({
           title: "Shipping method removed",
           description: "The shipping method has been successfully removed."
@@ -110,16 +121,30 @@ const ShippingMethodsSettings = () => {
 
       for (const method of shippingMethods) {
         if (method.id.startsWith("temp_")) {
-          await executeSql(`INSERT INTO shipping_methods (name, description, price, active, estimated_days) 
-                  VALUES ('${method.name}', '${method.description}', ${method.price}, ${method.active}, '${method.estimated_days}')`);
+          const { error } = await supabase
+            .from('shipping_methods')
+            .insert({
+              name: method.name,
+              description: method.description,
+              price: method.price,
+              active: method.active,
+              estimated_days: method.estimated_days
+            });
+          
+          if (error) throw error;
         } else {
-          await executeSql(`UPDATE shipping_methods SET 
-                    name = '${method.name}',
-                    description = '${method.description}',
-                    price = ${method.price},
-                    active = ${method.active},
-                    estimated_days = '${method.estimated_days}'
-                  WHERE id = '${method.id}'`);
+          const { error } = await supabase
+            .from('shipping_methods')
+            .update({
+              name: method.name,
+              description: method.description,
+              price: method.price,
+              active: method.active,
+              estimated_days: method.estimated_days
+            })
+            .eq('id', method.id);
+            
+          if (error) throw error;
         }
       }
       

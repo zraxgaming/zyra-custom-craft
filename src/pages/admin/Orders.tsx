@@ -13,28 +13,7 @@ import { Search, Eye, Download, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-
-interface Order {
-  id: string;
-  created_at: string;
-  status: string;
-  total_amount: number;
-  currency: string;
-  payment_status: string;
-  delivery_type: string;
-  profiles?: {
-    display_name?: string;
-    email?: string;
-  };
-  order_items?: {
-    id: string;
-    quantity: number;
-    price: number;
-    product: {
-      name: string;
-    };
-  }[];
-}
+import { Order } from "@/types/order";
 
 const Orders = () => {
   const { isAdmin, isLoading } = useAuth();
@@ -65,8 +44,20 @@ const Orders = () => {
         let query = supabase
           .from("orders")
           .select(`
-            *,
-            profiles (display_name, email),
+            id,
+            created_at,
+            status,
+            total_amount,
+            currency,
+            payment_status,
+            delivery_type,
+            user_id,
+            payment_method,
+            shipping_address,
+            billing_address,
+            notes,
+            tracking_number,
+            updated_at,
             order_items (
               id,
               quantity,
@@ -87,7 +78,14 @@ const Orders = () => {
         const { data, error } = await query;
           
         if (error) throw error;
-        setOrders(data || []);
+        
+        // Transform the data to match our Order type
+        const transformedOrders: Order[] = (data || []).map(order => ({
+          ...order,
+          profiles: undefined // We'll fetch profile data separately if needed
+        }));
+        
+        setOrders(transformedOrders);
       } catch (error: any) {
         console.error("Error fetching orders:", error);
         toast({
@@ -113,7 +111,7 @@ const Orders = () => {
       if (error) throw error;
       
       setOrders(orders.map(order => 
-        order.id === id ? { ...order, status } : order
+        order.id === id ? { ...order, status: status as any } : order
       ));
       
       toast({
@@ -205,7 +203,7 @@ const Orders = () => {
     <AdminLayout>
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Orders Management</h1>
+          <h1 className="text-3xl font-bold text-foreground">Orders Management</h1>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={exportOrders}>
               <Download className="mr-2 h-4 w-4" />
@@ -219,7 +217,7 @@ const Orders = () => {
         
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-foreground">
               <Filter className="h-5 w-5" />
               Filters & Search
             </CardTitle>
@@ -279,7 +277,7 @@ const Orders = () => {
         
         <Card>
           <CardHeader>
-            <CardTitle>Orders List</CardTitle>
+            <CardTitle className="text-foreground">Orders List</CardTitle>
           </CardHeader>
           <CardContent>
             {isOrdersLoading ? (
@@ -300,14 +298,14 @@ const Orders = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Order ID</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Items</TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>Order Status</TableHead>
-                      <TableHead>Payment</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead className="text-foreground">Order ID</TableHead>
+                      <TableHead className="text-foreground">Date</TableHead>
+                      <TableHead className="text-foreground">Customer</TableHead>
+                      <TableHead className="text-foreground">Items</TableHead>
+                      <TableHead className="text-foreground">Total</TableHead>
+                      <TableHead className="text-foreground">Order Status</TableHead>
+                      <TableHead className="text-foreground">Payment</TableHead>
+                      <TableHead className="text-foreground">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -317,15 +315,15 @@ const Orders = () => {
                         className="cursor-pointer hover:bg-muted/50"
                         onClick={() => navigate(`/admin/orders/${order.id}`)}
                       >
-                        <TableCell className="font-mono text-sm">
+                        <TableCell className="font-mono text-sm text-foreground">
                           {order.id.substring(0, 8)}...
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-foreground">
                           {format(new Date(order.created_at), "MMM d, yyyy")}
                         </TableCell>
                         <TableCell>
                           <div>
-                            <div className="font-medium">
+                            <div className="font-medium text-foreground">
                               {order.profiles?.display_name || "Guest"}
                             </div>
                             {order.profiles?.email && (
@@ -335,10 +333,10 @@ const Orders = () => {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-foreground">
                           {order.order_items?.length || 0} items
                         </TableCell>
-                        <TableCell className="font-medium">
+                        <TableCell className="font-medium text-foreground">
                           ${order.total_amount?.toFixed(2)} {order.currency}
                         </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>

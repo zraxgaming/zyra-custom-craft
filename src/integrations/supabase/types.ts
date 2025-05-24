@@ -9,6 +9,41 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      barcode_generations: {
+        Row: {
+          barcode_data: string
+          barcode_type: string
+          created_at: string
+          generated_by: string | null
+          id: string
+          product_id: string | null
+        }
+        Insert: {
+          barcode_data: string
+          barcode_type?: string
+          created_at?: string
+          generated_by?: string | null
+          id?: string
+          product_id?: string | null
+        }
+        Update: {
+          barcode_data?: string
+          barcode_type?: string
+          created_at?: string
+          generated_by?: string | null
+          id?: string
+          product_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "barcode_generations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cart_items: {
         Row: {
           created_at: string | null
@@ -741,6 +776,48 @@ export type Database = {
           role?: string | null
           updated_at?: string | null
           username?: string | null
+        }
+        Relationships: []
+      }
+      promotions: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          end_date: string | null
+          id: string
+          image_url: string | null
+          link_url: string | null
+          placement: string
+          start_date: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          link_url?: string | null
+          placement?: string
+          start_date?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          link_url?: string | null
+          placement?: string
+          start_date?: string
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
