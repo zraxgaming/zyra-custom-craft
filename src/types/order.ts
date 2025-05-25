@@ -43,8 +43,9 @@ export interface OrderDetail extends Order {
   status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
   payment_status: "pending" | "paid" | "failed" | "refunded";
   profiles?: {
-    email?: string;
-    display_name?: string;
+    email: string;
+    first_name: string;
+    last_name: string;
   } | null;
 }
 

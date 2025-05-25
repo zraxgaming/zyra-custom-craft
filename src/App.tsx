@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { CartProvider } from "@/components/cart/CartProvider";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider } from "@/hooks/use-auth";
 import PWANotifications from "@/components/pwa/PWANotifications";
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
@@ -32,6 +32,7 @@ import ContactAdmin from "./pages/admin/Contact";
 import GiftCards from "./pages/admin/GiftCards";
 import Analytics from "./pages/admin/Analytics";
 import Settings from "./pages/admin/Settings";
+import Coupons from "./pages/admin/Coupons";
 
 import "./App.css";
 
@@ -74,6 +75,7 @@ function App() {
                   <Route path="/admin/gift-cards" element={<GiftCards />} />
                   <Route path="/admin/analytics" element={<Analytics />} />
                   <Route path="/admin/settings" element={<Settings />} />
+                  <Route path="/admin/coupons" element={<Coupons />} />
                 </Routes>
               </BrowserRouter>
             </CartProvider>
