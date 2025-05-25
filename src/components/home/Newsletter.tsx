@@ -30,13 +30,40 @@ const Newsletter = () => {
         .from("newsletter_subscriptions")
         .insert([{ email, is_active: true }]);
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') {
+          toast({
+            title: "Already subscribed",
+            description: "This email is already subscribed to our newsletter.",
+            variant: "destructive",
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        // Send welcome email
+        await supabase.functions.invoke('send-brevo-email', {
+          body: {
+            to: email,
+            subject: 'Welcome to Zyra Newsletter!',
+            content: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2>Welcome to Zyra!</h2>
+                <p>Thank you for subscribing to our newsletter!</p>
+                <p>You'll be the first to know about new products, exclusive offers, and design tips.</p>
+                <p>Stay tuned for amazing content!</p>
+              </div>
+            `,
+            type: 'newsletter-welcome'
+          }
+        });
 
-      toast({
-        title: "Successfully subscribed!",
-        description: "Thank you for subscribing to our newsletter.",
-      });
-      setEmail("");
+        toast({
+          title: "Successfully subscribed!",
+          description: "Thank you for subscribing to our newsletter.",
+        });
+        setEmail("");
+      }
     } catch (error: any) {
       console.error("Newsletter subscription error:", error);
       toast({

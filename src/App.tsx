@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { AuthProvider } from "@/hooks/use-auth";
-import PWANotifications from "@/components/pwa/PWANotifications";
+import EmailNotificationService from "@/components/notifications/EmailNotificationService";
 import AdminRoute from "@/components/admin/AdminRoute";
 
 // Public pages
@@ -33,8 +33,6 @@ import Orders from "./pages/admin/Orders";
 import Customers from "./pages/admin/Customers";
 import Newsletter from "./pages/admin/Newsletter";
 import Promotions from "./pages/admin/Promotions";
-import Barcodes from "./pages/admin/Barcodes";
-import Scanner from "./pages/admin/Scanner";
 import ContactAdmin from "./pages/admin/Contact";
 import GiftCards from "./pages/admin/GiftCards";
 import Analytics from "./pages/admin/Analytics";
@@ -58,7 +56,7 @@ function App() {
               <Toaster />
               <Sonner />
               <BrowserRouter>
-                <PWANotifications />
+                <EmailNotificationService />
                 <Routes>
                   {/* Public Routes */}
                   <Route path="/" element={<Index />} />
@@ -77,7 +75,7 @@ function App() {
                   <Route path="/terms" element={<TermsOfService />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   
-                  {/* Admin Routes - Protected */}
+                  {/* Admin Routes */}
                   <Route path="/admin" element={<AdminRoute><Dashboard /></AdminRoute>} />
                   <Route path="/admin/products" element={<AdminRoute><Products /></AdminRoute>} />
                   <Route path="/admin/products/edit/:id" element={<AdminRoute><ProductEdit /></AdminRoute>} />
@@ -85,14 +83,14 @@ function App() {
                   <Route path="/admin/customers" element={<AdminRoute><Customers /></AdminRoute>} />
                   <Route path="/admin/newsletter" element={<AdminRoute><Newsletter /></AdminRoute>} />
                   <Route path="/admin/promotions" element={<AdminRoute><Promotions /></AdminRoute>} />
-                  <Route path="/admin/barcodes" element={<AdminRoute><BarcodeManager /></AdminRoute>} />
-                  <Route path="/admin/scanner" element={<AdminRoute><BarcodeScanner /></AdminRoute>} />
                   <Route path="/admin/contact" element={<AdminRoute><ContactAdmin /></AdminRoute>} />
                   <Route path="/admin/gift-cards" element={<AdminRoute><GiftCards /></AdminRoute>} />
                   <Route path="/admin/analytics" element={<AdminRoute><Analytics /></AdminRoute>} />
                   <Route path="/admin/settings" element={<AdminRoute><Settings /></AdminRoute>} />
                   <Route path="/admin/coupons" element={<AdminRoute><Coupons /></AdminRoute>} />
                   <Route path="/admin/ziina-stats" element={<AdminRoute><ZiinaStats /></AdminRoute>} />
+                  <Route path="/admin/barcodes" element={<AdminRoute><BarcodeManager /></AdminRoute>} />
+                  <Route path="/admin/scanner" element={<AdminRoute><BarcodeScanner /></AdminRoute>} />
                 </Routes>
               </BrowserRouter>
             </CartProvider>

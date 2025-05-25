@@ -1,5 +1,6 @@
 
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,8 +8,6 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  console.log('Hello from send-brevo-email!')
-
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -18,10 +17,23 @@ serve(async (req) => {
     
     console.log('Sending email via Brevo:', { to, subject, type })
 
-    const brevoApiKey = Deno.env.get('BREVO_API_KEY')
-    if (!brevoApiKey) {
-      throw new Error('BREVO_API_KEY is not configured')
+    // Get Brevo API key from site_config
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    const { data: configData, error: configError } = await supabase
+      .from('site_config')
+      .select('value')
+      .eq('key', 'brevo_api_key')
+      .single()
+
+    if (configError || !configData?.value) {
+      throw new Error('Brevo API key not configured in site settings')
     }
+
+    const brevoApiKey = configData.value
 
     // Prepare recipient list
     let recipients = []

@@ -3,7 +3,6 @@ import React from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Container } from "@/components/ui/container";
-import { PageLoader } from "@/components/ui/page-loader";
 import { useProducts } from "@/hooks/use-products";
 import { useCategories } from "@/hooks/use-categories";
 import { useProductFilters } from "@/hooks/useProductFilters";
@@ -12,8 +11,8 @@ import ProductGrid from "@/components/shop/ProductGrid";
 import SearchAndSort from "@/components/shop/SearchAndSort";
 
 const Shop = () => {
-  const { products, isLoading: productsLoading, error: productsError } = useProducts();
-  const { categories, isLoading: categoriesLoading } = useCategories();
+  const { products, error: productsError } = useProducts();
+  const { categories } = useCategories();
   
   const {
     filteredProducts,
@@ -30,12 +29,6 @@ const Shop = () => {
     setShowInStockOnly,
     resetFilters,
   } = useProductFilters(products);
-
-  const isLoading = productsLoading || categoriesLoading;
-
-  if (isLoading) {
-    return <PageLoader message="Loading products..." />;
-  }
 
   if (productsError) {
     return (
@@ -64,7 +57,6 @@ const Shop = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar with filters */}
           <div className="lg:block">
             <ProductFilters 
               categories={categories.map(cat => ({ name: cat.name, id: cat.id }))}
@@ -79,7 +71,6 @@ const Shop = () => {
             />
           </div>
 
-          {/* Main content */}
           <div className="lg:col-span-3">
             <SearchAndSort 
               searchTerm={searchTerm}
