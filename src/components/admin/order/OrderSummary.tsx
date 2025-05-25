@@ -21,9 +21,18 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
   updateOrder,
   sendManualEmail
 }) => {
-  const orderTotal = order.order_items.reduce((acc: number, item: any) => {
+  const orderTotal = order.order_items?.reduce((acc: number, item: any) => {
     return acc + (item.price * item.quantity);
-  }, 0);
+  }, 0) || 0;
+
+  const getProductImage = (item: OrderItem) => {
+    // Check multiple possible image sources with failsafes
+    const imageUrl = item.product?.images?.[0] || 
+                    item.product?.image_url || 
+                    null;
+    
+    return imageUrl;
+  };
 
   return (
     <>
@@ -78,44 +87,56 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {order.order_items.map((item: OrderItem) => (
-              <TableRow key={item.id}>
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden">
-                      {item.product.images && item.product.images.length > 0 ? (
-                        <img 
-                          src={item.product.images[0]} 
-                          alt={item.product.name} 
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
-                          No img
-                        </div>
-                      )}
+            {order.order_items?.map((item: OrderItem) => {
+              const productImage = getProductImage(item);
+              
+              return (
+                <TableRow key={item.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden">
+                        {productImage ? (
+                          <img 
+                            src={productImage} 
+                            alt={item.product?.name || 'Product'} 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              target.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500 text-xs">No img</div>';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500 text-xs">
+                            No img
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium">{item.product?.name || 'Unknown Product'}</p>
+                        {item.customization && (
+                          <p className="text-xs text-gray-500">Customized</p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">{item.product.name}</p>
-                      {item.customization && (
-                        <p className="text-xs text-gray-500">Customized</p>
-                      )}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>{item.quantity}</TableCell>
-                <TableCell>${item.price.toFixed(2)}</TableCell>
-                <TableCell>${(item.price * item.quantity).toFixed(2)}</TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                  <TableCell>{item.quantity}</TableCell>
+                  <TableCell>${item.price.toFixed(2)}</TableCell>
+                  <TableCell>${(item.price * item.quantity).toFixed(2)}</TableCell>
+                </TableRow>
+              );
+            }) || []}
             <TableRow>
               <TableCell colSpan={3} className="text-right font-medium">Subtotal</TableCell>
               <TableCell className="font-medium">${orderTotal.toFixed(2)}</TableCell>
             </TableRow>
             <TableRow>
-              <TableCell colSpan={3} className="text-right font-medium">Shipping ({order.delivery_type})</TableCell>
+              <TableCell colSpan={3} className="text-right font-medium">
+                Shipping ({order.delivery_type || order.delivery_option || 'standard'})
+              </TableCell>
               <TableCell className="font-medium">
-                ${order.delivery_type === "express" ? "15.00" : "5.00"}
+                ${order.shipping_cost ? order.shipping_cost.toFixed(2) : 
+                  (order.delivery_type === "express" ? "15.00" : "5.00")}
               </TableCell>
             </TableRow>
             <TableRow>

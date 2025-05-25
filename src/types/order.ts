@@ -11,6 +11,9 @@ export interface ShippingAddress {
 
 export interface Profile {
   id: string;
+  display_name?: string;
+  first_name?: string;
+  last_name?: string;
   full_name?: string;
   email?: string;
   phone?: string;
@@ -22,7 +25,9 @@ export interface Product {
   name: string;
   price: number;
   image_url?: string;
+  images?: string[];
   description?: string;
+  slug?: string;
 }
 
 export interface Order {
@@ -33,11 +38,15 @@ export interface Order {
   shipping_address: ShippingAddress;
   payment_method: string;
   delivery_option: string;
+  delivery_type?: string;
   shipping_cost: number;
   subtotal: number;
   created_at: string;
   updated_at: string;
   payment_status?: string;
+  currency?: string;
+  billing_address?: ShippingAddress;
+  tracking_number?: string;
   profiles?: Profile;
 }
 

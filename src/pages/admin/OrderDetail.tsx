@@ -9,7 +9,7 @@ import { ArrowLeft, Package, CreditCard, MapPin, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { OrderDetail as OrderDetailType } from "@/types/order";
+import { OrderDetail as OrderDetailType, ShippingAddress } from "@/types/order";
 import CustomerInfo from "@/components/admin/order/CustomerInfo";
 import OrderSummary from "@/components/admin/order/OrderSummary";
 import PaymentInfo from "@/components/admin/order/PaymentInfo";
@@ -41,6 +41,16 @@ const OrderDetail = () => {
               images,
               slug
             )
+          ),
+          profiles (
+            id,
+            display_name,
+            first_name,
+            last_name,
+            full_name,
+            email,
+            phone,
+            avatar_url
           )
         `)
         .eq("id", id)
@@ -48,20 +58,47 @@ const OrderDetail = () => {
 
       if (error) throw error;
 
-      // Parse JSON addresses and ensure proper typing
+      // Parse JSON addresses and ensure proper typing with failsafes
+      const parsedShippingAddress: ShippingAddress | null = data.shipping_address 
+        ? (typeof data.shipping_address === 'string' 
+           ? JSON.parse(data.shipping_address) 
+           : data.shipping_address)
+        : null;
+
+      const parsedBillingAddress: ShippingAddress | null = data.billing_address 
+        ? (typeof data.billing_address === 'string' 
+           ? JSON.parse(data.billing_address) 
+           : data.billing_address)
+        : null;
+
       const parsedOrder: OrderDetailType = {
         ...data,
         status: data.status as "pending" | "processing" | "shipped" | "delivered" | "cancelled",
         payment_status: data.payment_status as "pending" | "paid" | "failed" | "refunded",
-        shipping_address: data.shipping_address ? JSON.parse(data.shipping_address as string) : null,
-        billing_address: data.billing_address ? JSON.parse(data.billing_address as string) : null,
-        profiles: null,
+        shipping_address: parsedShippingAddress || {
+          name: '',
+          street: '',
+          city: '',
+          state: '',
+          zipCode: '',
+          country: ''
+        },
+        billing_address: parsedBillingAddress,
+        profiles: data.profiles || {
+          id: '',
+          email: null
+        },
+        order_items: data.order_items || [],
         currency: data.currency || 'USD',
-        tracking_number: data.tracking_number || undefined
+        tracking_number: data.tracking_number || undefined,
+        delivery_option: data.delivery_option || data.delivery_type || 'standard',
+        shipping_cost: data.shipping_cost || 0,
+        subtotal: data.subtotal || data.total_amount || 0
       };
 
       setOrder(parsedOrder);
     } catch (error: any) {
+      console.error("Error fetching order:", error);
       toast({
         title: "Error fetching order",
         description: error.message,
@@ -93,6 +130,7 @@ const OrderDetail = () => {
         description: `Order status changed to ${newStatus}`,
       });
     } catch (error: any) {
+      console.error("Error updating order:", error);
       toast({
         title: "Error updating order",
         description: error.message,
@@ -121,6 +159,7 @@ const OrderDetail = () => {
         description: `${field} updated successfully`,
       });
     } catch (error: any) {
+      console.error("Error updating order:", error);
       toast({
         title: "Error updating order",
         description: error.message,
@@ -147,6 +186,7 @@ const OrderDetail = () => {
         description: "Order confirmation email sent successfully",
       });
     } catch (error: any) {
+      console.error("Error sending email:", error);
       toast({
         title: "Error sending email",
         description: error.message,
@@ -259,9 +299,7 @@ const OrderDetail = () => {
           </div>
 
           <div className="space-y-6">
-            <Card className="bg-card border-border">
-              <CustomerInfo order={order} />
-            </Card>
+            <CustomerInfo order={order} />
           </div>
         </div>
       </div>

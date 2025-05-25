@@ -17,6 +17,9 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ order }) => {
     if (order.profiles?.first_name && order.profiles?.last_name) {
       return `${order.profiles.first_name} ${order.profiles.last_name}`;
     }
+    if (order.profiles?.full_name) {
+      return order.profiles.full_name;
+    }
     return order.profiles?.email || "Guest Customer";
   };
 

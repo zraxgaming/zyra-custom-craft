@@ -28,6 +28,15 @@ const PaymentInfo: React.FC<PaymentInfoProps> = ({
   updateOrder,
   sendManualEmail
 }) => {
+  const getPaymentMethodDisplay = (method: string) => {
+    switch (method) {
+      case "credit_card": return "Credit Card";
+      case "paypal": return "PayPal";
+      case "ziina": return "Ziina";
+      default: return method || "Unknown";
+    }
+  };
+
   return (
     <>
       <CardHeader>
@@ -37,10 +46,7 @@ const PaymentInfo: React.FC<PaymentInfoProps> = ({
         <div className="space-y-4">
           <div>
             <h4 className="text-sm font-medium text-foreground">Payment Method</h4>
-            <p className="text-muted-foreground">{order.payment_method === "credit_card" ? "Credit Card" : 
-                order.payment_method === "paypal" ? "PayPal" : 
-                order.payment_method === "ziina" ? "Ziina" : 
-                order.payment_method || "Unknown"}</p>
+            <p className="text-muted-foreground">{getPaymentMethodDisplay(order.payment_method)}</p>
           </div>
           
           <div>
@@ -84,7 +90,7 @@ const PaymentInfo: React.FC<PaymentInfoProps> = ({
           <div>
             <h4 className="text-sm font-medium text-foreground">Total Amount</h4>
             <p className="text-lg font-semibold text-primary">
-              {order.total_amount} {order.currency || 'USD'}
+              ${order.total_amount.toFixed(2)} {order.currency || 'USD'}
             </p>
           </div>
 

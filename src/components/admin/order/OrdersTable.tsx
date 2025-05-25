@@ -58,6 +58,19 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onOrderUpdate 
     }
   };
 
+  const getCustomerName = (order: Order) => {
+    if (!order.profiles) return 'Guest';
+    
+    const { display_name, first_name, last_name, full_name, email } = order.profiles;
+    
+    if (display_name) return display_name;
+    if (first_name && last_name) return `${first_name} ${last_name}`;
+    if (full_name) return full_name;
+    if (email) return email;
+    
+    return 'Guest';
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
@@ -118,9 +131,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onOrderUpdate 
                 <TableCell>
                   <div className="space-y-1">
                     <p className="font-medium text-foreground">
-                      {order.profiles?.display_name || 
-                       `${order.profiles?.first_name || ''} ${order.profiles?.last_name || ''}`.trim() ||
-                       order.profiles?.email || 'Guest'}
+                      {getCustomerName(order)}
                     </p>
                     {order.profiles?.email && (
                       <p className="text-sm text-muted-foreground">{order.profiles.email}</p>
@@ -139,8 +150,8 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onOrderUpdate 
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge className={`${getPaymentStatusColor(order.payment_status)} transition-all duration-200 hover:scale-105`}>
-                    {order.payment_status}
+                  <Badge className={`${getPaymentStatusColor(order.payment_status || 'pending')} transition-all duration-200 hover:scale-105`}>
+                    {order.payment_status || 'pending'}
                   </Badge>
                 </TableCell>
                 <TableCell>
