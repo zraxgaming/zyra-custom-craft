@@ -28,6 +28,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     }
   }, [isLoading, user, isAdmin, toast]);
 
+  // Show loading state while checking authentication
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -39,14 +40,17 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     );
   }
 
+  // Redirect if not authenticated
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
 
+  // Redirect if not admin
   if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
 
+  // Render admin content if user is authenticated and is admin
   return <>{children}</>;
 };
 

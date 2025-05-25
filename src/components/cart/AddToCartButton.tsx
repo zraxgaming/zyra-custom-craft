@@ -64,8 +64,7 @@ export const AddToCartButton: React.FC<AddToCartButtonProps> = ({
           name: product.name,
           price: product.price,
           images: Array.isArray(product.images) ? product.images : [],
-          slug: product.slug,
-          in_stock: product.in_stock !== false
+          slug: product.slug
         }
       });
 

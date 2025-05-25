@@ -8,6 +8,9 @@ import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { AuthProvider } from "@/hooks/use-auth";
 import PWANotifications from "@/components/pwa/PWANotifications";
+import AdminRoute from "@/components/admin/AdminRoute";
+
+// Public pages
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
@@ -18,10 +21,14 @@ import Contact from "./pages/Contact";
 import Auth from "./pages/Auth";
 import Account from "./pages/Account";
 import Wishlist from "./pages/Wishlist";
+import About from "./pages/About";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 // Admin pages
 import Dashboard from "./pages/admin/Dashboard";
 import Products from "./pages/admin/Products";
+import ProductEdit from "./pages/admin/ProductEdit";
 import Orders from "./pages/admin/Orders";
 import Customers from "./pages/admin/Customers";
 import Newsletter from "./pages/admin/Newsletter";
@@ -53,8 +60,10 @@ function App() {
               <BrowserRouter>
                 <PWANotifications />
                 <Routes>
+                  {/* Public Routes */}
                   <Route path="/" element={<Index />} />
                   <Route path="/shop" element={<Shop />} />
+                  <Route path="/products/:slug" element={<ProductDetail />} />
                   <Route path="/product/:slug" element={<ProductDetail />} />
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/checkout" element={<Checkout />} />
@@ -64,22 +73,26 @@ function App() {
                   <Route path="/account" element={<Account />} />
                   <Route path="/account/orders" element={<Account />} />
                   <Route path="/wishlist" element={<Wishlist />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/terms" element={<TermsOfService />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
                   
-                  {/* Admin Routes */}
-                  <Route path="/admin" element={<Dashboard />} />
-                  <Route path="/admin/products" element={<Products />} />
-                  <Route path="/admin/orders" element={<Orders />} />
-                  <Route path="/admin/customers" element={<Customers />} />
-                  <Route path="/admin/newsletter" element={<Newsletter />} />
-                  <Route path="/admin/promotions" element={<Promotions />} />
-                  <Route path="/admin/barcodes" element={<BarcodeManager />} />
-                  <Route path="/admin/scanner" element={<BarcodeScanner />} />
-                  <Route path="/admin/contact" element={<ContactAdmin />} />
-                  <Route path="/admin/gift-cards" element={<GiftCards />} />
-                  <Route path="/admin/analytics" element={<Analytics />} />
-                  <Route path="/admin/settings" element={<Settings />} />
-                  <Route path="/admin/coupons" element={<Coupons />} />
-                  <Route path="/admin/ziina-stats" element={<ZiinaStats />} />
+                  {/* Admin Routes - Protected */}
+                  <Route path="/admin" element={<AdminRoute><Dashboard /></AdminRoute>} />
+                  <Route path="/admin/products" element={<AdminRoute><Products /></AdminRoute>} />
+                  <Route path="/admin/products/edit/:id" element={<AdminRoute><ProductEdit /></AdminRoute>} />
+                  <Route path="/admin/orders" element={<AdminRoute><Orders /></AdminRoute>} />
+                  <Route path="/admin/customers" element={<AdminRoute><Customers /></AdminRoute>} />
+                  <Route path="/admin/newsletter" element={<AdminRoute><Newsletter /></AdminRoute>} />
+                  <Route path="/admin/promotions" element={<AdminRoute><Promotions /></AdminRoute>} />
+                  <Route path="/admin/barcodes" element={<AdminRoute><BarcodeManager /></AdminRoute>} />
+                  <Route path="/admin/scanner" element={<AdminRoute><BarcodeScanner /></AdminRoute>} />
+                  <Route path="/admin/contact" element={<AdminRoute><ContactAdmin /></AdminRoute>} />
+                  <Route path="/admin/gift-cards" element={<AdminRoute><GiftCards /></AdminRoute>} />
+                  <Route path="/admin/analytics" element={<AdminRoute><Analytics /></AdminRoute>} />
+                  <Route path="/admin/settings" element={<AdminRoute><Settings /></AdminRoute>} />
+                  <Route path="/admin/coupons" element={<AdminRoute><Coupons /></AdminRoute>} />
+                  <Route path="/admin/ziina-stats" element={<AdminRoute><ZiinaStats /></AdminRoute>} />
                 </Routes>
               </BrowserRouter>
             </CartProvider>

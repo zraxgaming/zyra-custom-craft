@@ -3,24 +3,9 @@ export interface CartItem {
   id: string;
   productId: string;
   name: string;
+  price: number;
   quantity: number;
-  price: number;
-  customization: Record<string, any>;
-  image?: string;
-  product?: {
-    id: string;
-    name: string;
-    price: number;
-    images: string[];
-    slug: string;
-  };
-}
-
-export interface WishlistItem {
-  id: string;
-  productId: string;
-  name: string;
-  price: number;
+  customization?: Record<string, any>;
   image?: string;
   product?: {
     id: string;
