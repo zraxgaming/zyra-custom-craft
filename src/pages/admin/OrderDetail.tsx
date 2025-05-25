@@ -48,12 +48,15 @@ const OrderDetail = () => {
 
       if (error) throw error;
 
-      // Parse JSON addresses
-      const parsedOrder = {
+      // Parse JSON addresses and ensure proper typing
+      const parsedOrder: OrderDetailType = {
         ...data,
+        status: data.status as "pending" | "processing" | "shipped" | "delivered" | "cancelled",
         shipping_address: data.shipping_address ? JSON.parse(data.shipping_address as string) : null,
         billing_address: data.billing_address ? JSON.parse(data.billing_address as string) : null,
-        profiles: null // Remove profiles since we don't have it
+        profiles: null,
+        currency: data.currency || 'USD',
+        tracking_number: data.tracking_number || undefined
       };
 
       setOrder(parsedOrder);
@@ -80,7 +83,10 @@ const OrderDetail = () => {
 
       if (error) throw error;
 
-      setOrder({ ...order, status: newStatus });
+      setOrder({ 
+        ...order, 
+        status: newStatus as "pending" | "processing" | "shipped" | "delivered" | "cancelled"
+      });
       toast({
         title: "Order updated",
         description: `Order status changed to ${newStatus}`,
@@ -88,6 +94,60 @@ const OrderDetail = () => {
     } catch (error: any) {
       toast({
         title: "Error updating order",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const updateOrder = async (field: string, value: string) => {
+    if (!order) return;
+
+    setIsUpdating(true);
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ [field]: value })
+        .eq("id", order.id);
+
+      if (error) throw error;
+
+      setOrder({ ...order, [field]: value });
+      toast({
+        title: "Order updated",
+        description: `${field} updated successfully`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error updating order",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const sendManualEmail = async () => {
+    if (!order) return;
+
+    setIsUpdating(true);
+    try {
+      const { error } = await supabase.functions.invoke('send-order-email', {
+        body: { orderId: order.id }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Email sent",
+        description: "Order confirmation email sent successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error sending email",
         description: error.message,
         variant: "destructive",
       });
@@ -123,8 +183,8 @@ const OrderDetail = () => {
         <div className="p-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-foreground">Order not found</h1>
-            <Button onClick={() => navigate("/admin/orders")} className="mt-4">
-              Back to Orders
+            <Button onClick={() => navigate("/admin")} className="mt-4">
+              Back to Dashboard
             </Button>
           </div>
         </div>
@@ -179,11 +239,21 @@ const OrderDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <Card className="bg-card border-border">
-              <OrderSummary order={order} />
+              <OrderSummary 
+                order={order} 
+                isUpdating={isUpdating} 
+                updateOrder={updateOrder}
+                sendManualEmail={sendManualEmail}
+              />
             </Card>
 
             <Card className="bg-card border-border">
-              <PaymentInfo order={order} />
+              <PaymentInfo 
+                order={order} 
+                isUpdating={isUpdating} 
+                updateOrder={updateOrder}
+                sendManualEmail={sendManualEmail}
+              />
             </Card>
           </div>
 

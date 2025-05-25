@@ -12,6 +12,7 @@ import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import CartDrawer from "@/components/cart/CartDrawer";
 import PWAInstallPrompt from "@/components/pwa/PWAInstallPrompt";
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
+import TypeformFeedback from "@/components/feedback/TypeformFeedback";
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
@@ -34,7 +35,6 @@ import AdminRoute from "./components/admin/AdminRoute";
 import Dashboard from "./pages/admin/Dashboard";
 import Products from "./pages/admin/Products";
 import ProductEdit from "./pages/admin/ProductEdit";
-import OrderDetail from "./pages/admin/OrderDetail";
 import Customers from "./pages/admin/Customers";
 import AdminCategories from "./pages/admin/Categories";
 import Coupons from "./pages/admin/Coupons";
@@ -77,6 +77,7 @@ const App = () => (
                   <Sonner />
                   <CartDrawer />
                   <PWAInstallPrompt />
+                  <TypeformFeedback />
                   <Routes>
                     {/* Public routes */}
                     <Route path="/" element={<Index />} />
@@ -106,7 +107,6 @@ const App = () => (
                     <Route path="/admin/products" element={<AdminRoute><Products /></AdminRoute>} />
                     <Route path="/admin/products/new" element={<AdminRoute><ProductEdit /></AdminRoute>} />
                     <Route path="/admin/products/:id/edit" element={<AdminRoute><ProductEdit /></AdminRoute>} />
-                    <Route path="/admin/orders/:id" element={<AdminRoute><OrderDetail /></AdminRoute>} />
                     <Route path="/admin/customers" element={<AdminRoute><Customers /></AdminRoute>} />
                     <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
                     <Route path="/admin/coupons" element={<AdminRoute><Coupons /></AdminRoute>} />

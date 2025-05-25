@@ -50,7 +50,7 @@ const ProductDetail = () => {
         .single();
 
       if (error) throw error;
-      setProduct(data);
+      setProduct(data as Product);
     } catch (error: any) {
       toast({
         title: "Error fetching product",
@@ -180,7 +180,7 @@ const ProductDetail = () => {
           <div className="space-y-6">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <Badge variant="secondary">{product.categories?.name}</Badge>
+                <Badge variant="secondary">{product.categories?.name || product.category}</Badge>
                 {product.is_new && <Badge className="bg-green-500 text-white">New</Badge>}
                 {product.discount_percentage > 0 && (
                   <Badge className="bg-red-500 text-white">
@@ -232,7 +232,8 @@ const ProductDetail = () => {
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg">Customize Your Product</h3>
                 <ProductCustomizer
-                  product={product}
+                  productId={product.id}
+                  customizationOptions={product.customization_options || []}
                   customization={customization}
                   onCustomizationChange={setCustomization}
                 />
@@ -272,7 +273,7 @@ const ProductDetail = () => {
                   <ShoppingCart className="w-4 h-4 mr-2" />
                   {product.in_stock ? "Add to Cart" : "Out of Stock"}
                 </Button>
-                <WishlistButton product={product} />
+                <WishlistButton productId={product.id} />
               </div>
             </div>
 

@@ -14,14 +14,19 @@ const WishlistButton: React.FC<WishlistButtonProps> = ({ productId, className })
   const { isInWishlist, addToWishlist, removeFromWishlist, isLoading } = useWishlist();
   const inWishlist = isInWishlist(productId);
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
     if (inWishlist) {
-      removeFromWishlist(productId);
+      await removeFromWishlist(productId);
     } else {
-      addToWishlist(productId);
+      // Create a placeholder wishlist item - the actual product data will be fetched by the hook
+      await addToWishlist({
+        productId,
+        name: "Loading...",
+        price: 0,
+      });
     }
   };
 
