@@ -5,10 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { LogIn, UserPlus, Mail, Lock, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Container } from "@/components/ui/container";
+import { useAuth } from "@/hooks/use-auth";
+import GoogleSignIn from "./GoogleSignIn";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -21,20 +26,16 @@ const AuthPage = () => {
   });
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user, isLoading: authLoading } = useAuth();
   const [searchParams] = useSearchParams();
-  const redirectTo = searchParams.get('redirect') || '/';
-  const referralCode = searchParams.get('ref');
+  const redirectTo = searchParams.get('redirect') || '/home';
 
+  // Redirect if already authenticated
   useEffect(() => {
-    // If there's a referral code, show signup form by default
-    if (referralCode) {
-      setIsLogin(false);
-      toast({
-        title: "Welcome!",
-        description: "You've been referred by a friend. Sign up to get your welcome bonus!",
-      });
+    if (!authLoading && user) {
+      navigate(redirectTo);
     }
-  }, [referralCode, toast]);
+  }, [user, authLoading, navigate, redirectTo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,44 +64,15 @@ const AuthPage = () => {
             data: {
               first_name: formData.firstName,
               last_name: formData.lastName,
-              referral_code: referralCode
             }
           }
         });
 
         if (error) throw error;
 
-        // If there's a referral code, create a referral record
-        if (referralCode && data.user) {
-          try {
-            // Find the referrer
-            const { data: referrer } = await supabase
-              .from('referrals')
-              .select('referrer_id')
-              .eq('referral_code', referralCode)
-              .single();
-
-            if (referrer) {
-              // Create a new referral record for the referred user
-              await supabase
-                .from('referrals')
-                .insert({
-                  referrer_id: referrer.referrer_id,
-                  referred_id: data.user.id,
-                  referral_code: referralCode,
-                  status: 'pending'
-                });
-            }
-          } catch (referralError) {
-            console.error('Error processing referral:', referralError);
-          }
-        }
-
         toast({
           title: "Account created!",
-          description: referralCode 
-            ? "Please check your email to verify your account. You'll receive your referral bonus after verification!"
-            : "Please check your email to verify your account.",
+          description: "Please check your email to verify your account.",
         });
       }
     } catch (error: any) {
@@ -114,108 +86,124 @@ const AuthPage = () => {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5 flex items-center justify-center py-12 animate-fade-in">
-      <Container className="max-w-md">
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-2xl animate-scale-in">
-          <CardHeader className="text-center space-y-4">
-            <div className="mx-auto relative">
-              <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 via-purple-500/20 to-pink-500/20 rounded-full blur-xl animate-pulse"></div>
-              <div className="relative bg-gradient-to-br from-primary/10 to-purple-500/10 p-4 rounded-2xl border border-primary/20">
-                {isLogin ? (
-                  <LogIn className="h-8 w-8 text-primary" />
-                ) : (
-                  <UserPlus className="h-8 w-8 text-primary" />
-                )}
-              </div>
-            </div>
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
-              {isLogin ? "Welcome Back" : "Create Account"}
-            </CardTitle>
-            {referralCode && !isLogin && (
-              <p className="text-sm text-green-600 font-medium">
-                🎉 You've been referred! Get special bonuses when you join!
-              </p>
-            )}
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {!isLogin && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">
-                      <User className="h-4 w-4 inline mr-2" />
-                      First Name
-                    </Label>
-                    <Input
-                      id="firstName"
-                      value={formData.firstName}
-                      onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                      required={!isLogin}
-                      className="animate-fade-in"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input
-                      id="lastName"
-                      value={formData.lastName}
-                      onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                      required={!isLogin}
-                      className="animate-fade-in"
-                    />
-                  </div>
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5 flex items-center justify-center py-12">
+        <Container className="max-w-md">
+          <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-2xl">
+            <CardHeader className="text-center space-y-4">
+              <div className="mx-auto relative">
+                <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 via-purple-500/20 to-pink-500/20 rounded-full blur-xl animate-pulse"></div>
+                <div className="relative bg-gradient-to-br from-primary/10 to-purple-500/10 p-4 rounded-2xl border border-primary/20">
+                  {isLogin ? (
+                    <LogIn className="h-8 w-8 text-primary" />
+                  ) : (
+                    <UserPlus className="h-8 w-8 text-primary" />
+                  )}
                 </div>
-              )}
+              </div>
+              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                {isLogin ? "Welcome Back" : "Create Account"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {!isLogin && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">
+                        <User className="h-4 w-4 inline mr-2" />
+                        First Name
+                      </Label>
+                      <Input
+                        id="firstName"
+                        value={formData.firstName}
+                        onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                        required={!isLogin}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Last Name</Label>
+                      <Input
+                        id="lastName"
+                        value={formData.lastName}
+                        onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                        required={!isLogin}
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                <div className="space-y-2">
+                  <Label htmlFor="email">
+                    <Mail className="h-4 w-4 inline mr-2" />
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="password">
+                    <Lock className="h-4 w-4 inline mr-2" />
+                    Password
+                  </Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    required
+                  />
+                </div>
+                
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Loading..." : (isLogin ? "Sign In" : "Create Account")}
+                </Button>
+              </form>
               
-              <div className="space-y-2">
-                <Label htmlFor="email">
-                  <Mail className="h-4 w-4 inline mr-2" />
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                  required
-                  className="animate-fade-in"
-                />
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <Separator className="w-full" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Or continue with
+                  </span>
+                </div>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="password">
-                  <Lock className="h-4 w-4 inline mr-2" />
-                  Password
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                  required
-                  className="animate-fade-in"
-                />
-              </div>
+              <GoogleSignIn />
               
-              <Button type="submit" className="w-full animate-scale-in" disabled={isLoading}>
-                {isLoading ? "Loading..." : (isLogin ? "Sign In" : "Create Account")}
-              </Button>
-            </form>
-            
-            <div className="mt-4 text-center">
-              <Button
-                variant="link"
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-primary hover-scale"
-              >
-                {isLogin ? "Need an account? Sign up" : "Already have an account? Sign in"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </Container>
-    </div>
+              <div className="text-center">
+                <Button
+                  variant="link"
+                  onClick={() => setIsLogin(!isLogin)}
+                  className="text-primary"
+                >
+                  {isLogin ? "Need an account? Sign up" : "Already have an account? Sign in"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </Container>
+      </div>
+      <Footer />
+    </>
   );
 };
 

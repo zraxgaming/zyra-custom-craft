@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -46,6 +45,7 @@ import AdminZiina from "./pages/admin/Ziina";
 import AdminSettings from "./pages/admin/Settings";
 import AdminInventory from "./pages/admin/Inventory";
 import ProductEdit from "./pages/admin/ProductEdit";
+import OrderDetail from "./pages/admin/OrderDetail";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +64,8 @@ const AppContent = () => {
       <Route path="/customize/:productId" element={<ProductCustomizer />} />
       <Route path="/about" element={<About />} />
       <Route path="/contact" element={<Contact />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/dashboard" element={<Dashboard />} />
@@ -72,11 +74,10 @@ const AppContent = () => {
       <Route path="/checkout" element={<Checkout />} />
       <Route path="/order-success/:orderId" element={<OrderSuccess />} />
       <Route path="/order-failed" element={<OrderFailed />} />
-      <Route path="/terms" element={<Terms />} />
-      <Route path="/privacy" element={<Privacy />} />
       
       {/* Admin Routes */}
       <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+      <Route path="/admin/orders/:id" element={<AdminRoute><OrderDetail /></AdminRoute>} />
       <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
       <Route path="/admin/products/:id/edit" element={<AdminRoute><ProductEdit /></AdminRoute>} />
       <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
