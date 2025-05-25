@@ -52,35 +52,44 @@ const Shop = () => {
       <Container className="py-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8 animate-fade-in">
-            <h1 className="text-3xl font-bold mb-2 text-foreground text-gradient">Shop</h1>
-            <p className="text-muted-foreground">
-              Discover our collection of customizable products
+            <h1 className="text-4xl font-bold mb-2 text-foreground bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+              Shop
+            </h1>
+            <p className="text-muted-foreground text-lg">
+              Discover our collection of premium customizable products
             </p>
           </div>
 
-          <SearchAndSort
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            sortBy={sortOption}
-            onSortChange={setSortOption}
-          />
+          <div className="animate-slide-in-right">
+            <SearchAndSort
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              sortBy={sortOption}
+              onSortChange={setSortOption}
+            />
+          </div>
 
           <div className="flex flex-col lg:flex-row gap-8 mt-8">
-            <aside className="w-full lg:w-64 flex-shrink-0">
-              <ProductFilters
-                categories={categories}
-                selectedCategories={selectedCategories}
-                onCategoryChange={toggleCategory}
-                priceRange={priceRange}
-                onPriceRangeChange={setPriceRange}
-                maxPrice={maxPrice}
-                showInStockOnly={showInStockOnly}
-                onShowInStockChange={setShowInStockOnly}
-                onResetFilters={resetFilters}
-              />
+            <aside className="w-full lg:w-64 flex-shrink-0 animate-slide-in-right" style={{ animationDelay: '0.2s' }}>
+              <div className="sticky top-4">
+                <ProductFilters
+                  categories={categories}
+                  selectedCategories={selectedCategories}
+                  onCategoryChange={toggleCategory}
+                  priceRange={priceRange}
+                  onPriceRangeChange={setPriceRange}
+                  maxPrice={maxPrice}
+                  showInStockOnly={showInStockOnly}
+                  onShowInStockChange={setShowInStockOnly}
+                  onResetFilters={resetFilters}
+                />
+              </div>
             </aside>
 
-            <main className="flex-1">
+            <main className="flex-1 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+              <div className="mb-4 text-sm text-muted-foreground">
+                Showing {filteredProducts.length} products
+              </div>
               <ProductGrid 
                 products={filteredProducts} 
                 isLoading={isLoading}

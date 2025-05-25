@@ -10,6 +10,8 @@ interface SiteConfig {
   notifications_enabled?: boolean;
   abandoned_cart_enabled?: boolean;
   newsletter_enabled?: boolean;
+  ziina_api_key?: string;
+  paypal_client_id?: string;
 }
 
 export const useSiteConfig = () => {
@@ -30,12 +32,10 @@ export const useSiteConfig = () => {
       if (data) {
         data.forEach((item: { key: string; value: any }) => {
           const key = item.key as keyof SiteConfig;
-          // Handle different value types properly
           if (typeof item.value === 'string' || typeof item.value === 'boolean' || typeof item.value === 'number') {
-            configObj[key] = item.value as any;
+            (configObj as any)[key] = item.value;
           } else if (item.value && typeof item.value === 'object') {
-            // Handle JSON values
-            configObj[key] = item.value as any;
+            (configObj as any)[key] = item.value;
           }
         });
       }
