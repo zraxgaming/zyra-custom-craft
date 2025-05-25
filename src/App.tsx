@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/use-auth";
 import { CartProvider } from "@/components/cart/CartProvider";
+import { usePageTracking } from "@/hooks/usePageTracking";
 import AdminRoute from "@/components/admin/AdminRoute";
 
 // Pages
@@ -14,12 +15,12 @@ import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import ProductCustomizer from "./pages/ProductCustomizer";
 import AuthPage from "./components/auth/AuthPage";
+import AuthCallback from "./pages/auth/callback";
+import Dashboard from "./pages/Dashboard";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -41,6 +42,45 @@ import AdminInventory from "./pages/admin/Inventory";
 
 const queryClient = new QueryClient();
 
+const AppContent = () => {
+  usePageTracking();
+  
+  return (
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/" element={<Index />} />
+      <Route path="/shop" element={<Shop />} />
+      <Route path="/products/:slug" element={<ProductDetail />} />
+      <Route path="/customize/:productId" element={<ProductCustomizer />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/contact" element={<Contact />} />
+      <Route path="/auth" element={<AuthPage />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
+      
+      {/* Admin Routes */}
+      <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+      <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
+      <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
+      <Route path="/admin/inventory" element={<AdminRoute><AdminInventory /></AdminRoute>} />
+      <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
+      <Route path="/admin/customers" element={<AdminRoute><AdminCustomers /></AdminRoute>} />
+      <Route path="/admin/newsletter" element={<AdminRoute><AdminNewsletter /></AdminRoute>} />
+      <Route path="/admin/promotions" element={<AdminRoute><AdminPromotions /></AdminRoute>} />
+      <Route path="/admin/coupons" element={<AdminRoute><AdminCoupons /></AdminRoute>} />
+      <Route path="/admin/gift-cards" element={<AdminRoute><AdminGiftCards /></AdminRoute>} />
+      <Route path="/admin/barcodes" element={<AdminRoute><AdminBarcodes /></AdminRoute>} />
+      <Route path="/admin/scanner" element={<AdminRoute><AdminScanner /></AdminRoute>} />
+      <Route path="/admin/contact" element={<AdminRoute><AdminContact /></AdminRoute>} />
+      <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
+      <Route path="/admin/ziina" element={<AdminRoute><AdminZiina /></AdminRoute>} />
+      <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+    </Routes>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -49,38 +89,7 @@ const App = () => (
           <CartProvider>
             <Toaster />
             <Sonner />
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<Index />} />
-              <Route path="/shop" element={<Shop />} />
-              <Route path="/products/:slug" element={<ProductDetail />} />
-              <Route path="/customize/:productId" element={<ProductCustomizer />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/privacy" element={<Privacy />} />
-              
-              {/* Admin Routes */}
-              <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-              <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
-              <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
-              <Route path="/admin/inventory" element={<AdminRoute><AdminInventory /></AdminRoute>} />
-              <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
-              <Route path="/admin/customers" element={<AdminRoute><AdminCustomers /></AdminRoute>} />
-              <Route path="/admin/newsletter" element={<AdminRoute><AdminNewsletter /></AdminRoute>} />
-              <Route path="/admin/promotions" element={<AdminRoute><AdminPromotions /></AdminRoute>} />
-              <Route path="/admin/coupons" element={<AdminRoute><AdminCoupons /></AdminRoute>} />
-              <Route path="/admin/gift-cards" element={<AdminRoute><AdminGiftCards /></AdminRoute>} />
-              <Route path="/admin/barcodes" element={<AdminRoute><AdminBarcodes /></AdminRoute>} />
-              <Route path="/admin/scanner" element={<AdminRoute><AdminScanner /></AdminRoute>} />
-              <Route path="/admin/contact" element={<AdminRoute><AdminContact /></AdminRoute>} />
-              <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
-              <Route path="/admin/ziina" element={<AdminRoute><AdminZiina /></AdminRoute>} />
-              <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
-            </Routes>
+            <AppContent />
           </CartProvider>
         </AuthProvider>
       </BrowserRouter>

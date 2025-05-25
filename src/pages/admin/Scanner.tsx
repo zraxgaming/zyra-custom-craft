@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScanLine, Search, Package, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } = "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 const Scanner = () => {
   const [scanResult, setScanResult] = useState("");
@@ -21,7 +21,6 @@ const Scanner = () => {
 
     setIsLoading(true);
     try {
-      // Search for product by barcode, SKU, or name
       const { data, error } = await supabase
         .from('products')
         .select('*')
@@ -57,7 +56,6 @@ const Scanner = () => {
 
   const startCamera = () => {
     setIsScanning(true);
-    // In a real implementation, this would start the camera
     toast({
       title: "Camera scanning",
       description: "Camera scanning would start here. Use manual input for now.",
@@ -96,7 +94,6 @@ const Scanner = () => {
           <p className="text-muted-foreground">Scan products and manage inventory</p>
         </div>
 
-        {/* Scanner Interface */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-slide-in-left">
             <CardHeader>
@@ -155,7 +152,6 @@ const Scanner = () => {
             </CardContent>
           </Card>
 
-          {/* Product Information */}
           <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-slide-in-right">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -249,7 +245,6 @@ const Scanner = () => {
           </Card>
         </div>
 
-        {/* Recent Scans */}
         <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-fade-in" style={{ animationDelay: '400ms' }}>
           <CardHeader>
             <CardTitle>Recent Scans</CardTitle>

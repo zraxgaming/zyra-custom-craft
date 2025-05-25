@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,18 @@ const AuthPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/';
+  const referralCode = searchParams.get('ref');
+
+  useEffect(() => {
+    // If there's a referral code, show signup form by default
+    if (referralCode) {
+      setIsLogin(false);
+      toast({
+        title: "Welcome!",
+        description: "You've been referred by a friend. Sign up to get your welcome bonus!",
+      });
+    }
+  }, [referralCode, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,22 +56,51 @@ const AuthPage = () => {
 
         navigate(redirectTo);
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
           options: {
             data: {
               first_name: formData.firstName,
               last_name: formData.lastName,
+              referral_code: referralCode
             }
           }
         });
 
         if (error) throw error;
 
+        // If there's a referral code, create a referral record
+        if (referralCode && data.user) {
+          try {
+            // Find the referrer
+            const { data: referrer } = await supabase
+              .from('referrals')
+              .select('referrer_id')
+              .eq('referral_code', referralCode)
+              .single();
+
+            if (referrer) {
+              // Create a new referral record for the referred user
+              await supabase
+                .from('referrals')
+                .insert({
+                  referrer_id: referrer.referrer_id,
+                  referred_id: data.user.id,
+                  referral_code: referralCode,
+                  status: 'pending'
+                });
+            }
+          } catch (referralError) {
+            console.error('Error processing referral:', referralError);
+          }
+        }
+
         toast({
           title: "Account created!",
-          description: "Please check your email to verify your account.",
+          description: referralCode 
+            ? "Please check your email to verify your account. You'll receive your referral bonus after verification!"
+            : "Please check your email to verify your account.",
         });
       }
     } catch (error: any) {
@@ -74,7 +115,7 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center py-12">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5 flex items-center justify-center py-12 animate-fade-in">
       <Container className="max-w-md">
         <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-2xl animate-scale-in">
           <CardHeader className="text-center space-y-4">
@@ -91,6 +132,11 @@ const AuthPage = () => {
             <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
               {isLogin ? "Welcome Back" : "Create Account"}
             </CardTitle>
+            {referralCode && !isLogin && (
+              <p className="text-sm text-green-600 font-medium">
+                🎉 You've been referred! Get special bonuses when you join!
+              </p>
+            )}
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -106,6 +152,7 @@ const AuthPage = () => {
                       value={formData.firstName}
                       onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
                       required={!isLogin}
+                      className="animate-fade-in"
                     />
                   </div>
                   <div className="space-y-2">
@@ -115,6 +162,7 @@ const AuthPage = () => {
                       value={formData.lastName}
                       onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
                       required={!isLogin}
+                      className="animate-fade-in"
                     />
                   </div>
                 </div>
@@ -131,6 +179,7 @@ const AuthPage = () => {
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                   required
+                  className="animate-fade-in"
                 />
               </div>
               
@@ -145,10 +194,11 @@ const AuthPage = () => {
                   value={formData.password}
                   onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                   required
+                  className="animate-fade-in"
                 />
               </div>
               
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full animate-scale-in" disabled={isLoading}>
                 {isLoading ? "Loading..." : (isLogin ? "Sign In" : "Create Account")}
               </Button>
             </form>
@@ -157,7 +207,7 @@ const AuthPage = () => {
               <Button
                 variant="link"
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-primary"
+                className="text-primary hover-scale"
               >
                 {isLogin ? "Need an account? Sign up" : "Already have an account? Sign in"}
               </Button>
