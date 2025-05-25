@@ -24,15 +24,19 @@ export const useCategories = () => {
     try {
       setIsLoading(true);
       setError(null);
+      console.log("Fetching categories...");
 
       const { data, error } = await supabase
         .from("categories")
         .select("*")
-        .eq("is_active", true)
         .order("sort_order", { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error:", error);
+        throw error;
+      }
 
+      console.log("Categories data:", data);
       setCategories(data || []);
     } catch (error: any) {
       console.error("Error fetching categories:", error);

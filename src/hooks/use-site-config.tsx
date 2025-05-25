@@ -27,7 +27,8 @@ export const useSiteConfig = () => {
       if (error) throw error;
 
       const configObj = data.reduce((acc: SiteConfig, item: any) => {
-        acc[item.key as keyof SiteConfig] = item.value;
+        const key = item.key as keyof SiteConfig;
+        acc[key] = item.value;
         return acc;
       }, {});
 

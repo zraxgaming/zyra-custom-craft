@@ -47,13 +47,20 @@ export const useProducts = () => {
     try {
       setIsLoading(true);
       setError(null);
+      console.log("Fetching products...");
 
       const { data, error } = await supabase
         .from("products")
         .select("*")
+        .eq("status", "published")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error:", error);
+        throw error;
+      }
+
+      console.log("Raw products data:", data);
 
       const formattedProducts: Product[] = (data || []).map((product: any) => ({
         id: product.id,
@@ -89,6 +96,7 @@ export const useProducts = () => {
         updated_at: product.updated_at
       }));
 
+      console.log("Formatted products:", formattedProducts);
       setProducts(formattedProducts);
     } catch (error: any) {
       console.error("Error fetching products:", error);

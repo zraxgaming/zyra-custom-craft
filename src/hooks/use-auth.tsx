@@ -26,7 +26,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       
       if (session?.user?.id) {
-        await checkAdminStatus(session.user.id);
+        await checkAdminStatus(session.user);
       } else {
         setIsAdmin(false);
       }
@@ -43,8 +43,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           console.log('Initial session:', session?.user?.id);
           setUser(session?.user ?? null);
-          if (session?.user?.id) {
-            await checkAdminStatus(session.user.id);
+          if (session?.user) {
+            await checkAdminStatus(session.user);
           }
         }
       } catch (error) {
@@ -61,25 +61,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const checkAdminStatus = async (userId: string) => {
+  const checkAdminStatus = async (currentUser: User) => {
     try {
-      console.log('Checking admin status for user:', userId);
+      console.log('Checking admin status for user:', currentUser.id, 'Email:', currentUser.email);
       
-      const { data, error } = await supabase
+      // First check if profiles table exists and get user data
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('role')
-        .eq('id', userId)
+        .eq('id', currentUser.id)
         .single();
       
-      if (error) {
-        console.error("Error checking admin status:", error);
+      if (profileError) {
+        console.log("Profile error (might not exist):", profileError);
+        
+        // If profile doesn't exist, create one for admin email
+        if (currentUser.email === 'zainabusal113@gmail.com') {
+          console.log('Creating admin profile for:', currentUser.email);
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: currentUser.id,
+              email: currentUser.email,
+              first_name: currentUser.user_metadata?.first_name || currentUser.email?.split('@')[0] || '',
+              last_name: currentUser.user_metadata?.last_name || '',
+              role: 'admin'
+            });
+          
+          if (insertError) {
+            console.error('Error creating admin profile:', insertError);
+          } else {
+            console.log('Admin profile created successfully');
+            setIsAdmin(true);
+            return;
+          }
+        }
+        
         setIsAdmin(false);
         return;
       }
       
-      const adminStatus = data?.role === 'admin';
-      console.log('Admin status result:', adminStatus, 'Role:', data?.role);
+      const adminStatus = profileData?.role === 'admin';
+      console.log('Admin status result:', adminStatus, 'Role:', profileData?.role);
       setIsAdmin(adminStatus);
+      
+      // If not admin but email is admin email, update role
+      if (!adminStatus && currentUser.email === 'zainabusal113@gmail.com') {
+        console.log('Updating role to admin for:', currentUser.email);
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ role: 'admin' })
+          .eq('id', currentUser.id);
+        
+        if (!updateError) {
+          setIsAdmin(true);
+        }
+      }
     } catch (error) {
       console.error("Error in checkAdminStatus:", error);
       setIsAdmin(false);

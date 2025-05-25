@@ -11,7 +11,7 @@ import ProductGrid from "@/components/shop/ProductGrid";
 import SearchAndSort from "@/components/shop/SearchAndSort";
 
 const Shop = () => {
-  const { products, error: productsError } = useProducts();
+  const { products, error: productsError, isLoading: productsLoading } = useProducts();
   const { categories } = useCategories();
   
   const {
@@ -79,7 +79,7 @@ const Shop = () => {
               setSortOption={setSortOption}
             />
             
-            <ProductGrid products={filteredProducts} isLoading={false} />
+            <ProductGrid products={filteredProducts} isLoading={productsLoading} />
           </div>
         </div>
       </Container>

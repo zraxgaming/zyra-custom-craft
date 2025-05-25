@@ -19,7 +19,7 @@ const EmailNotificationService: React.FC<EmailNotificationServiceProps> = ({
   const { config } = useSiteConfig();
 
   useEffect(() => {
-    if (!enableAbandonedCart || !user || items.length === 0 || !config.abandoned_cart_enabled) {
+    if (!enableAbandonedCart || !user || items.length === 0 || !config.abandoned_cart_enabled || !config.brevo_api_key) {
       return;
     }
 
@@ -34,6 +34,7 @@ const EmailNotificationService: React.FC<EmailNotificationServiceProps> = ({
     if (!user?.email || !config.brevo_api_key) return;
 
     try {
+      console.log('Sending abandoned cart email to:', user.email);
       await supabase.functions.invoke('send-brevo-email', {
         body: {
           to: user.email,
@@ -41,7 +42,7 @@ const EmailNotificationService: React.FC<EmailNotificationServiceProps> = ({
           content: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>Hi there!</h2>
-              <p>You have ${items.length} item(s) waiting in your cart at Zyra.</p>
+              <p>You have ${items.length} item(s) waiting in your cart at ${config.site_name || 'Zyra'}.</p>
               <p>Don't miss out on these great products!</p>
               <a href="${window.location.origin}/cart" style="background-color: #8B5CF6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0;">
                 Complete Your Purchase
@@ -52,6 +53,7 @@ const EmailNotificationService: React.FC<EmailNotificationServiceProps> = ({
           type: 'abandoned-cart'
         }
       });
+      console.log('Abandoned cart email sent successfully');
     } catch (error) {
       console.error('Failed to send abandoned cart email:', error);
     }
@@ -61,6 +63,7 @@ const EmailNotificationService: React.FC<EmailNotificationServiceProps> = ({
     if (!user?.email || !config.brevo_api_key) return;
 
     try {
+      console.log('Sending order confirmation email to:', user.email);
       await supabase.functions.invoke('send-brevo-email', {
         body: {
           to: user.email,
@@ -77,10 +80,16 @@ const EmailNotificationService: React.FC<EmailNotificationServiceProps> = ({
           type: 'order-confirmation'
         }
       });
+      console.log('Order confirmation email sent successfully');
     } catch (error) {
       console.error('Failed to send order confirmation:', error);
     }
   };
+
+  // Expose the sendOrderConfirmation function for use in checkout
+  React.useEffect(() => {
+    (window as any).sendOrderConfirmation = sendOrderConfirmation;
+  }, [user, config]);
 
   return null;
 };
