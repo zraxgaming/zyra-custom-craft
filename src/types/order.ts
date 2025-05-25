@@ -9,6 +9,22 @@ export interface ShippingAddress {
   phone?: string;
 }
 
+export interface Profile {
+  id: string;
+  full_name?: string;
+  email?: string;
+  phone?: string;
+  avatar_url?: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  image_url?: string;
+  description?: string;
+}
+
 export interface Order {
   id: string;
   user_id: string;
@@ -21,6 +37,8 @@ export interface Order {
   subtotal: number;
   created_at: string;
   updated_at: string;
+  payment_status?: string;
+  profiles?: Profile;
 }
 
 export interface OrderItem {
@@ -30,4 +48,10 @@ export interface OrderItem {
   quantity: number;
   price: number;
   customization?: any;
+  product?: Product;
+}
+
+export interface OrderDetail extends Order {
+  order_items: OrderItem[];
+  profiles: Profile;
 }
