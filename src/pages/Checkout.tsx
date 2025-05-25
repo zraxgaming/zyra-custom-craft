@@ -1,111 +1,121 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/hooks/use-auth";
-import { useCart } from "@/components/cart/CartProvider";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Container } from "@/components/ui/container";
+import { ArrowLeft, CreditCard, Truck, Shield } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { Container } from "@/components/ui/container";
+import { useCart } from "@/components/cart/CartProvider";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import OrderSummary from "@/components/checkout/OrderSummary";
 import AddressForm from "@/components/checkout/AddressForm";
 import PaymentMethods from "@/components/checkout/PaymentMethods";
-import OrderSummary from "@/components/checkout/OrderSummary";
 import DeliveryOptions from "@/components/checkout/DeliveryOptions";
-import CouponForm from "@/components/checkout/CouponForm";
-import { ShippingAddress } from "@/types/order";
 
 const Checkout = () => {
-  const { user, isLoading: authLoading } = useAuth();
-  const { state: cartState, clearCart } = useCart();
   const navigate = useNavigate();
+  const { items, clearCart, subtotal } = useCart();
+  const { user } = useAuth();
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [shippingCost, setShippingCost] = useState(10);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("card");
+  const [selectedDeliveryOption, setSelectedDeliveryOption] = useState("standard");
   
-  const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
-    name: "",
-    street: "",
+  const [shippingInfo, setShippingInfo] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    address: "",
     city: "",
     state: "",
     zipCode: "",
-    country: "UAE",
-    phone: ""
+    country: "UAE"
   });
-  
-  const [deliveryType, setDeliveryType] = useState("standard");
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
-  const [shippingCost, setShippingCost] = useState(15);
+
+  const total = subtotal + shippingCost;
 
   useEffect(() => {
-    if (cartState.items.length === 0 && !authLoading) {
-      navigate("/cart");
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+
+    if (items.length === 0) {
       toast({
         title: "Cart is empty",
-        description: "Please add items to your cart before checkout.",
+        description: "Add items to your cart before checkout.",
         variant: "destructive",
       });
+      navigate("/shop");
+      return;
     }
-  }, [cartState.items, authLoading, navigate, toast]);
+  }, [user, items, navigate, toast]);
 
-  const subtotal = cartState.items.reduce((total, item) => {
-    // Safe access to price with proper fallback
-    const itemPrice = item.product?.price || item.price || 0;
-    return total + (itemPrice * item.quantity);
-  }, 0);
-  
-  const discount = appliedCoupon 
-    ? appliedCoupon.discount_type === 'percentage' 
-      ? (subtotal * appliedCoupon.discount_value) / 100
-      : appliedCoupon.discount_value
-    : 0;
-  const total = subtotal - discount + shippingCost;
-
-  const validateAddress = () => {
-    return shippingAddress.name && 
-           shippingAddress.street && 
-           shippingAddress.city && 
-           shippingAddress.state && 
-           shippingAddress.zipCode && 
-           shippingAddress.country;
+  const handleShippingInfoChange = (field: string, value: string) => {
+    setShippingInfo(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
-  const hasValidAddress = validateAddress();
+  const handleDeliveryOptionChange = (option: string) => {
+    setSelectedDeliveryOption(option);
+    setShippingCost(option === "express" ? 25 : 10);
+  };
 
-  const createOrder = async (paymentData: any) => {
-    try {
-      setIsProcessing(true);
-
-      if (!hasValidAddress) {
-        throw new Error("Please complete your shipping address");
+  const validateForm = () => {
+    const required = ["firstName", "lastName", "email", "phone", "address", "city", "state", "zipCode"];
+    for (const field of required) {
+      if (!shippingInfo[field as keyof typeof shippingInfo]) {
+        toast({
+          title: "Missing information",
+          description: `Please fill in your ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}.`,
+          variant: "destructive",
+        });
+        return false;
       }
+    }
+    return true;
+  };
 
+  const createOrder = async () => {
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+    try {
       // Create order in database
-      const orderData = {
-        user_id: user?.id || null,
-        total_amount: total,
-        currency: "AED",
-        status: "pending" as const,
-        payment_status: "pending" as const,
-        payment_method: paymentData.method,
-        delivery_type: deliveryType,
-        shipping_address: shippingAddress as any,
-        billing_address: shippingAddress as any
-      };
-
       const { data: order, error: orderError } = await supabase
         .from("orders")
-        .insert(orderData)
+        .insert({
+          user_id: user!.id,
+          total_amount: total,
+          status: "pending",
+          shipping_address: shippingInfo,
+          payment_method: selectedPaymentMethod,
+          delivery_option: selectedDeliveryOption,
+          shipping_cost: shippingCost,
+          subtotal: subtotal
+        })
         .select()
         .single();
 
       if (orderError) throw orderError;
 
       // Create order items
-      const orderItems = cartState.items.map(item => ({
+      const orderItems = items.map(item => ({
         order_id: order.id,
-        product_id: item.product?.id || item.productId,
+        product_id: item.productId,
         quantity: item.quantity,
-        price: item.product?.price || item.price || 0,
+        price: item.price,
         customization: item.customization
       }));
 
@@ -115,84 +125,40 @@ const Checkout = () => {
 
       if (itemsError) throw itemsError;
 
-      // Update order payment status if payment was successful
-      if (paymentData.status === "completed") {
-        const { error: updateError } = await supabase
-          .from("orders")
-          .update({ 
-            payment_status: "paid" as const,
-            status: "processing" as const
-          })
-          .eq("id", order.id);
-
-        if (updateError) throw updateError;
-      }
-
       // Clear cart
-      clearCart();
+      await clearCart();
 
-      // Navigate to success page
+      // Redirect to success page
       navigate(`/order-success/${order.id}`);
 
-    } catch (error: any) {
-      console.error("Order creation error:", error);
       toast({
-        title: "Order failed",
-        description: error.message || "Failed to create order",
+        title: "Order placed successfully!",
+        description: "You will receive a confirmation email shortly.",
+      });
+
+    } catch (error: any) {
+      console.error("Checkout error:", error);
+      toast({
+        title: "Checkout failed",
+        description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
-      
       navigate("/order-failed");
     } finally {
-      setIsProcessing(false);
+      setIsLoading(false);
     }
   };
 
-  const handlePayPalApprove = async (data: any) => {
-    await createOrder({
-      method: "paypal",
-      status: "completed",
-      transactionId: data.orderID,
-      amount: total,
-      currency: "AED"
-    });
-  };
-
-  const handleZiinaApprove = async (data: any) => {
-    await createOrder({
-      method: "ziina",
-      status: "completed",
-      transactionId: data.transactionId,
-      amount: total,
-      currency: "AED"
-    });
-  };
-
-  const handleDeliveryChange = (type: string, cost: number) => {
-    setDeliveryType(type);
-    setShippingCost(cost);
-  };
-
-  const handleCouponApply = (coupon: any) => {
-    setAppliedCoupon(coupon);
-    toast({
-      title: "Coupon applied",
-      description: `${coupon.code} has been applied to your order.`,
-    });
-  };
-
-  const handleCouponRemove = () => {
-    setAppliedCoupon(null);
-    toast({
-      title: "Coupon removed",
-      description: "The coupon has been removed from your order.",
-    });
-  };
-
-  if (authLoading) {
+  if (!user || items.length === 0) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <Container className="py-12">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Loading...</h1>
+          </div>
+        </Container>
+        <Footer />
       </div>
     );
   }
@@ -201,75 +167,99 @@ const Checkout = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <Container className="py-8">
-        <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8 text-foreground">Checkout</h1>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="space-y-6">
-              <Card className="bg-card border-border">
-                <CardHeader>
-                  <CardTitle className="text-foreground">Shipping Address</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <AddressForm 
-                    address={shippingAddress}
-                    onAddressChange={setShippingAddress}
-                  />
-                </CardContent>
-              </Card>
+        <div className="mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          <h1 className="text-3xl font-bold text-foreground">Checkout</h1>
+          <p className="text-muted-foreground">Complete your purchase</p>
+        </div>
 
-              <Card className="bg-card border-border">
-                <CardHeader>
-                  <CardTitle className="text-foreground">Delivery Options</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <DeliveryOptions
-                    selectedType={deliveryType}
-                    onDeliveryChange={handleDeliveryChange}
-                  />
-                </CardContent>
-              </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Forms */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Shipping Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Truck className="h-5 w-5" />
+                  Shipping Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AddressForm
+                  shippingInfo={shippingInfo}
+                  onShippingInfoChange={handleShippingInfoChange}
+                />
+              </CardContent>
+            </Card>
 
-              <PaymentMethods
-                onPayPalApprove={handlePayPalApprove}
-                onZiinaApprove={handleZiinaApprove}
-                isProcessing={isProcessing}
-                total={total}
-                hasValidAddress={Boolean(hasValidAddress)}
-              />
-            </div>
+            {/* Delivery Options */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Delivery Options</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DeliveryOptions
+                  selectedOption={selectedDeliveryOption}
+                  onOptionChange={handleDeliveryOptionChange}
+                />
+              </CardContent>
+            </Card>
 
-            <div className="space-y-6">
-              <Card className="bg-card border-border">
-                <CardHeader>
-                  <CardTitle className="text-foreground">Order Summary</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <OrderSummary
-                    items={cartState.items}
-                    subtotal={subtotal}
-                    discount={discount}
-                    shipping={shippingCost}
-                    total={total}
-                    appliedCoupon={appliedCoupon}
-                  />
-                </CardContent>
-              </Card>
+            {/* Payment Method */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Payment Method
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PaymentMethods
+                  selectedMethod={selectedPaymentMethod}
+                  onMethodChange={setSelectedPaymentMethod}
+                />
+              </CardContent>
+            </Card>
+          </div>
 
-              <Card className="bg-card border-border">
-                <CardHeader>
-                  <CardTitle className="text-foreground">Promo Code</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CouponForm
-                    onCouponApply={handleCouponApply}
-                    onCouponRemove={handleCouponRemove}
-                    appliedCoupon={appliedCoupon}
-                    orderTotal={subtotal}
-                  />
-                </CardContent>
-              </Card>
-            </div>
+          {/* Right Column - Order Summary */}
+          <div className="space-y-6">
+            <Card className="sticky top-4">
+              <CardHeader>
+                <CardTitle>Order Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <OrderSummary
+                  items={items}
+                  subtotal={subtotal}
+                  shippingCost={shippingCost}
+                  total={total}
+                />
+                
+                <Separator className="my-4" />
+                
+                <Button
+                  onClick={createOrder}
+                  disabled={isLoading}
+                  className="w-full"
+                  size="lg"
+                >
+                  {isLoading ? "Processing..." : `Place Order - AED ${total.toFixed(2)}`}
+                </Button>
+
+                <div className="flex items-center justify-center gap-2 mt-4 text-sm text-muted-foreground">
+                  <Shield className="h-4 w-4" />
+                  Secure checkout powered by Ziina
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </Container>

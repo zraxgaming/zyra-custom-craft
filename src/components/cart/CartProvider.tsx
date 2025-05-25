@@ -17,7 +17,7 @@ interface CartItem {
     name: string;
     price: number;
     images: string[];
-    slug?: string;
+    slug: string;
   };
 }
 
@@ -85,7 +85,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error;
 
-      const cartItems = data?.map(item => ({
+      const cartItems: CartItem[] = data?.map(item => ({
         id: item.id,
         productId: item.product_id,
         name: item.products?.name || 'Unknown Product',
@@ -100,7 +100,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name: item.products.name,
           price: item.products.price,
           images: Array.isArray(item.products.images) ? item.products.images : [],
-          slug: item.products.slug
+          slug: item.products.slug || ''
         } : undefined
       })) || [];
 
