@@ -20,24 +20,21 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
         variant: "destructive",
       });
     } else if (!isLoading && user && !isAdmin) {
-      const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
       toast({
         title: "Access denied",
-        description: `You don't have permission to access the admin panel. Admin email is set to: ${adminEmail || 'Not configured'}`,
+        description: "You don't have permission to access the admin panel. Only administrators can access this area.",
         variant: "destructive",
-      });
-      console.log("Admin access check:", {
-        currentUserEmail: user.email,
-        adminEmail: adminEmail,
-        isAdmin: isAdmin
       });
     }
   }, [isLoading, user, isAdmin, toast]);
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zyra-purple"></div>
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Checking permissions...</p>
+        </div>
       </div>
     );
   }

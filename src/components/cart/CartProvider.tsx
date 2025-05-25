@@ -126,12 +126,13 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         .from("cart_items")
         .select(`
           *,
-          products!cart_items_product_id_fkey (
+          products (
             id,
             name,
             price,
             images,
-            slug
+            slug,
+            in_stock
           )
         `)
         .eq("user_id", user.id);
@@ -156,7 +157,8 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
           name: item.products.name,
           price: item.products.price,
           images: Array.isArray(item.products.images) ? item.products.images : [],
-          slug: item.products.slug
+          slug: item.products.slug,
+          in_stock: item.products.in_stock
         } : undefined
       }));
 

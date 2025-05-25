@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart, Plus, Check } from "lucide-react";
 import { useCart } from "./CartProvider";
 import { Product } from "@/types/product";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 
 interface AddToCartButtonProps {
   product: Product;
@@ -21,10 +23,30 @@ export const AddToCartButton: React.FC<AddToCartButtonProps> = ({
   size = "default",
 }) => {
   const { addItem } = useCart();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [isAdding, setIsAdding] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
 
   const handleAddToCart = async () => {
+    if (!user) {
+      toast({
+        title: "Please sign in",
+        description: "You need to be signed in to add items to your cart.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!product || !product.id) {
+      toast({
+        title: "Error",
+        description: "Product information is missing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsAdding(true);
     
     try {
@@ -42,7 +64,8 @@ export const AddToCartButton: React.FC<AddToCartButtonProps> = ({
           name: product.name,
           price: product.price,
           images: Array.isArray(product.images) ? product.images : [],
-          slug: product.slug
+          slug: product.slug,
+          in_stock: product.in_stock !== false
         }
       });
 
@@ -50,15 +73,22 @@ export const AddToCartButton: React.FC<AddToCartButtonProps> = ({
       setTimeout(() => setJustAdded(false), 2000);
     } catch (error) {
       console.error("Error adding to cart:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsAdding(false);
     }
   };
 
+  const isOutOfStock = product.in_stock === false || product.stock_status === 'out_of_stock';
+
   return (
     <Button
       onClick={handleAddToCart}
-      disabled={isAdding || !product.in_stock}
+      disabled={isAdding || isOutOfStock || !user}
       size={size}
       className={`
         relative transition-all duration-300 ease-in-out transform
@@ -67,7 +97,8 @@ export const AddToCartButton: React.FC<AddToCartButtonProps> = ({
           ? 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800' 
           : 'bg-primary hover:bg-primary/90'
         }
-        ${!product.in_stock ? 'opacity-50 cursor-not-allowed' : ''}
+        ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}
+        ${!user ? 'opacity-75' : ''}
         ${className}
       `}
     >
@@ -84,9 +115,11 @@ export const AddToCartButton: React.FC<AddToCartButtonProps> = ({
             ? "Adding..." 
             : justAdded 
               ? "Added!" 
-              : !product.in_stock 
+              : isOutOfStock 
                 ? "Out of Stock" 
-                : "Add to Cart"
+                : !user
+                  ? "Sign In to Add"
+                  : "Add to Cart"
           }
         </span>
       </div>

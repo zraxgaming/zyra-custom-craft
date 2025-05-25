@@ -1,138 +1,141 @@
+
 import React from "react";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import { Separator } from "@/components/ui/separator";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const PrivacyPolicy = () => {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Navbar />
-      <main className="flex-grow container mx-auto px-4 py-8 md:py-12 max-w-4xl">
-        <div className="bg-card text-card-foreground rounded-lg shadow-sm p-8">
-          <h1 className="text-3xl font-bold mb-6 text-primary-foreground">Privacy Policy</h1>
-          <Separator className="mb-8" />
-          
-          <div className="prose max-w-none prose-headings:text-primary-foreground prose-p:text-foreground">
-            <p className="text-sm text-foreground mb-8">Last Updated: May 9, 2025</p>
-            
-            <h2 className="text-2xl font-semibold mt-8 mb-4">1. Information We Collect</h2>
-            <p>
-              We collect several types of information from and about users of our website, including:
-            </p>
-            <ul className="list-disc pl-6 mb-6 space-y-2 text-foreground">
-              <li>Personal identifiable information (such as name, email address, mailing address, phone number)</li>
-              <li>Order information and history</li>
-              <li>Payment details (processed by our secure payment processors)</li>
-              <li>User-generated content, including custom designs and product customizations</li>
-              <li>Technical data, including IP address, browser type, device information</li>
-              <li>Usage data about how you interact with our website</li>
-            </ul>
-            
-            <h2 className="text-2xl font-semibold mt-8 mb-4">2. How We Use Your Information</h2>
-            <p>We use the information we collect to:</p>
-            <ul className="list-disc pl-6 mb-6 space-y-2 text-foreground">
-              <li>Fulfill and manage your orders</li>
-              <li>Process your payments</li>
-              <li>Communicate with you about orders, products, and services</li>
-              <li>Provide customer support</li>
-              <li>Improve and customize our website and services</li>
-              <li>Comply with our legal obligations</li>
-              <li>Send you marketing communications (if you've opted in)</li>
-            </ul>
-            
-            <h2 className="text-2xl font-semibold mt-8 mb-4">3. How We Share Your Information</h2>
-            <p>
-              We may share your personal information with:
-            </p>
-            <ul className="list-disc pl-6 mb-6 space-y-2 text-foreground">
-              <li>Service providers who assist us in operating our website and business</li>
-              <li>Payment processors to complete transactions</li>
-              <li>Shipping and logistics companies to deliver your orders</li>
-              <li>Marketing and analytics service providers</li>
-              <li>Law enforcement when required by law</li>
-            </ul>
-            <p>
-              We do not sell your personal information to third parties.
-            </p>
-            
-            <h2 className="text-2xl font-semibold mt-8 mb-4">4. Cookies and Tracking Technologies</h2>
-            <p>
-              We use cookies and similar tracking technologies to track activity on our website and hold certain information. 
-              Cookies are files with small amounts of data which may include an anonymous unique identifier. 
-              You can instruct your browser to refuse all cookies or to indicate when a cookie is being sent.
-            </p>
-            <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 my-6">
-              <h3 className="font-medium mb-2 text-lg">Your Cookie Choices</h3>
-              <p className="text-sm mb-2">You can control how cookies are used on our site:</p>
-              <ul className="list-disc pl-5 text-sm text-gray-700 dark:text-gray-300">
-                <li>Essential cookies: Always active and necessary for the website to function</li>
-                <li>Analytics cookies: Help us improve our website by collecting anonymous information</li>
-                <li>Marketing cookies: Used to deliver relevant advertisements and track marketing campaign performance</li>
-              </ul>
-            </div>
-            
-            <h2 className="text-2xl font-semibold mt-8 mb-4">5. Data Security</h2>
-            <p>
-              We implement appropriate security measures to protect your personal information. However, no method of transmission over the Internet or electronic storage is 100% secure, and we cannot guarantee absolute security.
-            </p>
-            <p>
-              Our security measures include:
-            </p>
-            <ul className="list-disc pl-6 mb-6 space-y-2 text-foreground">
-              <li>Encryption of sensitive data</li>
-              <li>Secure socket layer (SSL) technology</li>
-              <li>Regular security assessments</li>
-              <li>Employee training on data protection</li>
-              <li>Access controls and authentication measures</li>
-            </ul>
-            
-            <h2 className="text-2xl font-semibold mt-8 mb-4">6. Your Data Rights</h2>
-            <p>
-              Depending on your location, you may have certain rights regarding your personal information, including:
-            </p>
-            <ul className="list-disc pl-6 mb-6 space-y-2 text-foreground">
-              <li>Right to access the personal information we hold about you</li>
-              <li>Right to correct inaccurate information</li>
-              <li>Right to delete your personal information</li>
-              <li>Right to object to or restrict processing of your information</li>
-              <li>Right to data portability</li>
-            </ul>
-            
-            <h2 className="text-2xl font-semibold mt-8 mb-4">7. Children's Privacy</h2>
-            <p>
-              Our services are not intended for children under 16 years of age. We do not knowingly collect personal information from children under 16. If you are a parent or guardian and believe your child has provided us with personal information, please contact us.
-            </p>
-            
-            <h2 className="text-2xl font-semibold mt-8 mb-4">8. Changes to This Privacy Policy</h2>
-            <p>
-              We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last Updated" date at the top.
-            </p>
-            <div className="bg-zyra-purple bg-opacity-10 rounded-lg p-4 my-6 border border-zyra-purple border-opacity-20">
-              <h3 className="font-medium mb-2 text-lg text-zyra-purple dark:text-zyra-purple">Stay Informed</h3>
-              <p className="text-sm">
-                We recommend reviewing this Privacy Policy periodically for any changes. Changes to this Privacy Policy are effective when they are posted on this page.
-              </p>
-            </div>
-            
-            <h2 className="text-2xl font-semibold mt-8 mb-4">9. Contact Us</h2>
-            <p>
-              If you have any questions about this Privacy Policy, please contact us at:
-            </p>
-            <div className="bg-white dark:bg-gray-700 rounded-lg p-6 my-6 shadow-sm border border-gray-200 dark:border-gray-600">
-              <p className="mb-2">
-                <strong>Email:</strong> <a href="mailto:privacy@zyra.com" className="text-zyra-purple hover:underline dark:text-zyra-purple">privacy@zyra.com</a>
-              </p>
-              <p className="mb-2">
-                <strong>Address:</strong> 123 E-Commerce St, Web City, WC 12345
-              </p>
-              <p>
-                <strong>Phone:</strong> (555) 123-4567
-              </p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-background py-12">
+      <div className="container mx-auto px-4 max-w-4xl">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-foreground mb-4">Privacy Policy</h1>
+          <p className="text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
         </div>
-      </main>
-      <Footer />
+
+        <div className="space-y-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>1. Information We Collect</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">
+                We collect information you provide directly to us, such as when you create an account, make a purchase, or contact us for support.
+              </p>
+              <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
+                <li>Personal information (name, email address, phone number)</li>
+                <li>Billing and shipping addresses</li>
+                <li>Payment information (processed securely by our payment processors)</li>
+                <li>Order history and preferences</li>
+                <li>Images and text you upload for customization</li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>2. How We Use Your Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">We use the information we collect to:</p>
+              <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
+                <li>Process and fulfill your orders</li>
+                <li>Communicate with you about your orders and account</li>
+                <li>Provide customer support</li>
+                <li>Send you marketing communications (with your consent)</li>
+                <li>Improve our products and services</li>
+                <li>Comply with legal obligations</li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>3. Information Sharing</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">
+                We do not sell, trade, or otherwise transfer your personal information to third parties except as described in this policy:
+              </p>
+              <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
+                <li>Service providers who assist us in operating our business</li>
+                <li>Payment processors for transaction processing</li>
+                <li>Shipping companies for order fulfillment</li>
+                <li>Legal requirements or to protect our rights</li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>4. Data Security</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">
+                We implement appropriate technical and organizational security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>5. Cookies and Tracking</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">
+                We use cookies and similar technologies to enhance your browsing experience, analyze site traffic, and personalize content. You can control cookie settings through your browser.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>6. Your Rights</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">You have the right to:</p>
+              <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
+                <li>Access your personal information</li>
+                <li>Correct inaccurate information</li>
+                <li>Delete your personal information</li>
+                <li>Object to processing of your information</li>
+                <li>Withdraw consent where applicable</li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>7. Children's Privacy</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">
+                Our services are not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>8. Changes to Privacy Policy</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">
+                We may update this privacy policy from time to time. We will notify you of any changes by posting the new policy on this page.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>9. Contact Us</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">
+                If you have any questions about this Privacy Policy, please contact us at privacy@zyra.com.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };

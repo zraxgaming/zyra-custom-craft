@@ -21,9 +21,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
-      checkAdminStatus(session?.user?.email ?? null);
+      await checkAdminStatus(session?.user?.id ?? null);
       setIsLoading(false);
     });
 
@@ -31,7 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initializeAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
-      checkAdminStatus(session?.user?.email ?? null);
+      await checkAdminStatus(session?.user?.id ?? null);
       setIsLoading(false);
     };
     
@@ -42,20 +42,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const checkAdminStatus = (email: string | null) => {
-    if (!email) {
+  const checkAdminStatus = async (userId: string | null) => {
+    if (!userId) {
       setIsAdmin(false);
       return;
     }
     
-    // Get the admin email from env variable
-    const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
-    console.info("Admin email configured:", adminEmail);
-    console.info("Checking admin status:", email, adminEmail, email === adminEmail);
-    
-    if (adminEmail && email === adminEmail) {
-      setIsAdmin(true);
-    } else {
+    try {
+      // Check if user has admin role in profiles table
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        console.error("Error checking admin status:", error);
+        setIsAdmin(false);
+        return;
+      }
+      
+      setIsAdmin(data?.role === 'admin');
+    } catch (error) {
+      console.error("Error checking admin status:", error);
       setIsAdmin(false);
     }
   };
@@ -71,7 +80,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       password,
       options: {
         data: {
-          name
+          name,
+          first_name: name.split(' ')[0],
+          last_name: name.split(' ').slice(1).join(' ')
         }
       }
     });
