@@ -18,7 +18,7 @@ interface TypeformFeedbackProps {
 }
 
 const TypeformFeedback: React.FC<TypeformFeedbackProps> = ({
-  typeformId = "01JHF234567890", // Replace with your actual TypeForm ID
+  typeformId = "GcTxpZxC", // Replace with your actual TypeForm ID
   triggerText = "Give Feedback",
   className
 }) => {
