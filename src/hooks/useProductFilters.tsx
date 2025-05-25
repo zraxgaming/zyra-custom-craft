@@ -8,14 +8,16 @@ interface Product {
   price: number;
   category: string;
   in_stock: boolean;
-  // Add other product fields as needed
+  rating?: number;
+  created_at?: string;
+  featured?: boolean;
 }
 
 export const useProductFilters = (products: Product[]) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortOption, setSortOption] = useState("default");
+  const [sortOption, setSortOption] = useState("featured");
   const [showInStockOnly, setShowInStockOnly] = useState(false);
 
   // Get unique categories and max price from products
@@ -34,12 +36,17 @@ export const useProductFilters = (products: Product[]) => {
 
     return {
       categories: Array.from(categorySet).map(name => ({ name, id: name })),
-      maxPrice: Math.ceil(maxProductPrice / 5) * 5, // Round up to nearest 5
+      maxPrice: Math.max(Math.ceil(maxProductPrice / 5) * 5, 100), // Ensure minimum of 100
     };
   }, [products]);
 
   // Initialize price range based on products
   const [priceRange, setPriceRange] = useState<[number, number]>([0, maxPrice]);
+
+  // Update price range when maxPrice changes
+  useEffect(() => {
+    setPriceRange([0, maxPrice]);
+  }, [maxPrice]);
 
   // Load filters from URL on initial load
   useEffect(() => {
@@ -58,52 +65,11 @@ export const useProductFilters = (products: Product[]) => {
       setSortOption(sortParam);
     }
 
-    const minPriceParam = searchParams.get("minPrice");
-    const maxPriceParam = searchParams.get("maxPrice");
-    if (minPriceParam && maxPriceParam) {
-      setPriceRange([Number(minPriceParam), Number(maxPriceParam)]);
-    } else {
-      setPriceRange([0, maxPrice]);
-    }
-
     const stockParam = searchParams.get("inStock");
     if (stockParam) {
       setShowInStockOnly(stockParam === "true");
     }
-  }, [searchParams, maxPrice]);
-
-  // Update URL when filters change
-  const updateSearchParams = () => {
-    const newSearchParams = new URLSearchParams();
-
-    if (selectedCategories.length > 0) {
-      newSearchParams.set("category", selectedCategories.join(","));
-    }
-
-    if (searchTerm) {
-      newSearchParams.set("search", searchTerm);
-    }
-
-    if (sortOption !== "default") {
-      newSearchParams.set("sort", sortOption);
-    }
-
-    if (priceRange[0] > 0 || priceRange[1] < maxPrice) {
-      newSearchParams.set("minPrice", String(priceRange[0]));
-      newSearchParams.set("maxPrice", String(priceRange[1]));
-    }
-
-    if (showInStockOnly) {
-      newSearchParams.set("inStock", "true");
-    }
-
-    setSearchParams(newSearchParams);
-  };
-
-  // Update search params whenever filters change
-  useEffect(() => {
-    updateSearchParams();
-  }, [selectedCategories, searchTerm, sortOption, priceRange, showInStockOnly]);
+  }, [searchParams]);
 
   const toggleCategory = (category: string) => {
     setSelectedCategories((prev) =>
@@ -116,7 +82,7 @@ export const useProductFilters = (products: Product[]) => {
   const resetFilters = () => {
     setSelectedCategories([]);
     setSearchTerm("");
-    setSortOption("default");
+    setSortOption("featured");
     setPriceRange([0, maxPrice]);
     setShowInStockOnly(false);
     setSearchParams({});
@@ -160,16 +126,19 @@ export const useProductFilters = (products: Product[]) => {
       .sort((a, b) => {
         // Sort products
         switch (sortOption) {
-          case "name-asc":
+          case "name":
             return a.name.localeCompare(b.name);
-          case "name-desc":
-            return b.name.localeCompare(a.name);
-          case "price-asc":
+          case "price-low":
             return a.price - b.price;
-          case "price-desc":
+          case "price-high":
             return b.price - a.price;
+          case "rating":
+            return (b.rating || 0) - (a.rating || 0);
+          case "newest":
+            return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+          case "featured":
           default:
-            return 0;
+            return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
         }
       });
   }, [

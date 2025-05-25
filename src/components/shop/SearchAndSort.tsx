@@ -12,39 +12,40 @@ import {
 
 interface SearchAndSortProps {
   searchTerm: string;
-  setSearchTerm: (value: string) => void;
-  sortOption: string;
-  setSortOption: (value: string) => void;
+  onSearchChange: (value: string) => void;
+  sortBy: string;
+  onSortChange: (value: string) => void;
 }
 
 const SearchAndSort: React.FC<SearchAndSortProps> = ({
   searchTerm,
-  setSearchTerm,
-  sortOption,
-  setSortOption,
+  onSearchChange,
+  sortBy,
+  onSortChange,
 }) => {
   return (
-    <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mb-6">
+    <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mb-6 animate-fade-in">
       <div className="relative flex-grow">
         <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
         <Input
           placeholder="Search products..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="pl-10 input-focus"
         />
       </div>
       <div className="w-full sm:w-48">
-        <Select value={sortOption} onValueChange={setSortOption}>
-          <SelectTrigger>
+        <Select value={sortBy} onValueChange={onSortChange}>
+          <SelectTrigger className="input-focus">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="default">Featured</SelectItem>
-            <SelectItem value="name-asc">Name: A to Z</SelectItem>
-            <SelectItem value="name-desc">Name: Z to A</SelectItem>
-            <SelectItem value="price-asc">Price: Low to High</SelectItem>
-            <SelectItem value="price-desc">Price: High to Low</SelectItem>
+            <SelectItem value="featured">Featured</SelectItem>
+            <SelectItem value="name">Name: A to Z</SelectItem>
+            <SelectItem value="price-low">Price: Low to High</SelectItem>
+            <SelectItem value="price-high">Price: High to Low</SelectItem>
+            <SelectItem value="rating">Highest Rated</SelectItem>
+            <SelectItem value="newest">Newest</SelectItem>
           </SelectContent>
         </Select>
       </div>

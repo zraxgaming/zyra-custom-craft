@@ -2,7 +2,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { Star } from "lucide-react";
+import { Star, Heart } from "lucide-react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import WishlistButton from "@/components/products/WishlistButton";
 import { Product } from "@/hooks/use-products";
@@ -17,103 +17,113 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     : product.price;
 
   return (
-    <div className="group relative bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200 dark:border-gray-700">
+    <div className="group relative bg-card rounded-xl shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden border border-border hover:border-primary/20 animate-scale-in">
       <div className="relative overflow-hidden">
         <Link to={`/products/${product.slug}`}>
-          <div className="aspect-square bg-gray-100 dark:bg-gray-700">
+          <div className="aspect-square bg-muted">
             {product.images && product.images.length > 0 ? (
               <img
                 src={product.images[0]}
                 alt={product.name}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 loading="lazy"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400">
+              <div className="w-full h-full flex items-center justify-center text-muted-foreground animate-pulse">
                 <span>No Image</span>
               </div>
             )}
+            {/* Overlay on hover */}
+            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </div>
         </Link>
         
         <WishlistButton 
           productId={product.id}
-          className="absolute top-2 right-2"
+          className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0"
         />
         
-        {product.is_new && (
-          <Badge className="absolute top-2 left-2 bg-green-500 text-white">
-            New
-          </Badge>
-        )}
-        
-        {product.discount_percentage > 0 && (
-          <Badge className="absolute top-2 left-2 bg-red-500 text-white">
-            {product.discount_percentage}% OFF
-          </Badge>
-        )}
+        <div className="absolute top-3 left-3 flex flex-col gap-2">
+          {product.is_new && (
+            <Badge className="bg-green-500 text-white animate-bounce-in">
+              New
+            </Badge>
+          )}
+          
+          {product.discount_percentage > 0 && (
+            <Badge className="bg-red-500 text-white animate-pulse-glow">
+              {product.discount_percentage}% OFF
+            </Badge>
+          )}
+        </div>
         
         {!product.in_stock && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <Badge variant="destructive">Out of Stock</Badge>
+          <div className="absolute inset-0 bg-black/70 flex items-center justify-center animate-fade-in">
+            <Badge variant="destructive" className="text-lg px-4 py-2">Out of Stock</Badge>
           </div>
         )}
       </div>
       
-      <div className="p-4">
+      <div className="p-5">
         <Link to={`/products/${product.slug}`}>
-          <h3 className="font-semibold text-lg text-gray-900 dark:text-white hover:text-primary transition-colors line-clamp-2">
+          <h3 className="font-semibold text-lg text-foreground hover:text-primary transition-colors line-clamp-2 mb-2 story-link">
             {product.name}
           </h3>
         </Link>
         
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+        <p className="text-sm text-muted-foreground mt-1 line-clamp-2 mb-3">
           {product.description}
         </p>
         
-        <div className="flex items-center mt-2">
+        <div className="flex items-center mb-3">
           <div className="flex items-center">
             {[...Array(5)].map((_, i) => (
               <Star
                 key={i}
-                className={`h-4 w-4 ${
+                className={`h-4 w-4 transition-colors duration-200 ${
                   i < Math.floor(product.rating) 
                     ? "text-yellow-400 fill-current" 
-                    : "text-gray-300"
+                    : "text-muted-foreground/30"
                 }`}
               />
             ))}
-            <span className="text-xs text-gray-600 dark:text-gray-400 ml-1">
+            <span className="text-xs text-muted-foreground ml-2">
               ({product.review_count})
             </span>
           </div>
         </div>
         
-        <div className="flex justify-between items-center mt-3">
+        <div className="flex justify-between items-center mb-4">
           <div>
             {product.discount_percentage > 0 ? (
               <div className="flex items-center gap-2">
-                <span className="text-lg font-bold text-gray-900 dark:text-white">
+                <span className="text-xl font-bold text-foreground">
                   ${discountedPrice.toFixed(2)}
                 </span>
-                <span className="text-sm text-gray-500 line-through">
+                <span className="text-sm text-muted-foreground line-through">
                   ${product.price.toFixed(2)}
                 </span>
               </div>
             ) : (
-              <span className="text-lg font-bold text-gray-900 dark:text-white">
+              <span className="text-xl font-bold text-foreground">
                 ${product.price.toFixed(2)}
               </span>
             )}
           </div>
         </div>
         
-        <div className="mt-4">
+        <div className="space-y-2">
           <AddToCartButton 
             product={product}
-            className="w-full"
+            className="w-full btn-animate primary-button"
             size="sm"
+            disabled={!product.in_stock}
           />
+          {product.is_customizable && (
+            <p className="text-xs text-center text-muted-foreground">
+              ✨ Customizable
+            </p>
+          )}
         </div>
       </div>
     </div>

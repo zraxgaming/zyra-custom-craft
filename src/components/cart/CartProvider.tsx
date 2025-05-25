@@ -102,30 +102,55 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     if (user && session) {
       loadCartFromDatabase();
     } else {
-      dispatch({ type: "CLEAR_CART" });
+      // Load from localStorage for anonymous users
+      loadCartFromLocalStorage();
     }
   }, [user, session]);
 
-  // Save cart to database when items change (debounced)
+  // Save cart when items change
   useEffect(() => {
-    if (user && session && state.items.length >= 0) {
+    if (user && session) {
       const timeoutId = setTimeout(() => {
         saveCartToDatabase();
       }, 1000);
       
       return () => clearTimeout(timeoutId);
+    } else {
+      // Save to localStorage for anonymous users
+      saveCartToLocalStorage();
     }
   }, [state.items, user, session]);
+
+  const loadCartFromLocalStorage = () => {
+    try {
+      const savedCart = localStorage.getItem('cart');
+      if (savedCart) {
+        const cartItems = JSON.parse(savedCart);
+        dispatch({ type: "SET_ITEMS", payload: cartItems });
+      }
+    } catch (error) {
+      console.error("Error loading cart from localStorage:", error);
+    }
+  };
+
+  const saveCartToLocalStorage = () => {
+    try {
+      localStorage.setItem('cart', JSON.stringify(state.items));
+    } catch (error) {
+      console.error("Error saving cart to localStorage:", error);
+    }
+  };
 
   const loadCartFromDatabase = async () => {
     if (!user || !session) return;
 
     try {
+      // Use specific foreign key reference to avoid ambiguity
       const { data, error } = await supabase
         .from("cart_items")
         .select(`
           *,
-          products (
+          products!cart_items_product_id_fkey (
             id,
             name,
             price,

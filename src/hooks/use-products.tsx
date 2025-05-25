@@ -49,10 +49,10 @@ export const useProducts = () => {
       setError(null);
       console.log("Fetching products...");
 
+      // Simple query without RLS dependencies
       const { data, error } = await supabase
         .from("products")
         .select("*")
-        .eq("status", "published")
         .order("created_at", { ascending: false });
 
       if (error) {

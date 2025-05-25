@@ -26,6 +26,7 @@ export const useCategories = () => {
       setError(null);
       console.log("Fetching categories...");
 
+      // Simple query without RLS dependencies
       const { data, error } = await supabase
         .from("categories")
         .select("*")
