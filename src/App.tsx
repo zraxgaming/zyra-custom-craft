@@ -1,104 +1,131 @@
 
-import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Index from "@/pages/Index";
-import Shop from "@/pages/Shop";
-import { ThemeProvider } from "@/components/theme/ThemeProvider";
-import { CartProvider } from "@/components/cart/CartProvider";
-import { WishlistProvider } from "@/hooks/use-wishlist";
-import { AuthProvider } from "@/hooks/use-auth";
-import SEOHead from "@/components/seo/SEOHead";
-import { HelmetProvider } from "react-helmet-async";
-import "./App.css";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HelmetProvider } from 'react-helmet-async';
+import Index from "./pages/Index";
+import Shop from "./pages/Shop";
+import Categories from "./pages/Categories";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import FAQ from "./pages/FAQ";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import NotFound from "./pages/NotFound";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Profile from "./pages/Profile";
+import ProductDetail from "./pages/ProductDetail";
+import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
+import Wishlist from "./pages/Wishlist";
+import OrderTracking from "./pages/OrderTracking";
+import ProductCustomizer from "./pages/ProductCustomizer";
 
-// Lazy load components for better performance
-const ProductDetail = lazy(() => import("@/pages/ProductDetail"));
-const Wishlist = lazy(() => import("@/pages/Wishlist"));
-const Cart = lazy(() => import("@/pages/Cart"));
-const Checkout = lazy(() => import("@/pages/Checkout"));
-const Auth = lazy(() => import("@/pages/Auth"));
-const Account = lazy(() => import("@/pages/Account"));
-const Contact = lazy(() => import("@/pages/Contact"));
-const About = lazy(() => import("@/pages/About"));
-const FAQ = lazy(() => import("@/pages/FAQ"));
-const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
-const TermsOfService = lazy(() => import("@/pages/TermsOfService"));
-const NotFound = lazy(() => import("@/pages/NotFound"));
+// Admin Pages
+import Dashboard from "./pages/admin/Dashboard";
+import Products from "./pages/admin/Products";
+import AdminCategories from "./pages/admin/Categories";
+import BarcodeManager from "./pages/admin/BarcodeManager";
+import BarcodeScanner from "./pages/admin/BarcodeScanner";
+import Newsletter from "./pages/admin/Newsletter";
+import ProductEdit from "./pages/admin/ProductEdit";
+import InventoryManager from "./components/admin/InventoryManager";
+import PageAnalytics from "./components/admin/PageAnalytics";
+import ZiinaIntegration from "./components/admin/ZiinaIntegration";
 
-// Admin components
-const AdminRoute = lazy(() => import("@/components/admin/AdminRoute"));
-const Dashboard = lazy(() => import("@/pages/admin/Dashboard"));
+const queryClient = new QueryClient();
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      retry: 3,
-    },
-  },
-});
-
-function App() {
-  return (
+const App = () => (
+  <QueryClientProvider client={queryClient}>
     <HelmetProvider>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider defaultTheme="system" storageKey="zyra-ui-theme">
-          <AuthProvider>
-            <CartProvider>
-              <WishlistProvider>
-                <TooltipProvider>
-                  <Router>
-                    <SEOHead />
-                    <div className="min-h-screen bg-background font-sans antialiased">
-                      <Suspense fallback={
-                        <div className="min-h-screen flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                        </div>
-                      }>
-                        <Routes>
-                          <Route path="/" element={<Index />} />
-                          <Route path="/shop" element={<Shop />} />
-                          <Route path="/products/:slug" element={<ProductDetail />} />
-                          <Route path="/wishlist" element={<Wishlist />} />
-                          <Route path="/cart" element={<Cart />} />
-                          <Route path="/checkout" element={<Checkout />} />
-                          <Route path="/auth" element={<Auth />} />
-                          <Route path="/account" element={<Account />} />
-                          <Route path="/contact" element={<Contact />} />
-                          <Route path="/about" element={<About />} />
-                          <Route path="/faq" element={<FAQ />} />
-                          <Route path="/privacy" element={<PrivacyPolicy />} />
-                          <Route path="/terms" element={<TermsOfService />} />
-                          
-                          {/* Admin Routes */}
-                          <Route path="/admin" element={
-                            <AdminRoute>
-                              <Dashboard />
-                            </AdminRoute>
-                          } />
-                          <Route path="/admin/*" element={
-                            <AdminRoute>
-                              <Dashboard />
-                            </AdminRoute>
-                          } />
-                          
-                          <Route path="*" element={<NotFound />} />
-                        </Routes>
-                      </Suspense>
-                      <Toaster />
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<Index />} />
+            <Route path="/shop" element={<Shop />} />
+            <Route path="/categories" element={<Categories />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/faq" element={<FAQ />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            
+            {/* Protected User Routes */}
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/cart" element={<Cart />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/wishlist" element={<Wishlist />} />
+            <Route path="/order-tracking" element={<OrderTracking />} />
+            
+            {/* Product Routes */}
+            <Route path="/products/:slug" element={<ProductDetail />} />
+            <Route path="/customize/:productId" element={<ProductCustomizer />} />
+            
+            {/* Admin Routes */}
+            <Route path="/admin" element={<Dashboard />} />
+            <Route path="/admin/products" element={<Products />} />
+            <Route path="/admin/products/new" element={<ProductEdit />} />
+            <Route path="/admin/products/edit/:id" element={<ProductEdit />} />
+            <Route path="/admin/categories" element={<AdminCategories />} />
+            <Route path="/admin/inventory" element={
+              <div className="min-h-screen bg-background">
+                <div className="flex">
+                  <div className="flex-1 overflow-auto">
+                    <div className="p-6">
+                      <InventoryManager />
                     </div>
-                  </Router>
-                </TooltipProvider>
-              </WishlistProvider>
-            </CartProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
+                  </div>
+                </div>
+              </div>
+            } />
+            <Route path="/admin/orders" element={<Dashboard />} />
+            <Route path="/admin/customers" element={<Dashboard />} />
+            <Route path="/admin/newsletter" element={<Newsletter />} />
+            <Route path="/admin/promotions" element={<Dashboard />} />
+            <Route path="/admin/coupons" element={<Dashboard />} />
+            <Route path="/admin/gift-cards" element={<Dashboard />} />
+            <Route path="/admin/barcodes" element={<BarcodeManager />} />
+            <Route path="/admin/scanner" element={<BarcodeScanner />} />
+            <Route path="/admin/contact" element={<Dashboard />} />
+            <Route path="/admin/analytics" element={
+              <div className="min-h-screen bg-background">
+                <div className="flex">
+                  <div className="flex-1 overflow-auto">
+                    <div className="p-6">
+                      <PageAnalytics />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            } />
+            <Route path="/admin/ziina" element={
+              <div className="min-h-screen bg-background">
+                <div className="flex">
+                  <div className="flex-1 overflow-auto">
+                    <div className="p-6">
+                      <ZiinaIntegration />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            } />
+            <Route path="/admin/settings" element={<Dashboard />} />
+            
+            {/* 404 Route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
     </HelmetProvider>
-  );
-}
+  </QueryClientProvider>
+);
 
 export default App;

@@ -1,15 +1,15 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Plus, X } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { Loader2, Upload, X } from "lucide-react";
 
 interface ProductFormProps {
   productId?: string;
@@ -17,269 +17,204 @@ interface ProductFormProps {
 }
 
 const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
-  const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
-  const [discountPercentage, setDiscountPercentage] = useState("0");
-  const [category, setCategory] = useState("");
-  const [imageUrls, setImageUrls] = useState<string[]>([""]);
-  const [featured, setFeatured] = useState(false);
-  const [isNew, setIsNew] = useState(false);
-  const [inStock, setInStock] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    slug: "",
+    description: "",
+    short_description: "",
+    price: "",
+    cost_price: "",
+    sku: "",
+    barcode: "",
+    category: "",
+    stock_quantity: "",
+    manage_stock: true,
+    is_customizable: false,
+    is_digital: false,
+    is_featured: false,
+    status: "draft",
+    images: [] as string[],
+    weight: "",
+    dimensions_length: "",
+    dimensions_width: "",
+    dimensions_height: "",
+  });
+
   const [categories, setCategories] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(!!productId);
+  const [imageInput, setImageInput] = useState("");
   const { toast } = useToast();
 
-  // Advanced product options
-  const [allowCustomText, setAllowCustomText] = useState(false);
-  const [allowCustomImage, setAllowCustomImage] = useState(false);
-  const [maxTextLength, setMaxTextLength] = useState("100");
-  const [maxImageCount, setMaxImageCount] = useState("1");
-  const [allowResizeRotate, setAllowResizeRotate] = useState(false);
-
-  // Fetch categories for the dropdown
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("categories")
-          .select("slug, name")
-          .order("name");
-          
-        if (error) throw error;
-        setCategories(data || []);
-        
-        // Set default category if available
-        if (data && data.length > 0 && !category) {
-          setCategory(data[0].slug);
-        }
-      } catch (error: any) {
-        console.error("Error fetching categories:", error);
-        toast({
-          title: "Error loading categories",
-          description: error.message,
-          variant: "destructive"
-        });
-      }
-    };
-    
     fetchCategories();
-  }, [toast]);
-
-  // Fetch product data if editing
-  useEffect(() => {
     if (productId) {
-      const fetchProduct = async () => {
-        setIsLoading(true);
-        try {
-          // Fetch the product data
-          const { data: productData, error: productError } = await supabase
-            .from("products")
-            .select("*")
-            .eq("id", productId)
-            .single();
-            
-          if (productError) throw productError;
-          
-          if (productData) {
-            setName(productData.name || "");
-            setSlug(productData.slug || "");
-            setDescription(productData.description || "");
-            setPrice(productData.price?.toString() || "");
-            setDiscountPercentage(productData.discount_percentage?.toString() || "0");
-            setCategory(productData.category || "");
-            
-            // Handle images array properly
-            if (productData.images && Array.isArray(productData.images)) {
-              setImageUrls(productData.images.map(img => String(img)));
-            } else {
-              setImageUrls([""]);
-            }
-            
-            setFeatured(productData.featured || false);
-            setIsNew(productData.is_new || false);
-            setInStock(productData.in_stock !== false);
-          }
-
-          // Fetch customization options
-          const { data: customizationData, error: customizationError } = await supabase
-            .from("customization_options")
-            .select("*")
-            .eq("product_id", productId)
-            .single();
-
-          if (!customizationError && customizationData) {
-            setAllowCustomText(customizationData.allow_text || false);
-            setAllowCustomImage(customizationData.allow_image || false);
-            setMaxTextLength(customizationData.max_text_length?.toString() || "100");
-            setMaxImageCount(customizationData.max_image_count?.toString() || "1");
-            setAllowResizeRotate(customizationData.allow_resize_rotate || false);
-          }
-        } catch (error: any) {
-          console.error("Error fetching product:", error);
-          toast({
-            title: "Error loading product",
-            description: error.message,
-            variant: "destructive"
-          });
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      
       fetchProduct();
     }
-  }, [productId, toast]);
+  }, [productId]);
 
-  // Generate slug from name
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error: any) {
+      console.error("Error fetching categories:", error);
+    }
+  };
+
+  const fetchProduct = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("id", productId)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setFormData({
+          name: data.name || "",
+          slug: data.slug || "",
+          description: data.description || "",
+          short_description: data.short_description || "",
+          price: data.price?.toString() || "",
+          cost_price: data.cost_price?.toString() || "",
+          sku: data.sku || "",
+          barcode: data.barcode || "",
+          category: data.category || "",
+          stock_quantity: data.stock_quantity?.toString() || "",
+          manage_stock: data.manage_stock ?? true,
+          is_customizable: data.is_customizable ?? false,
+          is_digital: data.is_digital ?? false,
+          is_featured: data.is_featured ?? false,
+          status: data.status || "draft",
+          images: Array.isArray(data.images) ? data.images : [],
+          weight: data.weight?.toString() || "",
+          dimensions_length: data.dimensions_length?.toString() || "",
+          dimensions_width: data.dimensions_width?.toString() || "",
+          dimensions_height: data.dimensions_height?.toString() || "",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error fetching product",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const generateSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim();
+  };
+
   const handleNameChange = (value: string) => {
-    setName(value);
-    // Only auto-generate slug if it's a new product or if slug hasn't been manually edited
-    if (!productId || slug === "" || slug === name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')) {
-      setSlug(value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''));
+    setFormData(prev => ({
+      ...prev,
+      name: value,
+      slug: generateSlug(value)
+    }));
+  };
+
+  const addImage = () => {
+    if (imageInput.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        images: [...prev.images, imageInput.trim()]
+      }));
+      setImageInput("");
     }
   };
 
-  // Handle image URL changes
-  const handleImageChange = (index: number, value: string) => {
-    const newImages = [...imageUrls];
-    newImages[index] = value;
-    setImageUrls(newImages);
-  };
-
-  // Add another image URL field
-  const addImageField = () => {
-    setImageUrls([...imageUrls, ""]);
-  };
-
-  // Remove an image URL field
-  const removeImageField = (index: number) => {
-    if (imageUrls.length > 1) {
-      const newImages = [...imageUrls];
-      newImages.splice(index, 1);
-      setImageUrls(newImages);
-    }
+  const removeImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name || !slug || !price || !category) {
+    if (!formData.name || !formData.price) {
       toast({
-        title: "Missing fields",
+        title: "Missing required fields",
         description: "Please fill in all required fields.",
         variant: "destructive"
       });
       return;
     }
-    
-    // Filter out empty image URLs
-    const filteredImages = imageUrls.filter(url => url.trim() !== "");
-    
-    setIsSubmitting(true);
 
+    setIsSubmitting(true);
     try {
-      // First handle the product data
-      let productResult;
-      
       const productData = {
-        name,
-        slug,
-        description,
-        price: parseFloat(price),
-        discount_percentage: parseFloat(discountPercentage),
-        category,
-        images: filteredImages,
-        featured,
-        is_new: isNew,
-        in_stock: inStock
+        name: formData.name,
+        slug: formData.slug,
+        description: formData.description,
+        short_description: formData.short_description,
+        price: parseFloat(formData.price),
+        cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
+        sku: formData.sku,
+        barcode: formData.barcode,
+        category: formData.category,
+        stock_quantity: formData.stock_quantity ? parseInt(formData.stock_quantity) : 0,
+        manage_stock: formData.manage_stock,
+        is_customizable: formData.is_customizable,
+        is_digital: formData.is_digital,
+        is_featured: formData.is_featured,
+        status: formData.status,
+        images: formData.images,
+        weight: formData.weight ? parseFloat(formData.weight) : null,
+        dimensions_length: formData.dimensions_length ? parseFloat(formData.dimensions_length) : null,
+        dimensions_width: formData.dimensions_width ? parseFloat(formData.dimensions_width) : null,
+        dimensions_height: formData.dimensions_height ? parseFloat(formData.dimensions_height) : null,
+        in_stock: formData.stock_quantity ? parseInt(formData.stock_quantity) > 0 : true,
+        updated_at: new Date().toISOString(),
       };
-      
+
+      let result;
       if (productId) {
-        // Update existing product
-        productResult = await supabase
+        result = await supabase
           .from("products")
           .update(productData)
           .eq("id", productId)
           .select()
           .single();
       } else {
-        // Create new product
-        productResult = await supabase
+        result = await supabase
           .from("products")
           .insert(productData)
           .select()
           .single();
       }
-      
-      const { data: productResultData, error: productError } = productResult;
-      if (productError) throw productError;
-      
-      // Now handle customization options
-      const customizationData = {
-        product_id: productResultData.id,
-        allow_text: allowCustomText,
-        allow_image: allowCustomImage,
-        max_text_length: parseInt(maxTextLength),
-        max_image_count: parseInt(maxImageCount),
-        allow_resize_rotate: allowResizeRotate
-      };
 
-      // Check if customization options already exist
-      const { data: existingCustomization } = await supabase
-        .from("customization_options")
-        .select()
-        .eq("product_id", productResultData.id);
-      
-      if (existingCustomization && existingCustomization.length > 0) {
-        // Update existing customization options
-        const { error } = await supabase
-          .from("customization_options")
-          .update(customizationData)
-          .eq("product_id", productResultData.id);
-          
-        if (error) throw error;
-      } else {
-        // Create new customization options
-        const { error } = await supabase
-          .from("customization_options")
-          .insert(customizationData);
-          
-        if (error) throw error;
-      }
-      
+      if (result.error) throw result.error;
+
       toast({
         title: productId ? "Product updated" : "Product created",
-        description: `${name} has been ${productId ? "updated" : "created"} successfully.`
+        description: `${formData.name} has been ${productId ? 'updated' : 'created'} successfully.`
       });
-      
+
       if (onSuccess) {
         onSuccess();
       }
-      
-      if (!productId) {
-        // Reset form if creating a new product
-        setName("");
-        setSlug("");
-        setDescription("");
-        setPrice("");
-        setDiscountPercentage("0");
-        setImageUrls([""]);
-        setFeatured(false);
-        setIsNew(false);
-        setInStock(true);
-        setAllowCustomText(false);
-        setAllowCustomImage(false);
-        setMaxTextLength("100");
-        setMaxImageCount("1");
-        setAllowResizeRotate(false);
-      }
     } catch (error: any) {
-      console.error(`Error ${productId ? "updating" : "creating"} product:`, error);
       toast({
-        title: `Error ${productId ? "updating" : "creating"} product`,
+        title: productId ? "Error updating product" : "Error creating product",
         description: error.message,
         variant: "destructive"
       });
@@ -287,256 +222,328 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
       setIsSubmitting(false);
     }
   };
-  
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="zyra-spinner w-12 h-12"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
-  
+
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Product Name *</Label>
-            <Input 
-              id="name" 
-              value={name} 
-              onChange={(e) => handleNameChange(e.target.value)} 
-              placeholder="My Awesome Product"
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="slug">Slug *</Label>
-            <Input 
-              id="slug" 
-              value={slug} 
-              onChange={(e) => setSlug(e.target.value)}
-              placeholder="my-awesome-product"
-              required
-            />
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Used in URLs. Only lowercase letters, numbers, and hyphens.
-            </p>
-          </div>
-          
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Basic Information</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="price">Price * ($)</Label>
-              <Input 
-                id="price" 
-                type="number"
-                step="0.01"
-                min="0"
-                value={price} 
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="19.99"
+              <Label htmlFor="name">Product Name *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                placeholder="Enter product name"
                 required
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="discount">Discount (%)</Label>
-              <Input 
-                id="discount" 
+              <Label htmlFor="slug">Slug *</Label>
+              <Input
+                id="slug"
+                value={formData.slug}
+                onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+                placeholder="product-slug"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="short_description">Short Description</Label>
+            <Input
+              id="short_description"
+              value={formData.short_description}
+              onChange={(e) => setFormData(prev => ({ ...prev, short_description: e.target.value }))}
+              placeholder="Brief product description"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Detailed product description"
+              rows={4}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Pricing & Inventory</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="price">Price *</Label>
+              <Input
+                id="price"
                 type="number"
-                step="1"
-                min="0"
-                max="100"
-                value={discountPercentage} 
-                onChange={(e) => setDiscountPercentage(e.target.value)}
+                step="0.01"
+                value={formData.price}
+                onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                placeholder="0.00"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="cost_price">Cost Price</Label>
+              <Input
+                id="cost_price"
+                type="number"
+                step="0.01"
+                value={formData.cost_price}
+                onChange={(e) => setFormData(prev => ({ ...prev, cost_price: e.target.value }))}
+                placeholder="0.00"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="stock_quantity">Stock Quantity</Label>
+              <Input
+                id="stock_quantity"
+                type="number"
+                value={formData.stock_quantity}
+                onChange={(e) => setFormData(prev => ({ ...prev, stock_quantity: e.target.value }))}
                 placeholder="0"
               />
             </div>
           </div>
-          
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="sku">SKU</Label>
+              <Input
+                id="sku"
+                value={formData.sku}
+                onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
+                placeholder="Product SKU"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="barcode">Barcode</Label>
+              <Input
+                id="barcode"
+                value={formData.barcode}
+                onChange={(e) => setFormData(prev => ({ ...prev, barcode: e.target.value }))}
+                placeholder="Product barcode"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Categories & Settings</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="category">Category *</Label>
-            <Select 
-              value={category} 
-              onValueChange={setCategory} 
-              required
-            >
+            <Label htmlFor="category">Category</Label>
+            <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.slug} value={cat.slug}>{cat.name}</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.name}>
+                    {category.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea 
-              id="description" 
-              value={description} 
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Product description"
-              rows={5}
-            />
+            <Label htmlFor="status">Status</Label>
+            <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+                <SelectItem value="archived">Archived</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          
-          <div className="space-y-3">
-            <Label>Product Images</Label>
-            {imageUrls.map((url, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <Input 
-                  value={url} 
-                  onChange={(e) => handleImageChange(index, e.target.value)}
-                  placeholder="https://example.com/image.jpg"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => removeImageField(index)}
-                  disabled={imageUrls.length === 1}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={addImageField}
-              className="w-full"
-            >
-              <Plus className="h-4 w-4 mr-2" /> Add Another Image
-            </Button>
-          </div>
-          
-          <Separator />
 
           <div className="space-y-4">
-            <h3 className="text-lg font-medium">Customization Options</h3>
-            
             <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="allow-text" className="cursor-pointer">Allow Custom Text</Label>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Enable customers to add personalized text</p>
+                <Label>Manage Stock</Label>
+                <p className="text-sm text-muted-foreground">Track inventory for this product</p>
               </div>
-              <Switch 
-                id="allow-text" 
-                checked={allowCustomText}
-                onCheckedChange={setAllowCustomText}
+              <Switch
+                checked={formData.manage_stock}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, manage_stock: checked }))}
               />
             </div>
-            
-            {allowCustomText && (
-              <div className="pl-4 border-l-2 border-gray-100 dark:border-gray-700 space-y-2">
-                <Label htmlFor="max-text-length">Max Text Length</Label>
-                <Input 
-                  id="max-text-length" 
-                  type="number"
-                  min="1"
-                  max="500"
-                  value={maxTextLength}
-                  onChange={(e) => setMaxTextLength(e.target.value)}
-                  className="max-w-[150px]"
-                />
-              </div>
-            )}
-            
+
             <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="allow-image" className="cursor-pointer">Allow Custom Images</Label>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Enable customers to upload their own images</p>
+                <Label>Customizable</Label>
+                <p className="text-sm text-muted-foreground">Allow customers to customize this product</p>
               </div>
-              <Switch 
-                id="allow-image" 
-                checked={allowCustomImage}
-                onCheckedChange={setAllowCustomImage}
+              <Switch
+                checked={formData.is_customizable}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_customizable: checked }))}
               />
             </div>
-            
-            {allowCustomImage && (
-              <div className="pl-4 border-l-2 border-gray-100 dark:border-gray-700 space-y-2">
-                <Label htmlFor="max-image-count">Max Images Count</Label>
-                <Input 
-                  id="max-image-count" 
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={maxImageCount}
-                  onChange={(e) => setMaxImageCount(e.target.value)}
-                  className="max-w-[150px]"
-                />
-              </div>
-            )}
-            
-            {(allowCustomText || allowCustomImage) && (
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="allow-resize-rotate" className="cursor-pointer">Allow Resize & Rotate</Label>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Enable customers to resize and rotate text/images</p>
-                </div>
-                <Switch 
-                  id="allow-resize-rotate" 
-                  checked={allowResizeRotate}
-                  onCheckedChange={setAllowResizeRotate}
-                />
-              </div>
-            )}
-          </div>
-          
-          <Separator />
-          
-          <div className="flex flex-col gap-4">
+
             <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="featured" className="cursor-pointer">Featured Product</Label>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Show on homepage and featured sections</p>
+                <Label>Digital Product</Label>
+                <p className="text-sm text-muted-foreground">This is a digital/downloadable product</p>
               </div>
-              <Switch 
-                id="featured" 
-                checked={featured}
-                onCheckedChange={setFeatured}
+              <Switch
+                checked={formData.is_digital}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_digital: checked }))}
               />
             </div>
-            
+
             <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="new" className="cursor-pointer">Mark as New</Label>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Highlight as a new arrival</p>
+                <Label>Featured</Label>
+                <p className="text-sm text-muted-foreground">Feature this product on the homepage</p>
               </div>
-              <Switch 
-                id="new" 
-                checked={isNew}
-                onCheckedChange={setIsNew}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="stock" className="cursor-pointer">In Stock</Label>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Product is available for purchase</p>
-              </div>
-              <Switch 
-                id="stock" 
-                checked={inStock}
-                onCheckedChange={setInStock}
+              <Switch
+                checked={formData.is_featured}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_featured: checked }))}
               />
             </div>
           </div>
-          
-          <div className="pt-6 pb-2 flex justify-end">
-            <Button type="submit" disabled={isSubmitting} className="bg-zyra-purple hover:bg-zyra-dark-purple">
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {productId ? "Update Product" : "Create Product"}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Product Images</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              value={imageInput}
+              onChange={(e) => setImageInput(e.target.value)}
+              placeholder="Enter image URL"
+              className="flex-1"
+            />
+            <Button type="button" onClick={addImage} disabled={!imageInput.trim()}>
+              <Upload className="h-4 w-4 mr-2" />
+              Add
             </Button>
           </div>
-        </form>
-      </CardContent>
-    </Card>
+
+          {formData.images.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {formData.images.map((image, index) => (
+                <div key={index} className="relative group">
+                  <img
+                    src={image}
+                    alt={`Product image ${index + 1}`}
+                    className="w-full h-24 object-cover rounded-md border"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => removeImage(index)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {!formData.is_digital && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Shipping Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="weight">Weight (kg)</Label>
+                <Input
+                  id="weight"
+                  type="number"
+                  step="0.01"
+                  value={formData.weight}
+                  onChange={(e) => setFormData(prev => ({ ...prev, weight: e.target.value }))}
+                  placeholder="0.00"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="dimensions_length">Length (cm)</Label>
+                <Input
+                  id="dimensions_length"
+                  type="number"
+                  step="0.01"
+                  value={formData.dimensions_length}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dimensions_length: e.target.value }))}
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dimensions_width">Width (cm)</Label>
+                <Input
+                  id="dimensions_width"
+                  type="number"
+                  step="0.01"
+                  value={formData.dimensions_width}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dimensions_width: e.target.value }))}
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dimensions_height">Height (cm)</Label>
+                <Input
+                  id="dimensions_height"
+                  type="number"
+                  step="0.01"
+                  value={formData.dimensions_height}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dimensions_height: e.target.value }))}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="flex gap-4">
+        <Button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-primary/90">
+          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {productId ? "Update Product" : "Create Product"}
+        </Button>
+      </div>
+    </form>
   );
 };
 

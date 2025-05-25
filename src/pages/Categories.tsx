@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useCategories } from "@/hooks/use-categories";
-import { Grid, Sparkles, Package, TrendingUp } from "lucide-react";
+import { Grid, Sparkles, Package, TrendingUp, ShoppingBag } from "lucide-react";
 import SEOHead from "@/components/seo/SEOHead";
 
 const Categories = () => {
@@ -24,12 +24,12 @@ const Categories = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, index) => (
               <div key={index} className="animate-pulse">
-                <div className="aspect-square bg-gradient-to-br from-muted to-muted/50 rounded-2xl mb-4 loading-shimmer relative overflow-hidden">
+                <div className="aspect-[4/3] bg-gradient-to-br from-muted/30 to-muted/60 rounded-2xl mb-4 loading-shimmer relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
                 </div>
                 <div className="space-y-2">
-                  <div className="h-6 bg-gradient-to-r from-muted to-muted/50 rounded-lg loading-shimmer" />
-                  <div className="h-4 bg-gradient-to-r from-muted to-muted/50 rounded w-3/4 loading-shimmer" />
+                  <div className="h-6 bg-gradient-to-r from-muted/30 to-muted/60 rounded-lg loading-shimmer" />
+                  <div className="h-4 bg-gradient-to-r from-muted/30 to-muted/60 rounded w-3/4 loading-shimmer" />
                 </div>
               </div>
             ))}
@@ -75,7 +75,7 @@ const Categories = () => {
         "position": index + 1,
         "name": category.name,
         "description": category.description,
-        "url": `/categories/${category.slug}`
+        "url": `/shop?category=${category.slug}`
       }))
     }
   };
@@ -85,13 +85,13 @@ const Categories = () => {
       <SEOHead 
         title="Product Categories - Zyra"
         description="Browse our extensive range of product categories. Find exactly what you're looking for with our organized category system."
-        keywords="categories, products, shopping, organization, browse"
+        keywords="categories, products, shopping, organization, browse, custom products, phone cases, mugs, apparel"
         structuredData={categoryStructuredData}
         url="https://zyra.lovable.app/categories"
       />
       <Navbar />
       <div className="relative min-h-screen bg-background">
-        {/* Animated geometric background */}
+        {/* Premium background pattern */}
         <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.03] pointer-events-none">
           <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -100,8 +100,14 @@ const Categories = () => {
                 <circle cx="50" cy="50" r="15" fill="currentColor" opacity="0.1"/>
                 <path d="M20,50 L80,50 M50,20 L50,80" stroke="currentColor" strokeWidth="0.5" opacity="0.2"/>
               </pattern>
+              <linearGradient id="gradient-overlay" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="currentColor" stopOpacity="0.1"/>
+                <stop offset="50%" stopColor="currentColor" stopOpacity="0.05"/>
+                <stop offset="100%" stopColor="currentColor" stopOpacity="0.1"/>
+              </linearGradient>
             </defs>
             <rect width="100%" height="100%" fill="url(#category-pattern)"/>
+            <rect width="100%" height="100%" fill="url(#gradient-overlay)"/>
           </svg>
         </div>
 
@@ -109,10 +115,10 @@ const Categories = () => {
           <div className="max-w-6xl mx-auto">
             {/* Header */}
             <div className="text-center mb-12 animate-fade-in">
-              <div className="flex items-center justify-center gap-3 mb-6">
+              <div className="flex items-center justify-center gap-4 mb-6">
                 <div className="relative">
                   <div className="absolute -inset-2 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full blur-xl animate-pulse"></div>
-                  <div className="relative bg-gradient-to-br from-blue-500/10 to-purple-500/10 p-3 rounded-2xl border border-blue-500/20 backdrop-blur-sm">
+                  <div className="relative bg-gradient-to-br from-blue-500/10 to-purple-500/10 p-4 rounded-2xl border border-blue-500/20 backdrop-blur-sm">
                     <Grid className="h-8 w-8 text-blue-500 animate-pulse" />
                   </div>
                 </div>
@@ -120,10 +126,11 @@ const Categories = () => {
                   <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-500 via-purple-600 to-pink-600 bg-clip-text text-transparent">
                     Categories
                   </h1>
+                  <p className="text-lg text-muted-foreground mt-2">Discover our premium product collection</p>
                 </div>
               </div>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto animate-slide-in-right" style={{ animationDelay: '0.1s' }}>
-                Explore our diverse range of premium product categories
+                Explore our diverse range of customizable products, from tech accessories to home decor
               </p>
               <div className="flex items-center justify-center gap-2 mt-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
                 <Badge variant="secondary" className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/20">
@@ -134,6 +141,10 @@ const Categories = () => {
                   <Sparkles className="h-3 w-3 mr-1" />
                   Premium Quality
                 </Badge>
+                <Badge variant="secondary" className="bg-gradient-to-r from-green-500/10 to-blue-500/10 border-green-500/20">
+                  <ShoppingBag className="h-3 w-3 mr-1" />
+                  Customizable
+                </Badge>
               </div>
             </div>
 
@@ -143,31 +154,32 @@ const Categories = () => {
                 {categories.map((category, index) => (
                   <Link
                     key={category.id}
-                    to={`/categories/${category.slug}`}
-                    className="group block animate-scale-in card-hover"
+                    to={`/shop?category=${encodeURIComponent(category.name)}`}
+                    className="group block animate-scale-in hover-scale"
                     style={{ 
                       animationDelay: `${index * 0.1}s`,
                       animationFillMode: 'backwards'
                     }}
                   >
-                    <div className="relative bg-gradient-to-br from-card to-card/50 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-border/50 hover:border-primary/30">
+                    <div className="relative bg-gradient-to-br from-card/80 to-card/40 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-border/50 hover:border-primary/30 backdrop-blur-sm">
                       {/* Animated background gradient */}
                       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                       
                       {/* Category Image */}
-                      <div className="relative aspect-square bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl mb-4 overflow-hidden">
+                      <div className="relative aspect-[4/3] bg-gradient-to-br from-muted/20 to-muted/10 rounded-xl mb-4 overflow-hidden">
                         {category.image_url ? (
                           <img
                             src={category.image_url}
                             alt={category.name}
                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                            loading="lazy"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors duration-300">
-                            <div className="text-center">
-                              <Package className="h-16 w-16 mx-auto mb-2 animate-float" />
-                              <span className="text-sm font-medium">{category.name}</span>
+                          <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground group-hover:text-primary transition-colors duration-300">
+                            <div className="text-4xl mb-2 animate-float">
+                              {category.icon || '📦'}
                             </div>
+                            <span className="text-sm font-medium">{category.name}</span>
                           </div>
                         )}
                         

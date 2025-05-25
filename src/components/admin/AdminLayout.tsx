@@ -1,217 +1,76 @@
 
-import React, { useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  LayoutDashboard,
-  Package,
-  ShoppingCart,
-  Users,
-  Settings,
-  Tag,
-  List,
-  MessageSquare,
-  LogOut
-} from "lucide-react";
+import React from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import AdminSidebar from "./AdminSidebar";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { ThemeToggleSimple } from "@/components/theme/ThemeToggle";
+import { LogOut, User } from "lucide-react";
 
-interface NavItem {
-  name: string;
-  href: string;
-  icon: React.ReactNode;
+interface AdminLayoutProps {
+  children: React.ReactNode;
 }
 
-const navigation: NavItem[] = [
-  { name: "Dashboard", href: "/admin", icon: <LayoutDashboard className="h-5 w-5" /> },
-  { name: "Products", href: "/admin/products", icon: <Package className="h-5 w-5" /> },
-  { name: "Categories", href: "/admin/categories", icon: <List className="h-5 w-5" /> },
-  { name: "Orders", href: "/admin/orders", icon: <ShoppingCart className="h-5 w-5" /> },
-  { name: "Customers", href: "/admin/customers", icon: <Users className="h-5 w-5" /> },
-  { name: "Coupons", href: "/admin/coupons", icon: <Tag className="h-5 w-5" /> },
-  { name: "Promotions", href: "/admin/promotions", icon: <Tag className="h-5 w-5" /> },
-  { name: "Contact", href: "/admin/contact", icon: <MessageSquare className="h-5 w-5" /> },
-  { name: "Settings", href: "/admin/settings", icon: <Settings className="h-5 w-5" /> },
-];
-
-const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, signOut } = useAuth();
+const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
+  const { isAdmin, isLoading, user } = useAuth();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
-  const isMobile = useIsMobile();
-  
-  // Handle sign out
-  const handleSignOut = async () => {
-    await signOut();
+
+  // Redirect if not admin
+  React.useEffect(() => {
+    if (!isLoading && !isAdmin) {
+      navigate("/");
+    }
+  }, [isAdmin, isLoading, navigate]);
+
+  const handleLogout = async () => {
+    // Add logout logic here
     navigate("/");
   };
-  
-  // Create user initials for avatar fallback
-  const getUserInitials = () => {
-    if (!user) return "U";
-    const name = localStorage.getItem('user_name') || '';
-    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2);
-  };
-  
-  // Get shortened display name
-  const getDisplayName = () => {
-    if (!user) return "User";
-    return localStorage.getItem('user_name') || localStorage.getItem('user_email') || "User";
-  };
-  
-  // Get user avatar
-  const getUserAvatar = () => {
-    return localStorage.getItem('user_picture') || "";
-  };
 
-  // Mobile Navigation
-  const MobileNav = () => (
-    <Sheet>
-      <SheetTrigger asChild>
-        <Button variant="outline" size="icon" className="md:hidden">
-          <List className="h-5 w-5" />
-          <span className="sr-only">Toggle navigation</span>
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="left" className="w-72">
-        <div className="flex flex-col h-full py-4">
-          <div className="px-4 py-2">
-            <h2 className="text-lg font-semibold">Admin Dashboard</h2>
-          </div>
-          <nav className="flex-1 px-2 py-4 space-y-1">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${
-                  pathname === item.href
-                    ? "bg-zyra-purple text-white"
-                    : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-                }`}
-              >
-                <span className="mr-3">{item.icon}</span>
-                {item.name}
-              </Link>
-            ))}
-          </nav>
-          <div className="px-4 py-2 mt-auto">
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900 dark:hover:text-red-400"
-              onClick={handleSignOut}
-            >
-              <LogOut className="h-5 w-5 mr-3" />
-              Sign out
-            </Button>
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return null;
+  }
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Sidebar for desktop */}
-      <div className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 z-10 border-r bg-white dark:bg-gray-800 dark:border-gray-700">
-        <div className="flex-1 flex flex-col min-h-0 pt-5">
-          <div className="px-4 flex items-center justify-between">
-            <Link to="/" className="flex items-center">
-              <span className="text-lg font-semibold dark:text-white">Zyra Admin</span>
-            </Link>
-          </div>
-          <nav className="mt-8 flex-1 px-4 space-y-1 overflow-y-auto">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${
-                  pathname === item.href || pathname.startsWith(item.href + "/")
-                    ? "bg-zyra-purple text-white"
-                    : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-                }`}
-              >
-                <span className="mr-3">{item.icon}</span>
-                {item.name}
-              </Link>
-            ))}
-          </nav>
-        </div>
-        <div className="flex-shrink-0 p-4 border-t dark:border-gray-700">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <Avatar>
-                <AvatarImage src={getUserAvatar()} />
-                <AvatarFallback>{getUserInitials()}</AvatarFallback>
-              </Avatar>
+    <div className="min-h-screen bg-background flex">
+      <AdminSidebar />
+      <div className="flex-1 flex flex-col">
+        {/* Admin Header */}
+        <header className="bg-card/50 border-b border-border/50 px-6 py-4 backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm text-muted-foreground">Admin Dashboard</span>
+              </div>
             </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium dark:text-white">{getDisplayName()}</p>
-              <Button
-                variant="ghost"
-                className="text-xs text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 px-0 py-0"
-                onClick={handleSignOut}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <User className="h-4 w-4" />
+                <span>{user?.email}</span>
+              </div>
+              <Button 
+                onClick={handleLogout} 
+                variant="outline" 
+                size="sm"
+                className="border-border hover:bg-muted"
               >
-                Sign out
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
               </Button>
             </div>
           </div>
-        </div>
-      </div>
-      
-      {/* Mobile header */}
-      <div className="md:pl-64 flex flex-col flex-1">
-        <div className="sticky top-0 z-10 md:hidden bg-white dark:bg-gray-800 border-b dark:border-gray-700">
-          <div className="flex justify-between items-center px-4 h-14">
-            <MobileNav />
-            <Link to="/" className="text-lg font-semibold dark:text-white">
-              Zyra Admin
-            </Link>
-            <div className="flex items-center">
-              <ThemeToggleSimple />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full ml-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={getUserAvatar()} />
-                      <AvatarFallback>{getUserInitials()}</AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>{getDisplayName()}</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/admin/settings')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Sign out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </div>
+        </header>
         
-        {/* Add theme toggle for desktop */}
-        <div className="hidden md:block absolute top-4 right-4 z-50">
-          <ThemeToggleSimple />
-        </div>
-        
-        {/* Main content */}
-        <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+        {/* Main Content */}
+        <main className="flex-1 overflow-auto">
           {children}
         </main>
       </div>
