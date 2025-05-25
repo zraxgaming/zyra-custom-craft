@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ShoppingCart, User, Menu, X, Search } from "lucide-react";
@@ -11,7 +12,7 @@ import { ThemeToggleSimple } from "@/components/theme/ThemeToggle";
 
 const Navbar = () => {
   const { user, isAdmin } = useAuth();
-  const { state, toggleCart, totalItems } = useCart();
+  const { state, toggleCart } = useCart();
   const items = state.items;
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -19,6 +20,7 @@ const Navbar = () => {
 
   // Safeguard for item count
   const itemCount = Array.isArray(items) ? items.length : 0;
+  const totalItems = Array.isArray(items) ? items.reduce((total, item) => total + (item.quantity || 0), 0) : 0;
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -26,6 +28,7 @@ const Navbar = () => {
         const { data, error } = await supabase
           .from("categories")
           .select("name, slug")
+          .eq("is_active", true)
           .order("name");
 
         if (error) throw error;
@@ -66,7 +69,7 @@ const Navbar = () => {
           {/* Logo */}
           <div className="flex">
             <Link to="/" className="flex items-center">
-              <span className="text-2xl font-bold text-zyra-purple">Zyra</span>
+              <span className="text-2xl font-bold text-primary">Zyra</span>
             </Link>
           </div>
 
@@ -74,9 +77,9 @@ const Navbar = () => {
           <nav className="hidden md:flex items-center space-x-6">
             <Link
               to="/"
-              className={`text-sm font-medium transition-colors hover:text-zyra-purple ${
+              className={`text-sm font-medium transition-colors hover:text-primary ${
                 location.pathname === "/"
-                  ? "text-zyra-purple"
+                  ? "text-primary"
                   : "text-gray-800 dark:text-gray-300"
               }`}
             >
@@ -84,9 +87,9 @@ const Navbar = () => {
             </Link>
             <Link
               to="/shop"
-              className={`text-sm font-medium transition-colors hover:text-zyra-purple ${
+              className={`text-sm font-medium transition-colors hover:text-primary ${
                 location.pathname === "/shop"
-                  ? "text-zyra-purple"
+                  ? "text-primary"
                   : "text-gray-800 dark:text-gray-300"
               }`}
             >
@@ -94,9 +97,9 @@ const Navbar = () => {
             </Link>
             <Link
               to="/categories"
-              className={`text-sm font-medium transition-colors hover:text-zyra-purple ${
+              className={`text-sm font-medium transition-colors hover:text-primary ${
                 location.pathname === "/categories"
-                  ? "text-zyra-purple"
+                  ? "text-primary"
                   : "text-gray-800 dark:text-gray-300"
               }`}
             >
@@ -104,9 +107,9 @@ const Navbar = () => {
             </Link>
             <Link
               to="/about"
-              className={`text-sm font-medium transition-colors hover:text-zyra-purple ${
+              className={`text-sm font-medium transition-colors hover:text-primary ${
                 location.pathname === "/about"
-                  ? "text-zyra-purple"
+                  ? "text-primary"
                   : "text-gray-800 dark:text-gray-300"
               }`}
             >
@@ -114,9 +117,9 @@ const Navbar = () => {
             </Link>
             <Link
               to="/contact"
-              className={`text-sm font-medium transition-colors hover:text-zyra-purple ${
+              className={`text-sm font-medium transition-colors hover:text-primary ${
                 location.pathname === "/contact"
-                  ? "text-zyra-purple"
+                  ? "text-primary"
                   : "text-gray-800 dark:text-gray-300"
               }`}
             >
@@ -131,7 +134,7 @@ const Navbar = () => {
               <Input
                 type="search"
                 placeholder="Search..."
-                className="w-[180px] lg:w-[260px] pl-9 rounded-full bg-gray-100 dark:bg-gray-800 border dark:border-gray-700 focus-visible:ring-zyra-purple"
+                className="w-[180px] lg:w-[260px] pl-9 rounded-full bg-gray-100 dark:bg-gray-800 border dark:border-gray-700 focus-visible:ring-primary"
               />
             </div>
 
@@ -144,9 +147,9 @@ const Navbar = () => {
               onClick={toggleCart}
             >
               <ShoppingCart className="h-5 w-5" />
-              {Array.isArray(items) && items.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-zyra-purple text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                  {items.reduce((total, item) => total + (item.quantity || 0), 0)}
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {totalItems}
                 </span>
               )}
             </Button>
@@ -175,9 +178,9 @@ const Navbar = () => {
               onClick={toggleCart}
             >
               <ShoppingCart className="h-5 w-5 text-gray-800 dark:text-gray-200" />
-              {Array.isArray(items) && items.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-zyra-purple text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                  {items.reduce((total, item) => total + (item.quantity || 0), 0)}
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {totalItems}
                 </span>
               )}
             </Button>
@@ -224,9 +227,15 @@ const Navbar = () => {
                       >
                         Shop All
                       </Link>
+                      <Link
+                        to="/categories"
+                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200"
+                      >
+                        Categories
+                      </Link>
                       <div>
                         <h3 className="font-medium mb-2 text-gray-500 dark:text-gray-400">
-                          Categories
+                          Browse Categories
                         </h3>
                         <div className="flex flex-col space-y-1 ml-2">
                           {categories?.map((category) => (
@@ -272,7 +281,7 @@ const Navbar = () => {
                       </div>
                     ) : (
                       <Link to="/auth">
-                        <Button className="w-full bg-zyra-purple hover:bg-zyra-dark-purple">
+                        <Button className="w-full bg-primary hover:bg-primary/90">
                           Login / Register
                         </Button>
                       </Link>

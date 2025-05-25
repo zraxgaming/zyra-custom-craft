@@ -20,8 +20,10 @@ import OrderSuccess from "./pages/OrderSuccess";
 import Contact from "./pages/Contact";
 import Auth from "./pages/Auth";
 import Account from "./pages/Account";
+import Profile from "./pages/Profile";
 import Wishlist from "./pages/Wishlist";
 import About from "./pages/About";
+import Categories from "./pages/Categories";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 
@@ -61,6 +63,7 @@ function App() {
                   {/* Public Routes */}
                   <Route path="/" element={<Index />} />
                   <Route path="/shop" element={<Shop />} />
+                  <Route path="/categories" element={<Categories />} />
                   <Route path="/products/:slug" element={<ProductDetail />} />
                   <Route path="/product/:slug" element={<ProductDetail />} />
                   <Route path="/cart" element={<Cart />} />
@@ -69,6 +72,7 @@ function App() {
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/account" element={<Account />} />
+                  <Route path="/profile" element={<Profile />} />
                   <Route path="/account/orders" element={<Account />} />
                   <Route path="/wishlist" element={<Wishlist />} />
                   <Route path="/about" element={<About />} />

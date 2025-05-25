@@ -6,7 +6,6 @@ import { Container } from "@/components/ui/container";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useCategories } from "@/hooks/use-categories";
-import { EnhancedLoader } from "@/components/ui/enhanced-loader";
 
 const Categories = () => {
   const { categories, isLoading, error } = useCategories();
@@ -17,7 +16,19 @@ const Categories = () => {
       <>
         <Navbar />
         <Container className="py-12">
-          <EnhancedLoader message="Loading categories..." />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[...Array(6)].map((_, index) => (
+              <Card key={index} className="animate-pulse">
+                <CardContent className="p-0">
+                  <div className="aspect-video bg-gray-200 rounded-t-lg"></div>
+                  <div className="p-6">
+                    <div className="h-6 bg-gray-200 rounded mb-3"></div>
+                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </Container>
         <Footer />
       </>
@@ -65,7 +76,7 @@ const Categories = () => {
                   key={category.id}
                   className="group cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border-2 border-transparent hover:border-primary/30 animate-fade-in"
                   style={{ animationDelay: `${index * 0.1}s` }}
-                  onClick={() => navigate(`/category/${category.slug}`)}
+                  onClick={() => navigate(`/shop?category=${category.slug}`)}
                 >
                   <CardContent className="p-0">
                     {category.image_url && (

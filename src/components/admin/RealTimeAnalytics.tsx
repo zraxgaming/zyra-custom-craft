@@ -1,184 +1,204 @@
 
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
-import { TrendingUp, Users, ShoppingCart, DollarSign, Package, Star } from "lucide-react";
-
-interface AnalyticsData {
-  totalOrders: number;
-  totalRevenue: number;
-  totalCustomers: number;
-  totalProducts: number;
-  avgRating: number;
-  revenueByMonth: Array<{ month: string; revenue: number; orders: number }>;
-  topProducts: Array<{ name: string; sales: number; revenue: number }>;
-  ordersByStatus: Array<{ status: string; count: number; color: string }>;
-  recentActivity: Array<{ type: string; description: string; timestamp: string }>;
-}
-
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088fe'];
 
 const RealTimeAnalytics = () => {
-  const [data, setData] = useState<AnalyticsData | null>(null);
+  const [analytics, setAnalytics] = useState({
+    totalOrders: 0,
+    totalRevenue: 0,
+    totalCustomers: 0,
+    conversionRate: 0,
+    salesData: [],
+    recentActivity: [],
+    topProducts: [],
+    ordersByStatus: []
+  });
   const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchAnalytics();
+    
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('analytics-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+        fetchAnalytics();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'page_views' }, () => {
+        fetchAnalytics();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const fetchAnalytics = async () => {
     try {
       setIsLoading(true);
-      
+
       // Fetch orders data
-      const { data: orders, error: ordersError } = await supabase
+      const { data: orders } = await supabase
         .from('orders')
         .select('*');
-      
-      if (ordersError) throw ordersError;
 
-      // Fetch products data
-      const { data: products, error: productsError } = await supabase
-        .from('products')
+      // Fetch customers data
+      const { data: customers } = await supabase
+        .from('profiles')
         .select('*');
-      
-      if (productsError) throw productsError;
 
-      // Fetch order items for product analysis
-      const { data: orderItems, error: itemsError } = await supabase
+      // Fetch page views
+      const { data: pageViews } = await supabase
+        .from('page_views')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(10);
+
+      // Fetch order items with products
+      const { data: orderItems } = await supabase
         .from('order_items')
         .select(`
           *,
-          products!inner(name, price)
+          products (
+            id,
+            name,
+            price
+          )
         `);
-      
-      if (itemsError) throw itemsError;
-
-      // Fetch profiles for customer count
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id');
-      
-      if (profilesError) throw profilesError;
 
       // Calculate analytics
       const totalOrders = orders?.length || 0;
-      const totalRevenue = orders?.reduce((sum, order) => sum + Number(order.total_amount || 0), 0) || 0;
-      const totalCustomers = profiles?.length || 0;
-      const totalProducts = products?.length || 0;
-      const avgRating = products?.reduce((sum, product) => sum + Number(product.rating || 0), 0) / Math.max(products?.length || 1, 1);
+      const totalRevenue = orders?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
+      const totalCustomers = customers?.length || 0;
+      const conversionRate = totalCustomers > 0 ? (totalOrders / totalCustomers) * 100 : 0;
 
-      // Revenue by month
-      const revenueByMonth = orders?.reduce((acc: any[], order) => {
-        const month = new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        const existing = acc.find(item => item.month === month);
-        if (existing) {
-          existing.revenue += Number(order.total_amount || 0);
-          existing.orders += 1;
-        } else {
-          acc.push({ month, revenue: Number(order.total_amount || 0), orders: 1 });
-        }
-        return acc;
-      }, []) || [];
+      // Generate sales data for the last 7 days
+      const salesData = generateSalesData(orders || []);
+      
+      // Generate recent activity
+      const recentActivity = generateRecentActivity(orders || [], pageViews || []);
 
-      // Top products
-      const productSales = orderItems?.reduce((acc: any, item) => {
-        const productName = item.products?.name || 'Unknown Product';
-        if (!acc[productName]) {
-          acc[productName] = { sales: 0, revenue: 0 };
-        }
-        acc[productName].sales += item.quantity;
-        acc[productName].revenue += Number(item.price || 0) * item.quantity;
-        return acc;
-      }, {}) || {};
+      // Generate top products
+      const topProducts = generateTopProducts(orderItems || []);
 
-      const topProducts = Object.entries(productSales)
-        .map(([name, data]: [string, any]) => ({ name, ...data }))
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 5);
+      // Generate orders by status
+      const ordersByStatus = generateOrdersByStatus(orders || []);
 
-      // Orders by status
-      const statusCounts = orders?.reduce((acc: any, order) => {
-        const status = order.status || 'pending';
-        acc[status] = (acc[status] || 0) + 1;
-        return acc;
-      }, {}) || {};
-
-      const ordersByStatus = Object.entries(statusCounts).map(([status, count], index) => ({
-        status,
-        count: count as number,
-        color: COLORS[index % COLORS.length]
-      }));
-
-      // Recent activity
-      const recentActivity = [
-        ...orders?.slice(-5).map(order => ({
-          type: 'order',
-          description: `New order #${order.id.slice(0, 8)} - $${order.total_amount}`,
-          timestamp: order.created_at
-        })) || [],
-        ...products?.slice(-3).map(product => ({
-          type: 'product',
-          description: `Product "${product.name}" updated`,
-          timestamp: product.updated_at || product.created_at
-        })) || []
-      ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 10);
-
-      setData({
+      setAnalytics({
         totalOrders,
         totalRevenue,
         totalCustomers,
-        totalProducts,
-        avgRating,
-        revenueByMonth: revenueByMonth.slice(-6),
+        conversionRate,
+        salesData,
+        recentActivity,
         topProducts,
-        ordersByStatus,
-        recentActivity
+        ordersByStatus
       });
-
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching analytics:', error);
-      toast({
-        title: "Error fetching analytics",
-        description: error.message,
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchAnalytics();
+  const generateSalesData = (orders: any[]) => {
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      return date.toISOString().split('T')[0];
+    }).reverse();
+
+    return last7Days.map(date => {
+      const dayOrders = orders.filter(order => 
+        order.created_at?.startsWith(date)
+      );
+      return {
+        date: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+        sales: dayOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0),
+        orders: dayOrders.length
+      };
+    });
+  };
+
+  const generateRecentActivity = (orders: any[], pageViews: any[]) => {
+    const activities = [];
     
-    // Set up real-time subscriptions
-    const ordersSubscription = supabase
-      .channel('orders-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, fetchAnalytics)
-      .subscribe();
+    orders.slice(0, 5).forEach(order => {
+      activities.push({
+        type: 'order',
+        message: `New order #${order.id.slice(0, 8)} - $${order.total_amount}`,
+        time: new Date(order.created_at).toLocaleTimeString()
+      });
+    });
 
-    const productsSubscription = supabase
-      .channel('products-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchAnalytics)
-      .subscribe();
+    pageViews.slice(0, 5).forEach(view => {
+      activities.push({
+        type: 'view',
+        message: `Page view: ${view.path}`,
+        time: new Date(view.timestamp).toLocaleTimeString()
+      });
+    });
 
-    return () => {
-      supabase.removeChannel(ordersSubscription);
-      supabase.removeChannel(productsSubscription);
-    };
-  }, []);
+    return activities.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 10);
+  };
+
+  const generateTopProducts = (orderItems: any[]) => {
+    const productMap = new Map();
+    
+    orderItems.forEach(item => {
+      if (item.products) {
+        const productId = item.products.id;
+        const productName = item.products.name || 'Unknown Product';
+        
+        if (productMap.has(productId)) {
+          productMap.get(productId).quantity += item.quantity;
+          productMap.get(productId).revenue += (item.price || 0) * item.quantity;
+        } else {
+          productMap.set(productId, {
+            name: productName,
+            quantity: item.quantity,
+            revenue: (item.price || 0) * item.quantity
+          });
+        }
+      }
+    });
+
+    return Array.from(productMap.values())
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
+  };
+
+  const generateOrdersByStatus = (orders: any[]) => {
+    const statusMap = new Map();
+    
+    orders.forEach(order => {
+      const status = order.status || 'pending';
+      statusMap.set(status, (statusMap.get(status) || 0) + 1);
+    });
+
+    const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7c7c', '#8dd1e1'];
+    
+    return Array.from(statusMap.entries()).map(([status, count], index) => ({
+      name: status.charAt(0).toUpperCase() + status.slice(1),
+      value: count,
+      fill: colors[index % colors.length]
+    }));
+  };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (!data) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">No analytics data available</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardContent className="p-6">
+              <div className="h-4 bg-gray-200 rounded mb-2"></div>
+              <div className="h-8 bg-gray-200 rounded"></div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   }
@@ -186,160 +206,129 @@ const RealTimeAnalytics = () => {
   return (
     <div className="space-y-6">
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Orders</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${data.totalRevenue.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">All time revenue</p>
+            <div className="text-2xl font-bold">{analytics.totalOrders}</div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data.totalOrders}</div>
-            <p className="text-xs text-muted-foreground">Orders placed</p>
+            <div className="text-2xl font-bold">${analytics.totalRevenue.toFixed(2)}</div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Customers</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Customers</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data.totalCustomers}</div>
-            <p className="text-xs text-muted-foreground">Registered users</p>
+            <div className="text-2xl font-bold">{analytics.totalCustomers}</div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Products</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Conversion Rate</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data.totalProducts}</div>
-            <p className="text-xs text-muted-foreground">Active products</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Rating</CardTitle>
-            <Star className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data.avgRating.toFixed(1)}</div>
-            <p className="text-xs text-muted-foreground">Product rating</p>
+            <div className="text-2xl font-bold">{analytics.conversionRate.toFixed(1)}%</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts Row */}
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Trend */}
         <Card>
           <CardHeader>
-            <CardTitle>Revenue Trend</CardTitle>
-            <CardDescription>Monthly revenue and order count</CardDescription>
+            <CardTitle>Sales Trend (Last 7 Days)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data.revenueByMonth}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={analytics.salesData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="sales" stroke="#8884d8" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Order Status Distribution */}
         <Card>
           <CardHeader>
-            <CardTitle>Order Status</CardTitle>
-            <CardDescription>Distribution of order statuses</CardDescription>
+            <CardTitle>Orders by Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={data.ordersByStatus}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="count"
-                  >
-                    {data.ordersByStatus.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={analytics.ordersByStatus}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {analytics.ordersByStatus.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
 
       {/* Top Products and Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Products */}
         <Card>
           <CardHeader>
             <CardTitle>Top Products</CardTitle>
-            <CardDescription>Best selling products by revenue</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {data.topProducts.map((product, index) => (
+              {analytics.topProducts.map((product, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">{product.name}</p>
-                    <p className="text-sm text-muted-foreground">{product.sales} sold</p>
+                    <p className="text-sm text-muted-foreground">{product.quantity} sold</p>
                   </div>
-                  <p className="font-bold">${product.revenue.toFixed(2)}</p>
+                  <div className="text-right">
+                    <p className="font-medium">${product.revenue.toFixed(2)}</p>
+                  </div>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Recent Activity */}
         <Card>
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest system events</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {data.recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-start gap-3">
-                  <div className={`w-2 h-2 rounded-full mt-2 ${
-                    activity.type === 'order' ? 'bg-green-500' : 'bg-blue-500'
-                  }`} />
-                  <div className="flex-1">
-                    <p className="text-sm">{activity.description}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(activity.timestamp).toLocaleString()}
-                    </p>
+              {analytics.recentActivity.map((activity, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm">{activity.message}</p>
+                    <p className="text-xs text-muted-foreground">{activity.time}</p>
                   </div>
+                  <div className={`w-2 h-2 rounded-full ${
+                    activity.type === 'order' ? 'bg-green-500' : 'bg-blue-500'
+                  }`}></div>
                 </div>
               ))}
             </div>

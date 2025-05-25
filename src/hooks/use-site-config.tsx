@@ -28,7 +28,7 @@ export const useSiteConfig = () => {
 
       const configObj: SiteConfig = {};
       if (data) {
-        data.forEach((item: any) => {
+        data.forEach((item: { key: string; value: any }) => {
           const key = item.key as keyof SiteConfig;
           configObj[key] = item.value;
         });
