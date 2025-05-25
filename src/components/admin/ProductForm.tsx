@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -79,6 +78,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
       if (error) throw error;
 
       if (data) {
+        // Convert images JSON to string array safely
+        const imagesArray = Array.isArray(data.images) 
+          ? data.images.filter(img => typeof img === 'string') as string[]
+          : [];
+
         setFormData({
           name: data.name || "",
           slug: data.slug || "",
@@ -95,7 +99,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
           is_digital: data.is_digital ?? false,
           is_featured: data.is_featured ?? false,
           status: data.status || "draft",
-          images: Array.isArray(data.images) ? data.images : [],
+          images: imagesArray,
           weight: data.weight?.toString() || "",
           dimensions_length: data.dimensions_length?.toString() || "",
           dimensions_width: data.dimensions_width?.toString() || "",
