@@ -21,13 +21,25 @@ const Contact = () => {
             </p>
           </div>
           <ContactForm />
+          
+          {/* Embedded Typeform for detailed feedback */}
+          <div className="mt-16 p-8 bg-card rounded-lg border border-border">
+            <h2 className="text-2xl font-bold mb-4 text-foreground text-center">
+              Share Your Experience
+            </h2>
+            <p className="text-muted-foreground text-center mb-6">
+              Help us improve by sharing your detailed feedback about our website and services.
+            </p>
+            <div className="flex justify-center">
+              <TypeformFeedback 
+                typeformId="GcTxpZxC"
+                triggerText="Share Detailed Feedback"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-3 text-lg"
+              />
+            </div>
+          </div>
         </div>
       </Container>
-      <TypeformFeedback 
-        typeformId="GcTxpZxC"
-        triggerText="Quick Feedback"
-        className="fixed bottom-4 right-4 z-50"
-      />
       <Footer />
     </div>
   );

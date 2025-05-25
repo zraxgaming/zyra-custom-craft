@@ -8,9 +8,10 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/use-auth";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { WishlistProvider } from "@/hooks/use-wishlist";
-import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { ThemeProvider } from "@/hooks/use-theme";
 import CartDrawer from "@/components/cart/CartDrawer";
 import PWAInstallPrompt from "@/components/pwa/PWAInstallPrompt";
+import PWANotifications from "@/components/pwa/PWANotifications";
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 import TypeformFeedback from "@/components/feedback/TypeformFeedback";
 import Index from "./pages/Index";
@@ -65,7 +66,7 @@ const queryClient = new QueryClient({
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+    <ThemeProvider defaultTheme="system" storageKey="zyra-theme">
       <AuthProvider>
         <CartProvider>
           <WishlistProvider>
@@ -77,7 +78,12 @@ const App = () => (
                   <Sonner />
                   <CartDrawer />
                   <PWAInstallPrompt />
-                  <TypeformFeedback />
+                  <PWANotifications enableAbandonedCart={true} abandonedCartDelay={30} />
+                  <TypeformFeedback 
+                    typeformId="GcTxpZxC"
+                    triggerText="Quick Feedback"
+                    className="fixed bottom-4 right-4 z-50"
+                  />
                   <Routes>
                     {/* Public routes */}
                     <Route path="/" element={<Index />} />

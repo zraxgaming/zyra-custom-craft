@@ -37,11 +37,11 @@ export interface Product {
     name: string;
     slug: string;
   };
-  customization_options?: CustomizationOptions[];
+  customization_options?: CustomizationOptions;
 }
 
 export interface CustomizationOptions {
-  id: string;
+  id?: string;
   allowText: boolean;
   allowImage: boolean;
   maxTextLength: number;

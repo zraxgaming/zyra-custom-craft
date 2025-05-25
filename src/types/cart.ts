@@ -16,6 +16,21 @@ export interface CartItem {
   };
 }
 
+export interface WishlistItem {
+  id: string;
+  productId: string;
+  name: string;
+  price: number;
+  image?: string;
+  product?: {
+    id: string;
+    name: string;
+    price: number;
+    images: string[];
+    slug: string;
+  };
+}
+
 export interface CartState {
   isOpen: boolean;
   items: CartItem[];
