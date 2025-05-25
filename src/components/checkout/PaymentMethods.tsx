@@ -25,6 +25,10 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  // Convert AED to USD for PayPal (1 AED = ~0.27 USD)
+  const aedToUsdRate = 0.27;
+  const totalInUSD = total * aedToUsdRate;
+
   useEffect(() => {
     const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
     
@@ -68,18 +72,32 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
           </div>
         )}
 
-        <Tabs defaultValue="paypal" className="w-full">
+        <Tabs defaultValue="ziina" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="paypal">PayPal</TabsTrigger>
-            <TabsTrigger value="ziina">Ziina</TabsTrigger>
+            <TabsTrigger value="ziina">Ziina (AED)</TabsTrigger>
+            <TabsTrigger value="paypal">PayPal (USD)</TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="ziina" className="mt-4">
+            <ZiinaPayment
+              onZiinaApprove={onZiinaApprove}
+              isProcessing={isProcessing}
+              total={total}
+              hasValidAddress={hasValidAddress}
+            />
+          </TabsContent>
           
           <TabsContent value="paypal" className="mt-4">
             <div className="space-y-4">
               <div className="flex items-center border rounded-md p-3 bg-background">
                 <div className="flex items-center">
                   <img src="https://img.icons8.com/color/48/000000/paypal.png" alt="PayPal" className="h-8 mr-2" />
-                  <span className="text-foreground">PayPal or Credit/Debit Card</span>
+                  <div>
+                    <span className="text-foreground">PayPal or Credit/Debit Card</span>
+                    <div className="text-xs text-muted-foreground">
+                      Total: ${totalInUSD.toFixed(2)} USD (converted from {total.toFixed(2)} AED)
+                    </div>
+                  </div>
                 </div>
               </div>
               
@@ -108,17 +126,17 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
                       label: "pay"
                     }}
                     disabled={isProcessing || !hasValidAddress}
-                    forceReRender={[total, paypalClientId, hasValidAddress]}
+                    forceReRender={[totalInUSD, paypalClientId, hasValidAddress]}
                     createOrder={(data, actions) => {
-                      console.log("Creating PayPal order with total:", total.toFixed(2));
+                      console.log("Creating PayPal order with total USD:", totalInUSD.toFixed(2));
                       return actions.order.create({
                         purchase_units: [
                           {
                             amount: {
-                              value: total.toFixed(2),
+                              value: totalInUSD.toFixed(2),
                               currency_code: "USD"
                             },
-                            description: `Order from Zyra Store`
+                            description: `Order from Zyra Store (${total.toFixed(2)} AED)`
                           }
                         ]
                       });
@@ -159,15 +177,6 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
                 </PayPalScriptProvider>
               )}
             </div>
-          </TabsContent>
-          
-          <TabsContent value="ziina" className="mt-4">
-            <ZiinaPayment
-              onZiinaApprove={onZiinaApprove}
-              isProcessing={isProcessing}
-              total={total}
-              hasValidAddress={hasValidAddress}
-            />
           </TabsContent>
         </Tabs>
       </CardContent>
