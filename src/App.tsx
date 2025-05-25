@@ -12,8 +12,6 @@ import { WishlistProvider } from "@/hooks/use-wishlist";
 import { AuthProvider } from "@/hooks/use-auth";
 import SEOHead from "@/components/seo/SEOHead";
 import { HelmetProvider } from "react-helmet-async";
-import PWAInstallPrompt from "@/components/pwa/PWAInstallPrompt";
-import PWANotifications from "@/components/pwa/PWANotifications";
 import "./App.css";
 
 // Lazy load components for better performance
@@ -29,6 +27,10 @@ const FAQ = lazy(() => import("@/pages/FAQ"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("@/pages/TermsOfService"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
+
+// Admin components
+const AdminRoute = lazy(() => import("@/components/admin/AdminRoute"));
+const Dashboard = lazy(() => import("@/pages/admin/Dashboard"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -51,8 +53,6 @@ function App() {
                   <Router>
                     <SEOHead />
                     <div className="min-h-screen bg-background font-sans antialiased">
-                      <PWAInstallPrompt />
-                      <PWANotifications />
                       <Suspense fallback={
                         <div className="min-h-screen flex items-center justify-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -72,6 +72,19 @@ function App() {
                           <Route path="/faq" element={<FAQ />} />
                           <Route path="/privacy" element={<PrivacyPolicy />} />
                           <Route path="/terms" element={<TermsOfService />} />
+                          
+                          {/* Admin Routes */}
+                          <Route path="/admin" element={
+                            <AdminRoute>
+                              <Dashboard />
+                            </AdminRoute>
+                          } />
+                          <Route path="/admin/*" element={
+                            <AdminRoute>
+                              <Dashboard />
+                            </AdminRoute>
+                          } />
+                          
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </Suspense>

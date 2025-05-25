@@ -1,182 +1,256 @@
 
 import React, { useState } from "react";
-import { Container } from "@/components/ui/container";
-import { Input } from "@/components/ui/input";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, HelpCircle } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { Container } from "@/components/ui/container";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Search, HelpCircle, ChevronDown, ChevronRight } from "lucide-react";
+import SEOHead from "@/components/seo/SEOHead";
 
 const FAQ = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [openItems, setOpenItems] = useState<number[]>([]);
 
-  const faqCategories = {
-    general: {
-      title: "General",
-      faqs: [
+  const toggleItem = (index: number) => {
+    setOpenItems(prev => 
+      prev.includes(index) 
+        ? prev.filter(i => i !== index)
+        : [...prev, index]
+    );
+  };
+
+  const faqCategories = [
+    {
+      category: "Orders & Shipping",
+      color: "from-blue-600 to-purple-600",
+      questions: [
         {
-          question: "What is Zyra?",
-          answer: "Zyra is a custom e-commerce platform where you can purchase ready-made products or create custom designs for personalized items."
+          question: "How long does shipping take?",
+          answer: "Standard shipping takes 3-5 business days within the US. International shipping takes 7-14 business days. Express shipping options are available for faster delivery."
         },
         {
-          question: "How do I create an account?",
-          answer: "Click the 'Sign Up' button in the top right corner and follow the registration process. You can also sign up using your Google account."
+          question: "Can I track my order?",
+          answer: "Yes! Once your order ships, you'll receive a tracking number via email. You can also track your order in your account dashboard."
         },
         {
-          question: "Is my personal information secure?",
-          answer: "Yes, we use industry-standard encryption and security measures to protect your personal information and payment details."
-        }
-      ]
-    },
-    orders: {
-      title: "Orders & Shipping",
-      faqs: [
-        {
-          question: "How do I track my order?",
-          answer: "You can track your order by visiting the 'My Orders' section in your account or using our order tracking page with your order ID."
-        },
-        {
-          question: "What are the shipping options?",
-          answer: "We offer standard shipping (3-5 business days) and express shipping (1-2 business days). Shipping costs vary by location and method."
-        },
-        {
-          question: "Can I change or cancel my order?",
-          answer: "Orders can be modified or cancelled within 1 hour of placement. After that, please contact our support team for assistance."
+          question: "What are your shipping costs?",
+          answer: "Shipping costs vary by location and speed. Standard US shipping is $5.99, free on orders over $50. International rates start at $12.99."
         },
         {
           question: "Do you ship internationally?",
-          answer: "Yes, we ship to most countries worldwide. International shipping times and costs vary by destination."
+          answer: "Yes, we ship to over 100 countries worldwide. Shipping costs and delivery times vary by destination."
         }
       ]
     },
-    customization: {
-      title: "Customization",
-      faqs: [
+    {
+      category: "Customization",
+      color: "from-purple-600 to-pink-600",
+      questions: [
         {
-          question: "How does product customization work?",
-          answer: "Select a customizable product, click 'Customize', then use our design tool to add text, images, or modify colors. You'll see a live preview of your design."
+          question: "What products can be customized?",
+          answer: "Most of our products offer customization options including phone cases, mugs, t-shirts, hoodies, and accessories. Look for the 'Customizable' badge on product pages."
         },
         {
-          question: "What file formats can I upload?",
-          answer: "We accept JPG, PNG, and SVG files for image uploads. Files should be high resolution for best print quality."
+          question: "What file formats do you accept for custom images?",
+          answer: "We accept JPG, PNG, SVG, and PDF files. For best quality, use high-resolution images (300 DPI or higher)."
         },
         {
-          question: "Can I save my designs for later?",
-          answer: "Yes, your custom designs are automatically saved to your account and can be accessed anytime."
+          question: "Can I preview my custom design before ordering?",
+          answer: "Absolutely! Our live preview tool shows exactly how your design will look on the product before you add it to cart."
         },
         {
-          question: "What if I need help with my design?",
-          answer: "Our design team can assist you with complex customizations. Contact support with your requirements and we'll help bring your vision to life."
+          question: "Are there any restrictions on custom text or images?",
+          answer: "We don't allow copyrighted content, offensive material, or low-quality images. Our team reviews all custom orders to ensure quality standards."
         }
       ]
     },
-    payments: {
-      title: "Payments & Billing",
-      faqs: [
+    {
+      category: "Returns & Refunds",
+      color: "from-pink-600 to-red-600",
+      questions: [
+        {
+          question: "What's your return policy?",
+          answer: "We offer 30-day returns for non-customized items in original condition. Custom products have a 7-day return window for manufacturing defects only."
+        },
+        {
+          question: "How do I start a return?",
+          answer: "Log into your account, go to 'My Orders', and click 'Return Item' next to the product. Follow the prompts to generate a return label."
+        },
+        {
+          question: "When will I receive my refund?",
+          answer: "Refunds are processed within 3-5 business days after we receive your returned item. The refund will appear on your original payment method within 5-10 business days."
+        },
+        {
+          question: "Who pays for return shipping?",
+          answer: "We provide free return labels for defective items. For other returns, customers are responsible for return shipping costs."
+        }
+      ]
+    },
+    {
+      category: "Account & Payment",
+      color: "from-green-600 to-blue-600",
+      questions: [
         {
           question: "What payment methods do you accept?",
-          answer: "We accept PayPal, Zina, and major credit cards. All payments are processed securely."
+          answer: "We accept all major credit cards, PayPal, Ziina, Apple Pay, and Google Pay. All transactions are secured with SSL encryption."
         },
         {
-          question: "Can I use gift cards?",
-          answer: "Yes, you can purchase and redeem gift cards during checkout. Gift cards never expire."
+          question: "Do I need an account to place an order?",
+          answer: "You can checkout as a guest, but creating an account lets you track orders, save designs, and access exclusive member benefits."
         },
         {
-          question: "Do you offer refunds?",
-          answer: "We offer refunds within 30 days of purchase for unused items in original condition. Custom items may have different return policies."
+          question: "How do I reset my password?",
+          answer: "Click 'Forgot Password' on the login page, enter your email, and we'll send you a reset link. The link expires in 24 hours for security."
         },
         {
-          question: "Are there any hidden fees?",
-          answer: "No, all costs including taxes and shipping are clearly displayed during checkout. There are no hidden fees."
+          question: "Can I change my order after placing it?",
+          answer: "You can modify or cancel orders within 1 hour of placement. After that, contact our support team and we'll do our best to help."
         }
       ]
     }
-  };
+  ];
 
-  const filteredFAQs = Object.entries(faqCategories).reduce((acc, [key, category]) => {
-    const filteredFaqs = category.faqs.filter(
+  const filteredFAQs = faqCategories.map(category => ({
+    ...category,
+    questions: category.questions.filter(
       faq => 
         faq.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
         faq.answer.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    
-    if (filteredFaqs.length > 0) {
-      acc[key] = { ...category, faqs: filteredFaqs };
-    }
-    
-    return acc;
-  }, {} as typeof faqCategories);
+    )
+  })).filter(category => category.questions.length > 0);
 
   return (
     <>
-      <Navbar />
-      <Container className="py-12">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
-            <HelpCircle className="h-16 w-16 text-zyra-purple mx-auto mb-4" />
-            <h1 className="text-3xl font-bold mb-2">Frequently Asked Questions</h1>
-            <p className="text-gray-600">
-              Find answers to common questions about Zyra
-            </p>
-          </div>
-
-          <div className="mb-8">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search for answers..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+      <SEOHead 
+        title="FAQ - Frequently Asked Questions | Zyra"
+        description="Find answers to common questions about Zyra's custom products, shipping, returns, and more. Get help with your order today."
+        keywords="faq, help, support, questions, shipping, returns, customization"
+        url="https://zyra.lovable.app/faq"
+      />
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        
+        {/* Hero Section */}
+        <section className="relative py-20 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-purple-500/5 to-pink-500/5"></div>
+          <Container className="relative z-10">
+            <div className="text-center max-w-3xl mx-auto animate-fade-in">
+              <div className="flex items-center justify-center gap-4 mb-6">
+                <div className="relative">
+                  <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 via-purple-500/20 to-pink-500/20 rounded-full blur-xl animate-pulse"></div>
+                  <div className="relative bg-gradient-to-br from-primary/10 to-purple-500/10 p-4 rounded-2xl border border-primary/20 backdrop-blur-sm">
+                    <HelpCircle className="h-10 w-10 text-primary animate-pulse" />
+                  </div>
+                </div>
+              </div>
+              <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent mb-6 animate-scale-in">
+                Frequently Asked Questions
+              </h1>
+              <p className="text-xl text-muted-foreground leading-relaxed animate-slide-in-right">
+                Find quick answers to common questions about our products, shipping, returns, and more. 
+                Can't find what you're looking for? Contact our support team.
+              </p>
             </div>
-          </div>
+          </Container>
+        </section>
 
-          <Tabs defaultValue="general" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="general">General</TabsTrigger>
-              <TabsTrigger value="orders">Orders</TabsTrigger>
-              <TabsTrigger value="customization">Customization</TabsTrigger>
-              <TabsTrigger value="payments">Payments</TabsTrigger>
-            </TabsList>
-
-            {Object.entries(filteredFAQs).map(([key, category]) => (
-              <TabsContent key={key} value={key}>
-                <Accordion type="single" collapsible className="w-full">
-                  {category.faqs.map((faq, index) => (
-                    <AccordionItem key={index} value={`${key}-${index}`}>
-                      <AccordionTrigger className="text-left">
-                        {faq.question}
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        {faq.answer}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </TabsContent>
-            ))}
-          </Tabs>
-
-          {Object.keys(filteredFAQs).length === 0 && searchTerm && (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No FAQs found matching your search.</p>
+        {/* Search Section */}
+        <section className="py-8 bg-muted/30">
+          <Container>
+            <div className="max-w-2xl mx-auto animate-fade-in">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search frequently asked questions..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-12 pr-4 py-3 text-lg bg-background/80 backdrop-blur-sm border-2 border-border/50 focus:border-primary/50 transition-all duration-300 focus:scale-[1.02]"
+                />
+              </div>
             </div>
-          )}
+          </Container>
+        </section>
 
-          <div className="mt-12 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg text-center">
-            <h3 className="font-semibold mb-2">Still have questions?</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              Can't find what you're looking for? Our support team is here to help.
-            </p>
-            <a href="/contact" className="text-zyra-purple hover:underline">
-              Contact Support
-            </a>
-          </div>
-        </div>
-      </Container>
-      <Footer />
+        {/* FAQ Content */}
+        <section className="py-16">
+          <Container>
+            <div className="space-y-12">
+              {filteredFAQs.map((category, categoryIndex) => (
+                <div key={categoryIndex} className="animate-fade-in" style={{ animationDelay: `${categoryIndex * 100}ms` }}>
+                  <div className="text-center mb-8">
+                    <Badge className={`mb-4 bg-gradient-to-r ${category.color} text-white`}>
+                      {category.category}
+                    </Badge>
+                    <h2 className="text-3xl font-bold text-foreground">{category.category}</h2>
+                  </div>
+                  
+                  <div className="max-w-4xl mx-auto space-y-4">
+                    {category.questions.map((faq, index) => {
+                      const globalIndex = categoryIndex * 100 + index;
+                      const isOpen = openItems.includes(globalIndex);
+                      
+                      return (
+                        <Card 
+                          key={index} 
+                          className="bg-card/50 backdrop-blur-sm border border-border/50 hover:shadow-lg transition-all duration-300 animate-slide-in-right"
+                          style={{ animationDelay: `${index * 50}ms` }}
+                        >
+                          <Collapsible open={isOpen} onOpenChange={() => toggleItem(globalIndex)}>
+                            <CollapsibleTrigger className="w-full">
+                              <CardContent className="p-6">
+                                <div className="flex items-center justify-between text-left">
+                                  <h3 className="text-lg font-semibold text-foreground pr-4">
+                                    {faq.question}
+                                  </h3>
+                                  <div className="flex-shrink-0">
+                                    {isOpen ? (
+                                      <ChevronDown className="h-5 w-5 text-primary transition-transform duration-200" />
+                                    ) : (
+                                      <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform duration-200" />
+                                    )}
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <CardContent className="px-6 pb-6 pt-0">
+                                <div className="border-t border-border/50 pt-4">
+                                  <p className="text-muted-foreground leading-relaxed">
+                                    {faq.answer}
+                                  </p>
+                                </div>
+                              </CardContent>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {filteredFAQs.length === 0 && (
+              <div className="text-center py-12 animate-fade-in">
+                <HelpCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-2xl font-semibold mb-2 text-foreground">No results found</h3>
+                <p className="text-muted-foreground mb-6">
+                  We couldn't find any FAQs matching your search. Try different keywords or contact our support team.
+                </p>
+                <Badge className="bg-gradient-to-r from-primary to-purple-600">
+                  Contact Support for Help
+                </Badge>
+              </div>
+            )}
+          </Container>
+        </section>
+
+        <Footer />
+      </div>
     </>
   );
 };

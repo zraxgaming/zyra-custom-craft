@@ -1,7 +1,6 @@
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface Category {
   id: string;
@@ -15,51 +14,20 @@ export interface Category {
 }
 
 export const useCategories = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
-
-  const fetchCategories = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      console.log("Fetching categories...");
-
-      // Simple query without RLS dependencies
+  return useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
       const { data, error } = await supabase
-        .from("categories")
-        .select("*")
-        .order("sort_order", { ascending: true });
+        .from('categories')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
 
       if (error) {
-        console.error("Supabase error:", error);
-        throw error;
+        throw new Error(error.message);
       }
 
-      console.log("Categories data:", data);
-      setCategories(data || []);
-    } catch (error: any) {
-      console.error("Error fetching categories:", error);
-      setError(error.message);
-      toast({
-        title: "Error loading categories",
-        description: "Failed to load categories. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  return {
-    categories,
-    isLoading,
-    error,
-    refetch: fetchCategories
-  };
+      return data as Category[];
+    },
+  });
 };
