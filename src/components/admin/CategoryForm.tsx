@@ -1,170 +1,155 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Image, Save } from "lucide-react";
 
 interface CategoryFormProps {
-  onSuccess?: () => void;
+  onSuccess: () => void;
+  category?: any;
 }
 
-const CategoryForm: React.FC<CategoryFormProps> = ({ onSuccess }) => {
-  const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
-  const [description, setDescription] = useState("");
-  const [image, setImage] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+const CategoryForm: React.FC<CategoryFormProps> = ({ onSuccess, category }) => {
+  const [formData, setFormData] = useState({
+    name: category?.name || "",
+    description: category?.description || "",
+    image_url: category?.image_url || "",
+    icon: category?.icon || "",
+    sort_order: category?.sort_order || 0,
+    is_active: category?.is_active ?? true
+  });
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  // Generate slug from name
-  const handleNameChange = (value: string) => {
-    setName(value);
-    setSlug(value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''));
+  const generateSlug = (name: string) => {
+    return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!name || !slug) {
-      toast({
-        title: "Missing fields",
-        description: "Please provide a name for the category.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsSubmitting(true);
+    setIsLoading(true);
+
     try {
-      // First check if the slug already exists
-      const { data: existingCategory, error: checkError } = await supabase
-        .from("categories")
-        .select("slug")
-        .eq("slug", slug)
-        .maybeSingle();
-        
-      if (checkError) {
-        throw checkError;
-      }
+      const slug = generateSlug(formData.name);
       
-      if (existingCategory) {
+      const categoryData = {
+        ...formData,
+        slug,
+        sort_order: Number(formData.sort_order)
+      };
+
+      if (category) {
+        const { error } = await supabase
+          .from('categories')
+          .update(categoryData)
+          .eq('id', category.id);
+        
+        if (error) throw error;
+        
         toast({
-          title: "Category exists",
-          description: `A category with the slug "${slug}" already exists. Please use a different name.`,
-          variant: "destructive"
+          title: "Category updated",
+          description: "The category has been updated successfully.",
         });
-        setIsSubmitting(false);
-        return;
-      }
-      
-      // Create the category
-      const { data, error } = await supabase
-        .from("categories")
-        .insert({
-          name,
-          slug,
-          description,
-          image
-        })
-        .select()
-        .single();
+      } else {
+        const { error } = await supabase
+          .from('categories')
+          .insert(categoryData);
         
-      if (error) throw error;
-      
-      toast({
-        title: "Category created",
-        description: `The category "${name}" has been created successfully.`
-      });
-      
-      // Reset form
-      setName("");
-      setSlug("");
-      setDescription("");
-      setImage("");
-      
-      if (onSuccess) {
-        onSuccess();
+        if (error) throw error;
+        
+        toast({
+          title: "Category created",
+          description: "The category has been created successfully.",
+        });
       }
-      
+
+      onSuccess();
     } catch (error: any) {
-      console.error("Error creating category:", error);
       toast({
-        title: "Error creating category",
-        description: error.message || "An unexpected error occurred.",
-        variant: "destructive"
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
-  
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Add New Category</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name *</Label>
-            <Input 
-              id="name" 
-              value={name} 
-              onChange={(e) => handleNameChange(e.target.value)} 
-              placeholder="Category name"
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="slug">Slug *</Label>
-            <Input 
-              id="slug" 
-              value={slug} 
-              onChange={(e) => setSlug(e.target.value)}
-              placeholder="category-slug"
-              required
-            />
-            <p className="text-xs text-gray-500">
-              Used in URLs. Only lowercase letters, numbers, and hyphens.
-            </p>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea 
-              id="description" 
-              value={description} 
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description of the category"
-              rows={3}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="image">Image URL</Label>
-            <Input 
-              id="image" 
-              value={image} 
-              onChange={(e) => setImage(e.target.value)}
-              placeholder="https://example.com/image.jpg"
-            />
-          </div>
 
-          <CardFooter className="px-0 pt-4">
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Category
-            </Button>
-          </CardFooter>
-        </form>
-      </CardContent>
-    </Card>
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-2">
+        <Label htmlFor="name">Category Name</Label>
+        <Input
+          id="name"
+          value={formData.name}
+          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+          rows={3}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="image_url" className="flex items-center gap-2">
+          <Image className="h-4 w-4" />
+          Image URL
+        </Label>
+        <Input
+          id="image_url"
+          type="url"
+          value={formData.image_url}
+          onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
+          placeholder="https://example.com/image.jpg"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="icon">Icon (Emoji)</Label>
+        <Input
+          id="icon"
+          value={formData.icon}
+          onChange={(e) => setFormData(prev => ({ ...prev, icon: e.target.value }))}
+          placeholder="📱"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="sort_order">Sort Order</Label>
+        <Input
+          id="sort_order"
+          type="number"
+          value={formData.sort_order}
+          onChange={(e) => setFormData(prev => ({ ...prev, sort_order: Number(e.target.value) }))}
+        />
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <input
+          id="is_active"
+          type="checkbox"
+          checked={formData.is_active}
+          onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
+        />
+        <Label htmlFor="is_active">Active</Label>
+      </div>
+
+      <Button type="submit" disabled={isLoading} className="w-full">
+        <Save className="h-4 w-4 mr-2" />
+        {isLoading ? "Saving..." : (category ? "Update Category" : "Create Category")}
+      </Button>
+    </form>
   );
 };
 

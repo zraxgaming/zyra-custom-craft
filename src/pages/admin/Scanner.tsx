@@ -1,91 +1,52 @@
 
-import React, { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import React, { useState } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Camera, Upload, Search, Package } from "lucide-react";
-
-interface ScannedProduct {
-  id: string;
-  name: string;
-  sku: string;
-  barcode: string;
-  price: number;
-  in_stock: boolean;
-}
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { ScanLine, Search, Package, AlertCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } = "@/hooks/use-toast";
 
 const Scanner = () => {
+  const [scanResult, setScanResult] = useState("");
+  const [productInfo, setProductInfo] = useState<any>(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [manualCode, setManualCode] = useState("");
-  const [scannedProduct, setScannedProduct] = useState<ScannedProduct | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
 
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
-      });
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        setIsScanning(true);
-      }
-    } catch (error) {
-      toast({
-        title: "Camera access denied",
-        description: "Please allow camera access to scan barcodes.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const stopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-      tracks.forEach(track => track.stop());
-    }
-    setIsScanning(false);
-  };
-
-  const searchProduct = async (code: string) => {
-    if (!code.trim()) return;
+  const handleScan = async (barcode: string) => {
+    if (!barcode.trim()) return;
 
     setIsLoading(true);
     try {
+      // Search for product by barcode, SKU, or name
       const { data, error } = await supabase
-        .from("products")
-        .select("id, name, sku, barcode, price, in_stock")
-        .or(`barcode.eq.${code},sku.eq.${code}`)
-        .single();
+        .from('products')
+        .select('*')
+        .or(`barcode.eq.${barcode},sku.eq.${barcode},name.ilike.%${barcode}%`)
+        .limit(1);
 
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
+      if (error) throw error;
 
-      if (data) {
-        setScannedProduct(data);
+      if (data && data.length > 0) {
+        setProductInfo(data[0]);
         toast({
           title: "Product found",
-          description: `Found: ${data.name}`,
+          description: `Found: ${data[0].name}`,
         });
       } else {
-        setScannedProduct(null);
+        setProductInfo(null);
         toast({
           title: "Product not found",
-          description: "No product found with this code.",
+          description: "No product matches this barcode.",
           variant: "destructive",
         });
       }
     } catch (error: any) {
       toast({
-        title: "Search error",
+        title: "Scan error",
         description: error.message,
         variant: "destructive",
       });
@@ -94,166 +55,212 @@ const Scanner = () => {
     }
   };
 
-  const handleManualSearch = () => {
-    searchProduct(manualCode);
+  const startCamera = () => {
+    setIsScanning(true);
+    // In a real implementation, this would start the camera
+    toast({
+      title: "Camera scanning",
+      description: "Camera scanning would start here. Use manual input for now.",
+    });
   };
 
-  // Simulate barcode scanning (in production, integrate with a barcode scanning library)
-  const simulateScan = () => {
-    // This would be replaced with actual barcode detection
-    const mockBarcode = "1234567890123";
-    searchProduct(mockBarcode);
-    setManualCode(mockBarcode);
-  };
+  const updateStock = async (productId: string, newQuantity: number) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ stock_quantity: newQuantity })
+        .eq('id', productId);
 
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, []);
+      if (error) throw error;
+
+      setProductInfo(prev => ({ ...prev, stock_quantity: newQuantity }));
+      
+      toast({
+        title: "Stock updated",
+        description: "Product stock has been updated successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error updating stock",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <AdminLayout>
-      <div className="p-6 space-y-6">
-        <div className="flex justify-between items-center">
+      <div className="p-6 space-y-6 animate-fade-in">
+        <div>
           <h1 className="text-3xl font-bold text-foreground">Barcode Scanner</h1>
+          <p className="text-muted-foreground">Scan products and manage inventory</p>
         </div>
 
+        {/* Scanner Interface */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="bg-card border-border">
+          <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-slide-in-left">
             <CardHeader>
-              <CardTitle className="flex items-center text-foreground">
-                <Camera className="mr-2 h-5 w-5" />
-                Camera Scanner
+              <CardTitle className="flex items-center gap-2">
+                <ScanLine className="h-5 w-5" />
+                Scanner
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="relative">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  className="w-full h-64 bg-gray-900 rounded-lg"
-                  style={{ display: isScanning ? 'block' : 'none' }}
-                />
-                <canvas
-                  ref={canvasRef}
-                  className="hidden"
-                />
-                {!isScanning && (
-                  <div className="w-full h-64 bg-muted rounded-lg flex items-center justify-center">
-                    <div className="text-center">
-                      <Camera className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
-                      <p className="text-muted-foreground">Camera not active</p>
-                    </div>
+              <div className="aspect-square bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-border">
+                {isScanning ? (
+                  <div className="text-center">
+                    <ScanLine className="h-16 w-16 mx-auto text-primary animate-pulse" />
+                    <p className="text-muted-foreground mt-2">Scanning for barcode...</p>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <ScanLine className="h-16 w-16 mx-auto text-muted-foreground/50" />
+                    <p className="text-muted-foreground mt-2">Camera view will appear here</p>
                   </div>
                 )}
               </div>
 
-              <div className="flex gap-2">
-                {!isScanning ? (
-                  <Button onClick={startCamera} className="flex-1">
-                    <Camera className="mr-2 h-4 w-4" />
-                    Start Camera
-                  </Button>
-                ) : (
-                  <>
-                    <Button onClick={stopCamera} variant="outline" className="flex-1">
-                      Stop Camera
-                    </Button>
-                    <Button onClick={simulateScan} className="flex-1">
-                      Simulate Scan
-                    </Button>
-                  </>
-                )}
+              <Button 
+                onClick={startCamera} 
+                className="w-full"
+                disabled={isScanning}
+              >
+                <ScanLine className="h-4 w-4 mr-2" />
+                {isScanning ? "Scanning..." : "Start Camera Scanner"}
+              </Button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Or scan manually</span>
+                </div>
               </div>
 
-              <p className="text-sm text-muted-foreground text-center">
-                Point your camera at a barcode to scan it automatically
-              </p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter barcode or product name..."
+                  value={scanResult}
+                  onChange={(e) => setScanResult(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleScan(scanResult)}
+                />
+                <Button 
+                  onClick={() => handleScan(scanResult)}
+                  disabled={isLoading || !scanResult.trim()}
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-border">
+          {/* Product Information */}
+          <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-slide-in-right">
             <CardHeader>
-              <CardTitle className="flex items-center text-foreground">
-                <Search className="mr-2 h-5 w-5" />
-                Manual Search
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Product Information
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="manual-code" className="text-foreground">
-                  Enter Barcode or SKU
-                </Label>
-                <Input
-                  id="manual-code"
-                  value={manualCode}
-                  onChange={(e) => setManualCode(e.target.value)}
-                  placeholder="Enter barcode or SKU"
-                  className="bg-background text-foreground border-border"
-                  onKeyPress={(e) => e.key === 'Enter' && handleManualSearch()}
-                />
-              </div>
+            <CardContent>
+              {productInfo ? (
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-lg font-medium">{productInfo.name}</h3>
+                      <p className="text-sm text-muted-foreground">{productInfo.category}</p>
+                    </div>
+                    <Badge variant={productInfo.in_stock ? "default" : "destructive"}>
+                      {productInfo.in_stock ? "In Stock" : "Out of Stock"}
+                    </Badge>
+                  </div>
 
-              <Button 
-                onClick={handleManualSearch} 
-                disabled={isLoading || !manualCode.trim()}
-                className="w-full"
-              >
-                {isLoading ? (
-                  "Searching..."
-                ) : (
-                  <>
-                    <Search className="mr-2 h-4 w-4" />
-                    Search Product
-                  </>
-                )}
-              </Button>
+                  {productInfo.images && productInfo.images.length > 0 && (
+                    <img 
+                      src={productInfo.images[0]} 
+                      alt={productInfo.name}
+                      className="w-full h-32 object-cover rounded-lg"
+                    />
+                  )}
 
-              <div className="text-sm text-muted-foreground">
-                <p>You can search by:</p>
-                <ul className="list-disc list-inside mt-1">
-                  <li>Product barcode</li>
-                  <li>Product SKU</li>
-                </ul>
-              </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Price</p>
+                      <p className="font-medium">${productInfo.price}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">SKU</p>
+                      <p className="font-medium">{productInfo.sku || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Current Stock</p>
+                      <p className="font-medium">{productInfo.stock_quantity}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Status</p>
+                      <p className="font-medium">{productInfo.status}</p>
+                    </div>
+                  </div>
+
+                  {productInfo.description && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Description</p>
+                      <p className="text-sm">{productInfo.description}</p>
+                    </div>
+                  )}
+
+                  <div className="pt-4 border-t">
+                    <p className="text-sm font-medium mb-2">Quick Stock Actions</p>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => updateStock(productInfo.id, productInfo.stock_quantity - 1)}
+                        disabled={productInfo.stock_quantity === 0}
+                      >
+                        -1
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => updateStock(productInfo.id, productInfo.stock_quantity + 1)}
+                      >
+                        +1
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => updateStock(productInfo.id, productInfo.stock_quantity + 10)}
+                      >
+                        +10
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Package className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">No product selected</h3>
+                  <p className="text-muted-foreground">Scan or search for a product to view details</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        {scannedProduct && (
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="flex items-center text-foreground">
-                <Package className="mr-2 h-5 w-5" />
-                Scanned Product
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">Product Name</Label>
-                  <p className="font-medium text-foreground">{scannedProduct.name}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">SKU</Label>
-                  <p className="font-mono text-foreground">{scannedProduct.sku || 'N/A'}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Price</Label>
-                  <p className="font-medium text-foreground">${scannedProduct.price.toFixed(2)}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Stock Status</Label>
-                  <p className={`font-medium ${scannedProduct.in_stock ? 'text-green-600' : 'text-red-600'}`}>
-                    {scannedProduct.in_stock ? 'In Stock' : 'Out of Stock'}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Recent Scans */}
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-fade-in" style={{ animationDelay: '400ms' }}>
+          <CardHeader>
+            <CardTitle>Recent Scans</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <AlertCircle className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+              <p className="text-muted-foreground">Recent scan history will appear here</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </AdminLayout>
   );

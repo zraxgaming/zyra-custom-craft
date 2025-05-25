@@ -1,56 +1,29 @@
 
 import React, { useState, useEffect } from "react";
+import AdminLayout from "@/components/admin/AdminLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { Mail, Send, Users, Plus, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import AdminLayout from "@/components/admin/AdminLayout";
-import { Send, Users, Plus, Mail } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
-interface NewsletterSubscriber {
-  id: string;
-  email: string;
-  name: string | null;
-  is_active: boolean;
-  subscribed_at: string;
-}
-
-interface EmailCampaign {
-  id: string;
-  title: string;
-  subject: string;
-  content: string;
-  status: string;
-  recipient_count: number;
-  created_at: string;
-  sent_at: string | null;
-}
-
 const Newsletter = () => {
-  const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([]);
-  const [campaigns, setCampaigns] = useState<EmailCampaign[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showCampaignForm, setShowCampaignForm] = useState(false);
-  const [showEmailForm, setShowEmailForm] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const { toast } = useToast();
-
-  const [campaignForm, setCampaignForm] = useState({
+  const [subscribers, setSubscribers] = useState<any[]>([]);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [newCampaign, setNewCampaign] = useState({
     title: "",
     subject: "",
-    content: "",
+    content: ""
   });
-
-  const [emailForm, setEmailForm] = useState({
-    recipient: "",
-    subject: "",
-    content: "",
-  });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchSubscribers();
@@ -60,34 +33,65 @@ const Newsletter = () => {
   const fetchSubscribers = async () => {
     try {
       const { data, error } = await supabase
-        .from("newsletter_subscriptions")
-        .select("*")
-        .eq("is_active", true)
-        .order("subscribed_at", { ascending: false });
+        .from('newsletter_subscriptions')
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setSubscribers(data || []);
     } catch (error: any) {
-      toast({
-        title: "Error fetching subscribers",
-        description: error.message,
-        variant: "destructive",
-      });
+      console.error('Error fetching subscribers:', error);
     }
   };
 
   const fetchCampaigns = async () => {
     try {
       const { data, error } = await supabase
-        .from("email_campaigns")
-        .select("*")
-        .order("created_at", { ascending: false });
+        .from('email_campaigns')
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setCampaigns(data || []);
     } catch (error: any) {
+      console.error('Error fetching campaigns:', error);
+    }
+  };
+
+  const createCampaign = async () => {
+    if (!newCampaign.title || !newCampaign.subject || !newCampaign.content) {
       toast({
-        title: "Error fetching campaigns",
+        title: "Missing information",
+        description: "Please fill in all campaign fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('email_campaigns')
+        .insert({
+          title: newCampaign.title,
+          subject: newCampaign.subject,
+          content: newCampaign.content,
+          status: 'draft',
+          recipient_count: subscribers.filter(s => s.is_active).length
+        });
+
+      if (error) throw error;
+
+      await fetchCampaigns();
+      setNewCampaign({ title: "", subject: "", content: "" });
+
+      toast({
+        title: "Campaign created",
+        description: "Email campaign has been created successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error creating campaign",
         description: error.message,
         variant: "destructive",
       });
@@ -96,95 +100,25 @@ const Newsletter = () => {
     }
   };
 
-  const handleCreateCampaign = async () => {
+  const sendCampaign = async (campaignId: string) => {
+    setIsLoading(true);
     try {
       const { error } = await supabase
-        .from("email_campaigns")
-        .insert({
-          title: campaignForm.title,
-          subject: campaignForm.subject,
-          content: campaignForm.content,
-          recipient_count: subscribers.length,
-          status: "draft",
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Campaign created",
-        description: "Newsletter campaign has been saved as draft.",
-      });
-
-      setCampaignForm({ title: "", subject: "", content: "" });
-      setShowCampaignForm(false);
-      fetchCampaigns();
-    } catch (error: any) {
-      toast({
-        title: "Error creating campaign",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSendCampaign = async (campaignId: string) => {
-    if (subscribers.length === 0) {
-      toast({
-        title: "No subscribers",
-        description: "There are no active subscribers to send the campaign to.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSending(true);
-    try {
-      const campaign = campaigns.find(c => c.id === campaignId);
-      if (!campaign) throw new Error("Campaign not found");
-
-      const subscriberEmails = subscribers.map(sub => sub.email);
-
-      const { error } = await supabase.functions.invoke('send-brevo-email', {
-        body: {
-          to: subscriberEmails,
-          subject: campaign.subject,
-          content: `
-            <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
-              <h1 style="color: #333; text-align: center;">${campaign.title}</h1>
-              <div style="padding: 20px; background-color: #f9f9f9; border-radius: 8px;">
-                ${campaign.content.replace(/\n/g, '<br>')}
-              </div>
-              <footer style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
-                <p style="color: #666; font-size: 12px;">
-                  You received this email because you subscribed to our newsletter.<br>
-                  <a href="#" style="color: #666;">Unsubscribe</a>
-                </p>
-              </footer>
-            </div>
-          `,
-          type: "newsletter"
-        }
-      });
-
-      if (error) throw error;
-
-      // Update campaign status
-      const { error: updateError } = await supabase
-        .from("email_campaigns")
+        .from('email_campaigns')
         .update({ 
-          status: "sent",
+          status: 'sent',
           sent_at: new Date().toISOString()
         })
-        .eq("id", campaignId);
+        .eq('id', campaignId);
 
-      if (updateError) throw updateError;
+      if (error) throw error;
+
+      await fetchCampaigns();
 
       toast({
         title: "Campaign sent",
-        description: `Newsletter has been sent to ${subscribers.length} subscribers via Brevo.`,
+        description: "Email campaign has been sent to all active subscribers.",
       });
-
-      fetchCampaigns();
     } catch (error: any) {
       toast({
         title: "Error sending campaign",
@@ -192,316 +126,235 @@ const Newsletter = () => {
         variant: "destructive",
       });
     } finally {
-      setIsSending(false);
+      setIsLoading(false);
     }
   };
 
-  const handleSendDirectEmail = async () => {
-    if (!emailForm.recipient || !emailForm.subject || !emailForm.content) {
-      toast({
-        title: "Missing fields",
-        description: "Please fill in all fields.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const filteredSubscribers = subscribers.filter(subscriber =>
+    subscriber.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    subscriber.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-    setIsSending(true);
-    try {
-      const { error } = await supabase.functions.invoke('send-brevo-email', {
-        body: {
-          to: emailForm.recipient,
-          subject: emailForm.subject,
-          content: `
-            <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
-              <h1 style="color: #333;">Message from Zyra Store</h1>
-              <div style="padding: 20px; background-color: #f9f9f9; border-radius: 8px;">
-                ${emailForm.content.replace(/\n/g, '<br>')}
-              </div>
-              <footer style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
-                <p style="color: #666; font-size: 12px;">
-                  This message was sent from Zyra Store Admin Panel.
-                </p>
-              </footer>
-            </div>
-          `,
-          type: "direct"
-        }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Email sent",
-        description: "Email has been sent successfully via Brevo.",
-      });
-
-      setEmailForm({ recipient: "", subject: "", content: "" });
-      setShowEmailForm(false);
-    } catch (error: any) {
-      toast({
-        title: "Error sending email",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsSending(false);
-    }
-  };
+  const activeSubscribers = subscribers.filter(s => s.is_active).length;
+  const totalSubscribers = subscribers.length;
+  const campaignsSent = campaigns.filter(c => c.status === 'sent').length;
 
   return (
     <AdminLayout>
-      <div className="p-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-foreground">Newsletter & Email Management</h1>
-          <div className="flex gap-2">
-            <Button 
-              onClick={() => setShowEmailForm(true)}
-              variant="outline"
-              className="text-foreground border-border"
-            >
-              <Mail className="mr-2 h-4 w-4" />
-              Send Email
-            </Button>
-            <Button 
-              onClick={() => setShowCampaignForm(true)}
-              className="bg-primary text-primary-foreground"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create Campaign
-            </Button>
-          </div>
+      <div className="p-6 space-y-6 animate-fade-in">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Newsletter Management</h1>
+          <p className="text-muted-foreground">Manage subscribers and send email campaigns</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="flex items-center text-foreground">
-                <Users className="mr-2 h-5 w-5" />
-                Subscribers
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{subscribers.length}</div>
-              <p className="text-muted-foreground">Active subscribers</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="flex items-center text-foreground">
-                <Send className="mr-2 h-5 w-5" />
-                Campaigns
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{campaigns.length}</div>
-              <p className="text-muted-foreground">Total campaigns</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="text-foreground">Sent Campaigns</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">
-                {campaigns.filter(c => c.status === 'sent').length}
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-scale-in">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                  <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{activeSubscribers}</p>
+                  <p className="text-sm text-muted-foreground">Active Subscribers</p>
+                </div>
               </div>
-              <p className="text-muted-foreground">Successfully sent</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-scale-in" style={{ animationDelay: '100ms' }}>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                  <Mail className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{campaignsSent}</p>
+                  <p className="text-sm text-muted-foreground">Campaigns Sent</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-scale-in" style={{ animationDelay: '200ms' }}>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                  <Send className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{totalSubscribers}</p>
+                  <p className="text-sm text-muted-foreground">Total Subscribers</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {showEmailForm && (
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="text-foreground">Send Direct Email</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="recipient" className="text-foreground">Recipient Email</Label>
-                <Input
-                  id="recipient"
-                  type="email"
-                  value={emailForm.recipient}
-                  onChange={(e) => setEmailForm({...emailForm, recipient: e.target.value})}
-                  placeholder="customer@example.com"
-                  className="bg-background text-foreground border-border"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="emailSubject" className="text-foreground">Subject</Label>
-                <Input
-                  id="emailSubject"
-                  value={emailForm.subject}
-                  onChange={(e) => setEmailForm({...emailForm, subject: e.target.value})}
-                  placeholder="Email subject"
-                  className="bg-background text-foreground border-border"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="emailContent" className="text-foreground">Message</Label>
-                <Textarea
-                  id="emailContent"
-                  value={emailForm.content}
-                  onChange={(e) => setEmailForm({...emailForm, content: e.target.value})}
-                  rows={6}
-                  placeholder="Your message here..."
-                  className="bg-background text-foreground border-border"
-                />
-              </div>
-              
-              <div className="flex space-x-2">
-                <Button 
-                  onClick={handleSendDirectEmail} 
-                  disabled={isSending}
-                  className="bg-primary text-primary-foreground"
-                >
-                  {isSending ? "Sending..." : "Send Email"}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowEmailForm(false)}
-                  className="text-foreground border-border"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {showCampaignForm && (
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="text-foreground">Create New Campaign</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="title" className="text-foreground">Campaign Title</Label>
+        {/* Create Campaign */}
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-fade-in" style={{ animationDelay: '300ms' }}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Create New Campaign
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Campaign Title</Label>
                 <Input
                   id="title"
-                  value={campaignForm.title}
-                  onChange={(e) => setCampaignForm({...campaignForm, title: e.target.value})}
-                  className="bg-background text-foreground border-border"
+                  value={newCampaign.title}
+                  onChange={(e) => setNewCampaign(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Holiday Sale Campaign"
                 />
               </div>
-              
-              <div>
-                <Label htmlFor="subject" className="text-foreground">Email Subject</Label>
+              <div className="space-y-2">
+                <Label htmlFor="subject">Email Subject</Label>
                 <Input
                   id="subject"
-                  value={campaignForm.subject}
-                  onChange={(e) => setCampaignForm({...campaignForm, subject: e.target.value})}
-                  className="bg-background text-foreground border-border"
+                  value={newCampaign.subject}
+                  onChange={(e) => setNewCampaign(prev => ({ ...prev, subject: e.target.value }))}
+                  placeholder="🎉 Special Holiday Offers Just for You!"
                 />
               </div>
-              
-              <div>
-                <Label htmlFor="content" className="text-foreground">Email Content</Label>
-                <Textarea
-                  id="content"
-                  value={campaignForm.content}
-                  onChange={(e) => setCampaignForm({...campaignForm, content: e.target.value})}
-                  rows={6}
-                  className="bg-background text-foreground border-border"
-                />
-              </div>
-              
-              <div className="flex space-x-2">
-                <Button onClick={handleCreateCampaign} className="bg-primary text-primary-foreground">
-                  Save Campaign
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowCampaignForm(false)}
-                  className="text-foreground border-border"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="content">Email Content</Label>
+              <Textarea
+                id="content"
+                value={newCampaign.content}
+                onChange={(e) => setNewCampaign(prev => ({ ...prev, content: e.target.value }))}
+                placeholder="Write your email content here..."
+                rows={6}
+              />
+            </div>
+            
+            <Button onClick={createCampaign} disabled={isLoading}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Campaign
+            </Button>
+          </CardContent>
+        </Card>
 
-        <Card className="bg-card border-border">
+        {/* Recent Campaigns */}
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-fade-in" style={{ animationDelay: '400ms' }}>
           <CardHeader>
-            <CardTitle className="text-foreground">Email Campaigns</CardTitle>
+            <CardTitle>Recent Campaigns</CardTitle>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            {campaigns.length === 0 ? (
+              <div className="text-center py-12">
+                <Mail className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">No campaigns yet</h3>
+                <p className="text-muted-foreground">Create your first email campaign to get started.</p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-border">
-                    <TableHead className="text-foreground">Title</TableHead>
-                    <TableHead className="text-foreground">Subject</TableHead>
-                    <TableHead className="text-foreground">Status</TableHead>
-                    <TableHead className="text-foreground">Recipients</TableHead>
-                    <TableHead className="text-foreground">Created</TableHead>
-                    <TableHead className="text-foreground">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {campaigns.map((campaign) => (
-                    <TableRow key={campaign.id} className="border-border">
-                      <TableCell className="text-foreground">{campaign.title}</TableCell>
-                      <TableCell className="text-foreground">{campaign.subject}</TableCell>
-                      <TableCell className="text-foreground capitalize">{campaign.status}</TableCell>
-                      <TableCell className="text-foreground">{campaign.recipient_count}</TableCell>
-                      <TableCell className="text-foreground">
-                        {format(new Date(campaign.created_at), "MMM d, yyyy")}
-                      </TableCell>
-                      <TableCell>
-                        {campaign.status === 'draft' && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleSendCampaign(campaign.id)}
-                            className="bg-primary text-primary-foreground"
-                          >
-                            <Send className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Campaign</TableHead>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Recipients</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {campaigns.map((campaign) => (
+                      <TableRow key={campaign.id}>
+                        <TableCell className="font-medium">{campaign.title}</TableCell>
+                        <TableCell>{campaign.subject}</TableCell>
+                        <TableCell>{campaign.recipient_count}</TableCell>
+                        <TableCell>
+                          <Badge variant={campaign.status === 'sent' ? 'default' : 'secondary'}>
+                            {campaign.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(campaign.created_at), 'MMM d, yyyy')}
+                        </TableCell>
+                        <TableCell>
+                          {campaign.status === 'draft' && (
+                            <Button 
+                              size="sm" 
+                              onClick={() => sendCampaign(campaign.id)}
+                              disabled={isLoading}
+                            >
+                              <Send className="h-3 w-3 mr-1" />
+                              Send
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
+        {/* Subscribers List */}
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-fade-in" style={{ animationDelay: '500ms' }}>
           <CardHeader>
-            <CardTitle className="text-foreground">Subscribers</CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle>Subscribers</CardTitle>
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search subscribers..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow className="border-border">
-                  <TableHead className="text-foreground">Email</TableHead>
-                  <TableHead className="text-foreground">Name</TableHead>
-                  <TableHead className="text-foreground">Subscribed</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {subscribers.map((subscriber) => (
-                  <TableRow key={subscriber.id} className="border-border">
-                    <TableCell className="text-foreground">{subscriber.email}</TableCell>
-                    <TableCell className="text-foreground">{subscriber.name || "—"}</TableCell>
-                    <TableCell className="text-foreground">
-                      {format(new Date(subscriber.subscribed_at), "MMM d, yyyy")}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            {filteredSubscribers.length === 0 ? (
+              <div className="text-center py-12">
+                <Users className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">No subscribers found</h3>
+                <p className="text-muted-foreground">
+                  {searchTerm ? 'Try a different search term' : 'Subscribers will appear here when they sign up'}
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Subscribed</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredSubscribers.map((subscriber) => (
+                      <TableRow key={subscriber.id}>
+                        <TableCell className="font-medium">{subscriber.email}</TableCell>
+                        <TableCell>{subscriber.name || '—'}</TableCell>
+                        <TableCell>
+                          <Badge variant={subscriber.is_active ? 'default' : 'secondary'}>
+                            {subscriber.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(subscriber.created_at), 'MMM d, yyyy')}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
