@@ -17,6 +17,7 @@ export interface OrderItem {
   price: number;
   customization?: any;
   product?: {
+    id: string;
     name: string;
     images?: string[];
   };

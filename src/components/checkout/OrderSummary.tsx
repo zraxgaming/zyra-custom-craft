@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Separator } from "@/components/ui/separator";
-import { CartItem } from "@/types/cart";
+import { CartItem } from "@/components/cart/CartProvider";
 
 export interface OrderSummaryProps {
   items: CartItem[];

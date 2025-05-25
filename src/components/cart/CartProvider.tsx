@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +11,13 @@ export type CartItem = {
   quantity: number;
   image?: string;
   customization?: Record<string, any>;
+  product: {
+    id: string;
+    name: string;
+    price: number;
+    images?: string[];
+    slug: string;
+  };
 };
 
 type CartState = {
@@ -87,7 +93,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Sync with localStorage for non-logged in users
   useEffect(() => {
     if (!user) {
       const savedCart = localStorage.getItem("cart");
@@ -102,14 +107,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
-  // Save to localStorage when cart changes (for non-logged in users)
   useEffect(() => {
     if (!user) {
       localStorage.setItem("cart", JSON.stringify(state.items));
     }
   }, [state.items, user]);
 
-  // Sync with database when logged in
   useEffect(() => {
     const syncCartWithDatabase = async () => {
       if (!user) return;
@@ -123,9 +126,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             quantity,
             customization,
             products!inner (
+              id,
               name,
               price,
-              images
+              images,
+              slug
             )
           `)
           .eq('user_id', user.id);
@@ -143,6 +148,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
               ? item.products.images[0] 
               : undefined,
             customization: item.customization,
+            product: {
+              id: item.products?.id || item.product_id,
+              name: item.products?.name || 'Unknown Product',
+              price: item.products?.price || 0,
+              images: item.products?.images || [],
+              slug: item.products?.slug || ''
+            }
           }));
 
           dispatch({ type: "SET_CART", payload: mappedItems });
@@ -157,7 +169,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
-  // Add item to cart
   const addItem = async (item: Omit<CartItem, "id">) => {
     const cartItem = {
       ...item,
@@ -215,7 +226,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  // Remove item from cart
   const removeItem = async (id: string) => {
     const itemToRemove = state.items.find((item) => item.id === id);
     
@@ -242,7 +252,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Update quantity
   const updateQuantity = async (id: string, quantity: number) => {
     if (quantity < 1) {
       removeItem(id);
@@ -268,7 +277,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Clear cart
   const clearCart = async () => {
     dispatch({ type: "CLEAR_CART" });
 
@@ -286,20 +294,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Toggle cart visibility
   const toggleCart = () => {
     dispatch({ type: "TOGGLE_CART" });
   };
 
-  // Calculate total items
   const totalItems = state.items.reduce(
     (total, item) => total + item.quantity,
     0
   );
 
-  // Calculate subtotal
   const subtotal = state.items.reduce(
-    (total, item) => total + item.price * item.quantity,
+    (total, item) => total + item.product.price * item.quantity,
     0
   );
 

@@ -1,5 +1,12 @@
 
 export interface CartItem {
+  id: string;
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  image?: string;
+  customization?: Record<string, any>;
   product: {
     id: string;
     name: string;
@@ -7,8 +14,6 @@ export interface CartItem {
     images?: string[];
     slug: string;
   };
-  quantity: number;
-  customization?: any;
 }
 
 export interface CartContextType {
