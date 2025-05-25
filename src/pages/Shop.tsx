@@ -14,10 +14,10 @@ import SEOHead from "@/components/seo/SEOHead";
 
 const Shop = () => {
   const [searchParams] = useSearchParams();
-  const { products, isLoading, error } = useProducts();
+  const { data: products = [], isLoading, error } = useProducts();
   
   // Transform products to match the filter hook's Product interface
-  const transformedProducts = (products || []).map(product => ({
+  const transformedProducts = products.map(product => ({
     id: product.id,
     name: product.name,
     price: product.price,
@@ -50,7 +50,6 @@ const Shop = () => {
     const originalProduct = products?.find(p => p.id === filteredProduct.id);
     return originalProduct ? {
       ...originalProduct,
-      // Ensure all required properties exist with proper defaults
       description: originalProduct.description || "",
       images: originalProduct.images || [],
       slug: originalProduct.slug || originalProduct.id,
@@ -58,8 +57,10 @@ const Shop = () => {
       review_count: originalProduct.review_count || 0,
       is_new: originalProduct.is_new || false,
       discount_percentage: originalProduct.discount_percentage || 0,
-      status: originalProduct.status || "published",
-      featured: originalProduct.featured || false
+      status: originalProduct.status || "published" as const,
+      featured: originalProduct.featured || false,
+      is_customizable: originalProduct.is_customizable || false,
+      is_digital: originalProduct.is_digital || false
     } : {
       ...filteredProduct,
       description: "",
@@ -70,7 +71,9 @@ const Shop = () => {
       is_new: false,
       discount_percentage: 0,
       status: "published" as const,
-      featured: filteredProduct.featured || false
+      featured: filteredProduct.featured || false,
+      is_customizable: false,
+      is_digital: false
     };
   });
 
@@ -87,7 +90,7 @@ const Shop = () => {
           <div className="text-center animate-fade-in">
             <Package className="mx-auto h-16 w-16 text-muted-foreground mb-4 animate-bounce" />
             <h1 className="text-2xl font-bold mb-4 text-foreground">Error Loading Products</h1>
-            <p className="text-muted-foreground">{error}</p>
+            <p className="text-muted-foreground">{error?.message || 'Unknown error occurred'}</p>
           </div>
         </Container>
         <Footer />
@@ -119,6 +122,15 @@ const Shop = () => {
       }))
     }
   };
+
+  // Transform categories to match expected interface
+  const categoryOptions = categories.map(category => ({
+    name: category,
+    id: category
+  }));
+
+  // Ensure priceRange is a tuple
+  const priceRangeTuple: [number, number] = [priceRange[0] || 0, priceRange[1] || maxPrice];
 
   return (
     <>
@@ -188,10 +200,10 @@ const Shop = () => {
                 <div className="sticky top-4">
                   <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-lg">
                     <ProductFilters
-                      categories={categories}
+                      categories={categoryOptions}
                       selectedCategories={selectedCategories}
                       onCategoryChange={toggleCategory}
-                      priceRange={priceRange}
+                      priceRange={priceRangeTuple}
                       onPriceRangeChange={setPriceRange}
                       maxPrice={maxPrice}
                       showInStockOnly={showInStockOnly}

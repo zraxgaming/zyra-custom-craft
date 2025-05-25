@@ -10,8 +10,8 @@ import Categories from "@/components/home/Categories";
 import Newsletter from "@/components/home/Newsletter";
 
 const Index = () => {
-  const { products } = useProducts();
-  const { categories } = useCategories();
+  const { data: products = [] } = useProducts();
+  const { data: categories = [] } = useCategories();
   
   const featuredProducts = products.filter(p => p.is_new || p.discount_percentage > 0 || p.featured).slice(0, 8);
 

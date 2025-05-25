@@ -24,6 +24,8 @@ export interface Product {
     slug: string;
   };
   stock_quantity?: number;
+  is_customizable: boolean;
+  is_digital: boolean;
 }
 
 export const useProducts = () => {
@@ -54,7 +56,9 @@ export const useProducts = () => {
         discount_percentage: product.discount_percentage || 0,
         featured: product.featured || false,
         images: Array.isArray(product.images) ? product.images : [],
-        category: product.categories?.name || product.category || 'Uncategorized'
+        category: product.categories?.name || product.category || 'Uncategorized',
+        is_customizable: product.is_customizable || false,
+        is_digital: product.is_digital || false
       })) as Product[];
     },
   });
