@@ -22,9 +22,9 @@ const Shop = () => {
     price: product.price,
     category: product.category || "Uncategorized",
     in_stock: product.in_stock,
-    rating: product.rating,
-    created_at: product.created_at,
-    featured: product.featured
+    rating: product.rating || 0,
+    created_at: product.created_at || new Date().toISOString(),
+    featured: product.featured || false
   }));
 
   const {
@@ -47,7 +47,26 @@ const Shop = () => {
   // Transform filtered products back to full Product type for display
   const fullFilteredProducts = filteredProducts.map(filteredProduct => {
     const originalProduct = products?.find(p => p.id === filteredProduct.id);
-    return originalProduct || filteredProduct;
+    return originalProduct ? {
+      ...originalProduct,
+      // Ensure all required properties exist
+      description: originalProduct.description || "",
+      images: originalProduct.images || [],
+      slug: originalProduct.slug || originalProduct.id,
+      review_count: originalProduct.review_count || 0,
+      is_new: originalProduct.is_new || false,
+      discount_percentage: originalProduct.discount_percentage || 0,
+      status: originalProduct.status || "published"
+    } : {
+      ...filteredProduct,
+      description: "",
+      images: [],
+      slug: filteredProduct.id,
+      review_count: 0,
+      is_new: false,
+      discount_percentage: 0,
+      status: "published"
+    };
   });
 
   if (error) {

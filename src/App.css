@@ -65,9 +65,25 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground transition-colors duration-300;
-    background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0);
-    background-size: 20px 20px;
+    @apply bg-background text-foreground transition-colors duration-500;
+    /* Modern geometric pattern background */
+    background-image: 
+      linear-gradient(45deg, hsl(var(--muted)) 25%, transparent 25%),
+      linear-gradient(-45deg, hsl(var(--muted)) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, hsl(var(--muted)) 75%),
+      linear-gradient(-45deg, transparent 75%, hsl(var(--muted)) 75%);
+    background-size: 40px 40px;
+    background-position: 0 0, 0 20px, 20px -20px, -20px 0px;
+    background-attachment: fixed;
+  }
+  
+  .dark body {
+    /* Darker geometric pattern for dark mode */
+    background-image: 
+      linear-gradient(45deg, rgba(255,255,255,0.02) 25%, transparent 25%),
+      linear-gradient(-45deg, rgba(255,255,255,0.02) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.02) 75%),
+      linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.02) 75%);
   }
 }
 
@@ -75,11 +91,11 @@
 @keyframes fade-in {
   0% {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(30px) scale(0.95);
   }
   100% {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -185,6 +201,18 @@
   }
 }
 
+@keyframes gradient-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
 /* Animation Classes */
 .animate-fade-in {
   animation: fade-in 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
@@ -218,6 +246,11 @@
   animation: wiggle 1s ease-in-out;
 }
 
+.animate-gradient-flow {
+  animation: gradient-flow 3s ease infinite;
+  background-size: 200% 200%;
+}
+
 /* Interactive Elements */
 .btn-animate {
   @apply transition-all duration-500 hover:scale-110 hover:shadow-2xl active:scale-95 transform-gpu;
@@ -234,12 +267,21 @@
   @apply transition-all duration-300 focus:scale-[1.02] focus:shadow-xl transform-gpu;
 }
 
+/* Dark mode specific enhancements */
+.dark .card-hover {
+  @apply hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)];
+}
+
+.dark .btn-animate {
+  background: linear-gradient(45deg, transparent, rgba(255,255,255,0.05), transparent);
+}
+
 /* Smooth transitions for all interactive elements */
 button, a, input, textarea, select {
   @apply transition-all duration-300 transform-gpu;
 }
 
-/* Custom scrollbar */
+/* Enhanced scrollbar for both light and dark modes */
 ::-webkit-scrollbar {
   width: 12px;
 }
@@ -256,11 +298,23 @@ button, a, input, textarea, select {
   @apply bg-gradient-to-b from-primary to-purple-600;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  @apply bg-gradient-to-b from-primary/80 to-purple-600/80;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  @apply bg-gradient-to-b from-primary to-purple-600;
+}
+
 /* Loading animations */
 .loading-shimmer {
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
+}
+
+.dark .loading-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
 }
 
 /* Text animations */
@@ -285,22 +339,22 @@ button, a, input, textarea, select {
   @apply bg-gradient-to-r from-secondary to-muted text-secondary-foreground transition-all duration-500 hover:scale-105 hover:shadow-xl active:scale-95 transform-gpu;
 }
 
-/* Notification animations */
-.notification-enter {
-  animation: slide-in-right 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.notification-exit {
-  animation: slide-in-right 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) reverse;
-}
-
-/* Special effects */
+/* Enhanced glass morphism effects */
 .glass-effect {
   @apply bg-white/10 backdrop-blur-md border border-white/20;
 }
 
+.dark .glass-effect {
+  @apply bg-black/20 backdrop-blur-md border border-white/10;
+}
+
 .neon-glow {
   box-shadow: 0 0 20px currentColor, 0 0 40px currentColor, 0 0 60px currentColor;
+}
+
+/* Theme transition enhancement */
+* {
+  transition: background-color 0.5s ease, border-color 0.5s ease, color 0.5s ease;
 }
 
 /* Responsive animations */
@@ -309,5 +363,17 @@ button, a, input, textarea, select {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  
+  .no-print {
+    display: none !important;
   }
 }
