@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -303,10 +304,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     0
   );
 
-  const subtotal = state.items.reduce(
-    (total, item) => total + item.product.price * item.quantity,
-    0
-  );
+  const subtotal = state.items.reduce((total, item) => {
+    // Safe access to price with fallback
+    const itemPrice = item.product?.price || item.price || 0;
+    return total + (itemPrice * item.quantity);
+  }, 0);
 
   const value = {
     state,

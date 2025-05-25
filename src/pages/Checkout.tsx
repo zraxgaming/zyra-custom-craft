@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +48,7 @@ const Checkout = () => {
   }, [cartState.items, authLoading, navigate, toast]);
 
   const subtotal = cartState.items.reduce((total, item) => {
+    // Safe access to price with proper fallback
     const itemPrice = item.product?.price || item.price || 0;
     return total + (itemPrice * item.quantity);
   }, 0);

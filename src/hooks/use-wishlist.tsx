@@ -34,8 +34,9 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     
     setIsLoading(true);
     try {
+      // Using any type to bypass TypeScript issues with table recognition
       const { data, error } = await supabase
-        .from('wishlists')
+        .from('wishlists' as any)
         .select(`
           id,
           user_id,
@@ -53,7 +54,7 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (error) throw error;
 
-      const mappedItems: WishlistItem[] = (data || []).map(item => ({
+      const mappedItems: WishlistItem[] = (data || []).map((item: any) => ({
         id: item.id,
         user_id: item.user_id,
         product_id: item.product_id,
@@ -87,7 +88,7 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     try {
       const { error } = await supabase
-        .from('wishlists')
+        .from('wishlists' as any)
         .insert({ user_id: user.id, product_id: productId });
 
       if (error) throw error;
@@ -112,7 +113,7 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     try {
       const { error } = await supabase
-        .from('wishlists')
+        .from('wishlists' as any)
         .delete()
         .eq('user_id', user.id)
         .eq('product_id', productId);

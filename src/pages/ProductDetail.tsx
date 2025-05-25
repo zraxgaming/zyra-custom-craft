@@ -118,6 +118,15 @@ const ProductDetail = () => {
       quantity,
       image: product.images?.[0] || "",
       customization,
+      product: {
+        id: product.id,
+        name: product.name,
+        price: product.discount_percentage > 0
+          ? product.price * (1 - product.discount_percentage / 100)
+          : product.price,
+        images: product.images || [],
+        slug: product.slug
+      }
     });
     
     toast.success("Added to cart!", {
