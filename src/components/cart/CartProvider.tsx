@@ -16,7 +16,8 @@ type CartAction =
   | { type: "REMOVE_ITEM"; payload: string }
   | { type: "UPDATE_QUANTITY"; payload: { id: string; quantity: number } }
   | { type: "CLEAR_CART" }
-  | { type: "SET_ITEMS"; payload: CartItem[] };
+  | { type: "SET_ITEMS"; payload: CartItem[] }
+  | { type: "SET_LOADING"; payload: boolean };
 
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
@@ -42,7 +43,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 
       const newItem: CartItem = {
         ...action.payload,
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       };
 
       return {
@@ -62,7 +63,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         ...state,
         items: state.items.map(item =>
           item.id === action.payload.id
-            ? { ...item, quantity: action.payload.quantity }
+            ? { ...item, quantity: Math.max(1, action.payload.quantity) }
             : item
         ),
       };
@@ -97,22 +98,21 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Load cart from database on user login
+  // Load cart from database when user logs in
   useEffect(() => {
     if (user) {
       loadCartFromDatabase();
     } else {
-      // Clear cart when user logs out
       dispatch({ type: "CLEAR_CART" });
     }
   }, [user]);
 
-  // Save cart to database whenever items change (with debounce)
+  // Save cart to database when items change
   useEffect(() => {
     if (user && state.items.length >= 0) {
       const timeoutId = setTimeout(() => {
         saveCartToDatabase();
-      }, 500);
+      }, 1000);
       
       return () => clearTimeout(timeoutId);
     }
@@ -131,23 +131,19 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
             name,
             price,
             images,
-            slug,
-            in_stock
+            slug
           )
         `)
         .eq("user_id", user.id);
 
-      if (error) {
-        console.error("Error fetching cart from database:", error);
-        return;
-      }
+      if (error) throw error;
 
       const cartItems: CartItem[] = (data || []).map((item: any) => ({
         id: item.id,
         productId: item.product_id,
         name: item.products?.name || "Unknown Product",
         quantity: item.quantity || 1,
-        price: item.products?.price || 0,
+        price: Number(item.products?.price) || 0,
         customization: item.customization || {},
         image: Array.isArray(item.products?.images) && item.products.images.length > 0 
           ? item.products.images[0] 
@@ -155,10 +151,9 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         product: item.products ? {
           id: item.products.id,
           name: item.products.name,
-          price: item.products.price,
+          price: Number(item.products.price) || 0,
           images: Array.isArray(item.products.images) ? item.products.images : [],
-          slug: item.products.slug,
-          in_stock: item.products.in_stock
+          slug: item.products.slug
         } : undefined
       }));
 
@@ -188,13 +183,9 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
           customization: item.customization || {}
         }));
 
-        const { error } = await supabase
+        await supabase
           .from("cart_items")
           .insert(itemsToInsert);
-
-        if (error) {
-          console.error("Error saving cart to database:", error);
-        }
       }
     } catch (error) {
       console.error("Error saving cart:", error);
@@ -211,7 +202,6 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     toast({
       title: "Added to cart",
       description: `${item.name} has been added to your cart.`,
-      className: "animate-slide-in-right",
     });
   };
 
@@ -221,7 +211,6 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     toast({
       title: "Removed from cart",
       description: "Item has been removed from your cart.",
-      className: "animate-slide-in-right",
     });
   };
 
@@ -240,7 +229,6 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     toast({
       title: "Cart cleared",
       description: "All items have been removed from your cart.",
-      className: "animate-slide-in-right",
     });
   };
 

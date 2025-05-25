@@ -1,19 +1,19 @@
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Container } from "@/components/ui/container";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { PageLoader } from "@/components/ui/page-loader";
+import { useProducts } from "@/hooks/use-products";
+import { useCategories } from "@/hooks/use-categories";
 import { useProductFilters } from "@/hooks/useProductFilters";
 import ProductFilters from "@/components/shop/ProductFilters";
 import ProductGrid from "@/components/shop/ProductGrid";
 import SearchAndSort from "@/components/shop/SearchAndSort";
 
 const Shop = () => {
-  const [products, setProducts] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
+  const { products, isLoading: productsLoading, error: productsError } = useProducts();
+  const { categories, isLoading: categoriesLoading } = useCategories();
   
   const {
     filteredProducts,
@@ -29,36 +29,28 @@ const Shop = () => {
     showInStockOnly,
     setShowInStockOnly,
     resetFilters,
-    categories,
   } = useProductFilters(products);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("products")
-          .select("*");
+  const isLoading = productsLoading || categoriesLoading;
 
-        if (error) {
-          throw error;
-        }
+  if (isLoading) {
+    return <PageLoader message="Loading products..." />;
+  }
 
-        setProducts(data || []);
-      } catch (error: any) {
-        console.error("Error fetching products:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load products. Please try again later.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, [toast]);
+  if (productsError) {
+    return (
+      <>
+        <Navbar />
+        <Container className="py-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4 text-foreground">Error Loading Products</h1>
+            <p className="text-muted-foreground">{productsError}</p>
+          </div>
+        </Container>
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <>
@@ -66,8 +58,8 @@ const Shop = () => {
       <Container className="py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Shop All Products</h1>
-          <p className="text-gray-600">
-            Browse our collection of products and find the perfect item for you.
+          <p className="text-muted-foreground">
+            Browse our collection of {products.length} products and find the perfect item for you.
           </p>
         </div>
 
@@ -75,7 +67,7 @@ const Shop = () => {
           {/* Sidebar with filters */}
           <div className="lg:block">
             <ProductFilters 
-              categories={categories}
+              categories={categories.map(cat => ({ name: cat.name, id: cat.id }))}
               selectedCategories={selectedCategories}
               toggleCategory={toggleCategory}
               priceRange={priceRange}
@@ -96,7 +88,7 @@ const Shop = () => {
               setSortOption={setSortOption}
             />
             
-            <ProductGrid products={filteredProducts} isLoading={isLoading} />
+            <ProductGrid products={filteredProducts} isLoading={false} />
           </div>
         </div>
       </Container>
