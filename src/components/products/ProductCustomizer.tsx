@@ -37,6 +37,7 @@ const ProductCustomizer: React.FC<ProductCustomizerProps> = ({
   onCustomizationChange
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
   
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
@@ -90,100 +91,145 @@ const ProductCustomizer: React.FC<ProductCustomizerProps> = ({
   };
   
   return (
-    <div className="space-y-4">
-      {customizationOptions.allowText && (
-        <div>
-          <h4 className="text-sm font-medium mb-2 flex items-center text-foreground">
-            <Type className="h-4 w-4 mr-2" />
-            Add Custom Text
-          </h4>
-          <Textarea
-            placeholder="Enter your text here..."
-            value={customization.text || ""}
-            onChange={handleTextChange}
-            maxLength={customizationOptions.maxTextLength}
-            className="resize-none bg-background text-foreground border-border"
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            {(customization.text?.length || 0)}/{customizationOptions.maxTextLength} characters
-          </p>
-        </div>
-      )}
-      
-      {customizationOptions.allowImage && (
-        <div>
-          <h4 className="text-sm font-medium mb-2 flex items-center text-foreground">
-            <ImagePlus className="h-4 w-4 mr-2" />
-            Upload Image
-          </h4>
-          <div className="flex flex-col gap-2">
-            <Input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="bg-background text-foreground border-border"
-            />
-            {customization.image && (
-              <div className="flex items-center gap-2">
-                <img 
-                  src={customization.image} 
-                  alt="Preview" 
-                  className="w-16 h-16 object-cover rounded border"
-                />
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleRemoveImage}
-                  className="flex items-center gap-1"
-                >
-                  <Trash2 className="h-3 w-3" />
-                  Remove
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-      
-      {customizationOptions.allowResizeRotate && (customization.text || customization.image) && (
-        <div className="space-y-4">
-          <div>
-            <h4 className="text-sm font-medium mb-2 text-foreground">Size</h4>
-            <Slider
-              value={[customization.scale || 100]}
-              min={50}
-              max={200}
-              step={5}
-              onValueChange={handleScaleChange}
-              className="py-4"
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Small</span>
-              <span>Large</span>
-            </div>
-          </div>
-          
-          <div>
-            <h4 className="text-sm font-medium mb-2 flex items-center text-foreground">
-              <RotateCw className="h-4 w-4 mr-2" />
-              Rotation
+    <div className="space-y-6 p-6 border border-border rounded-lg bg-card/50 backdrop-blur-sm animate-fade-in">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-foreground">Customize Your Product</h3>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="transition-all duration-300 hover:scale-105"
+        >
+          {isExpanded ? "Collapse" : "Expand"}
+        </Button>
+      </div>
+
+      <div className={`space-y-6 transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-none opacity-100' : 'max-h-96 opacity-90'} overflow-hidden`}>
+        {customizationOptions.allowText && (
+          <div className="space-y-3 animate-scale-in" style={{ animationDelay: '100ms' }}>
+            <h4 className="text-sm font-medium flex items-center text-foreground transition-colors duration-200">
+              <Type className="h-4 w-4 mr-2 text-primary" />
+              Add Custom Text
             </h4>
-            <Slider
-              value={[customization.rotation || 0]}
-              min={0}
-              max={360}
-              step={5}
-              onValueChange={handleRotationChange}
-              className="py-4"
+            <Textarea
+              placeholder="Enter your text here..."
+              value={customization.text || ""}
+              onChange={handleTextChange}
+              maxLength={customizationOptions.maxTextLength}
+              className="resize-none bg-background/80 text-foreground border-border transition-all duration-300 focus:shadow-lg focus:scale-[1.02] hover:border-primary/50"
             />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>0°</span>
-              <span>360°</span>
+            <div className="flex justify-between items-center">
+              <p className="text-xs text-muted-foreground">
+                {(customization.text?.length || 0)}/{customizationOptions.maxTextLength} characters
+              </p>
+              <div className={`w-full max-w-32 h-1 bg-muted rounded-full overflow-hidden transition-all duration-300`}>
+                <div 
+                  className="h-full bg-primary transition-all duration-500 ease-out"
+                  style={{ 
+                    width: `${((customization.text?.length || 0) / customizationOptions.maxTextLength) * 100}%` 
+                  }}
+                />
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+        
+        {customizationOptions.allowImage && (
+          <div className="space-y-3 animate-scale-in" style={{ animationDelay: '200ms' }}>
+            <h4 className="text-sm font-medium flex items-center text-foreground">
+              <ImagePlus className="h-4 w-4 mr-2 text-primary" />
+              Upload Image
+            </h4>
+            <div className="space-y-3">
+              <Input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="bg-background/80 text-foreground border-border transition-all duration-300 file:transition-colors file:duration-200 hover:border-primary/50 focus:shadow-lg"
+              />
+              {customization.image && (
+                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg animate-fade-in">
+                  <div className="relative group">
+                    <img 
+                      src={customization.image} 
+                      alt="Preview" 
+                      className="w-16 h-16 object-cover rounded border transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 rounded" />
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleRemoveImage}
+                    className="flex items-center gap-2 transition-all duration-300 hover:scale-105 hover:bg-destructive hover:text-destructive-foreground"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Remove
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {customizationOptions.allowResizeRotate && (customization.text || customization.image) && (
+          <div className="space-y-6 animate-scale-in" style={{ animationDelay: '300ms' }}>
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium text-foreground">Size</h4>
+              <div className="px-2">
+                <Slider
+                  value={[customization.scale || 100]}
+                  min={50}
+                  max={200}
+                  step={5}
+                  onValueChange={handleScaleChange}
+                  className="py-4 transition-all duration-200"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                  <span className="transition-colors duration-200 hover:text-foreground">Small (50%)</span>
+                  <span className="font-medium text-primary">{customization.scale || 100}%</span>
+                  <span className="transition-colors duration-200 hover:text-foreground">Large (200%)</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium flex items-center text-foreground">
+                <RotateCw className="h-4 w-4 mr-2 text-primary" />
+                Rotation
+              </h4>
+              <div className="px-2">
+                <Slider
+                  value={[customization.rotation || 0]}
+                  min={0}
+                  max={360}
+                  step={5}
+                  onValueChange={handleRotationChange}
+                  className="py-4 transition-all duration-200"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                  <span className="transition-colors duration-200 hover:text-foreground">0°</span>
+                  <span className="font-medium text-primary">{customization.rotation || 0}°</span>
+                  <span className="transition-colors duration-200 hover:text-foreground">360°</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {(customization.text || customization.image) && (
+          <div className="pt-4 border-t border-border animate-fade-in">
+            <Button 
+              className="w-full bg-primary hover:bg-primary/90 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
+              onClick={() => toast.success("Customization saved!")}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Save Customization
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

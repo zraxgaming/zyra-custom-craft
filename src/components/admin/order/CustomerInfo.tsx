@@ -1,60 +1,74 @@
 
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User, Mail, MapPin, Phone } from "lucide-react";
-import { OrderDetail } from "@/types/order";
+import { User, Mail, Calendar } from "lucide-react";
+import { Order } from "@/types/order";
 
 interface CustomerInfoProps {
-  order: OrderDetail;
+  order: Order;
 }
 
-const CustomerInfo = ({ order }: CustomerInfoProps) => {
-  return (
-    <CardContent className="pt-6">
-      <CardTitle className="flex items-center gap-2 mb-4 text-foreground">
-        <User className="h-5 w-5" />
-        Customer Information
-      </CardTitle>
-      
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Mail className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm text-foreground">
-            {order.profiles?.email || "No email"}
-          </span>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <User className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm text-foreground">
-            {order.profiles?.display_name || "Guest User"}
-          </span>
-        </div>
+const CustomerInfo: React.FC<CustomerInfoProps> = ({ order }) => {
+  const getDisplayName = () => {
+    if (order.profiles?.display_name) {
+      return order.profiles.display_name;
+    }
+    if (order.profiles?.first_name && order.profiles?.last_name) {
+      return `${order.profiles.first_name} ${order.profiles.last_name}`;
+    }
+    return order.profiles?.email || "Guest Customer";
+  };
 
-        {order.shipping_address && (
-          <div className="space-y-2">
-            <div className="flex items-start gap-2">
-              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div className="text-sm text-foreground">
-                <div className="font-medium">Shipping Address</div>
-                <div>{order.shipping_address.name}</div>
-                <div>{order.shipping_address.street}</div>
-                <div>
-                  {order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.zipCode}
-                </div>
-                <div>{order.shipping_address.country}</div>
-                {order.shipping_address.phone && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <Phone className="h-3 w-3" />
-                    {order.shipping_address.phone}
-                  </div>
-                )}
-              </div>
+  return (
+    <Card className="bg-card border-border hover:shadow-lg transition-all duration-300 animate-fade-in">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-foreground">
+          <User className="h-5 w-5 text-primary" />
+          Customer Information
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg transition-colors duration-200 hover:bg-muted">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <p className="font-medium text-foreground">{getDisplayName()}</p>
+              <p className="text-sm text-muted-foreground">Customer</p>
             </div>
           </div>
-        )}
-      </div>
-    </CardContent>
+          
+          {order.profiles?.email && (
+            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg transition-colors duration-200 hover:bg-muted">
+              <Mail className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="font-medium text-foreground">{order.profiles.email}</p>
+                <p className="text-sm text-muted-foreground">Email Address</p>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg transition-colors duration-200 hover:bg-muted">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <p className="font-medium text-foreground">
+                {new Date(order.created_at).toLocaleDateString()}
+              </p>
+              <p className="text-sm text-muted-foreground">Order Date</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="pt-2">
+          <Badge 
+            variant={order.payment_status === 'paid' ? 'default' : 'secondary'}
+            className="transition-all duration-200 hover:scale-105"
+          >
+            {order.payment_status === 'paid' ? 'Verified Customer' : 'Pending Verification'}
+          </Badge>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

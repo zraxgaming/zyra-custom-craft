@@ -4,7 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, X } from "lucide-react";
+import { ShoppingCart, X, Plus, Minus } from "lucide-react";
 import { useCart } from "./CartProvider";
 import CartItem from "./CartItem";
 import { useNavigate } from "react-router-dom";
@@ -23,69 +23,89 @@ const CartDrawer = () => {
 
   return (
     <Sheet open={state.isOpen} onOpenChange={toggleCart}>
-      <SheetContent className="w-full sm:max-w-lg flex flex-col">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            Shopping Cart ({totalItems})
+      <SheetContent className="w-full sm:max-w-lg flex flex-col animate-slide-in-right">
+        <SheetHeader className="animate-fade-in">
+          <SheetTitle className="flex items-center gap-3 text-xl">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <ShoppingCart className="h-5 w-5 text-primary" />
+            </div>
+            <span>Shopping Cart</span>
+            {totalItems > 0 && (
+              <span className="bg-primary text-primary-foreground text-sm px-2 py-1 rounded-full animate-scale-in">
+                {totalItems}
+              </span>
+            )}
           </SheetTitle>
         </SheetHeader>
 
         {state.items.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <ShoppingCart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500 dark:text-gray-400">Your cart is empty</p>
+          <div className="flex-1 flex items-center justify-center animate-fade-in">
+            <div className="text-center space-y-4">
+              <div className="p-8 bg-muted/30 rounded-full w-fit mx-auto">
+                <ShoppingCart className="h-16 w-16 text-muted-foreground" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-medium text-foreground">Your cart is empty</h3>
+                <p className="text-muted-foreground">Add some amazing products to get started!</p>
+              </div>
               <Button 
-                className="mt-4 bg-zyra-purple hover:bg-zyra-dark-purple"
+                className="bg-primary hover:bg-primary/90 transition-all duration-300 hover:scale-105 hover:shadow-lg"
                 onClick={() => {
                   toggleCart();
                   navigate("/shop");
                 }}
               >
-                Continue Shopping
+                Start Shopping
               </Button>
             </div>
           </div>
         ) : (
           <>
-            <ScrollArea className="flex-1 -mx-6 px-6">
-              <div className="space-y-4">
-                {state.items.map((item) => (
-                  <CartItem key={item.id} item={item} />
+            <ScrollArea className="flex-1 -mx-6 px-6 animate-fade-in">
+              <div className="space-y-4 py-2">
+                {state.items.map((item, index) => (
+                  <div 
+                    key={item.id} 
+                    className="animate-scale-in"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <CartItem item={item} />
+                  </div>
                 ))}
               </div>
             </ScrollArea>
 
-            <div className="space-y-4 pt-4">
+            <div className="space-y-4 pt-4 animate-fade-in" style={{ animationDelay: '200ms' }}>
               <Separator />
               
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
+              <div className="space-y-3 p-4 bg-muted/30 rounded-lg">
+                <div className="flex justify-between text-sm transition-colors duration-200">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span className="font-medium">${subtotal.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tax</span>
-                  <span>${tax.toFixed(2)}</span>
+                <div className="flex justify-between text-sm transition-colors duration-200">
+                  <span className="text-muted-foreground">Tax (8%)</span>
+                  <span className="font-medium">${tax.toFixed(2)}</span>
                 </div>
                 <Separator />
-                <div className="flex justify-between font-semibold">
+                <div className="flex justify-between font-semibold text-lg">
                   <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span className="text-primary">${total.toFixed(2)}</span>
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Button 
-                  className="w-full bg-zyra-purple hover:bg-zyra-dark-purple btn-animate"
+                  className="w-full bg-primary hover:bg-primary/90 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
                   onClick={handleCheckout}
+                  size="lg"
                 >
                   Proceed to Checkout
+                  <span className="ml-2 text-sm opacity-80">${total.toFixed(2)}</span>
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="w-full border-zyra-purple text-zyra-purple hover:bg-zyra-purple hover:text-white"
+                  className="w-full border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300 hover:scale-[1.02]"
                   onClick={() => {
                     toggleCart();
                     navigate("/shop");

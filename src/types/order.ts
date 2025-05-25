@@ -2,6 +2,7 @@
 export interface Order {
   id: string;
   user_id: string;
+  profile_id?: string;
   total_amount: number;
   status: string;
   payment_status: string;
@@ -18,6 +19,7 @@ export interface Order {
     email: string;
     first_name: string;
     last_name: string;
+    display_name?: string;
   };
   order_items?: OrderItem[];
 }
@@ -46,6 +48,7 @@ export interface OrderDetail extends Order {
     email: string;
     first_name: string;
     last_name: string;
+    display_name?: string;
   } | null;
 }
 

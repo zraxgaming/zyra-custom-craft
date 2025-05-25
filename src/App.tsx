@@ -33,6 +33,9 @@ import GiftCards from "./pages/admin/GiftCards";
 import Analytics from "./pages/admin/Analytics";
 import Settings from "./pages/admin/Settings";
 import Coupons from "./pages/admin/Coupons";
+import ZiinaStats from "./pages/admin/ZiinaStats";
+import BarcodeManager from "./pages/admin/BarcodeManager";
+import BarcodeScanner from "./pages/admin/BarcodeScanner";
 
 import "./App.css";
 
@@ -69,13 +72,14 @@ function App() {
                   <Route path="/admin/customers" element={<Customers />} />
                   <Route path="/admin/newsletter" element={<Newsletter />} />
                   <Route path="/admin/promotions" element={<Promotions />} />
-                  <Route path="/admin/barcodes" element={<Barcodes />} />
-                  <Route path="/admin/scanner" element={<Scanner />} />
+                  <Route path="/admin/barcodes" element={<BarcodeManager />} />
+                  <Route path="/admin/scanner" element={<BarcodeScanner />} />
                   <Route path="/admin/contact" element={<ContactAdmin />} />
                   <Route path="/admin/gift-cards" element={<GiftCards />} />
                   <Route path="/admin/analytics" element={<Analytics />} />
                   <Route path="/admin/settings" element={<Settings />} />
                   <Route path="/admin/coupons" element={<Coupons />} />
+                  <Route path="/admin/ziina-stats" element={<ZiinaStats />} />
                 </Routes>
               </BrowserRouter>
             </CartProvider>
