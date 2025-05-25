@@ -1,8 +1,7 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth";
 import { useCart } from "@/components/cart/CartProvider";
 import { useToast } from "@/hooks/use-toast";
@@ -34,7 +33,6 @@ const Checkout = () => {
   });
   
   const [deliveryType, setDeliveryType] = useState("standard");
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [shippingCost, setShippingCost] = useState(15);
@@ -50,7 +48,11 @@ const Checkout = () => {
     }
   }, [cartState.items, authLoading, navigate, toast]);
 
-  const subtotal = cartState.items.reduce((total, item) => total + (item.product.price * item.quantity), 0);
+  const subtotal = cartState.items.reduce((total, item) => {
+    const itemPrice = item.product?.price || item.price || 0;
+    return total + (itemPrice * item.quantity);
+  }, 0);
+  
   const discount = appliedCoupon 
     ? appliedCoupon.discount_type === 'percentage' 
       ? (subtotal * appliedCoupon.discount_value) / 100
@@ -101,9 +103,9 @@ const Checkout = () => {
       // Create order items
       const orderItems = cartState.items.map(item => ({
         order_id: order.id,
-        product_id: item.product.id,
+        product_id: item.product?.id || item.productId,
         quantity: item.quantity,
-        price: item.product.price,
+        price: item.product?.price || item.price || 0,
         customization: item.customization
       }));
 
@@ -140,7 +142,6 @@ const Checkout = () => {
         variant: "destructive",
       });
       
-      // Navigate to failure page
       navigate("/order-failed");
     } finally {
       setIsProcessing(false);

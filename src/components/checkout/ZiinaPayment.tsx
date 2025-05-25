@@ -32,21 +32,37 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 
     setIsLoading(true);
     try {
-      // In a real implementation, you would integrate with Ziina's SDK
-      // For now, we'll simulate the payment process
-      const mockZiinaResponse = {
-        transactionId: `ziina_${Date.now()}`,
-        status: "completed",
-        amount: total,
-        currency: "AED"
-      };
+      // Convert AED to fils (1 AED = 100 fils)
+      const amountInFils = Math.round(total * 100);
       
-      await onZiinaApprove(mockZiinaResponse);
-    } catch (error) {
+      // Create payment intent with Ziina API
+      const response = await fetch('/api/ziina/payment-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: amountInFils,
+          success_url: `${window.location.origin}/order-success`,
+          cancel_url: `${window.location.origin}/checkout`,
+          test: true // Set to false for production
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create payment intent');
+      }
+
+      const { redirect_url, payment_intent_id } = await response.json();
+      
+      // Redirect to Ziina payment page
+      window.location.href = redirect_url;
+      
+    } catch (error: any) {
       console.error("Ziina payment error:", error);
       toast({
         title: "Payment failed",
-        description: "There was an error processing your Ziina payment",
+        description: error.message || "There was an error processing your Ziina payment",
         variant: "destructive",
       });
     } finally {

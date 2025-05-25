@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -44,25 +43,16 @@ const Orders = () => {
         let query = supabase
           .from("orders")
           .select(`
-            id,
-            created_at,
-            status,
-            total_amount,
-            currency,
-            payment_status,
-            delivery_type,
-            user_id,
-            payment_method,
-            shipping_address,
-            billing_address,
-            notes,
-            tracking_number,
-            updated_at,
-            order_items (
+            *,
+            order_items!order_items_order_id_fkey (
               id,
               quantity,
               price,
-              product:product_id (name)
+              products!order_items_product_id_fkey (name)
+            ),
+            profiles!orders_user_id_fkey (
+              display_name,
+              email
             )
           `)
           .order("created_at", { ascending: false });
@@ -93,7 +83,19 @@ const Orders = () => {
           billing_address: typeof order.billing_address === 'string' 
             ? JSON.parse(order.billing_address) 
             : order.billing_address,
-          profiles: undefined
+          order_items: order.order_items?.map((item: any) => ({
+            id: item.id,
+            order_id: order.id,
+            product_id: item.products?.id || '',
+            quantity: item.quantity,
+            price: item.price,
+            customization: null,
+            product: item.products ? {
+              id: item.products.id || '',
+              name: item.products.name || 'Unknown Product',
+              images: []
+            } : undefined
+          })) || []
         }));
         
         setOrders(transformedOrders);
@@ -359,10 +361,7 @@ const Orders = () => {
                             onValueChange={(value) => updateOrderStatus(order.id, value)}
                           >
                             <SelectTrigger className="w-32 bg-background text-foreground border-border">
-                              <div className="flex items-center gap-2">
-                                <span className={`inline-block w-2 h-2 rounded-full ${getStatusColor(order.status)}`}></span>
-                                <SelectValue />
-                              </div>
+                              <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="bg-background border-border">
                               <SelectItem value="pending">Pending</SelectItem>
@@ -374,7 +373,12 @@ const Orders = () => {
                           </Select>
                         </TableCell>
                         <TableCell>
-                          <Badge className={getPaymentStatusColor(order.payment_status)}>
+                          <Badge className={
+                            order.payment_status === "paid" ? "bg-green-500" :
+                            order.payment_status === "refunded" ? "bg-orange-500" :
+                            order.payment_status === "failed" ? "bg-red-500" :
+                            "bg-yellow-500"
+                          }>
                             {order.payment_status}
                           </Badge>
                         </TableCell>
