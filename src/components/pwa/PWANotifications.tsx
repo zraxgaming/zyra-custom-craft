@@ -55,17 +55,7 @@ const PWANotifications: React.FC<PWANotificationsProps> = ({
           icon: '/icon-192.png',
           badge: '/icon-192.png',
           tag: 'abandoned-cart',
-          requireInteraction: true,
-          actions: [
-            {
-              action: 'view-cart',
-              title: 'View Cart'
-            },
-            {
-              action: 'dismiss',
-              title: 'Dismiss'
-            }
-          ]
+          requireInteraction: true
         });
 
         notification.onclick = () => {

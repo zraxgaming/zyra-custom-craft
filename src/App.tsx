@@ -45,6 +45,8 @@ import ShippingMethodsSettings from "./pages/admin/settings/ShippingMethodsSetti
 import ContactSubmissions from "./pages/admin/ContactSubmissions";
 import ContactView from "./pages/admin/ContactView";
 import Newsletter from "./pages/admin/Newsletter";
+import Orders from "./pages/admin/Orders";
+import OrderDetail from "./pages/admin/OrderDetail";
 import Promotions from "./pages/admin/Promotions";
 import BarcodeScanner from "./pages/admin/BarcodeScanner";
 import Barcodes from "./pages/admin/Barcodes";
@@ -113,6 +115,8 @@ const App = () => (
                     <Route path="/admin/products" element={<AdminRoute><Products /></AdminRoute>} />
                     <Route path="/admin/products/new" element={<AdminRoute><ProductEdit /></AdminRoute>} />
                     <Route path="/admin/products/:id/edit" element={<AdminRoute><ProductEdit /></AdminRoute>} />
+                    <Route path="/admin/orders" element={<AdminRoute><Orders /></AdminRoute>} />
+                    <Route path="/admin/orders/:id" element={<AdminRoute><OrderDetail /></AdminRoute>} />
                     <Route path="/admin/customers" element={<AdminRoute><Customers /></AdminRoute>} />
                     <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
                     <Route path="/admin/coupons" element={<AdminRoute><Coupons /></AdminRoute>} />

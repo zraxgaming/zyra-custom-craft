@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -247,7 +246,13 @@ const ProductDetail = () => {
                 <h3 className="font-semibold text-lg text-foreground">Customize Your Product</h3>
                 <ProductCustomizer
                   productId={product.id}
-                  customizationOptions={product.customization_options || []}
+                  customizationOptions={product.customization_options?.[0] || {
+                    allowText: false,
+                    allowImage: false,
+                    maxTextLength: 100,
+                    maxImageCount: 1,
+                    allowResizeRotate: false
+                  }}
                   customization={customization}
                   onCustomizationChange={setCustomization}
                 />

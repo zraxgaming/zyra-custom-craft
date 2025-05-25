@@ -9,13 +9,19 @@ import TypeformFeedback from "@/components/feedback/TypeformFeedback";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
+declare global {
+  interface Window {
+    gtag?: (...args: any[]) => void;
+  }
+}
+
 const OrderSuccess = () => {
   const { orderId } = useParams();
 
   useEffect(() => {
     // Track order success for analytics
-    if (typeof gtag !== 'undefined') {
-      gtag('event', 'purchase', {
+    if (typeof window.gtag !== 'undefined') {
+      window.gtag('event', 'purchase', {
         transaction_id: orderId,
         currency: 'USD'
       });
@@ -90,6 +96,7 @@ const OrderSuccess = () => {
                 typeformId="GcTxpZxC"
                 triggerText="Share Your Experience"
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                openInNewTab={true}
               />
             </CardContent>
           </Card>
