@@ -3,20 +3,20 @@ import React from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const Coupons = () => {
+const GiftCards = () => {
   return (
     <AdminLayout>
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-foreground">Coupons</h1>
+          <h1 className="text-3xl font-bold text-foreground">Gift Cards</h1>
         </div>
 
         <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-foreground">Coupon Management</CardTitle>
+            <CardTitle className="text-foreground">Gift Card Management</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">Coupon management features coming soon.</p>
+            <p className="text-muted-foreground">Gift card management features coming soon.</p>
           </CardContent>
         </Card>
       </div>
@@ -24,4 +24,4 @@ const Coupons = () => {
   );
 };
 
-export default Coupons;
+export default GiftCards;

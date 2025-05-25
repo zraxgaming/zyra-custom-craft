@@ -30,4 +30,45 @@ export interface OrderItem {
   price: number;
   customization?: any;
   created_at: string;
+  product?: {
+    id: string;
+    name: string;
+    price: number;
+    images: string[];
+    slug: string;
+  };
+}
+
+export interface OrderDetail extends Order {
+  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+  payment_status: "pending" | "paid" | "failed" | "refunded";
+  profiles?: {
+    email?: string;
+    display_name?: string;
+  } | null;
+}
+
+export interface ShippingAddress {
+  name: string;
+  street: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  phone?: string;
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: number;
+  min_purchase: number;
+  max_uses?: number;
+  used_count: number;
+  active: boolean;
+  starts_at: string;
+  expires_at?: string;
+  created_at: string;
+  updated_at: string;
 }
