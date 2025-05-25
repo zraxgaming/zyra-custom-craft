@@ -1,43 +1,67 @@
 
 import React from "react";
-import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
 
-interface DeliveryOptionsProps {
-  selectedOption: string;
-  onOptionChange: (value: string) => void;
+export interface DeliveryOptionsProps {
+  selectedType: string;
+  onDeliveryChange: (type: string, cost: number) => void;
 }
 
-const DeliveryOptions: React.FC<DeliveryOptionsProps> = ({
-  selectedOption,
-  onOptionChange
+const DeliveryOptions: React.FC<DeliveryOptionsProps> = ({ 
+  selectedType, 
+  onDeliveryChange 
 }) => {
+  const deliveryOptions = [
+    {
+      id: "standard",
+      name: "Standard Delivery",
+      description: "5-7 business days",
+      cost: 15
+    },
+    {
+      id: "express",
+      name: "Express Delivery", 
+      description: "2-3 business days",
+      cost: 25
+    },
+    {
+      id: "overnight",
+      name: "Overnight Delivery",
+      description: "Next business day",
+      cost: 45
+    }
+  ];
+
   return (
-    <div className="mt-6">
-      <Label className="mb-2 block">Delivery Options</Label>
-      <RadioGroup 
-        value={selectedOption} 
-        onValueChange={onOptionChange}
-      >
-        <div className="flex items-start space-x-2 border rounded-md p-3">
-          <RadioGroupItem value="standard" id="standard-delivery" />
-          <Label htmlFor="standard-delivery" className="font-normal cursor-pointer">
-            <div className="font-medium">Standard Delivery</div>
-            <div className="text-sm text-gray-500">5-7 business days</div>
-            <div className="mt-1 font-medium text-sm">$5.00</div>
-          </Label>
-        </div>
-        
-        <div className="flex items-start space-x-2 border rounded-md p-3 mt-3">
-          <RadioGroupItem value="express" id="express-delivery" />
-          <Label htmlFor="express-delivery" className="font-normal cursor-pointer">
-            <div className="font-medium">Store PickUp</div>
-            <div className="text-sm text-gray-500">2-3 business days</div>
-            <div className="mt-1 font-medium text-sm">$0.00</div>
-          </Label>
-        </div>
-      </RadioGroup>
-    </div>
+    <RadioGroup 
+      value={selectedType} 
+      onValueChange={(value) => {
+        const option = deliveryOptions.find(opt => opt.id === value);
+        if (option) {
+          onDeliveryChange(value, option.cost);
+        }
+      }}
+      className="space-y-3"
+    >
+      {deliveryOptions.map((option) => (
+        <Card key={option.id} className="p-4 bg-card border-border">
+          <div className="flex items-center space-x-3">
+            <RadioGroupItem value={option.id} id={option.id} />
+            <Label htmlFor={option.id} className="flex-1 cursor-pointer text-foreground">
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="font-medium">{option.name}</div>
+                  <div className="text-sm text-muted-foreground">{option.description}</div>
+                </div>
+                <div className="font-medium text-foreground">${option.cost}</div>
+              </div>
+            </Label>
+          </div>
+        </Card>
+      ))}
+    </RadioGroup>
   );
 };
 

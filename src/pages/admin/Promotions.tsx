@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Plus, Edit, Trash2, Calendar } from "lucide-react";
+import { Plus, Edit, Trash2, Calendar, Image } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { format } from "date-fns";
 
@@ -56,13 +55,13 @@ const Promotions = () => {
 
   const fetchPromotions = async () => {
     try {
-      // For now, we'll use a mock data approach since the promotions table might not be fully set up
-      setPromotions([]);
-      
-      toast({
-        title: "Promotions loaded",
-        description: "Promotions system is ready to use.",
-      });
+      const { data, error } = await supabase
+        .from('promotions')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPromotions(data || []);
     } catch (error: any) {
       console.error("Error fetching promotions:", error);
       toast({
@@ -80,13 +79,24 @@ const Promotions = () => {
     
     try {
       if (editingPromotion) {
-        // Update existing promotion
+        const { error } = await supabase
+          .from('promotions')
+          .update(formData)
+          .eq('id', editingPromotion.id);
+          
+        if (error) throw error;
+        
         toast({
           title: "Promotion updated",
           description: "The promotion has been successfully updated.",
         });
       } else {
-        // Create new promotion
+        const { error } = await supabase
+          .from('promotions')
+          .insert(formData);
+          
+        if (error) throw error;
+        
         toast({
           title: "Promotion created",
           description: "The promotion has been successfully created.",
@@ -112,6 +122,13 @@ const Promotions = () => {
     }
 
     try {
+      const { error } = await supabase
+        .from('promotions')
+        .delete()
+        .eq('id', id);
+        
+      if (error) throw error;
+      
       toast({
         title: "Promotion deleted",
         description: "The promotion has been successfully deleted.",
@@ -158,6 +175,13 @@ const Promotions = () => {
 
   const togglePromotionStatus = async (id: string, currentStatus: boolean) => {
     try {
+      const { error } = await supabase
+        .from('promotions')
+        .update({ active: !currentStatus })
+        .eq('id', id);
+        
+      if (error) throw error;
+      
       toast({
         title: "Promotion updated",
         description: `Promotion has been ${!currentStatus ? 'activated' : 'deactivated'}.`,
@@ -192,35 +216,36 @@ const Promotions = () => {
           <h1 className="text-3xl font-bold text-foreground">Promotions Management</h1>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={resetForm}>
+              <Button onClick={resetForm} className="bg-primary text-primary-foreground hover:bg-primary/90">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Promotion
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl bg-background border-border">
               <DialogHeader>
-                <DialogTitle>
+                <DialogTitle className="text-foreground">
                   {editingPromotion ? "Edit Promotion" : "Create New Promotion"}
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="title">Title *</Label>
+                    <Label htmlFor="title" className="text-foreground">Title *</Label>
                     <Input
                       id="title"
                       value={formData.title}
                       onChange={(e) => setFormData({...formData, title: e.target.value})}
                       required
+                      className="bg-background text-foreground border-border"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="placement">Placement</Label>
+                    <Label htmlFor="placement" className="text-foreground">Placement</Label>
                     <select
                       id="placement"
                       value={formData.placement}
                       onChange={(e) => setFormData({...formData, placement: e.target.value})}
-                      className="w-full p-2 border border-input rounded-md bg-background"
+                      className="w-full p-2 border border-border rounded-md bg-background text-foreground"
                     >
                       <option value="banner">Banner</option>
                       <option value="popup">Popup</option>
@@ -230,54 +255,72 @@ const Promotions = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description" className="text-foreground">Description</Label>
                   <Textarea
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
                     rows={3}
+                    className="bg-background text-foreground border-border"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="image_url">Image URL</Label>
+                    <Label htmlFor="image_url" className="text-foreground">Image URL</Label>
                     <Input
                       id="image_url"
                       type="url"
                       value={formData.image_url}
                       onChange={(e) => setFormData({...formData, image_url: e.target.value})}
+                      className="bg-background text-foreground border-border"
                     />
+                    {formData.image_url && (
+                      <div className="mt-2">
+                        <img 
+                          src={formData.image_url} 
+                          alt="Preview" 
+                          className="w-full h-32 object-cover rounded-md border border-border"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
                   <div>
-                    <Label htmlFor="link_url">Link URL</Label>
+                    <Label htmlFor="link_url" className="text-foreground">Link URL</Label>
                     <Input
                       id="link_url"
                       type="url"
                       value={formData.link_url}
                       onChange={(e) => setFormData({...formData, link_url: e.target.value})}
+                      className="bg-background text-foreground border-border"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="start_date">Start Date *</Label>
+                    <Label htmlFor="start_date" className="text-foreground">Start Date *</Label>
                     <Input
                       id="start_date"
                       type="date"
                       value={formData.start_date}
                       onChange={(e) => setFormData({...formData, start_date: e.target.value})}
                       required
+                      className="bg-background text-foreground border-border"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="end_date">End Date</Label>
+                    <Label htmlFor="end_date" className="text-foreground">End Date</Label>
                     <Input
                       id="end_date"
                       type="date"
                       value={formData.end_date}
                       onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+                      className="bg-background text-foreground border-border"
                     />
                   </div>
                 </div>
@@ -288,14 +331,14 @@ const Promotions = () => {
                     checked={formData.active}
                     onCheckedChange={(checked) => setFormData({...formData, active: checked})}
                   />
-                  <Label htmlFor="active">Active</Label>
+                  <Label htmlFor="active" className="text-foreground">Active</Label>
                 </div>
 
                 <div className="flex justify-end space-x-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="text-foreground border-border">
                     Cancel
                   </Button>
-                  <Button type="submit">
+                  <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90">
                     {editingPromotion ? "Update" : "Create"} Promotion
                   </Button>
                 </div>
@@ -304,7 +347,7 @@ const Promotions = () => {
           </Dialog>
         </div>
 
-        <Card>
+        <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-foreground">All Promotions</CardTitle>
           </CardHeader>
@@ -320,7 +363,7 @@ const Promotions = () => {
                 <p className="text-muted-foreground mb-4">
                   Create your first promotion to start engaging with customers.
                 </p>
-                <Button onClick={() => setIsDialogOpen(true)}>
+                <Button onClick={() => setIsDialogOpen(true)} className="bg-primary text-primary-foreground hover:bg-primary/90">
                   <Plus className="mr-2 h-4 w-4" />
                   Create Promotion
                 </Button>
@@ -329,8 +372,9 @@ const Promotions = () => {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
+                    <TableRow className="border-border">
                       <TableHead className="text-foreground">Title</TableHead>
+                      <TableHead className="text-foreground">Image</TableHead>
                       <TableHead className="text-foreground">Placement</TableHead>
                       <TableHead className="text-foreground">Start Date</TableHead>
                       <TableHead className="text-foreground">End Date</TableHead>
@@ -340,7 +384,7 @@ const Promotions = () => {
                   </TableHeader>
                   <TableBody>
                     {promotions.map((promotion) => (
-                      <TableRow key={promotion.id}>
+                      <TableRow key={promotion.id} className="border-border">
                         <TableCell>
                           <div>
                             <div className="font-medium text-foreground">{promotion.title}</div>
@@ -352,7 +396,24 @@ const Promotions = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="capitalize">
+                          {promotion.image_url ? (
+                            <img 
+                              src={promotion.image_url} 
+                              alt={promotion.title}
+                              className="w-16 h-16 object-cover rounded-md border border-border"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center border border-border">
+                              <Image className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize text-foreground border-border">
                             {promotion.placement}
                           </Badge>
                         </TableCell>
@@ -372,6 +433,7 @@ const Promotions = () => {
                             />
                             <Badge 
                               variant={promotion.active ? "default" : "secondary"}
+                              className={promotion.active ? "bg-green-500" : "bg-gray-500"}
                             >
                               {promotion.active ? "Active" : "Inactive"}
                             </Badge>
@@ -383,6 +445,7 @@ const Promotions = () => {
                               variant="ghost"
                               size="icon"
                               onClick={() => openEditDialog(promotion)}
+                              className="text-foreground hover:bg-muted"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -390,7 +453,7 @@ const Promotions = () => {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleDelete(promotion.id)}
-                              className="text-red-500 hover:text-red-700"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>

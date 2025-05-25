@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -38,7 +37,7 @@ const Checkout = () => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
-  const [shippingCost, setShippingCost] = useState(0);
+  const [shippingCost, setShippingCost] = useState(15);
 
   useEffect(() => {
     if (items.length === 0 && !authLoading) {
@@ -83,12 +82,12 @@ const Checkout = () => {
         user_id: user?.id || null,
         total_amount: total,
         currency: "AED",
-        status: "pending",
-        payment_status: "pending",
+        status: "pending" as const,
+        payment_status: "pending" as const,
         payment_method: paymentData.method,
         delivery_type: deliveryType,
-        shipping_address: shippingAddress,
-        billing_address: shippingAddress
+        shipping_address: shippingAddress as any,
+        billing_address: shippingAddress as any
       };
 
       const { data: order, error: orderError } = await supabase
@@ -119,8 +118,8 @@ const Checkout = () => {
         const { error: updateError } = await supabase
           .from("orders")
           .update({ 
-            payment_status: "paid",
-            status: "processing"
+            payment_status: "paid" as const,
+            status: "processing" as const
           })
           .eq("id", order.id);
 
@@ -206,9 +205,9 @@ const Checkout = () => {
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="space-y-6">
-              <Card>
+              <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle>Shipping Address</CardTitle>
+                  <CardTitle className="text-foreground">Shipping Address</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <AddressForm 
@@ -218,9 +217,9 @@ const Checkout = () => {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle>Delivery Options</CardTitle>
+                  <CardTitle className="text-foreground">Delivery Options</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <DeliveryOptions
@@ -230,9 +229,9 @@ const Checkout = () => {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle>Payment Method</CardTitle>
+                  <CardTitle className="text-foreground">Payment Method</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <PaymentMethods
@@ -247,25 +246,25 @@ const Checkout = () => {
             </div>
 
             <div className="space-y-6">
-              <Card>
+              <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle>Order Summary</CardTitle>
+                  <CardTitle className="text-foreground">Order Summary</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <OrderSummary
                     items={items}
                     subtotal={subtotal}
                     discount={discount}
-                    shippingCost={shippingCost}
+                    shipping={shippingCost}
                     total={total}
                     appliedCoupon={appliedCoupon}
                   />
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle>Promo Code</CardTitle>
+                  <CardTitle className="text-foreground">Promo Code</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <CouponForm

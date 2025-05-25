@@ -1,3 +1,4 @@
+
 import { Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -9,6 +10,7 @@ import { CartProvider } from "@/components/cart/CartProvider";
 import { ThemeProvider } from "@/hooks/use-theme";
 import CartDrawer from "@/components/cart/CartDrawer";
 import PWAInstallPrompt from "@/components/pwa/PWAInstallPrompt";
+import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
 import CategoryPage from "./pages/CategoryPage";
@@ -59,6 +61,7 @@ const App = () => (
       <ThemeProvider>
         <CartProvider>
           <BrowserRouter>
+            <GoogleAnalytics />
             <Suspense fallback={<div className="flex h-screen items-center justify-center bg-background"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>}>
               <TooltipProvider>
                 <Toaster />

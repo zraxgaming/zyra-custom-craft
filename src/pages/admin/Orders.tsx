@@ -77,11 +77,16 @@ const Orders = () => {
         
         const { data, error } = await query;
           
-        if (error) throw error;
+        if (error) {
+          console.error("Orders fetch error:", error);
+          throw error;
+        }
         
         // Transform the data to match our Order type
         const transformedOrders: Order[] = (data || []).map(order => ({
           ...order,
+          status: order.status as Order['status'],
+          payment_status: order.payment_status as Order['payment_status'],
           profiles: undefined // We'll fetch profile data separately if needed
         }));
         
@@ -98,8 +103,10 @@ const Orders = () => {
       }
     };
     
-    fetchOrders();
-  }, [toast, statusFilter, paymentStatusFilter]);
+    if (isAdmin) {
+      fetchOrders();
+    }
+  }, [toast, statusFilter, paymentStatusFilter, isAdmin]);
 
   const updateOrderStatus = async (id: string, status: string) => {
     try {
@@ -111,7 +118,7 @@ const Orders = () => {
       if (error) throw error;
       
       setOrders(orders.map(order => 
-        order.id === id ? { ...order, status: status as any } : order
+        order.id === id ? { ...order, status: status as Order['status'] } : order
       ));
       
       toast({
@@ -205,7 +212,7 @@ const Orders = () => {
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold text-foreground">Orders Management</h1>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={exportOrders}>
+            <Button variant="outline" onClick={exportOrders} className="text-foreground border-border">
               <Download className="mr-2 h-4 w-4" />
               Export CSV
             </Button>
@@ -215,7 +222,7 @@ const Orders = () => {
           </div>
         </div>
         
-        <Card>
+        <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-foreground">
               <Filter className="h-5 w-5" />
@@ -228,17 +235,17 @@ const Orders = () => {
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search orders..."
-                  className="pl-10"
+                  className="pl-10 bg-background text-foreground border-border"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background text-foreground border-border">
                   <SelectValue placeholder="Order Status" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border-border">
                   <SelectItem value="">All Statuses</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="processing">Processing</SelectItem>
@@ -249,10 +256,10 @@ const Orders = () => {
               </Select>
 
               <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background text-foreground border-border">
                   <SelectValue placeholder="Payment Status" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border-border">
                   <SelectItem value="">All Payments</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="paid">Paid</SelectItem>
@@ -268,6 +275,7 @@ const Orders = () => {
                   setStatusFilter("");
                   setPaymentStatusFilter("");
                 }}
+                className="text-foreground border-border hover:bg-muted"
               >
                 Clear Filters
               </Button>
@@ -275,7 +283,7 @@ const Orders = () => {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-foreground">Orders List</CardTitle>
           </CardHeader>
@@ -297,7 +305,7 @@ const Orders = () => {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
+                    <TableRow className="border-border">
                       <TableHead className="text-foreground">Order ID</TableHead>
                       <TableHead className="text-foreground">Date</TableHead>
                       <TableHead className="text-foreground">Customer</TableHead>
@@ -312,7 +320,7 @@ const Orders = () => {
                     {filteredOrders.map((order) => (
                       <TableRow 
                         key={order.id}
-                        className="cursor-pointer hover:bg-muted/50"
+                        className="cursor-pointer hover:bg-muted/50 border-border"
                         onClick={() => navigate(`/admin/orders/${order.id}`)}
                       >
                         <TableCell className="font-mono text-sm text-foreground">
@@ -344,13 +352,13 @@ const Orders = () => {
                             value={order.status} 
                             onValueChange={(value) => updateOrderStatus(order.id, value)}
                           >
-                            <SelectTrigger className="w-32">
+                            <SelectTrigger className="w-32 bg-background text-foreground border-border">
                               <div className="flex items-center gap-2">
                                 <span className={`inline-block w-2 h-2 rounded-full ${getStatusColor(order.status)}`}></span>
                                 <SelectValue />
                               </div>
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-background border-border">
                               <SelectItem value="pending">Pending</SelectItem>
                               <SelectItem value="processing">Processing</SelectItem>
                               <SelectItem value="shipped">Shipped</SelectItem>
@@ -370,6 +378,7 @@ const Orders = () => {
                             size="icon"
                             onClick={() => navigate(`/admin/orders/${order.id}`)}
                             title="View Details"
+                            className="text-foreground hover:bg-muted"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>

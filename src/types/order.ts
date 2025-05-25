@@ -11,86 +11,40 @@ export interface ShippingAddress {
 
 export interface OrderItem {
   id: string;
+  order_id: string;
+  product_id: string;
   quantity: number;
   price: number;
-  product: {
+  customization?: any;
+  product?: {
     name: string;
     images?: string[];
   };
-  customization: Record<string, any> | null;
 }
 
 export interface Order {
   id: string;
   user_id?: string;
-  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
-  payment_status: "pending" | "paid" | "refunded";
-  payment_method: string;
-  total_amount: number;
-  delivery_type: string;
-  shipping_address: ShippingAddress | null;
   created_at: string;
   updated_at: string;
-  order_items: OrderItem[];
+  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+  payment_status: "pending" | "paid" | "failed" | "refunded";
+  payment_method: string;
+  total_amount: number;
+  currency: string;
+  delivery_type: string;
+  shipping_address?: ShippingAddress;
+  billing_address?: ShippingAddress;
+  notes?: string;
+  tracking_number?: string;
+  order_items?: OrderItem[];
   profiles?: {
     display_name?: string;
     email?: string;
   };
 }
 
-export interface OrderDetail {
-  id: string;
-  user_id?: string;
-  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
-  payment_status: "pending" | "paid" | "refunded";
-  payment_method: string;
-  total_amount: number;
-  delivery_type: string;
-  shipping_address: ShippingAddress | null;
-  created_at: string;
-  updated_at: string;
-  order_items: OrderItem[];
-  profiles?: {
-    display_name?: string;
-    email?: string;
-  };
-}
-
-export interface Coupon {
-  id: string;
-  code: string;
-  discount_type: 'percentage' | 'fixed';
-  discount_value: number;
-  min_purchase: number;
-  max_uses: number | null;
-  used_count: number;
-  active: boolean;
-  starts_at: string;
-  expires_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Promotion {
-  id: string;
-  title: string;
-  description?: string;
-  image_url?: string;
-  link_url?: string;
-  start_date: string;
-  end_date?: string | null;
-  active: boolean;
-  placement: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ShippingMethod {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  active: boolean;
-  estimated_days: string;
-  created_at: string;
+export interface OrderDetail extends Order {
+  currency: string;
+  tracking_number?: string;
 }

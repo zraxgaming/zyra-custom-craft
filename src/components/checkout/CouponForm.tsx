@@ -2,80 +2,80 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 
-interface CouponFormProps {
-  onApplyCoupon: (code: string) => Promise<void>;
-  isLoading: boolean;
-  appliedCoupon?: {
-    code: string;
-    discountValue: number;
-    discountType: 'percentage' | 'fixed';
-  } | null;
-  onRemoveCoupon: () => void;
+export interface CouponFormProps {
+  onCouponApply: (coupon: any) => void;
+  onCouponRemove: () => void;
+  appliedCoupon?: any;
+  orderTotal: number;
 }
 
 const CouponForm: React.FC<CouponFormProps> = ({
-  onApplyCoupon,
-  isLoading,
+  onCouponApply,
+  onCouponRemove,
   appliedCoupon,
-  onRemoveCoupon
+  orderTotal
 }) => {
   const [couponCode, setCouponCode] = useState("");
-  
-  const handleApplyCoupon = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (couponCode.trim()) {
-      onApplyCoupon(couponCode.trim());
-    }
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    
+    setIsLoading(true);
+    // Mock coupon validation - replace with actual API call
+    setTimeout(() => {
+      if (couponCode.toLowerCase() === "save10") {
+        onCouponApply({
+          code: couponCode,
+          discount_type: "percentage",
+          discount_value: 10
+        });
+      }
+      setIsLoading(false);
+      setCouponCode("");
+    }, 1000);
   };
-  
+
   if (appliedCoupon) {
     return (
-      <div className="bg-green-50 p-3 rounded-md border border-green-200 flex justify-between items-center">
-        <div>
-          <p className="text-sm font-medium text-green-800">
-            Coupon applied: {appliedCoupon.code}
-          </p>
-          <p className="text-xs text-green-700">
-            {appliedCoupon.discountType === 'percentage'
-              ? `${appliedCoupon.discountValue}% off`
-              : `$${appliedCoupon.discountValue.toFixed(2)} off`
-            }
-          </p>
+      <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100">
+            {appliedCoupon.code}
+          </Badge>
+          <span className="text-sm text-foreground">Coupon applied</span>
         </div>
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           size="sm"
-          onClick={onRemoveCoupon}
+          onClick={onCouponRemove}
+          className="text-muted-foreground hover:text-foreground"
         >
-          Remove
+          <X className="h-4 w-4" />
         </Button>
       </div>
     );
   }
-  
+
   return (
-    <form onSubmit={handleApplyCoupon} className="flex flex-col space-y-2">
-      <Label htmlFor="couponCode">Promo Code</Label>
-      <div className="flex gap-2">
-        <Input
-          id="couponCode"
-          value={couponCode}
-          onChange={(e) => setCouponCode(e.target.value)}
-          placeholder="Enter promo code"
-          disabled={isLoading}
-        />
-        <Button 
-          type="submit" 
-          variant="secondary"
-          disabled={!couponCode.trim() || isLoading}
-        >
-          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
-        </Button>
-      </div>
-    </form>
+    <div className="flex gap-2">
+      <Input
+        placeholder="Enter coupon code"
+        value={couponCode}
+        onChange={(e) => setCouponCode(e.target.value)}
+        className="bg-background text-foreground border-border"
+      />
+      <Button
+        onClick={handleApplyCoupon}
+        disabled={!couponCode.trim() || isLoading}
+        className="bg-primary text-primary-foreground hover:bg-primary/90"
+      >
+        {isLoading ? "Applying..." : "Apply"}
+      </Button>
+    </div>
   );
 };
 
