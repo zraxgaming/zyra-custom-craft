@@ -15,7 +15,7 @@ const Index = () => {
   const { categories, isLoading: categoriesLoading } = useCategories();
   
   const isLoading = productsLoading || categoriesLoading;
-  const featuredProducts = products.filter(p => p.is_new || p.discount_percentage > 0).slice(0, 8);
+  const featuredProducts = products.filter(p => p.is_new || p.discount_percentage > 0 || p.featured).slice(0, 8);
 
   if (isLoading) {
     return <PageLoader message="Loading homepage..." />;

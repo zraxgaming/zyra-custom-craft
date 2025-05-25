@@ -18,6 +18,7 @@ export interface Product {
   discount_percentage: number;
   stock_quantity?: number;
   status: string;
+  featured: boolean;
 }
 
 export const useProducts = () => {
@@ -53,7 +54,8 @@ export const useProducts = () => {
         is_new: Boolean(product.is_new),
         discount_percentage: Number(product.discount_percentage) || 0,
         stock_quantity: product.stock_quantity,
-        status: product.status || "draft"
+        status: product.status || "draft",
+        featured: Boolean(product.featured || product.is_featured)
       }));
 
       setProducts(formattedProducts);
