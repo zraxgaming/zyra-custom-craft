@@ -1,6 +1,6 @@
 
 import React, { useEffect } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -11,6 +11,7 @@ interface AdminRouteProps {
 const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   const { user, isAdmin, isLoading } = useAuth();
   const { toast } = useToast();
+  const location = useLocation();
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -28,11 +29,21 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     }
   }, [isLoading, user, isAdmin, toast]);
 
-  // Don't show loading, just redirect immediately
-  if (!user) {
-    return <Navigate to="/auth" replace />;
+  // Show loading while checking auth status
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
+  // Redirect to auth page if not logged in
+  if (!user) {
+    return <Navigate to={`/auth?redirect=${encodeURIComponent(location.pathname)}`} replace />;
+  }
+
+  // Redirect to home if not admin
   if (!isAdmin) {
     return <Navigate to="/" replace />;
   }

@@ -16,8 +16,7 @@ type CartAction =
   | { type: "REMOVE_ITEM"; payload: string }
   | { type: "UPDATE_QUANTITY"; payload: { id: string; quantity: number } }
   | { type: "CLEAR_CART" }
-  | { type: "SET_ITEMS"; payload: CartItem[] }
-  | { type: "SET_LOADING"; payload: boolean };
+  | { type: "SET_ITEMS"; payload: CartItem[] };
 
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
@@ -95,31 +94,31 @@ interface CartProviderProps {
 
 export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { toast } = useToast();
 
   // Load cart from database when user logs in
   useEffect(() => {
-    if (user) {
+    if (user && session) {
       loadCartFromDatabase();
     } else {
       dispatch({ type: "CLEAR_CART" });
     }
-  }, [user]);
+  }, [user, session]);
 
-  // Save cart to database when items change
+  // Save cart to database when items change (debounced)
   useEffect(() => {
-    if (user && state.items.length >= 0) {
+    if (user && session && state.items.length >= 0) {
       const timeoutId = setTimeout(() => {
         saveCartToDatabase();
       }, 1000);
       
       return () => clearTimeout(timeoutId);
     }
-  }, [state.items, user]);
+  }, [state.items, user, session]);
 
   const loadCartFromDatabase = async () => {
-    if (!user) return;
+    if (!user || !session) return;
 
     try {
       const { data, error } = await supabase
@@ -136,7 +135,10 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         `)
         .eq("user_id", user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error loading cart:", error);
+        return;
+      }
 
       const cartItems: CartItem[] = (data || []).map((item: any) => ({
         id: item.id,
@@ -164,7 +166,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   };
 
   const saveCartToDatabase = async () => {
-    if (!user) return;
+    if (!user || !session) return;
 
     try {
       // Delete existing cart items
@@ -183,9 +185,13 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
           customization: item.customization || {}
         }));
 
-        await supabase
+        const { error } = await supabase
           .from("cart_items")
           .insert(itemsToInsert);
+
+        if (error) {
+          console.error("Error saving cart:", error);
+        }
       }
     } catch (error) {
       console.error("Error saving cart:", error);

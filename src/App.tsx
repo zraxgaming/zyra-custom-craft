@@ -19,8 +19,10 @@ import Checkout from "./pages/Checkout";
 import OrderSuccess from "./pages/OrderSuccess";
 import Contact from "./pages/Contact";
 import Auth from "./pages/Auth";
+import AuthCallback from "./pages/auth/callback";
 import Account from "./pages/Account";
 import Profile from "./pages/Profile";
+import ProfileSettings from "./pages/ProfileSettings";
 import Wishlist from "./pages/Wishlist";
 import About from "./pages/About";
 import Categories from "./pages/Categories";
@@ -71,8 +73,10 @@ function App() {
                   <Route path="/order-success" element={<OrderSuccess />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
                   <Route path="/account" element={<Account />} />
                   <Route path="/profile" element={<Profile />} />
+                  <Route path="/profile/settings" element={<ProfileSettings />} />
                   <Route path="/account/orders" element={<Account />} />
                   <Route path="/wishlist" element={<Wishlist />} />
                   <Route path="/about" element={<About />} />

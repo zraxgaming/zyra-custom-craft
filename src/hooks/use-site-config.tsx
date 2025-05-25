@@ -28,9 +28,9 @@ export const useSiteConfig = () => {
 
       const configObj: SiteConfig = {};
       if (data) {
-        data.forEach((item: { key: string; value: any }) => {
+        data.forEach((item: { key: string; value: string | boolean | number }) => {
           const key = item.key as keyof SiteConfig;
-          configObj[key] = item.value;
+          configObj[key] = item.value as any;
         });
       }
 

@@ -1,10 +1,11 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { User } from '@supabase/supabase-js';
+import type { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   isLoading: boolean;
   isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<any>;
@@ -16,6 +17,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -23,10 +25,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, session?.user?.id);
+      setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user?.id) {
-        await checkAdminStatus(session.user);
+        // Use setTimeout to prevent recursive calls
+        setTimeout(() => {
+          checkAdminStatus(session.user);
+        }, 0);
       } else {
         setIsAdmin(false);
       }
@@ -42,9 +48,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error('Error getting session:', error);
         } else {
           console.log('Initial session:', session?.user?.id);
+          setSession(session);
           setUser(session?.user ?? null);
           if (session?.user) {
-            await checkAdminStatus(session.user);
+            setTimeout(() => {
+              checkAdminStatus(session.user);
+            }, 0);
           }
         }
       } catch (error) {
@@ -124,32 +133,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signIn = async (email: string, password: string) => {
-    const response = await supabase.auth.signInWithPassword({ email, password });
-    return response;
+    try {
+      const response = await supabase.auth.signInWithPassword({ email, password });
+      return response;
+    } catch (error) {
+      console.error('Sign in error:', error);
+      throw error;
+    }
   };
 
   const signUp = async (email: string, password: string, name: string) => {
-    const response = await supabase.auth.signUp({ 
-      email, 
-      password,
-      options: {
-        data: {
-          name,
-          first_name: name.split(' ')[0],
-          last_name: name.split(' ').slice(1).join(' ')
+    try {
+      const response = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          data: {
+            name,
+            first_name: name.split(' ')[0],
+            last_name: name.split(' ').slice(1).join(' ')
+          }
         }
-      }
-    });
-    return response;
+      });
+      return response;
+    } catch (error) {
+      console.error('Sign up error:', error);
+      throw error;
+    }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setIsAdmin(false);
+    try {
+      await supabase.auth.signOut();
+      setIsAdmin(false);
+      setUser(null);
+      setSession(null);
+    } catch (error) {
+      console.error('Sign out error:', error);
+      throw error;
+    }
   };
 
   const value = {
     user,
+    session,
     isLoading,
     isAdmin,
     signIn,
