@@ -47,7 +47,6 @@ const OrderDetail = () => {
             display_name,
             first_name,
             last_name,
-            full_name,
             email,
             phone,
             avatar_url
@@ -91,9 +90,9 @@ const OrderDetail = () => {
         order_items: data.order_items || [],
         currency: data.currency || 'USD',
         tracking_number: data.tracking_number || undefined,
-        delivery_option: data.delivery_option || data.delivery_type || 'standard',
-        shipping_cost: data.shipping_cost || 0,
-        subtotal: data.subtotal || data.total_amount || 0
+        delivery_option: data.delivery_type || 'standard',
+        shipping_cost: 0, // Default value
+        subtotal: data.total_amount || 0 // Use total_amount as fallback
       };
 
       setOrder(parsedOrder);
