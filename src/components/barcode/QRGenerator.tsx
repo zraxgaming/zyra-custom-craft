@@ -1,57 +1,40 @@
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
+import QRCode from "qrcode";
 
 interface QRGeneratorProps {
   value: string;
   size?: number;
-  level?: "L" | "M" | "Q" | "H";
+  className?: string;
 }
 
-const QRGenerator: React.FC<QRGeneratorProps> = ({
-  value,
-  size = 200,
-  level = "M",
+const QRGenerator: React.FC<QRGeneratorProps> = ({ 
+  value, 
+  size = 200, 
+  className = "" 
 }) => {
-  // Simple QR code placeholder - in production use qrcode library
-  const generateQRPattern = (text: string, gridSize: number = 21) => {
-    const grid = Array(gridSize).fill(null).map(() => Array(gridSize).fill(false));
-    
-    // Simple pattern based on text (not a real QR algorithm)
-    for (let i = 0; i < gridSize; i++) {
-      for (let j = 0; j < gridSize; j++) {
-        const index = (i * gridSize + j) % text.length;
-        grid[i][j] = (text.charCodeAt(index) + i + j) % 2 === 0;
-      }
-    }
-    
-    return grid;
-  };
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const pattern = generateQRPattern(value);
-  const cellSize = size / pattern.length;
+  useEffect(() => {
+    if (canvasRef.current && value) {
+      QRCode.toCanvas(canvasRef.current, value, {
+        width: size,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      }).catch(console.error);
+    }
+  }, [value, size]);
+
+  if (!value) {
+    return <div className={`${className} flex items-center justify-center`}>No value provided</div>;
+  }
 
   return (
-    <div className="flex flex-col items-center space-y-2">
-      <div 
-        className="border border-gray-300"
-        style={{ width: size, height: size }}
-      >
-        <svg width={size} height={size}>
-          {pattern.map((row, i) =>
-            row.map((cell, j) => (
-              <rect
-                key={`${i}-${j}`}
-                x={j * cellSize}
-                y={i * cellSize}
-                width={cellSize}
-                height={cellSize}
-                fill={cell ? "#000" : "#fff"}
-              />
-            ))
-          )}
-        </svg>
-      </div>
-      <span className="text-xs text-center break-all max-w-[200px]">{value}</span>
+    <div className={className}>
+      <canvas ref={canvasRef} />
     </div>
   );
 };

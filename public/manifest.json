@@ -18,14 +18,14 @@
       "type": "image/x-icon"
     },
     {
-      "src": "/icon-192.png",
-      "type": "image/png",
+      "src": "/placeholder.svg",
+      "type": "image/svg+xml",
       "sizes": "192x192",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512.png",
-      "type": "image/png",
+      "src": "/placeholder.svg",
+      "type": "image/svg+xml",
       "sizes": "512x512",
       "purpose": "any maskable"
     }
@@ -58,16 +58,16 @@
   ],
   "screenshots": [
     {
-      "src": "/screenshot-wide.png",
+      "src": "/placeholder.svg",
       "sizes": "1280x720",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "form_factor": "wide",
       "label": "Zyra Desktop View"
     },
     {
-      "src": "/screenshot-narrow.png",
+      "src": "/placeholder.svg",
       "sizes": "750x1334",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "form_factor": "narrow",
       "label": "Zyra Mobile View"
     }

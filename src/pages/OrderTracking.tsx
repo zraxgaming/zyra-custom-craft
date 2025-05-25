@@ -45,7 +45,16 @@ const OrderTracking = () => {
         .from("orders")
         .select(`
           *,
-          order_items (*)
+          order_items (
+            id,
+            quantity,
+            price,
+            products!order_items_product_id_fkey (
+              id,
+              name,
+              images
+            )
+          )
         `)
         .eq("tracking_number", trackingNumber.trim())
         .single();
@@ -173,7 +182,7 @@ const OrderTracking = () => {
                     <div>
                       <h4 className="font-medium text-gray-900 dark:text-gray-100">Order Date</h4>
                       <p className="text-gray-600 dark:text-gray-400">
-                        {new Date(order.created_at).toLocaleDateString()}
+                        {order.created_at ? new Date(order.created_at).toLocaleDateString() : 'Unknown'}
                       </p>
                     </div>
                     <div>
@@ -256,7 +265,9 @@ const OrderTracking = () => {
                       {order.order_items.map((item: any) => (
                         <div key={item.id} className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-4 last:border-b-0">
                           <div>
-                            <h4 className="font-medium text-gray-900 dark:text-gray-100">Item #{item.id.slice(0, 8)}</h4>
+                            <h4 className="font-medium text-gray-900 dark:text-gray-100">
+                              {item.products?.name || `Item #${item.id.slice(0, 8)}`}
+                            </h4>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
                               Quantity: {item.quantity}
                             </p>

@@ -1,41 +1,33 @@
 
 export interface CartItem {
   id: string;
-  productId: string;
   name: string;
-  price: number;
+  productId: string;
   quantity: number;
-  image?: string;
-  customization?: Record<string, any>;
-  product: {
-    id: string;
-    name: string;
-    price: number;
-    images?: string[];
-    slug: string;
-  };
-}
-
-export interface CartContextType {
-  items: CartItem[];
-  addItem: (product: any, quantity?: number, customization?: any) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
-  clearCart: () => void;
-  getCartTotal: () => number;
-  getTotalItems: () => number;
-}
-
-export interface WishlistItem {
-  id: string;
-  user_id: string;
-  product_id: string;
-  created_at: string;
+  price: number;
+  customization?: any;
   product?: {
     id: string;
     name: string;
     price: number;
-    images?: string[];
+    images: string[];
     slug: string;
   };
+}
+
+export interface CartState {
+  isOpen: boolean;
+  items: CartItem[];
+}
+
+export interface CartContextType {
+  state: CartState;
+  items: CartItem[];
+  totalItems: number;
+  subtotal: number;
+  toggleCart: () => void;
+  addItem: (item: Omit<CartItem, 'id'>) => void;
+  removeItem: (id: string) => void;
+  updateQuantity: (id: string, quantity: number) => void;
+  clearCart: () => void;
 }

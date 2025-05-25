@@ -1,110 +1,57 @@
 
-import React, { createContext, useContext, useReducer, useEffect } from "react";
-import { useAuth } from "@/hooks/use-auth";
+import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { CartItem, CartState, CartContextType } from "@/types/cart";
+import type { Json } from "@/integrations/supabase/types";
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const initialState: CartState = {
-  items: [],
-  isLoading: false,
-};
-
-type CartAction =
-  | { type: "SET_LOADING"; payload: boolean }
-  | { type: "SET_ITEMS"; payload: CartItem[] }
-  | { type: "ADD_ITEM"; payload: CartItem }
-  | { type: "UPDATE_QUANTITY"; payload: { id: string; quantity: number } }
-  | { type: "REMOVE_ITEM"; payload: string }
-  | { type: "CLEAR_CART" };
-
-const cartReducer = (state: CartState, action: CartAction): CartState => {
-  switch (action.type) {
-    case "SET_LOADING":
-      return { ...state, isLoading: action.payload };
-    case "SET_ITEMS":
-      return { ...state, items: action.payload };
-    case "ADD_ITEM":
-      const existingItemIndex = state.items.findIndex(
-        item => item.productId === action.payload.productId
-      );
-      
-      if (existingItemIndex >= 0) {
-        const updatedItems = [...state.items];
-        updatedItems[existingItemIndex] = {
-          ...updatedItems[existingItemIndex],
-          quantity: updatedItems[existingItemIndex].quantity + action.payload.quantity
-        };
-        return { ...state, items: updatedItems };
-      }
-      
-      return { ...state, items: [...state.items, action.payload] };
-    case "UPDATE_QUANTITY":
-      return {
-        ...state,
-        items: state.items.map(item =>
-          item.id === action.payload.id
-            ? { ...item, quantity: action.payload.quantity }
-            : item
-        ),
-      };
-    case "REMOVE_ITEM":
-      return {
-        ...state,
-        items: state.items.filter(item => item.id !== action.payload),
-      };
-    case "CLEAR_CART":
-      return { ...state, items: [] };
-    default:
-      return state;
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error("useCart must be used within a CartProvider");
   }
+  return context;
 };
 
-export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, dispatch] = useReducer(cartReducer, initialState);
+interface CartProviderProps {
+  children: ReactNode;
+}
+
+export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [state, setState] = useState<CartState>({
+    isOpen: false,
+    items: [],
+  });
 
-  // Load cart from localStorage on component mount
-  useEffect(() => {
-    if (!user) {
-      const savedCart = localStorage.getItem("cart");
-      if (savedCart) {
-        try {
-          const parsedCart = JSON.parse(savedCart);
-          dispatch({ type: "SET_ITEMS", payload: parsedCart });
-        } catch (error) {
-          console.error("Error loading cart from localStorage:", error);
-        }
-      }
-    }
-  }, [user]);
+  // Calculate totals
+  const totalItems = state.items.reduce((sum, item) => sum + item.quantity, 0);
+  const subtotal = state.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   // Load cart from database when user logs in
   useEffect(() => {
     if (user) {
       loadCartFromDatabase();
+    } else {
+      // Clear cart when user logs out
+      setState(prev => ({ ...prev, items: [] }));
     }
   }, [user]);
 
-  // Save cart to localStorage when items change (for non-logged-in users)
-  useEffect(() => {
-    if (!user && state.items.length >= 0) {
-      localStorage.setItem("cart", JSON.stringify(state.items));
-    }
-  }, [state.items, user]);
-
   const loadCartFromDatabase = async () => {
     if (!user) return;
-
-    dispatch({ type: "SET_LOADING", payload: true });
+    
     try {
       const { data, error } = await supabase
         .from("cart_items")
         .select(`
-          *,
+          id,
+          quantity,
+          customization,
           products!cart_items_product_id_fkey (
             id,
             name,
@@ -115,11 +62,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         `)
         .eq("user_id", user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching cart from database:", error);
+        return;
+      }
 
-      const cartItems: CartItem[] = (data || []).map(item => ({
+      const cartItems: CartItem[] = (data || []).map((item: any) => ({
         id: item.id,
-        productId: item.product_id,
+        name: item.products?.name || "Unknown Product",
+        productId: item.products?.id || '',
         quantity: item.quantity,
         price: item.products?.price || 0,
         customization: item.customization,
@@ -127,71 +78,88 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: item.products.id,
           name: item.products.name,
           price: item.products.price,
-          images: item.products.images || [],
+          images: Array.isArray(item.products.images) ? item.products.images : [],
           slug: item.products.slug
         } : undefined
       }));
 
-      dispatch({ type: "SET_ITEMS", payload: cartItems });
-    } catch (error: any) {
-      console.error("Error fetching cart from database:", error);
-    } finally {
-      dispatch({ type: "SET_LOADING", payload: false });
+      setState(prev => ({ ...prev, items: cartItems }));
+    } catch (error) {
+      console.error("Error loading cart:", error);
     }
   };
 
-  const addToCart = async (productId: string, quantity: number = 1, customization?: any) => {
+  const toggleCart = () => {
+    setState(prev => ({ ...prev, isOpen: !prev.isOpen }));
+  };
+
+  const addItem = async (newItem: Omit<CartItem, 'id'>) => {
     try {
-      // Get product details
-      const { data: product, error: productError } = await supabase
-        .from("products")
-        .select("id, name, price, images, slug")
-        .eq("id", productId)
-        .single();
+      // Check if item already exists in cart
+      const existingItem = state.items.find(item => 
+        item.productId === newItem.productId && 
+        JSON.stringify(item.customization) === JSON.stringify(newItem.customization)
+      );
 
-      if (productError) throw productError;
-
-      const cartItem: CartItem = {
-        id: `temp-${Date.now()}`,
-        productId,
-        quantity,
-        price: product.price,
-        customization,
-        product: {
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          images: product.images || [],
-          slug: product.slug
-        }
-      };
+      if (existingItem) {
+        // Update quantity if item exists
+        await updateQuantity(existingItem.id, existingItem.quantity + newItem.quantity);
+        return;
+      }
 
       if (user) {
-        // Save to database
+        // Add to database if user is logged in
         const { data, error } = await supabase
           .from("cart_items")
           .insert({
             user_id: user.id,
-            product_id: productId,
-            quantity,
-            customization
+            product_id: newItem.productId,
+            quantity: newItem.quantity,
+            customization: newItem.customization as Json,
           })
           .select()
           .single();
 
         if (error) throw error;
 
-        cartItem.id = data.id;
-      }
+        const cartItem: CartItem = {
+          id: data.id,
+          name: newItem.name,
+          productId: newItem.productId,
+          quantity: newItem.quantity,
+          price: newItem.price,
+          customization: newItem.customization,
+          product: newItem.product,
+        };
 
-      dispatch({ type: "ADD_ITEM", payload: cartItem });
+        setState(prev => ({
+          ...prev,
+          items: [...prev.items, cartItem]
+        }));
+      } else {
+        // Add to local state if user is not logged in
+        const cartItem: CartItem = {
+          id: Math.random().toString(36).substr(2, 9),
+          name: newItem.name,
+          productId: newItem.productId,
+          quantity: newItem.quantity,
+          price: newItem.price,
+          customization: newItem.customization,
+          product: newItem.product,
+        };
+
+        setState(prev => ({
+          ...prev,
+          items: [...prev.items, cartItem]
+        }));
+      }
 
       toast({
         title: "Added to cart",
-        description: `${product.name} has been added to your cart.`,
+        description: `${newItem.name} has been added to your cart.`,
       });
-    } catch (error: any) {
-      console.error("Error adding to cart:", error);
+    } catch (error) {
+      console.error("Error adding item to cart:", error);
       toast({
         title: "Error",
         description: "Failed to add item to cart.",
@@ -200,9 +168,39 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const removeItem = async (id: string) => {
+    try {
+      if (user) {
+        const { error } = await supabase
+          .from("cart_items")
+          .delete()
+          .eq("id", id);
+
+        if (error) throw error;
+      }
+
+      setState(prev => ({
+        ...prev,
+        items: prev.items.filter(item => item.id !== id)
+      }));
+
+      toast({
+        title: "Removed from cart",
+        description: "Item has been removed from your cart.",
+      });
+    } catch (error) {
+      console.error("Error removing item from cart:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove item from cart.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const updateQuantity = async (id: string, quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(id);
+      await removeItem(id);
       return;
     }
 
@@ -216,39 +214,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (error) throw error;
       }
 
-      dispatch({ type: "UPDATE_QUANTITY", payload: { id, quantity } });
-    } catch (error: any) {
-      console.error("Error updating quantity:", error);
+      setState(prev => ({
+        ...prev,
+        items: prev.items.map(item =>
+          item.id === id ? { ...item, quantity } : item
+        )
+      }));
+    } catch (error) {
+      console.error("Error updating cart quantity:", error);
       toast({
         title: "Error",
         description: "Failed to update quantity.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const removeFromCart = async (id: string) => {
-    try {
-      if (user) {
-        const { error } = await supabase
-          .from("cart_items")
-          .delete()
-          .eq("id", id);
-
-        if (error) throw error;
-      }
-
-      dispatch({ type: "REMOVE_ITEM", payload: id });
-
-      toast({
-        title: "Removed from cart",
-        description: "Item has been removed from your cart.",
-      });
-    } catch (error: any) {
-      console.error("Error removing from cart:", error);
-      toast({
-        title: "Error",
-        description: "Failed to remove item from cart.",
         variant: "destructive",
       });
     }
@@ -263,12 +239,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq("user_id", user.id);
 
         if (error) throw error;
-      } else {
-        localStorage.removeItem("cart");
       }
 
-      dispatch({ type: "CLEAR_CART" });
-    } catch (error: any) {
+      setState(prev => ({ ...prev, items: [] }));
+      
+      toast({
+        title: "Cart cleared",
+        description: "All items have been removed from your cart.",
+      });
+    } catch (error) {
       console.error("Error clearing cart:", error);
       toast({
         title: "Error",
@@ -278,38 +257,23 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const getCartTotal = () => {
-    return state.items.reduce((total, item) => {
-      const itemPrice = item.product?.price || item.price || 0;
-      return total + (itemPrice * item.quantity);
-    }, 0);
-  };
-
-  const getItemCount = () => {
-    return state.items.reduce((total, item) => total + item.quantity, 0);
+  const value: CartContextType = {
+    state,
+    items: state.items,
+    totalItems,
+    subtotal,
+    toggleCart,
+    addItem,
+    removeItem,
+    updateQuantity,
+    clearCart,
   };
 
   return (
-    <CartContext.Provider
-      value={{
-        state,
-        addToCart,
-        updateQuantity,
-        removeFromCart,
-        clearCart,
-        getCartTotal,
-        getItemCount,
-      }}
-    >
+    <CartContext.Provider value={value}>
       {children}
     </CartContext.Provider>
   );
 };
 
-export const useCart = () => {
-  const context = useContext(CartContext);
-  if (!context) {
-    throw new Error("useCart must be used within a CartProvider");
-  }
-  return context;
-};
+export { CartItem };

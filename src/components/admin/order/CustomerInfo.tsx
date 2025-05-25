@@ -1,56 +1,60 @@
 
-import React from "react";
-import { 
-  CardHeader, 
-  CardContent, 
-  CardTitle,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { ShippingAddress } from "@/types/order";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { User, Mail, MapPin, Phone } from "lucide-react";
+import { OrderDetail } from "@/types/order";
 
 interface CustomerInfoProps {
-  profiles: {
-    display_name?: string;
-    email?: string;
-  } | null;
-  shippingAddress: ShippingAddress | null;
+  order: OrderDetail;
 }
 
-const CustomerInfo: React.FC<CustomerInfoProps> = ({ 
-  profiles,
-  shippingAddress
-}) => {
+const CustomerInfo = ({ order }: CustomerInfoProps) => {
   return (
-    <>
-      <CardHeader>
-        <CardTitle>Customer Information</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="font-medium">
-          {profiles?.display_name || "Guest Customer"}
-        </p>
-        <p className="text-gray-500">
-          {profiles?.email || "No email provided"}
-        </p>
-        
-        <Separator className="my-4" />
-        
-        <div>
-          <h4 className="font-medium mb-2">Shipping Address</h4>
-          {shippingAddress ? (
-            <div className="text-sm">
-              <p>{shippingAddress.name}</p>
-              <p>{shippingAddress.street}</p>
-              <p>{shippingAddress.city}, {shippingAddress.state} {shippingAddress.zipCode}</p>
-              <p>{shippingAddress.country}</p>
-              {shippingAddress.phone && <p>Phone: {shippingAddress.phone}</p>}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500">No shipping address provided</p>
-          )}
+    <CardContent className="pt-6">
+      <CardTitle className="flex items-center gap-2 mb-4 text-foreground">
+        <User className="h-5 w-5" />
+        Customer Information
+      </CardTitle>
+      
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Mail className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm text-foreground">
+            {order.profiles?.email || "No email"}
+          </span>
         </div>
-      </CardContent>
-    </>
+        
+        <div className="flex items-center gap-2">
+          <User className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm text-foreground">
+            {order.profiles?.display_name || "Guest User"}
+          </span>
+        </div>
+
+        {order.shipping_address && (
+          <div className="space-y-2">
+            <div className="flex items-start gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+              <div className="text-sm text-foreground">
+                <div className="font-medium">Shipping Address</div>
+                <div>{order.shipping_address.name}</div>
+                <div>{order.shipping_address.street}</div>
+                <div>
+                  {order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.zipCode}
+                </div>
+                <div>{order.shipping_address.country}</div>
+                {order.shipping_address.phone && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <Phone className="h-3 w-3" />
+                    {order.shipping_address.phone}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </CardContent>
   );
 };
 

@@ -1,3 +1,4 @@
+
 import { Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -28,11 +29,11 @@ import Categories from "./pages/Categories";
 import CategoryPage from "./pages/CategoryPage";
 import GiftCards from "./pages/GiftCards";
 import NotFound from "./pages/NotFound";
+import Contact from "./pages/Contact";
 import AdminRoute from "./components/admin/AdminRoute";
 import Dashboard from "./pages/admin/Dashboard";
 import Products from "./pages/admin/Products";
 import ProductEdit from "./pages/admin/ProductEdit";
-import Orders from "./pages/admin/Orders";
 import OrderDetail from "./pages/admin/OrderDetail";
 import Customers from "./pages/admin/Customers";
 import AdminCategories from "./pages/admin/Categories";
@@ -105,7 +106,6 @@ const App = () => (
                     <Route path="/admin/products" element={<AdminRoute><Products /></AdminRoute>} />
                     <Route path="/admin/products/new" element={<AdminRoute><ProductEdit /></AdminRoute>} />
                     <Route path="/admin/products/:id/edit" element={<AdminRoute><ProductEdit /></AdminRoute>} />
-                    <Route path="/admin/orders" element={<AdminRoute><Orders /></AdminRoute>} />
                     <Route path="/admin/orders/:id" element={<AdminRoute><OrderDetail /></AdminRoute>} />
                     <Route path="/admin/customers" element={<AdminRoute><Customers /></AdminRoute>} />
                     <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
