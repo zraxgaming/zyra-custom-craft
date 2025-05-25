@@ -462,6 +462,7 @@ export type Database = {
           notes: string | null
           payment_method: string | null
           payment_status: string | null
+          profile_id: string | null
           shipping_address: Json | null
           status: string | null
           total_amount: number
@@ -478,6 +479,7 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           payment_status?: string | null
+          profile_id?: string | null
           shipping_address?: Json | null
           status?: string | null
           total_amount: number
@@ -494,6 +496,7 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           payment_status?: string | null
+          profile_id?: string | null
           shipping_address?: Json | null
           status?: string | null
           total_amount?: number
@@ -501,7 +504,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "orders_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       page_views: {
         Row: {

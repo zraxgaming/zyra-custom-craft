@@ -1,12 +1,25 @@
 
-export interface ShippingAddress {
-  name: string;
-  street: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
-  phone?: string;
+export interface Order {
+  id: string;
+  user_id: string;
+  total_amount: number;
+  status: string;
+  payment_status: string;
+  payment_method?: string;
+  shipping_address?: any;
+  billing_address?: any;
+  currency: string;
+  delivery_type: string;
+  notes?: string;
+  tracking_number?: string;
+  created_at: string;
+  updated_at?: string;
+  profiles?: {
+    email: string;
+    first_name: string;
+    last_name: string;
+  };
+  order_items?: OrderItem[];
 }
 
 export interface OrderItem {
@@ -16,51 +29,5 @@ export interface OrderItem {
   quantity: number;
   price: number;
   customization?: any;
-  product?: {
-    id: string;
-    name: string;
-    images?: string[];
-  };
-}
-
-export interface Order {
-  id: string;
-  user_id?: string;
   created_at: string;
-  updated_at: string;
-  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
-  payment_status: "pending" | "paid" | "failed" | "refunded";
-  payment_method: string;
-  total_amount: number;
-  currency: string;
-  delivery_type: string;
-  shipping_address?: ShippingAddress;
-  billing_address?: ShippingAddress;
-  notes?: string;
-  tracking_number?: string;
-  order_items?: OrderItem[];
-  profiles?: {
-    display_name?: string;
-    email?: string;
-  };
-}
-
-export interface OrderDetail extends Order {
-  currency: string;
-  tracking_number?: string;
-}
-
-export interface Coupon {
-  id: string;
-  code: string;
-  discount_type: 'percentage' | 'fixed';
-  discount_value: number;
-  min_purchase: number;
-  max_uses?: number;
-  used_count: number;
-  active: boolean;
-  starts_at: string;
-  expires_at?: string;
-  created_at: string;
-  updated_at: string;
 }

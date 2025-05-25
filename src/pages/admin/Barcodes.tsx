@@ -1,50 +1,41 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
 import AdminLayout from "@/components/admin/AdminLayout";
-import BarcodeDisplay from "@/components/barcode/BarcodeDisplay";
-import { Plus, Download, Eye } from "lucide-react";
+import { QrCode, Download, Plus, Package } from "lucide-react";
 import { format } from "date-fns";
 
 interface BarcodeGeneration {
   id: string;
+  product_id: string;
   barcode_type: string;
   barcode_data: string;
-  generated_by: string | null;
   created_at: string;
-  product_id: string | null;
+  generated_by: string;
 }
 
 interface Product {
   id: string;
   name: string;
   sku: string;
+  barcode: string;
 }
 
 const Barcodes = () => {
-  const { user } = useAuth();
   const [barcodes, setBarcodes] = useState<BarcodeGeneration[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [selectedBarcode, setSelectedBarcode] = useState<BarcodeGeneration | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState("");
+  const [barcodeType, setBarcodeType] = useState("qr");
+  const [customData, setCustomData] = useState("");
   const { toast } = useToast();
-
-  const [formData, setFormData] = useState({
-    barcode_type: "qr" as "qr" | "code128" | "ean13",
-    barcode_data: "",
-    product_id: "",
-  });
 
   useEffect(() => {
     fetchBarcodes();
@@ -66,8 +57,6 @@ const Barcodes = () => {
         description: error.message,
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -75,49 +64,54 @@ const Barcodes = () => {
     try {
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, sku")
+        .select("id, name, sku, barcode")
         .eq("status", "published");
 
       if (error) throw error;
       setProducts(data || []);
     } catch (error: any) {
-      console.error("Error fetching products:", error);
+      toast({
+        title: "Error fetching products",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      barcode_type: "qr",
-      barcode_data: "",
-      product_id: "",
-    });
-  };
+  const generateBarcode = async () => {
+    if (!selectedProduct && !customData) {
+      toast({
+        title: "Missing data",
+        description: "Please select a product or enter custom data.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
     try {
-      const barcodeData = {
-        barcode_type: formData.barcode_type,
-        barcode_data: formData.barcode_data,
-        generated_by: user?.id || null,
-        product_id: formData.product_id || null,
-      };
+      const product = products.find(p => p.id === selectedProduct);
+      const barcodeData = customData || product?.sku || product?.name || selectedProduct;
 
       const { error } = await supabase
         .from("barcode_generations")
-        .insert(barcodeData);
+        .insert({
+          product_id: selectedProduct || null,
+          barcode_type: barcodeType,
+          barcode_data: barcodeData,
+        });
 
       if (error) throw error;
 
       toast({
         title: "Barcode generated",
-        description: "New barcode has been generated successfully.",
+        description: "Barcode has been generated successfully.",
       });
 
-      setIsDialogOpen(false);
-      resetForm();
       fetchBarcodes();
+      setSelectedProduct("");
+      setCustomData("");
     } catch (error: any) {
       toast({
         title: "Error generating barcode",
@@ -127,100 +121,127 @@ const Barcodes = () => {
     }
   };
 
-  const handleView = (barcode: BarcodeGeneration) => {
-    setSelectedBarcode(barcode);
-    setViewDialogOpen(true);
-  };
+  const downloadBarcode = (barcodeId: string, data: string) => {
+    // Generate QR code data URL
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-  const downloadBarcode = (barcode: BarcodeGeneration) => {
-    // This would typically convert the barcode to an image and download it
-    toast({
-      title: "Download started",
-      description: "Barcode download will begin shortly.",
-    });
+    canvas.width = 200;
+    canvas.height = 200;
+    
+    // Simple QR code placeholder - in production, use a proper QR code library
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, 200, 200);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '12px Arial';
+    ctx.fillText(data, 10, 100);
+
+    const link = document.createElement('a');
+    link.download = `barcode-${barcodeId}.png`;
+    link.href = canvas.toDataURL();
+    link.click();
   };
 
   return (
     <AdminLayout>
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-foreground">Barcode Generator</h1>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={resetForm} className="bg-primary text-primary-foreground">
-                <Plus className="mr-2 h-4 w-4" />
-                Generate Barcode
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-background border-border">
-              <DialogHeader>
-                <DialogTitle className="text-foreground">Generate New Barcode</DialogTitle>
-              </DialogHeader>
-              
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <Label htmlFor="barcode_type" className="text-foreground">Barcode Type</Label>
-                  <Select 
-                    value={formData.barcode_type} 
-                    onValueChange={(value: "qr" | "code128" | "ean13") => 
-                      setFormData({ ...formData, barcode_type: value })
-                    }
-                  >
-                    <SelectTrigger className="bg-background text-foreground border-border">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border-border">
-                      <SelectItem value="qr">QR Code</SelectItem>
-                      <SelectItem value="code128">Code 128</SelectItem>
-                      <SelectItem value="ean13">EAN-13</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="barcode_data" className="text-foreground">Barcode Data</Label>
-                  <Input
-                    id="barcode_data"
-                    value={formData.barcode_data}
-                    onChange={(e) => setFormData({ ...formData, barcode_data: e.target.value })}
-                    placeholder="Enter data to encode"
-                    required
-                    className="bg-background text-foreground border-border"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="product_id" className="text-foreground">Link to Product (Optional)</Label>
-                  <Select 
-                    value={formData.product_id} 
-                    onValueChange={(value) => setFormData({ ...formData, product_id: value })}
-                  >
-                    <SelectTrigger className="bg-background text-foreground border-border">
-                      <SelectValue placeholder="Select a product" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border-border">
-                      <SelectItem value="">No product</SelectItem>
-                      {products.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name} {product.sku && `(${product.sku})`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="text-foreground border-border">
-                    Cancel
-                  </Button>
-                  <Button type="submit" className="bg-primary text-primary-foreground">
-                    Generate
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <h1 className="text-3xl font-bold text-foreground">Barcode Management</h1>
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="flex items-center text-foreground">
+                <QrCode className="mr-2 h-5 w-5" />
+                Total Barcodes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">{barcodes.length}</div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-foreground">Products with Barcodes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">
+                {products.filter(p => p.barcode).length}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-foreground">Generated Today</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">
+                {barcodes.filter(b => 
+                  new Date(b.created_at).toDateString() === new Date().toDateString()
+                ).length}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <CardTitle className="text-foreground">Generate New Barcode</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="product" className="text-foreground">Select Product</Label>
+                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                  <SelectTrigger className="bg-background text-foreground border-border">
+                    <SelectValue placeholder="Select a product" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name} {product.sku && `(${product.sku})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="type" className="text-foreground">Barcode Type</Label>
+                <Select value={barcodeType} onValueChange={setBarcodeType}>
+                  <SelectTrigger className="bg-background text-foreground border-border">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="qr">QR Code</SelectItem>
+                    <SelectItem value="ean13">EAN-13</SelectItem>
+                    <SelectItem value="code128">Code 128</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="custom" className="text-foreground">Custom Data (Optional)</Label>
+                <Input
+                  id="custom"
+                  value={customData}
+                  onChange={(e) => setCustomData(e.target.value)}
+                  placeholder="Enter custom data"
+                  className="bg-background text-foreground border-border"
+                />
+              </div>
+            </div>
+
+            <Button onClick={generateBarcode} className="bg-primary text-primary-foreground">
+              <Plus className="mr-2 h-4 w-4" />
+              Generate Barcode
+            </Button>
+          </CardContent>
+        </Card>
 
         <Card className="bg-card border-border">
           <CardHeader>
@@ -243,72 +264,41 @@ const Barcodes = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {barcodes.map((barcode) => (
-                    <TableRow key={barcode.id} className="border-border">
-                      <TableCell className="text-foreground uppercase">{barcode.barcode_type}</TableCell>
-                      <TableCell className="text-foreground font-mono">
-                        {barcode.barcode_data.length > 30 
-                          ? `${barcode.barcode_data.substring(0, 30)}...` 
-                          : barcode.barcode_data
-                        }
-                      </TableCell>
-                      <TableCell className="text-foreground">
-                        {barcode.product_id 
-                          ? products.find(p => p.id === barcode.product_id)?.name || "Unknown"
-                          : "None"
-                        }
-                      </TableCell>
-                      <TableCell className="text-foreground">
-                        {format(new Date(barcode.created_at), "MMM d, yyyy")}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
+                  {barcodes.map((barcode) => {
+                    const product = products.find(p => p.id === barcode.product_id);
+                    return (
+                      <TableRow key={barcode.id} className="border-border">
+                        <TableCell className="text-foreground uppercase">
+                          {barcode.barcode_type}
+                        </TableCell>
+                        <TableCell className="text-foreground font-mono">
+                          {barcode.barcode_data}
+                        </TableCell>
+                        <TableCell className="text-foreground">
+                          {product ? product.name : "Custom"}
+                        </TableCell>
+                        <TableCell className="text-foreground">
+                          {format(new Date(barcode.created_at), "MMM d, yyyy HH:mm")}
+                        </TableCell>
+                        <TableCell>
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleView(barcode)}
-                            className="text-foreground hover:bg-muted"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => downloadBarcode(barcode.id, barcode.barcode_data)}
+                            className="text-foreground border-border"
                           >
-                            <Eye className="h-4 w-4" />
+                            <Download className="h-4 w-4 mr-2" />
+                            Download
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => downloadBarcode(barcode)}
-                            className="text-foreground hover:bg-muted"
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
           </CardContent>
         </Card>
-
-        {/* View Barcode Dialog */}
-        <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-          <DialogContent className="bg-background border-border">
-            <DialogHeader>
-              <DialogTitle className="text-foreground">View Barcode</DialogTitle>
-            </DialogHeader>
-            {selectedBarcode && (
-              <div className="flex flex-col items-center space-y-4">
-                <BarcodeDisplay
-                  type={selectedBarcode.barcode_type as "qr" | "code128" | "ean13"}
-                  data={selectedBarcode.barcode_data}
-                />
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Type: {selectedBarcode.barcode_type.toUpperCase()}</p>
-                  <p className="text-sm text-muted-foreground">Data: {selectedBarcode.barcode_data}</p>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
       </div>
     </AdminLayout>
   );

@@ -25,9 +25,13 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Convert AED to USD for PayPal (1 AED = ~0.27 USD)
-  const aedToUsdRate = 0.27;
+  // Correct currency conversion rates
+  const aedToUsdRate = 0.272; // 1 AED = 0.272 USD
+  const usdToAedRate = 3.673; // 1 USD = 3.673 AED
+  
+  // Convert based on payment method
   const totalInUSD = total * aedToUsdRate;
+  const totalInAED = total; // Assuming base currency is AED
 
   useEffect(() => {
     const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
@@ -82,7 +86,7 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
             <ZiinaPayment
               onZiinaApprove={onZiinaApprove}
               isProcessing={isProcessing}
-              total={total}
+              total={totalInAED}
               hasValidAddress={hasValidAddress}
             />
           </TabsContent>
@@ -95,7 +99,7 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
                   <div>
                     <span className="text-foreground">PayPal or Credit/Debit Card</span>
                     <div className="text-xs text-muted-foreground">
-                      Total: ${totalInUSD.toFixed(2)} USD (converted from {total.toFixed(2)} AED)
+                      Total: ${totalInUSD.toFixed(2)} USD (converted from {totalInAED.toFixed(2)} AED)
                     </div>
                   </div>
                 </div>
@@ -133,44 +137,20 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
                         purchase_units: [
                           {
                             amount: {
+                              currency_code: "USD",
                               value: totalInUSD.toFixed(2),
-                              currency_code: "USD"
                             },
-                            description: `Order from Zyra Store (${total.toFixed(2)} AED)`
-                          }
-                        ]
+                          },
+                        ],
                       });
                     }}
-                    onApprove={async (data, actions) => {
-                      console.log("PayPal payment approved:", data);
-                      if (actions.order) {
-                        try {
-                          const details = await actions.order.capture();
-                          console.log("PayPal capture details:", details);
-                          await onPayPalApprove(details);
-                        } catch (error) {
-                          console.error("Error capturing PayPal payment:", error);
-                          toast({
-                            title: "Payment Failed",
-                            description: "There was an error processing your payment. Please try again.",
-                            variant: "destructive",
-                          });
-                        }
-                      }
-                    }}
+                    onApprove={onPayPalApprove}
                     onError={(err) => {
-                      console.error("PayPal Error:", err);
+                      console.error("PayPal Checkout onError", err);
                       toast({
-                        title: "Payment Error",
-                        description: "There was an error processing your payment. Please try again.",
+                        title: "Payment failed",
+                        description: "There was an error processing your PayPal payment",
                         variant: "destructive",
-                      });
-                    }}
-                    onCancel={() => {
-                      toast({
-                        title: "Payment Cancelled",
-                        description: "You cancelled the payment process. Try again when you're ready.",
-                        variant: "default",
                       });
                     }}
                   />

@@ -3,7 +3,6 @@ import React from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import ContactForm from "@/components/contact/ContactForm";
-import TypeformFeedback from "@/components/feedback/TypeformFeedback";
 import NewsletterSignup from "@/components/newsletter/NewsletterSignup";
 import { Container } from "@/components/ui/container";
 
@@ -34,24 +33,6 @@ const Contact = () => {
                 Subscribe to our newsletter for the latest updates, promotions, and news.
               </p>
               <NewsletterSignup />
-            </div>
-          </div>
-          
-          {/* Embedded Typeform for detailed feedback */}
-          <div className="mt-16 p-8 bg-card rounded-lg border border-border">
-            <h2 className="text-2xl font-bold mb-4 text-foreground text-center">
-              Share Your Experience
-            </h2>
-            <p className="text-muted-foreground text-center mb-6">
-              Help us improve by sharing your detailed feedback about our website and services.
-            </p>
-            <div className="flex justify-center">
-              <TypeformFeedback 
-                typeformId="GcTxpZxC"
-                triggerText="Share Detailed Feedback"
-                className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-3 text-lg"
-                openInNewTab={true}
-              />
             </div>
           </div>
         </div>
