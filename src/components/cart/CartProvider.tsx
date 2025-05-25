@@ -74,6 +74,9 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         quantity: item.quantity,
         price: item.products?.price || 0,
         customization: item.customization,
+        image: Array.isArray(item.products?.images) && item.products.images.length > 0 
+          ? item.products.images[0] 
+          : undefined,
         product: item.products ? {
           id: item.products.id,
           name: item.products.name,
@@ -129,6 +132,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
           quantity: newItem.quantity,
           price: newItem.price,
           customization: newItem.customization,
+          image: newItem.image,
           product: newItem.product,
         };
 
@@ -145,6 +149,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
           quantity: newItem.quantity,
           price: newItem.price,
           customization: newItem.customization,
+          image: newItem.image,
           product: newItem.product,
         };
 
@@ -276,4 +281,4 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   );
 };
 
-export { CartItem };
+export type { CartItem };

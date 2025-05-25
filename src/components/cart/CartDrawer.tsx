@@ -22,7 +22,7 @@ const CartDrawer = () => {
   const total = subtotal + tax;
 
   return (
-    <Sheet open={state.isCartOpen} onOpenChange={toggleCart}>
+    <Sheet open={state.isOpen} onOpenChange={toggleCart}>
       <SheetContent className="w-full sm:max-w-lg flex flex-col">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">

@@ -6,6 +6,22 @@ export interface CartItem {
   quantity: number;
   price: number;
   customization?: any;
+  image?: string;
+  product?: {
+    id: string;
+    name: string;
+    price: number;
+    images: string[];
+    slug: string;
+  };
+}
+
+export interface WishlistItem {
+  id: string;
+  productId: string;
+  name: string;
+  price: number;
+  image?: string;
   product?: {
     id: string;
     name: string;
