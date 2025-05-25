@@ -14,7 +14,7 @@ import { ArrowLeft, Package, CreditCard, Truck } from "lucide-react";
 import { format } from "date-fns";
 import CustomerInfo from "@/components/admin/order/CustomerInfo";
 import PaymentInfo from "@/components/admin/order/PaymentInfo";
-import { OrderDetail as OrderDetailType } from "@/types/order";
+import { OrderDetail as OrderDetailType, ShippingAddress } from "@/types/order";
 
 const OrderDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -73,6 +73,12 @@ const OrderDetail = () => {
         ...data,
         status: data.status as OrderDetailType['status'],
         payment_status: data.payment_status as OrderDetailType['payment_status'],
+        shipping_address: typeof data.shipping_address === 'string' 
+          ? JSON.parse(data.shipping_address) as ShippingAddress
+          : data.shipping_address as ShippingAddress,
+        billing_address: typeof data.billing_address === 'string' 
+          ? JSON.parse(data.billing_address) as ShippingAddress
+          : data.billing_address as ShippingAddress,
         profiles: undefined,
         currency: data.currency || "AED",
         tracking_number: data.tracking_number || undefined

@@ -87,7 +87,13 @@ const Orders = () => {
           ...order,
           status: order.status as Order['status'],
           payment_status: order.payment_status as Order['payment_status'],
-          profiles: undefined // We'll fetch profile data separately if needed
+          shipping_address: typeof order.shipping_address === 'string' 
+            ? JSON.parse(order.shipping_address) 
+            : order.shipping_address,
+          billing_address: typeof order.billing_address === 'string' 
+            ? JSON.parse(order.billing_address) 
+            : order.billing_address,
+          profiles: undefined
         }));
         
         setOrders(transformedOrders);

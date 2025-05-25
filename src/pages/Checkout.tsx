@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,7 @@ import { ShippingAddress } from "@/types/order";
 
 const Checkout = () => {
   const { user, isLoading: authLoading } = useAuth();
-  const { items, clearCart, getCartTotal } = useCart();
+  const { state: cartState, clearCart } = useCart();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -40,7 +41,7 @@ const Checkout = () => {
   const [shippingCost, setShippingCost] = useState(15);
 
   useEffect(() => {
-    if (items.length === 0 && !authLoading) {
+    if (cartState.items.length === 0 && !authLoading) {
       navigate("/cart");
       toast({
         title: "Cart is empty",
@@ -48,9 +49,9 @@ const Checkout = () => {
         variant: "destructive",
       });
     }
-  }, [items, authLoading, navigate, toast]);
+  }, [cartState.items, authLoading, navigate, toast]);
 
-  const subtotal = getCartTotal();
+  const subtotal = cartState.items.reduce((total, item) => total + (item.product.price * item.quantity), 0);
   const discount = appliedCoupon 
     ? appliedCoupon.discount_type === 'percentage' 
       ? (subtotal * appliedCoupon.discount_value) / 100
@@ -99,7 +100,7 @@ const Checkout = () => {
       if (orderError) throw orderError;
 
       // Create order items
-      const orderItems = items.map(item => ({
+      const orderItems = cartState.items.map(item => ({
         order_id: order.id,
         product_id: item.product.id,
         quantity: item.quantity,
@@ -229,20 +230,13 @@ const Checkout = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-card border-border">
-                <CardHeader>
-                  <CardTitle className="text-foreground">Payment Method</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <PaymentMethods
-                    onPayPalApprove={handlePayPalApprove}
-                    onZiinaApprove={handleZiinaApprove}
-                    isProcessing={isProcessing}
-                    total={total}
-                    hasValidAddress={Boolean(hasValidAddress)}
-                  />
-                </CardContent>
-              </Card>
+              <PaymentMethods
+                onPayPalApprove={handlePayPalApprove}
+                onZiinaApprove={handleZiinaApprove}
+                isProcessing={isProcessing}
+                total={total}
+                hasValidAddress={Boolean(hasValidAddress)}
+              />
             </div>
 
             <div className="space-y-6">
@@ -252,7 +246,7 @@ const Checkout = () => {
                 </CardHeader>
                 <CardContent>
                   <OrderSummary
-                    items={items}
+                    items={cartState.items}
                     subtotal={subtotal}
                     discount={discount}
                     shipping={shippingCost}
