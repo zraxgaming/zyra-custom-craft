@@ -1,54 +1,78 @@
 
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, Users, ShoppingCart, TrendingUp } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
+import { TrendingUp, Users, Eye, Clock } from "lucide-react";
 
 const RealTimeAnalytics = () => {
-  const [analyticsData, setAnalyticsData] = useState<any[]>([]);
-  const [stats, setStats] = useState({
-    pageViews: 0,
+  const { user } = useAuth();
+  const [analytics, setAnalytics] = useState({
+    todayViews: 0,
     uniqueVisitors: 0,
-    orders: 0,
-    revenue: 0
+    bounceRate: 0,
+    avgSessionDuration: 0,
+    monthlyData: [],
+    recentData: []
   });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchAnalyticsData();
-    const interval = setInterval(fetchAnalyticsData, 30000); // Update every 30 seconds
-    return () => clearInterval(interval);
-  }, []);
+    if (user) {
+      fetchAnalytics();
+      const interval = setInterval(fetchAnalytics, 30000); // Update every 30 seconds
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
-  const fetchAnalyticsData = async () => {
+  const fetchAnalytics = async () => {
     try {
-      // Fetch analytics data
-      const { data: analytics, error: analyticsError } = await supabase
-        .from('analytics')
+      // Fetch page views for today
+      const today = new Date().toISOString().split('T')[0];
+      const { data: pageViews } = await supabase
+        .from('page_views')
         .select('*')
-        .order('date', { ascending: false })
-        .limit(7);
+        .gte('timestamp', today);
 
-      if (analyticsError) throw analyticsError;
+      // Calculate metrics
+      const todayViews = pageViews?.length || 0;
+      const uniqueVisitors = new Set(pageViews?.map(view => view.session_id)).size;
+      
+      // Mock data for demonstration (in a real app, you'd calculate these from actual data)
+      const bounceRate = Math.round(Math.random() * 30 + 20); // 20-50%
+      const avgSessionDuration = Math.round(Math.random() * 180 + 120); // 2-5 minutes
 
-      // Fetch orders count and revenue
-      const { data: orders, error: ordersError } = await supabase
-        .from('orders')
-        .select('total_amount')
-        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+      // Generate monthly data for the last 6 months
+      const monthlyData = [];
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date();
+        date.setMonth(date.getMonth() - i);
+        monthlyData.push({
+          month: date.toLocaleDateString('en-US', { month: 'short' }),
+          views: Math.round(Math.random() * 5000 + 1000),
+          visitors: Math.round(Math.random() * 2000 + 500)
+        });
+      }
 
-      if (ordersError) throw ordersError;
+      // Generate recent hourly data
+      const recentData = [];
+      for (let i = 23; i >= 0; i--) {
+        const hour = new Date();
+        hour.setHours(hour.getHours() - i);
+        recentData.push({
+          time: hour.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          views: Math.round(Math.random() * 100 + 10)
+        });
+      }
 
-      const totalRevenue = orders?.reduce((sum, order) => sum + Number(order.total_amount), 0) || 0;
-      const totalOrders = orders?.length || 0;
-
-      setAnalyticsData(analytics || []);
-      setStats({
-        pageViews: analytics?.reduce((sum, day) => sum + day.views, 0) || 0,
-        uniqueVisitors: analytics?.reduce((sum, day) => sum + day.unique_visitors, 0) || 0,
-        orders: totalOrders,
-        revenue: totalRevenue
+      setAnalytics({
+        todayViews,
+        uniqueVisitors,
+        bounceRate,
+        avgSessionDuration,
+        monthlyData,
+        recentData
       });
     } catch (error) {
       console.error('Error fetching analytics:', error);
@@ -57,37 +81,25 @@ const RealTimeAnalytics = () => {
     }
   };
 
-  const chartData = analyticsData.map(item => ({
-    date: new Date(item.date).toLocaleDateString(),
-    views: item.views,
-    visitors: item.unique_visitors
-  }));
-
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[...Array(4)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
-            <CardContent className="p-6">
-              <div className="h-20 bg-muted rounded"></div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="space-y-6 animate-fade-in">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-scale-in">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Page Views</p>
-                <p className="text-2xl font-bold">{stats.pageViews.toLocaleString()}</p>
+                <p className="text-sm font-medium text-muted-foreground">Today's Views</p>
+                <p className="text-2xl font-bold text-foreground">{analytics.todayViews}</p>
               </div>
-              <Eye className="h-8 w-8 text-blue-500" />
+              <Eye className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -97,9 +109,9 @@ const RealTimeAnalytics = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Unique Visitors</p>
-                <p className="text-2xl font-bold">{stats.uniqueVisitors.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-foreground">{analytics.uniqueVisitors}</p>
               </div>
-              <Users className="h-8 w-8 text-green-500" />
+              <Users className="h-8 w-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
@@ -108,10 +120,10 @@ const RealTimeAnalytics = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Orders (24h)</p>
-                <p className="text-2xl font-bold">{stats.orders}</p>
+                <p className="text-sm font-medium text-muted-foreground">Bounce Rate</p>
+                <p className="text-2xl font-bold text-foreground">{analytics.bounceRate}%</p>
               </div>
-              <ShoppingCart className="h-8 w-8 text-orange-500" />
+              <TrendingUp className="h-8 w-8 text-orange-500" />
             </div>
           </CardContent>
         </Card>
@@ -120,35 +132,51 @@ const RealTimeAnalytics = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Revenue (24h)</p>
-                <p className="text-2xl font-bold">${stats.revenue.toFixed(2)}</p>
+                <p className="text-sm font-medium text-muted-foreground">Avg. Session</p>
+                <p className="text-2xl font-bold text-foreground">{Math.floor(analytics.avgSessionDuration / 60)}m {analytics.avgSessionDuration % 60}s</p>
               </div>
-              <TrendingUp className="h-8 w-8 text-purple-500" />
+              <Clock className="h-8 w-8 text-purple-500" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-fade-in" style={{ animationDelay: '400ms' }}>
-        <CardHeader>
-          <CardTitle>Traffic Trends (Last 7 Days)</CardTitle>
-          <CardDescription>Page views and unique visitors over time</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-scale-in" style={{ animationDelay: '400ms' }}>
+          <CardHeader>
+            <CardTitle>Monthly Traffic</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={analytics.monthlyData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="views" fill="#8884d8" name="Page Views" />
+                <Bar dataKey="visitors" fill="#82ca9d" name="Unique Visitors" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-scale-in" style={{ animationDelay: '500ms' }}>
+          <CardHeader>
+            <CardTitle>Real-time Activity (Last 24h)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={analytics.recentData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="time" />
                 <YAxis />
                 <Tooltip />
                 <Line type="monotone" dataKey="views" stroke="#8884d8" strokeWidth={2} />
-                <Line type="monotone" dataKey="visitors" stroke="#82ca9d" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

@@ -7,30 +7,48 @@ import { useToast } from '@/hooks/use-toast';
 interface CartItem {
   id: string;
   productId: string;
+  name: string;
+  price: number;
   quantity: number;
+  image?: string;
   customization?: any;
   product?: {
+    id: string;
     name: string;
     price: number;
     images: string[];
+    slug?: string;
   };
 }
 
-interface CartContextType {
+interface CartState {
   items: CartItem[];
+  isOpen: boolean;
+}
+
+interface CartContextType {
+  state: CartState;
+  items: CartItem[];
+  addItem: (item: Omit<CartItem, 'id'>) => Promise<void>;
   addToCart: (productId: string, quantity?: number, customization?: any) => Promise<void>;
+  removeItem: (itemId: string) => Promise<void>;
   removeFromCart: (itemId: string) => Promise<void>;
   updateQuantity: (itemId: string, quantity: number) => Promise<void>;
   clearCart: () => Promise<void>;
+  toggleCart: () => void;
   totalItems: number;
   totalPrice: number;
+  subtotal: number;
   isLoading: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [state, setState] = useState<CartState>({
+    items: [],
+    isOpen: false
+  });
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -39,7 +57,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (user) {
       fetchCartItems();
     } else {
-      setItems([]);
+      setState(prev => ({ ...prev, items: [] }));
       setIsLoading(false);
     }
   }, [user]);
@@ -55,10 +73,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           product_id,
           quantity,
           customization,
-          products (
+          products!cart_items_product_id_fkey (
+            id,
             name,
             price,
-            images
+            images,
+            slug
           )
         `)
         .eq('user_id', user.id);
@@ -68,16 +88,64 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const cartItems = data?.map(item => ({
         id: item.id,
         productId: item.product_id,
+        name: item.products?.name || 'Unknown Product',
+        price: item.products?.price || 0,
         quantity: item.quantity,
         customization: item.customization,
-        product: item.products
+        image: Array.isArray(item.products?.images) && item.products.images.length > 0 
+          ? item.products.images[0] 
+          : undefined,
+        product: item.products ? {
+          id: item.products.id,
+          name: item.products.name,
+          price: item.products.price,
+          images: Array.isArray(item.products.images) ? item.products.images : [],
+          slug: item.products.slug
+        } : undefined
       })) || [];
 
-      setItems(cartItems);
+      setState(prev => ({ ...prev, items: cartItems }));
     } catch (error: any) {
       console.error('Error fetching cart items:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const addItem = async (itemData: Omit<CartItem, 'id'>) => {
+    if (!user) {
+      toast({
+        title: "Please sign in",
+        description: "You need to be signed in to add items to cart.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('cart_items')
+        .insert({
+          user_id: user.id,
+          product_id: itemData.productId,
+          quantity: itemData.quantity,
+          customization: itemData.customization
+        });
+
+      if (error) throw error;
+
+      await fetchCartItems();
+      
+      toast({
+        title: "Added to cart",
+        description: "Item has been added to your cart.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -118,7 +186,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const removeFromCart = async (itemId: string) => {
+  const removeItem = async (itemId: string) => {
     try {
       const { error } = await supabase
         .from('cart_items')
@@ -127,7 +195,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error;
 
-      setItems(prev => prev.filter(item => item.id !== itemId));
+      setState(prev => ({
+        ...prev,
+        items: prev.items.filter(item => item.id !== itemId)
+      }));
       
       toast({
         title: "Removed from cart",
@@ -142,9 +213,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const removeFromCart = removeItem;
+
   const updateQuantity = async (itemId: string, quantity: number) => {
     if (quantity <= 0) {
-      await removeFromCart(itemId);
+      await removeItem(itemId);
       return;
     }
 
@@ -156,9 +229,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error;
 
-      setItems(prev => prev.map(item => 
-        item.id === itemId ? { ...item, quantity } : item
-      ));
+      setState(prev => ({
+        ...prev,
+        items: prev.items.map(item => 
+          item.id === itemId ? { ...item, quantity } : item
+        )
+      }));
     } catch (error: any) {
       toast({
         title: "Error",
@@ -179,27 +255,34 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error;
 
-      setItems([]);
+      setState(prev => ({ ...prev, items: [] }));
     } catch (error: any) {
       console.error('Error clearing cart:', error);
     }
   };
 
-  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = items.reduce((sum, item) => {
-    const price = item.product?.price || 0;
-    return sum + (price * item.quantity);
-  }, 0);
+  const toggleCart = () => {
+    setState(prev => ({ ...prev, isOpen: !prev.isOpen }));
+  };
+
+  const totalItems = state.items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = state.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const subtotal = totalPrice;
 
   return (
     <CartContext.Provider value={{
-      items,
+      state,
+      items: state.items,
+      addItem,
       addToCart,
+      removeItem,
       removeFromCart,
       updateQuantity,
       clearCart,
+      toggleCart,
       totalItems,
       totalPrice,
+      subtotal,
       isLoading
     }}>
       {children}
