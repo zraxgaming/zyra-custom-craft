@@ -6,32 +6,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ZiinaPayment from "./ZiinaPayment";
 
-interface PaymentMethodsProps {
-  onPayPalApprove: (data: any) => Promise<void>;
-  onZiinaApprove: (data: any) => Promise<void>;
-  isProcessing: boolean;
-  total: number;
-  hasValidAddress: boolean;
+export interface PaymentMethodsProps {
+  selectedMethod: string;
+  onMethodChange: (method: string) => void;
 }
 
 const PaymentMethods: React.FC<PaymentMethodsProps> = ({
-  onPayPalApprove,
-  onZiinaApprove,
-  isProcessing,
-  total,
-  hasValidAddress,
+  selectedMethod,
+  onMethodChange,
 }) => {
   const [paypalClientId, setPaypalClientId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-
-  // Correct currency conversion rates
-  const aedToUsdRate = 0.272; // 1 AED = 0.272 USD
-  const usdToAedRate = 3.673; // 1 USD = 3.673 AED
-  
-  // Convert based on payment method
-  const totalInUSD = total * aedToUsdRate;
-  const totalInAED = total; // Assuming base currency is AED
 
   useEffect(() => {
     const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
@@ -68,27 +54,14 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
       <CardContent className="pt-6">
         <div className="font-medium text-lg mb-4 text-foreground">Payment Method</div>
         
-        {!hasValidAddress && (
-          <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-            <p className="text-sm text-destructive">
-              Please complete your shipping address to enable payment options.
-            </p>
-          </div>
-        )}
-
-        <Tabs defaultValue="ziina" className="w-full">
+        <Tabs value={selectedMethod} onValueChange={onMethodChange} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="ziina">Ziina (AED)</TabsTrigger>
             <TabsTrigger value="paypal">PayPal (USD)</TabsTrigger>
           </TabsList>
           
           <TabsContent value="ziina" className="mt-4">
-            <ZiinaPayment
-              onZiinaApprove={onZiinaApprove}
-              isProcessing={isProcessing}
-              total={totalInAED}
-              hasValidAddress={hasValidAddress}
-            />
+            <ZiinaPayment />
           </TabsContent>
           
           <TabsContent value="paypal" className="mt-4">
@@ -96,12 +69,7 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
               <div className="flex items-center border rounded-md p-3 bg-background">
                 <div className="flex items-center">
                   <img src="https://img.icons8.com/color/48/000000/paypal.png" alt="PayPal" className="h-8 mr-2" />
-                  <div>
-                    <span className="text-foreground">PayPal or Credit/Debit Card</span>
-                    <div className="text-xs text-muted-foreground">
-                      Total: ${totalInUSD.toFixed(2)} USD (converted from {totalInAED.toFixed(2)} AED)
-                    </div>
-                  </div>
+                  <span className="text-foreground">PayPal or Credit/Debit Card</span>
                 </div>
               </div>
               
@@ -113,7 +81,7 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
                 </div>
               </div>
 
-              {hasValidAddress && (
+              {paypalClientId && (
                 <PayPalScriptProvider options={{ 
                   clientId: paypalClientId,
                   currency: "USD",
@@ -129,22 +97,26 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
                       shape: "rect",
                       label: "pay"
                     }}
-                    disabled={isProcessing || !hasValidAddress}
-                    forceReRender={[totalInUSD, paypalClientId, hasValidAddress]}
                     createOrder={(data, actions) => {
-                      console.log("Creating PayPal order with total USD:", totalInUSD.toFixed(2));
                       return actions.order.create({
                         purchase_units: [
                           {
                             amount: {
                               currency_code: "USD",
-                              value: totalInUSD.toFixed(2),
+                              value: "10.00",
                             },
                           },
                         ],
                       });
                     }}
-                    onApprove={onPayPalApprove}
+                    onApprove={(data, actions) => {
+                      return actions.order!.capture().then((details) => {
+                        toast({
+                          title: "Payment successful!",
+                          description: `Transaction completed by ${details.payer?.name?.given_name}`,
+                        });
+                      });
+                    }}
                     onError={(err) => {
                       console.error("PayPal Checkout onError", err);
                       toast({

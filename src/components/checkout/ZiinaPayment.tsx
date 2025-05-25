@@ -1,108 +1,41 @@
 
-import React, { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
-interface ZiinaPaymentProps {
-  onZiinaApprove: (data: any) => Promise<void>;
-  isProcessing: boolean;
-  total: number;
-  hasValidAddress: boolean;
-}
-
-const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
-  onZiinaApprove,
-  isProcessing,
-  total,
-  hasValidAddress
-}) => {
-  const [isLoading, setIsLoading] = useState(false);
+const ZiinaPayment: React.FC = () => {
   const { toast } = useToast();
 
-  const handleZiinaPayment = async () => {
-    if (!hasValidAddress) {
-      toast({
-        title: "Shipping address required",
-        description: "Please provide a valid shipping address before proceeding to payment.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // Convert AED to fils (1 AED = 100 fils)
-      const amountInFils = Math.round(total * 100);
-      
-      // Create payment intent with Ziina API
-      const response = await fetch('/api/ziina/payment-intent', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: amountInFils,
-          success_url: `${window.location.origin}/order-success`,
-          cancel_url: `${window.location.origin}/checkout`,
-          test: true // Set to false for production
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create payment intent');
-      }
-
-      const { redirect_url, payment_intent_id } = await response.json();
-      
-      // Redirect to Ziina payment page
-      window.location.href = redirect_url;
-      
-    } catch (error: any) {
-      console.error("Ziina payment error:", error);
-      toast({
-        title: "Payment failed",
-        description: error.message || "There was an error processing your Ziina payment",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const handleZiinaPayment = () => {
+    toast({
+      title: "Ziina Integration",
+      description: "Ziina payment integration is being set up. Please use PayPal for now.",
+    });
   };
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="space-y-4">
-          <div className="flex items-center border rounded-md p-3 bg-background">
-            <div className="flex items-center">
-              <div className="h-8 w-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded flex items-center justify-center text-white text-xs font-bold mr-3">
-                Ziina
-              </div>
-              <span className="text-foreground">Pay with Ziina</span>
-            </div>
+    <div className="space-y-4">
+      <div className="flex items-center border rounded-md p-3 bg-background">
+        <div className="flex items-center">
+          <div className="w-8 h-8 bg-primary rounded mr-2 flex items-center justify-center text-white font-bold">
+            Z
           </div>
-          
-          <div className="text-sm text-muted-foreground">
-            Fast and secure payment with Ziina
-          </div>
-
-          <Button
-            onClick={handleZiinaPayment}
-            disabled={isProcessing || isLoading || !hasValidAddress}
-            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-          >
-            {isLoading ? "Processing..." : `Pay ${total.toFixed(2)} AED with Ziina`}
-          </Button>
-
-          {!hasValidAddress && (
-            <p className="text-sm text-destructive">
-              Please complete your shipping address to enable payment options.
-            </p>
-          )}
+          <span className="text-foreground">Pay with Ziina (AED)</span>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+      
+      <Button
+        onClick={handleZiinaPayment}
+        className="w-full"
+        variant="outline"
+      >
+        Pay with Ziina
+      </Button>
+      
+      <div className="text-xs text-muted-foreground text-center">
+        Secure payment processing in UAE Dirhams
+      </div>
+    </div>
   );
 };
 

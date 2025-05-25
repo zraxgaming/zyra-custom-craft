@@ -6,19 +6,15 @@ import { CartItem } from "@/types/cart";
 export interface OrderSummaryProps {
   items: CartItem[];
   subtotal: number;
-  discount: number;
-  shipping: number;
+  shippingCost: number;
   total: number;
-  appliedCoupon?: any;
 }
 
 const OrderSummary: React.FC<OrderSummaryProps> = ({
   items,
   subtotal,
-  discount,
-  shipping,
+  shippingCost,
   total,
-  appliedCoupon
 }) => {
   return (
     <div className="space-y-4">
@@ -48,18 +44,9 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
           <span>${subtotal.toFixed(2)}</span>
         </div>
         
-        {discount > 0 && (
-          <div className="flex justify-between text-green-600">
-            <span>
-              Discount {appliedCoupon && `(${appliedCoupon.code})`}
-            </span>
-            <span>-${discount.toFixed(2)}</span>
-          </div>
-        )}
-        
         <div className="flex justify-between text-foreground">
           <span>Shipping</span>
-          <span>${shipping.toFixed(2)}</span>
+          <span>${shippingCost.toFixed(2)}</span>
         </div>
         
         <Separator className="border-border" />

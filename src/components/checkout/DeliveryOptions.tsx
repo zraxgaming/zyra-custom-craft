@@ -5,13 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 
 export interface DeliveryOptionsProps {
-  selectedType: string;
-  onDeliveryChange: (type: string, cost: number) => void;
+  selectedOption: string;
+  onOptionChange: (option: string) => void;
 }
 
 const DeliveryOptions: React.FC<DeliveryOptionsProps> = ({ 
-  selectedType, 
-  onDeliveryChange 
+  selectedOption, 
+  onOptionChange 
 }) => {
   const deliveryOptions = [
     {
@@ -36,13 +36,8 @@ const DeliveryOptions: React.FC<DeliveryOptionsProps> = ({
 
   return (
     <RadioGroup 
-      value={selectedType} 
-      onValueChange={(value) => {
-        const option = deliveryOptions.find(opt => opt.id === value);
-        if (option) {
-          onDeliveryChange(value, option.cost);
-        }
-      }}
+      value={selectedOption} 
+      onValueChange={onOptionChange}
       className="space-y-3"
     >
       {deliveryOptions.map((option) => (

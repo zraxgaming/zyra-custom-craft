@@ -1,30 +1,8 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-
-interface CartItem {
-  id: string;
-  productId: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image?: string;
-  customization?: any;
-  product?: {
-    id: string;
-    name: string;
-    price: number;
-    images: string[];
-    slug: string;
-  };
-}
-
-interface CartState {
-  items: CartItem[];
-  isOpen: boolean;
-}
+import { CartItem, CartState } from '@/types/cart';
 
 interface CartContextType {
   state: CartState;
@@ -93,13 +71,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         quantity: item.quantity,
         customization: item.customization,
         image: Array.isArray(item.products?.images) && item.products.images.length > 0 
-          ? item.products.images[0] 
+          ? String(item.products.images[0]) 
           : undefined,
         product: item.products ? {
           id: item.products.id,
           name: item.products.name,
           price: item.products.price,
-          images: Array.isArray(item.products.images) ? item.products.images : [],
+          images: Array.isArray(item.products.images) 
+            ? item.products.images.map(img => String(img))
+            : [],
           slug: item.products.slug || ''
         } : undefined
       })) || [];
