@@ -26,11 +26,13 @@ export const useSiteConfig = () => {
 
       if (error) throw error;
 
-      const configObj = data.reduce((acc: SiteConfig, item: any) => {
-        const key = item.key as keyof SiteConfig;
-        acc[key] = item.value;
-        return acc;
-      }, {});
+      const configObj: SiteConfig = {};
+      if (data) {
+        data.forEach((item: any) => {
+          const key = item.key as keyof SiteConfig;
+          configObj[key] = item.value;
+        });
+      }
 
       setConfig(configObj);
     } catch (error: any) {

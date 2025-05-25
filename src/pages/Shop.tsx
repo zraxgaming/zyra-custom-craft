@@ -52,7 +52,7 @@ const Shop = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Shop All Products</h1>
           <p className="text-muted-foreground">
-            Browse our collection of {products.length} products and find the perfect item for you.
+            Browse our collection of {products?.length || 0} products and find the perfect item for you.
           </p>
         </div>
 

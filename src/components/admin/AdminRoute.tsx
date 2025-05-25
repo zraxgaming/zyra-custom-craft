@@ -3,7 +3,6 @@ import React, { useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { PageLoader } from "@/components/ui/page-loader";
 
 interface AdminRouteProps {
   children: React.ReactNode;
@@ -29,8 +28,16 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     }
   }, [isLoading, user, isAdmin, toast]);
 
+  // Show loading only briefly while checking auth
   if (isLoading) {
-    return <PageLoader message="Checking permissions..." />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Checking permissions...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
