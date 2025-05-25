@@ -107,10 +107,14 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }
   }, [user]);
 
-  // Save cart to database whenever items change
+  // Save cart to database whenever items change (with debounce)
   useEffect(() => {
     if (user && state.items.length >= 0) {
-      saveCartToDatabase();
+      const timeoutId = setTimeout(() => {
+        saveCartToDatabase();
+      }, 500);
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [state.items, user]);
 
@@ -205,6 +209,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     toast({
       title: "Added to cart",
       description: `${item.name} has been added to your cart.`,
+      className: "animate-slide-in-right",
     });
   };
 
@@ -214,6 +219,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     toast({
       title: "Removed from cart",
       description: "Item has been removed from your cart.",
+      className: "animate-slide-in-right",
     });
   };
 
@@ -232,6 +238,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     toast({
       title: "Cart cleared",
       description: "All items have been removed from your cart.",
+      className: "animate-slide-in-right",
     });
   };
 
