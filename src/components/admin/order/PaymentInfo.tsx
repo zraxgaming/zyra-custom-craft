@@ -31,25 +31,26 @@ const PaymentInfo: React.FC<PaymentInfoProps> = ({
   return (
     <>
       <CardHeader>
-        <CardTitle>Payment Information</CardTitle>
+        <CardTitle className="text-foreground">Payment Information</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <div>
-            <h4 className="text-sm font-medium">Payment Method</h4>
-            <p>{order.payment_method === "credit_card" ? "Credit Card" : 
+            <h4 className="text-sm font-medium text-foreground">Payment Method</h4>
+            <p className="text-muted-foreground">{order.payment_method === "credit_card" ? "Credit Card" : 
                 order.payment_method === "paypal" ? "PayPal" : 
                 order.payment_method === "ziina" ? "Ziina" : 
                 order.payment_method || "Unknown"}</p>
           </div>
           
           <div>
-            <h4 className="text-sm font-medium">Payment Status</h4>
+            <h4 className="text-sm font-medium text-foreground">Payment Status</h4>
             <div className="flex items-center mt-1">
               <Badge className={
-                order.payment_status === "paid" ? "bg-green-500" :
-                order.payment_status === "refunded" ? "bg-orange-500" :
-                "bg-yellow-500"
+                order.payment_status === "paid" ? "bg-green-500 text-white" :
+                order.payment_status === "refunded" ? "bg-orange-500 text-white" :
+                order.payment_status === "failed" ? "bg-red-500 text-white" :
+                "bg-yellow-500 text-white"
               }>
                 {order.payment_status?.charAt(0).toUpperCase() + (order.payment_status?.slice(1) || '')}
               </Badge>
@@ -61,12 +62,15 @@ const PaymentInfo: React.FC<PaymentInfoProps> = ({
                       Change
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" className="bg-background border-border">
                     <DropdownMenuItem onClick={() => updateOrder("payment_status", "pending")}>
                       Pending
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => updateOrder("payment_status", "paid")}>
                       Paid
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => updateOrder("payment_status", "failed")}>
+                      Failed
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => updateOrder("payment_status", "refunded")}>
                       Refunded
@@ -78,8 +82,8 @@ const PaymentInfo: React.FC<PaymentInfoProps> = ({
           </div>
 
           <div>
-            <h4 className="text-sm font-medium">Total Amount</h4>
-            <p className="text-lg font-semibold text-zyra-purple">
+            <h4 className="text-sm font-medium text-foreground">Total Amount</h4>
+            <p className="text-lg font-semibold text-primary">
               {order.total_amount} {order.currency || 'USD'}
             </p>
           </div>

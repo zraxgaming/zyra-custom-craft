@@ -52,6 +52,7 @@ const OrderDetail = () => {
       const parsedOrder: OrderDetailType = {
         ...data,
         status: data.status as "pending" | "processing" | "shipped" | "delivered" | "cancelled",
+        payment_status: data.payment_status as "pending" | "paid" | "failed" | "refunded",
         shipping_address: data.shipping_address ? JSON.parse(data.shipping_address as string) : null,
         billing_address: data.billing_address ? JSON.parse(data.billing_address as string) : null,
         profiles: null,
@@ -114,7 +115,7 @@ const OrderDetail = () => {
 
       if (error) throw error;
 
-      setOrder({ ...order, [field]: value });
+      setOrder({ ...order, [field]: value } as OrderDetailType);
       toast({
         title: "Order updated",
         description: `${field} updated successfully`,
@@ -158,12 +159,12 @@ const OrderDetail = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "pending": return "bg-yellow-100 text-yellow-800";
-      case "processing": return "bg-blue-100 text-blue-800";
-      case "shipped": return "bg-purple-100 text-purple-800";
-      case "delivered": return "bg-green-100 text-green-800";
-      case "cancelled": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "pending": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
+      case "processing": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+      case "shipped": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
+      case "delivered": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+      case "cancelled": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
     }
   };
 
@@ -225,7 +226,7 @@ const OrderDetail = () => {
               <SelectTrigger className="w-40 bg-background text-foreground border-border">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-background border-border">
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="processing">Processing</SelectItem>
                 <SelectItem value="shipped">Shipped</SelectItem>

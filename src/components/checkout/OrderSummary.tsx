@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Separator } from "@/components/ui/separator";
-import { CartItem } from "@/components/cart/CartProvider";
+import { CartItem } from "@/types/cart";
 
 export interface OrderSummaryProps {
   items: CartItem[];
@@ -24,17 +24,17 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
     <div className="space-y-4">
       <div className="space-y-3">
         {items.map((item) => (
-          <div key={`${item.product.id}-${JSON.stringify(item.customization)}`} 
+          <div key={`${item.productId}-${JSON.stringify(item.customization)}`} 
                className="flex justify-between items-center">
             <div className="flex-1">
-              <h4 className="font-medium text-foreground">{item.product.name}</h4>
+              <h4 className="font-medium text-foreground">{item.name}</h4>
               <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
               {item.customization && (
                 <p className="text-xs text-muted-foreground">Customized</p>
               )}
             </div>
             <div className="font-medium text-foreground">
-              ${(item.product.price * item.quantity).toFixed(2)}
+              ${(item.price * item.quantity).toFixed(2)}
             </div>
           </div>
         ))}

@@ -1,14 +1,6 @@
 
 import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { MessageSquare } from "lucide-react";
 
 interface TypeformFeedbackProps {
@@ -18,12 +10,10 @@ interface TypeformFeedbackProps {
 }
 
 const TypeformFeedback: React.FC<TypeformFeedbackProps> = ({
-  typeformId = "GcTxpZxC", // Replace with your actual TypeForm ID
+  typeformId = "GcTxpZxC",
   triggerText = "Give Feedback",
-  className
+  className = ""
 }) => {
-  const [isOpen, setIsOpen] = React.useState(false);
-
   useEffect(() => {
     // Load TypeForm embed script
     const script = document.createElement('script');
@@ -61,7 +51,7 @@ const TypeformFeedback: React.FC<TypeformFeedbackProps> = ({
     <Button
       onClick={openTypeform}
       variant="outline"
-      className={`fixed bottom-4 right-4 z-50 rounded-full shadow-lg bg-zyra-purple text-white hover:bg-zyra-dark-purple ${className}`}
+      className={`rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 border-primary ${className}`}
     >
       <MessageSquare className="w-4 h-4 mr-2" />
       {triggerText}

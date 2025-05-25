@@ -37,14 +37,16 @@ export interface Product {
     name: string;
     slug: string;
   };
-  customization_options?: Array<{
-    id: string;
-    allow_text: boolean;
-    allow_image: boolean;
-    max_text_length: number;
-    max_image_count: number;
-    allow_resize_rotate: boolean;
-  }>;
+  customization_options?: CustomizationOptions[];
+}
+
+export interface CustomizationOptions {
+  id: string;
+  allowText: boolean;
+  allowImage: boolean;
+  maxTextLength: number;
+  maxImageCount: number;
+  allowResizeRotate: boolean;
 }
 
 export interface CartItem {

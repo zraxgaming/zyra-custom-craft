@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import TypeformFeedback from "@/components/feedback/TypeformFeedback";
 import { Container } from "@/components/ui/container";
 
 const OrderSuccess = () => {
@@ -78,10 +79,10 @@ const OrderSuccess = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <Container className="py-16">
-        <div className="bg-card p-8 rounded-lg shadow-sm border max-w-4xl mx-auto">
+        <div className="bg-card p-8 rounded-lg shadow-sm border border-border max-w-4xl mx-auto">
           <div className="flex flex-col items-center text-center mb-8">
-            <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle className="h-10 w-10 text-green-600" />
+            <div className="h-16 w-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle className="h-10 w-10 text-green-600 dark:text-green-400" />
             </div>
             <h1 className="text-3xl font-bold mb-2 text-foreground">Order Confirmed!</h1>
             <p className="text-muted-foreground max-w-md">
@@ -112,15 +113,15 @@ const OrderSuccess = () => {
 
           <div className="mb-8">
             <h2 className="text-lg font-semibold mb-4 text-foreground">Order Details</h2>
-            <div className="border rounded-lg overflow-hidden">
-              <div className="bg-muted/30 px-6 py-3 border-b">
+            <div className="border border-border rounded-lg overflow-hidden">
+              <div className="bg-muted/30 px-6 py-3 border-b border-border">
                 <div className="grid grid-cols-3 gap-4 text-sm font-medium text-muted-foreground">
                   <span>Product</span>
                   <span className="text-right">Quantity</span>
                   <span className="text-right">Price</span>
                 </div>
               </div>
-              <div className="divide-y">
+              <div className="divide-y divide-border">
                 {order.order_items.map((item: any) => (
                   <div key={item.id} className="px-6 py-4">
                     <div className="grid grid-cols-3 gap-4 items-center">
@@ -152,7 +153,7 @@ const OrderSuccess = () => {
                   </div>
                 ))}
               </div>
-              <div className="bg-muted/30 px-6 py-3 border-t">
+              <div className="bg-muted/30 px-6 py-3 border-t border-border">
                 <div className="grid grid-cols-3 gap-4">
                   <div></div>
                   <div className="text-right text-sm font-semibold text-foreground">Total</div>
@@ -193,6 +194,13 @@ const OrderSuccess = () => {
           </div>
         </div>
       </Container>
+      
+      <TypeformFeedback 
+        typeformId="GcTxpZxC"
+        triggerText="Rate Your Experience"
+        className="fixed bottom-4 right-4 z-50"
+      />
+      
       <Footer />
     </div>
   );

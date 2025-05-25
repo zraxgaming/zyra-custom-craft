@@ -1,26 +1,11 @@
 
 export interface CartItem {
   id: string;
-  name: string;
   productId: string;
+  name: string;
   quantity: number;
   price: number;
-  customization?: any;
-  image?: string;
-  product?: {
-    id: string;
-    name: string;
-    price: number;
-    images: string[];
-    slug: string;
-  };
-}
-
-export interface WishlistItem {
-  id: string;
-  productId: string;
-  name: string;
-  price: number;
+  customization: Record<string, any>;
   image?: string;
   product?: {
     id: string;
@@ -42,7 +27,7 @@ export interface CartContextType {
   totalItems: number;
   subtotal: number;
   toggleCart: () => void;
-  addItem: (item: Omit<CartItem, 'id'>) => void;
+  addItem: (item: Omit<CartItem, "id">) => Promise<void>;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;

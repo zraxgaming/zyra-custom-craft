@@ -13,7 +13,7 @@ import WishlistButton from "@/components/products/WishlistButton";
 import ProductCustomizer from "@/components/products/ProductCustomizer";
 import ProductReviews from "@/components/reviews/ProductReviews";
 import { useCart } from "@/components/cart/CartProvider";
-import { Product } from "@/types/product";
+import { Product, CustomizationOptions } from "@/types/product";
 
 const ProductDetail = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -50,7 +50,21 @@ const ProductDetail = () => {
         .single();
 
       if (error) throw error;
-      setProduct(data as Product);
+      
+      // Transform customization options to match the interface
+      const transformedProduct = {
+        ...data,
+        customization_options: data.customization_options?.map((option: any) => ({
+          id: option.id,
+          allowText: option.allow_text,
+          allowImage: option.allow_image,
+          maxTextLength: option.max_text_length,
+          maxImageCount: option.max_image_count,
+          allowResizeRotate: option.allow_resize_rotate
+        })) || []
+      };
+      
+      setProduct(transformedProduct as Product);
     } catch (error: any) {
       toast({
         title: "Error fetching product",
@@ -91,32 +105,32 @@ const ProductDetail = () => {
 
   if (isLoading) {
     return (
-      <>
+      <div className="min-h-screen bg-background">
         <Navbar />
         <Container className="py-12">
           <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zyra-purple"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         </Container>
         <Footer />
-      </>
+      </div>
     );
   }
 
   if (!product) {
     return (
-      <>
+      <div className="min-h-screen bg-background">
         <Navbar />
         <Container className="py-12">
           <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Product not found</h1>
+            <h1 className="text-2xl font-bold mb-4 text-foreground">Product not found</h1>
             <Button onClick={() => navigate("/shop")}>
               Back to Shop
             </Button>
           </div>
         </Container>
         <Footer />
-      </>
+      </div>
     );
   }
 
@@ -124,13 +138,13 @@ const ProductDetail = () => {
   const hasCustomization = product.customization_options && product.customization_options.length > 0;
 
   return (
-    <>
+    <div className="min-h-screen bg-background">
       <Navbar />
       <Container className="py-8">
         <Button
           variant="outline"
           onClick={() => navigate(-1)}
-          className="mb-6 border-zyra-purple text-zyra-purple hover:bg-zyra-purple hover:text-white"
+          className="mb-6 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
@@ -139,7 +153,7 @@ const ProductDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Product Images */}
           <div className="space-y-4">
-            <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+            <div className="aspect-square rounded-lg overflow-hidden bg-muted">
               {images.length > 0 ? (
                 <img
                   src={images[selectedImageIndex]}
@@ -147,7 +161,7 @@ const ProductDetail = () => {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                   No Image Available
                 </div>
               )}
@@ -161,8 +175,8 @@ const ProductDetail = () => {
                     onClick={() => setSelectedImageIndex(index)}
                     className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
                       selectedImageIndex === index
-                        ? "border-zyra-purple"
-                        : "border-gray-200 dark:border-gray-700"
+                        ? "border-primary"
+                        : "border-border"
                     }`}
                   >
                     <img
@@ -189,7 +203,7 @@ const ProductDetail = () => {
                 )}
               </div>
               
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+              <h1 className="text-3xl font-bold text-foreground mb-4">
                 {product.name}
               </h1>
               
@@ -201,28 +215,28 @@ const ProductDetail = () => {
                       className={`w-5 h-5 ${
                         i < Math.floor(product.rating)
                           ? "text-yellow-400 fill-current"
-                          : "text-gray-300"
+                          : "text-muted-foreground"
                       }`}
                     />
                   ))}
-                  <span className="ml-2 text-gray-600 dark:text-gray-400">
+                  <span className="ml-2 text-muted-foreground">
                     ({product.review_count} reviews)
                   </span>
                 </div>
               </div>
 
               <div className="flex items-center gap-4 mb-6">
-                <span className="text-3xl font-bold text-zyra-purple">
+                <span className="text-3xl font-bold text-primary">
                   ${product.price.toFixed(2)}
                 </span>
                 {product.discount_percentage > 0 && (
-                  <span className="text-xl text-gray-500 line-through">
+                  <span className="text-xl text-muted-foreground line-through">
                     ${(product.price / (1 - product.discount_percentage / 100)).toFixed(2)}
                   </span>
                 )}
               </div>
 
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
+              <p className="text-muted-foreground mb-6">
                 {product.description}
               </p>
             </div>
@@ -230,7 +244,7 @@ const ProductDetail = () => {
             {/* Customization Options */}
             {hasCustomization && (
               <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Customize Your Product</h3>
+                <h3 className="font-semibold text-lg text-foreground">Customize Your Product</h3>
                 <ProductCustomizer
                   productId={product.id}
                   customizationOptions={product.customization_options || []}
@@ -243,8 +257,8 @@ const ProductDetail = () => {
             {/* Quantity and Add to Cart */}
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <label className="font-medium">Quantity:</label>
-                <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg">
+                <label className="font-medium text-foreground">Quantity:</label>
+                <div className="flex items-center border border-border rounded-lg">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -253,7 +267,7 @@ const ProductDetail = () => {
                   >
                     <Minus className="w-4 h-4" />
                   </Button>
-                  <span className="px-4 py-2 font-medium">{quantity}</span>
+                  <span className="px-4 py-2 font-medium text-foreground">{quantity}</span>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -267,7 +281,7 @@ const ProductDetail = () => {
               <div className="flex gap-4">
                 <Button
                   onClick={handleAddToCart}
-                  className="flex-1 bg-zyra-purple hover:bg-zyra-dark-purple btn-animate"
+                  className="flex-1 btn-animate"
                   disabled={!product.in_stock}
                 >
                   <ShoppingCart className="w-4 h-4 mr-2" />
@@ -298,11 +312,15 @@ const ProductDetail = () => {
 
         {/* Product Reviews */}
         <div className="mt-16">
-          <ProductReviews productId={product.id} />
+          <ProductReviews 
+            productId={product.id} 
+            averageRating={product.rating}
+            totalReviews={product.review_count}
+          />
         </div>
       </Container>
       <Footer />
-    </>
+    </div>
   );
 };
 
