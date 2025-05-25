@@ -12,8 +12,8 @@ import { WishlistProvider } from "@/hooks/use-wishlist";
 import { AuthProvider } from "@/hooks/use-auth";
 import SEOHead from "@/components/seo/SEOHead";
 import { HelmetProvider } from "react-helmet-async";
-import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
-import { PWANotifications } from "@/components/pwa/PWANotifications";
+import PWAInstallPrompt from "@/components/pwa/PWAInstallPrompt";
+import PWANotifications from "@/components/pwa/PWANotifications";
 import "./App.css";
 
 // Lazy load components for better performance

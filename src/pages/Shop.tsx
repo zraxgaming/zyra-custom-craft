@@ -23,7 +23,7 @@ const Shop = () => {
     price: product.price,
     category: product.category || "Uncategorized",
     in_stock: product.in_stock,
-    rating: product.rating || 0, // Ensure rating is always a number
+    rating: product.rating || 0,
     created_at: product.created_at || new Date().toISOString(),
     featured: product.featured || false
   }));
@@ -54,21 +54,23 @@ const Shop = () => {
       description: originalProduct.description || "",
       images: originalProduct.images || [],
       slug: originalProduct.slug || originalProduct.id,
-      rating: originalProduct.rating || 0, // Ensure rating is always provided
+      rating: originalProduct.rating || 0,
       review_count: originalProduct.review_count || 0,
       is_new: originalProduct.is_new || false,
       discount_percentage: originalProduct.discount_percentage || 0,
-      status: originalProduct.status || "published"
+      status: originalProduct.status || "published",
+      featured: originalProduct.featured || false
     } : {
       ...filteredProduct,
       description: "",
       images: [],
       slug: filteredProduct.id,
-      rating: filteredProduct.rating || 0, // Ensure rating is always provided
+      rating: filteredProduct.rating || 0,
       review_count: 0,
       is_new: false,
       discount_percentage: 0,
-      status: "published"
+      status: "published" as const,
+      featured: filteredProduct.featured || false
     };
   });
 
@@ -129,39 +131,50 @@ const Shop = () => {
       />
       <Navbar />
       <div className="relative min-h-screen bg-background">
-        {/* Geometric background pattern */}
-        <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.03]">
+        {/* Premium Hexagonal Pattern Background */}
+        <div className="absolute inset-0 opacity-[0.015] dark:opacity-[0.025] pointer-events-none">
           <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <pattern id="geometric-pattern" x="0" y="0" width="120" height="120" patternUnits="userSpaceOnUse">
-                <polygon points="60,0 120,60 60,120 0,60" fill="currentColor" opacity="0.4"/>
-                <circle cx="60" cy="60" r="20" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.6"/>
-                <path d="M30,30 L90,30 L90,90 L30,90 Z" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.3"/>
+              <pattern id="hexagonal-pattern" x="0" y="0" width="120" height="104" patternUnits="userSpaceOnUse">
+                <polygon points="60,4 90,26 90,70 60,92 30,70 30,26" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.3"/>
+                <polygon points="60,20 80,32 80,56 60,68 40,56 40,32" fill="currentColor" opacity="0.1"/>
+                <circle cx="60" cy="48" r="8" fill="none" stroke="currentColor" strokeWidth="0.3" opacity="0.4"/>
+                <path d="M45,48 L75,48 M60,33 L60,63" stroke="currentColor" strokeWidth="0.2" opacity="0.2"/>
               </pattern>
+              <linearGradient id="gradient-overlay" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="currentColor" stopOpacity="0.1"/>
+                <stop offset="50%" stopColor="currentColor" stopOpacity="0.05"/>
+                <stop offset="100%" stopColor="currentColor" stopOpacity="0.1"/>
+              </linearGradient>
             </defs>
-            <rect width="100%" height="100%" fill="url(#geometric-pattern)"/>
+            <rect width="100%" height="100%" fill="url(#hexagonal-pattern)"/>
+            <rect width="100%" height="100%" fill="url(#gradient-overlay)"/>
           </svg>
         </div>
 
         <Container className="py-8 relative z-10">
           <div className="max-w-7xl mx-auto">
             <div className="mb-8 animate-fade-in">
-              <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-4 mb-6">
                 <div className="relative">
-                  <Sparkles className="h-8 w-8 text-primary animate-pulse" />
-                  <div className="absolute inset-0 h-8 w-8 text-primary/30 animate-ping" />
+                  <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 via-purple-500/20 to-pink-500/20 rounded-full blur-xl animate-pulse"></div>
+                  <div className="relative bg-gradient-to-br from-primary/10 to-purple-500/10 p-3 rounded-2xl border border-primary/20 backdrop-blur-sm">
+                    <Sparkles className="h-8 w-8 text-primary animate-pulse" />
+                  </div>
                 </div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent animate-scale-in">
-                  Shop
-                </h1>
+                <div>
+                  <h1 className="text-5xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent animate-scale-in">
+                    Premium Shop
+                  </h1>
+                  <p className="text-muted-foreground text-lg mt-2 animate-slide-in-right flex items-center gap-2">
+                    <span className="inline-block w-2 h-2 bg-gradient-to-r from-primary to-purple-600 rounded-full animate-pulse"></span>
+                    <span>Discover our collection of premium customizable products</span>
+                  </p>
+                </div>
               </div>
-              <p className="text-muted-foreground text-lg animate-slide-in-right flex items-center gap-2">
-                <span className="text-primary">✨</span>
-                <span>Discover our collection of premium customizable products</span>
-              </p>
             </div>
 
-            <div className="animate-slide-in-right" style={{ animationDelay: '0.1s' }}>
+            <div className="animate-slide-in-right mb-8" style={{ animationDelay: '0.1s' }}>
               <SearchAndSort
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
@@ -170,31 +183,46 @@ const Shop = () => {
               />
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-8 mt-8">
-              <aside className="w-full lg:w-64 flex-shrink-0 animate-slide-in-left" style={{ animationDelay: '0.2s' }}>
+            <div className="flex flex-col lg:flex-row gap-8">
+              <aside className="w-full lg:w-72 flex-shrink-0 animate-slide-in-left" style={{ animationDelay: '0.2s' }}>
                 <div className="sticky top-4">
-                  <ProductFilters
-                    categories={categories}
-                    selectedCategories={selectedCategories}
-                    onCategoryChange={toggleCategory}
-                    priceRange={priceRange}
-                    onPriceRangeChange={setPriceRange}
-                    maxPrice={maxPrice}
-                    showInStockOnly={showInStockOnly}
-                    onShowInStockChange={setShowInStockOnly}
-                    onResetFilters={resetFilters}
-                  />
+                  <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-lg">
+                    <ProductFilters
+                      categories={categories}
+                      selectedCategories={selectedCategories}
+                      onCategoryChange={toggleCategory}
+                      priceRange={priceRange}
+                      onPriceRangeChange={setPriceRange}
+                      maxPrice={maxPrice}
+                      showInStockOnly={showInStockOnly}
+                      onShowInStockChange={setShowInStockOnly}
+                      onResetFilters={resetFilters}
+                    />
+                  </div>
                 </div>
               </aside>
 
               <main className="flex-1 animate-fade-in" style={{ animationDelay: '0.3s' }}>
-                <div className="mb-6 flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Package className="h-4 w-4" />
-                    <span>Showing {fullFilteredProducts.length} products</span>
+                <div className="mb-8 flex items-center justify-between bg-card/30 backdrop-blur-sm border border-border/50 rounded-2xl p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gradient-to-br from-primary/10 to-purple-500/10 rounded-lg">
+                      <Package className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        Showing {fullFilteredProducts.length} products
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Premium quality guaranteed
+                      </p>
+                    </div>
                   </div>
-                  <div className="h-1 bg-gradient-to-r from-primary to-purple-600 rounded-full w-24 animate-pulse"></div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 bg-gradient-to-r from-primary via-purple-600 to-pink-600 rounded-full w-16 animate-pulse"></div>
+                    <div className="h-2 bg-gradient-to-r from-pink-600 via-purple-600 to-primary rounded-full w-8 animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+                  </div>
                 </div>
+                
                 <ProductGrid 
                   products={fullFilteredProducts} 
                   isLoading={isLoading}
