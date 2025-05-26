@@ -24,6 +24,7 @@ import OrderSuccess from "./pages/OrderSuccess";
 import Profile from "./pages/Profile";
 import ProfileSettings from "./pages/ProfileSettings";
 import GiftCards from "./pages/GiftCards";
+import NotFound from "./pages/NotFound";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -122,6 +123,9 @@ function AppContent() {
         <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
         <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
         <Route path="/admin/reports" element={<AdminRoute><AdminReports /></AdminRoute>} />
+        
+        {/* 404 Catch-all */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
       
       {/* PWA Components */}

@@ -1,10 +1,7 @@
 
 import { useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
 
 const SimplePWANotifications = () => {
-  const { toast } = useToast();
-
   useEffect(() => {
     // Check if notifications are supported
     if (!('Notification' in window)) {
@@ -18,20 +15,11 @@ const SimplePWANotifications = () => {
       return;
     }
 
-    // Only show toast if permission is explicitly denied
+    // Only log if permission is explicitly denied
     if (Notification.permission === 'denied') {
-      // Show toast only once per session
-      const hasShownNotificationWarning = sessionStorage.getItem('notificationWarningShown');
-      if (!hasShownNotificationWarning) {
-        toast({
-          title: "Notifications Disabled",
-          description: "Enable notifications in browser settings to receive updates.",
-          variant: "destructive",
-        });
-        sessionStorage.setItem('notificationWarningShown', 'true');
-      }
+      console.log('Notifications are disabled by user');
     }
-  }, [toast]);
+  }, []);
 
   return null;
 };

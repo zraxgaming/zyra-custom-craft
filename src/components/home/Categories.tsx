@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Sparkles, Grid } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -58,14 +59,37 @@ const Categories = () => {
     );
   }
 
-  // Show a message if no categories are available
+  // Show enhanced empty state if no categories are available
   if (categories.length === 0) {
     return (
       <section className="bg-zyra-soft-gray py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900">Shop By Category</h2>
-            <p className="mt-2 text-gray-600">No categories available at the moment</p>
+            <p className="mt-2 text-gray-600">Categories will appear here once they're added</p>
+          </div>
+          
+          <div className="flex flex-col items-center justify-center py-12 animate-fade-in">
+            <div className="relative mb-8">
+              <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 via-purple-500/20 to-pink-500/20 rounded-full blur-xl animate-pulse"></div>
+              <div className="relative p-8 bg-white/50 backdrop-blur-sm rounded-full border border-border/50">
+                <Grid className="h-16 w-16 text-muted-foreground" />
+              </div>
+            </div>
+            
+            <Badge className="mb-6 bg-gradient-to-r from-primary to-purple-600 animate-scale-in">
+              <Sparkles className="h-4 w-4 mr-2" />
+              Coming Soon
+            </Badge>
+            
+            <h3 className="text-2xl font-bold mb-4 text-gray-900">
+              Categories are being prepared
+            </h3>
+            
+            <p className="text-gray-600 text-center max-w-md mb-8">
+              We're working on organizing our amazing collection into categories. 
+              In the meantime, explore all our products in the shop.
+            </p>
           </div>
         </div>
       </section>
@@ -86,11 +110,12 @@ const Categories = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {displayCategories.map((category) => (
+          {displayCategories.map((category, index) => (
             <div
               key={category.id}
               onClick={() => handleCategoryClick(category.slug)}
-              className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
+              className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer animate-fade-in hover-lift-lg"
+              style={{ animationDelay: `${index * 100}ms` }}
             >
               <div className="aspect-square overflow-hidden">
                 <img
