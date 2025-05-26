@@ -17,20 +17,22 @@ const PayPalPayment: React.FC<PayPalPaymentProps> = ({ amount, onSuccess, onErro
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load PayPal SDK
     const loadPayPalSDK = () => {
       if (window.paypal) {
         setPaypalLoaded(true);
         return;
       }
 
+      const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+      if (!clientId) {
+        onError('PayPal Client ID not configured');
+        return;
+      }
+
       const script = document.createElement('script');
-      script.src = `https://www.paypal.com/sdk/js?client-id=${import.meta.env.VITE_PAYPAL_CLIENT_ID || 'demo'}&currency=USD&intent=capture`;
+      script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD&intent=capture`;
       script.onload = () => setPaypalLoaded(true);
-      script.onerror = () => {
-        console.error('Failed to load PayPal SDK');
-        onError('Failed to load PayPal payment system');
-      };
+      script.onerror = () => onError('Failed to load PayPal SDK');
       document.head.appendChild(script);
     };
 
@@ -39,7 +41,6 @@ const PayPalPayment: React.FC<PayPalPaymentProps> = ({ amount, onSuccess, onErro
 
   useEffect(() => {
     if (paypalLoaded && window.paypal) {
-      // Render PayPal button
       window.paypal.Buttons({
         createOrder: (data: any, actions: any) => {
           return actions.order.create({
@@ -57,14 +58,7 @@ const PayPalPayment: React.FC<PayPalPaymentProps> = ({ amount, onSuccess, onErro
                 given_name: orderData.firstName,
                 surname: orderData.lastName
               },
-              email_address: orderData.email,
-              address: {
-                address_line_1: orderData.address,
-                admin_area_2: orderData.city,
-                admin_area_1: orderData.state,
-                postal_code: orderData.zipCode,
-                country_code: 'US'
-              }
+              email_address: orderData.email
             }
           });
         },
@@ -112,18 +106,18 @@ const PayPalPayment: React.FC<PayPalPaymentProps> = ({ amount, onSuccess, onErro
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center border rounded-md p-4 bg-gradient-to-r from-blue-50 to-blue-100 hover:shadow-md transition-all duration-300 hover-3d-lift">
+      <div className="flex items-center border rounded-xl p-6 bg-gradient-to-br from-blue-50 via-white to-blue-100 hover:shadow-lg transition-all duration-500 hover-3d-lift border-blue-200">
         <div className="flex items-center flex-1">
-          <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl mr-4 flex items-center justify-center text-white font-bold animate-float-gentle">
-            <CreditCard className="h-6 w-6" />
+          <div className="w-14 h-14 bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl mr-4 flex items-center justify-center text-white font-bold animate-float-gentle shadow-lg">
+            <CreditCard className="h-7 w-7" />
           </div>
           <div>
-            <span className="text-foreground font-semibold text-lg">Pay with PayPal</span>
-            <p className="text-sm text-muted-foreground">Secure online payment</p>
+            <span className="text-foreground font-bold text-xl">Pay with PayPal</span>
+            <p className="text-sm text-muted-foreground mt-1">Secure online payment • Buyer protection included</p>
           </div>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+          <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
             ${amount.toFixed(2)}
           </div>
           <div className="text-sm text-muted-foreground">USD</div>
@@ -132,29 +126,30 @@ const PayPalPayment: React.FC<PayPalPaymentProps> = ({ amount, onSuccess, onErro
       
       <div className="animate-scale-in">
         {!paypalLoaded ? (
-          <Button disabled className="w-full" size="lg">
-            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+          <Button disabled className="w-full h-16 text-lg" size="lg">
+            <Loader2 className="h-6 w-6 mr-3 animate-spin" />
             Loading PayPal...
           </Button>
         ) : (
-          <div id="paypal-button-container" className="w-full"></div>
+          <div id="paypal-button-container" className="w-full [&>div]:!rounded-xl [&>div]:!overflow-hidden [&>div]:!shadow-lg"></div>
         )}
       </div>
       
       {isProcessing && (
-        <div className="text-center animate-fade-in">
-          <Loader2 className="h-8 w-8 mx-auto animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground mt-2">Processing PayPal payment...</p>
+        <div className="text-center animate-fade-in bg-blue-50 p-6 rounded-xl border border-blue-200">
+          <Loader2 className="h-10 w-10 mx-auto animate-spin text-blue-600 mb-3" />
+          <p className="text-lg font-medium text-blue-900">Processing PayPal payment...</p>
+          <p className="text-sm text-blue-600 mt-1">Please wait while we confirm your transaction</p>
         </div>
       )}
       
-      <div className="text-xs text-center space-y-2 animate-fade-in">
-        <div className="flex items-center justify-center gap-2 text-muted-foreground bg-muted/30 p-3 rounded-lg">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <span>🔒 Secure payment processing via PayPal</span>
+      <div className="text-xs text-center space-y-3 animate-fade-in">
+        <div className="flex items-center justify-center gap-3 text-muted-foreground bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100">
+          <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
+          <span className="font-medium">🔒 Secure payment processing via PayPal</span>
         </div>
-        <div className="text-muted-foreground">
-          Powered by PayPal • 256-bit SSL encryption • Buyer protection
+        <div className="text-muted-foreground font-medium">
+          Powered by PayPal • 256-bit SSL encryption • Instant processing • Buyer protection
         </div>
       </div>
     </div>
