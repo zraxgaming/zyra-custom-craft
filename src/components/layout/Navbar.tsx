@@ -15,13 +15,12 @@ import { ShoppingCart, User, Menu, X, LogOut, Settings, Package } from "lucide-r
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import CartDrawer from "@/components/cart/CartDrawer";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import ThemeToggle from "@/components/theme/ThemeToggle";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [showCart, setShowCart] = useState(false);
-  const { user, profile, signOut } = useAuth();
+  const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -51,8 +50,6 @@ const Navbar = () => {
     { name: "Contact", href: "/contact" },
   ];
 
-  const isAdmin = profile?.role === "admin";
-
   return (
     <>
       <nav className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border sticky top-0 z-40">
@@ -72,7 +69,7 @@ const Navbar = () => {
                 <Link
                   key={item.name}
                   to={item.href}
-                  className="text-muted-foreground hover:text-foreground transition-colors duration-200 font-medium"
+                  className="text-muted-foreground hover:text-foreground transition-colors duration-200 font-medium hover:scale-105 transform"
                 >
                   {item.name}
                 </Link>
@@ -87,10 +84,10 @@ const Navbar = () => {
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowCart(true)}
-                className="relative"
+                className="relative hover:scale-110 transition-transform duration-200"
               >
                 <ShoppingCart className="h-5 w-5" />
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs animate-pulse">
                   0
                 </Badge>
               </Button>
@@ -98,37 +95,31 @@ const Navbar = () => {
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:scale-110 transition-transform duration-200">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={profile?.avatar_url} alt={profile?.display_name || "User"} />
+                        <AvatarImage src={user.user_metadata?.avatar_url} alt={user.user_metadata?.first_name || "User"} />
                         <AvatarFallback>
-                          {profile?.display_name?.charAt(0) || profile?.first_name?.charAt(0) || "U"}
+                          {user.user_metadata?.first_name?.charAt(0) || user.email?.charAt(0) || "U"}
                         </AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuContent className="w-56 animate-slide-in-right" align="end" forceMount>
                     <div className="flex items-center justify-start gap-2 p-2">
                       <div className="flex flex-col space-y-1 leading-none">
                         <p className="font-medium">
-                          {profile?.display_name || profile?.first_name || "User"}
+                          {user.user_metadata?.first_name || "User"}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {profile?.email || user.email}
+                          {user.email}
                         </p>
                       </div>
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link to="/profile" className="cursor-pointer">
-                        <User className="mr-2 h-4 w-4" />
-                        Profile
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
                       <Link to="/dashboard" className="cursor-pointer">
-                        <Settings className="mr-2 h-4 w-4" />
-                        Dashboard
+                        <User className="mr-2 h-4 w-4" />
+                        My Account
                       </Link>
                     </DropdownMenuItem>
                     {isAdmin && (
@@ -147,7 +138,7 @@ const Navbar = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button asChild>
+                <Button asChild className="hover:scale-105 transition-transform duration-200">
                   <Link to="/auth">Sign In</Link>
                 </Button>
               )}
@@ -160,7 +151,7 @@ const Navbar = () => {
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowCart(true)}
-                className="relative"
+                className="relative hover:scale-110 transition-transform duration-200"
               >
                 <ShoppingCart className="h-5 w-5" />
                 <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
@@ -171,6 +162,7 @@ const Navbar = () => {
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsOpen(!isOpen)}
+                className="hover:scale-110 transition-transform duration-200"
               >
                 {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </Button>
@@ -180,13 +172,13 @@ const Navbar = () => {
 
         {/* Mobile Navigation */}
         {isOpen && (
-          <div className="md:hidden">
+          <div className="md:hidden animate-slide-in-right">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-background border-t border-border">
               {navigation.map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
-                  className="block px-3 py-2 text-muted-foreground hover:text-foreground transition-colors duration-200"
+                  className="block px-3 py-2 text-muted-foreground hover:text-foreground transition-colors duration-200 hover:scale-105 transform"
                   onClick={() => setIsOpen(false)}
                 >
                   {item.name}
@@ -194,45 +186,39 @@ const Navbar = () => {
               ))}
               <div className="px-3 py-2">
                 {user ? (
-                  <div className="space-y-2">
+                  <div className="space-y-2 animate-fade-in">
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={profile?.avatar_url} alt={profile?.display_name || "User"} />
+                        <AvatarImage src={user.user_metadata?.avatar_url} alt={user.user_metadata?.first_name || "User"} />
                         <AvatarFallback>
-                          {profile?.display_name?.charAt(0) || profile?.first_name?.charAt(0) || "U"}
+                          {user.user_metadata?.first_name?.charAt(0) || user.email?.charAt(0) || "U"}
                         </AvatarFallback>
                       </Avatar>
                       <span className="text-sm font-medium">
-                        {profile?.display_name || profile?.first_name || "User"}
+                        {user.user_metadata?.first_name || "User"}
                       </span>
                     </div>
-                    <Button asChild variant="ghost" className="w-full justify-start">
-                      <Link to="/profile" onClick={() => setIsOpen(false)}>
-                        <User className="mr-2 h-4 w-4" />
-                        Profile
-                      </Link>
-                    </Button>
-                    <Button asChild variant="ghost" className="w-full justify-start">
+                    <Button asChild variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
                       <Link to="/dashboard" onClick={() => setIsOpen(false)}>
-                        <Settings className="mr-2 h-4 w-4" />
-                        Dashboard
+                        <User className="mr-2 h-4 w-4" />
+                        My Account
                       </Link>
                     </Button>
                     {isAdmin && (
-                      <Button asChild variant="ghost" className="w-full justify-start">
+                      <Button asChild variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
                         <Link to="/admin" onClick={() => setIsOpen(false)}>
                           <Package className="mr-2 h-4 w-4" />
                           Admin Panel
                         </Link>
                       </Button>
                     )}
-                    <Button onClick={handleSignOut} variant="ghost" className="w-full justify-start">
+                    <Button onClick={handleSignOut} variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
                       <LogOut className="mr-2 h-4 w-4" />
                       Sign out
                     </Button>
                   </div>
                 ) : (
-                  <Button asChild className="w-full">
+                  <Button asChild className="w-full hover:scale-105 transition-transform duration-200">
                     <Link to="/auth" onClick={() => setIsOpen(false)}>
                       Sign In
                     </Link>
@@ -243,8 +229,6 @@ const Navbar = () => {
           </div>
         )}
       </nav>
-
-      <CartDrawer open={showCart} onOpenChange={setShowCart} />
     </>
   );
 };
