@@ -6,27 +6,156 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Wallet, Smartphone } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Wallet, Smartphone, Loader2 } from "lucide-react";
 
 interface PaymentMethodsProps {
   total: number;
-  onPaymentMethodSelect: (method: string) => void;
-  onPaymentComplete: () => void;
+  orderData: any;
+  appliedCoupon?: any;
+  appliedGiftCard?: any;
+  onPaymentSuccess: (orderId: string) => void;
 }
 
 const PaymentMethods: React.FC<PaymentMethodsProps> = ({
   total,
-  onPaymentMethodSelect,
-  onPaymentComplete
+  orderData,
+  appliedCoupon,
+  appliedGiftCard,
+  onPaymentSuccess
 }) => {
   const [selectedMethod, setSelectedMethod] = useState<string>("ziina");
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
+  const processZiinaPayment = async () => {
+    try {
+      // Get Ziina configuration from site_config
+      const { data: configData, error: configError } = await supabase
+        .from('site_config')
+        .select('*')
+        .in('key', ['ziina_api_key', 'ziina_merchant_id', 'ziina_base_url']);
+
+      if (configError) throw new Error('Failed to fetch Ziina configuration');
+
+      const config = configData.reduce((acc, item) => {
+        acc[item.key] = item.value;
+        return acc;
+      }, {} as any);
+
+      const ziinaApiKey = config.ziina_api_key;
+      const ziinaMerchantId = config.ziina_merchant_id;
+      const ziinaBaseUrl = config.ziina_base_url || 'https://api-v2.ziina.com';
+
+      if (!ziinaApiKey || !ziinaMerchantId) {
+        throw new Error('Ziina API credentials not configured in admin settings');
+      }
+
+      const paymentAmount = Math.round(total * 3.67); // Convert to AED
+
+      const paymentPayload = {
+        amount: paymentAmount,
+        currency_code: 'AED',
+        message: `Order payment for ${orderData.email}`,
+        success_url: `${window.location.origin}/order-success`,
+        cancel_url: `${window.location.origin}/order-failed`,
+        failure_url: `${window.location.origin}/order-failed`,
+        test: true,
+        transaction_source: 'directApi',
+        expiry: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        allow_tips: true
+      };
+
+      const response = await fetch(`${ziinaBaseUrl}/api/payment_intent`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ziinaApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(paymentPayload)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Ziina API error: ${response.status}`);
+      }
+
+      const ziinaData = await response.json();
+
+      if (!ziinaData?.payment_url) {
+        throw new Error('No payment URL received from Ziina');
+      }
+
+      // Store payment data for verification
+      localStorage.setItem('pending_payment', JSON.stringify({
+        payment_id: ziinaData.id,
+        amount: paymentAmount,
+        order_data: orderData,
+        method: 'ziina',
+        applied_coupon: appliedCoupon,
+        applied_gift_card: appliedGiftCard
+      }));
+
+      // Redirect to Ziina payment page
+      window.location.href = ziinaData.payment_url;
+    } catch (error: any) {
+      console.error('Ziina payment error:', error);
+      throw error;
+    }
+  };
+
+  const processPayPalPayment = async () => {
+    try {
+      // PayPal integration using client ID and secret from environment
+      const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+      const paypalClientSecret = process.env.PAYPAL_CLIENT_SECRET;
+
+      if (!paypalClientId) {
+        throw new Error('PayPal client ID not configured');
+      }
+
+      // Create PayPal order
+      const response = await fetch('/api/paypal/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: total.toFixed(2),
+          currency: 'USD',
+          orderData,
+          appliedCoupon,
+          appliedGiftCard
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create PayPal order');
+      }
+
+      const { orderID, approvalUrl } = await response.json();
+
+      // Store payment data for verification
+      localStorage.setItem('pending_payment', JSON.stringify({
+        payment_id: orderID,
+        amount: total,
+        order_data: orderData,
+        method: 'paypal',
+        applied_coupon: appliedCoupon,
+        applied_gift_card: appliedGiftCard
+      }));
+
+      // Redirect to PayPal
+      window.location.href = approvalUrl;
+    } catch (error: any) {
+      console.error('PayPal payment error:', error);
+      throw error;
+    }
+  };
+
   const handlePayment = async () => {
     if (!selectedMethod) {
-      console.log('Payment method required');
       toast({
         title: "Payment method required",
         description: "Please select a payment method",
@@ -38,24 +167,17 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
     setIsProcessing(true);
 
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      console.log(`Payment successful with ${selectedMethod}:`, total);
+      if (selectedMethod === 'ziina') {
+        await processZiinaPayment();
+      } else if (selectedMethod === 'paypal') {
+        await processPayPalPayment();
+      }
+    } catch (error: any) {
       toast({
-        title: "Payment successful!",
-        description: `Payment of $${total.toFixed(2)} processed successfully`,
-      });
-      
-      onPaymentComplete();
-    } catch (error) {
-      console.error('Payment failed:', error);
-      toast({
-        title: "Payment failed",
-        description: "There was an error processing your payment",
+        title: "Payment Failed",
+        description: error.message,
         variant: "destructive"
       });
-    } finally {
       setIsProcessing(false);
     }
   };
@@ -71,10 +193,7 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
       <CardContent className="space-y-6 p-6">
         <RadioGroup
           value={selectedMethod}
-          onValueChange={(value) => {
-            setSelectedMethod(value);
-            onPaymentMethodSelect(value);
-          }}
+          onValueChange={setSelectedMethod}
           className="space-y-4"
         >
           <div className="relative group">
@@ -114,7 +233,7 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
           <div className="flex items-center justify-between mb-6 p-4 bg-muted/30 rounded-lg">
             <span className="text-lg font-semibold text-foreground">Total Amount:</span>
             <span className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              ${total.toFixed(2)}
+              {selectedMethod === 'ziina' ? `AED ${(total * 3.67).toFixed(2)}` : `$${total.toFixed(2)}`}
             </span>
           </div>
           
@@ -126,11 +245,11 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
           >
             {isProcessing ? (
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <Loader2 className="w-5 h-5 animate-spin" />
                 Processing Payment...
               </div>
             ) : (
-              `Complete Order - $${total.toFixed(2)}`
+              `Pay with ${selectedMethod === 'ziina' ? 'Ziina' : 'PayPal'}`
             )}
           </Button>
         </div>
