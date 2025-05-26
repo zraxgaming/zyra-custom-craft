@@ -11,16 +11,17 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ShoppingCart, User, Menu, X, LogOut, Settings, Package } from "lucide-react";
+import { ShoppingCart, User, Menu, X, LogOut, Package } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { useCart } from "@/components/cart/CartProvider";
 import { useToast } from "@/hooks/use-toast";
 import ThemeToggle from "@/components/theme/ThemeToggle";
+import CartDrawer from "@/components/cart/CartDrawer";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [showCart, setShowCart] = useState(false);
   const { user, isAdmin, signOut } = useAuth();
+  const { toggleCart, totalItems } = useCart();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -83,13 +84,15 @@ const Navbar = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setShowCart(true)}
+                onClick={toggleCart}
                 className="relative hover:scale-110 transition-transform duration-200"
               >
                 <ShoppingCart className="h-5 w-5" />
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs animate-pulse">
-                  0
-                </Badge>
+                {totalItems > 0 && (
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs animate-pulse">
+                    {totalItems}
+                  </Badge>
+                )}
               </Button>
 
               {user ? (
@@ -150,13 +153,15 @@ const Navbar = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setShowCart(true)}
+                onClick={toggleCart}
                 className="relative hover:scale-110 transition-transform duration-200"
               >
                 <ShoppingCart className="h-5 w-5" />
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
-                  0
-                </Badge>
+                {totalItems > 0 && (
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                    {totalItems}
+                  </Badge>
+                )}
               </Button>
               <Button
                 variant="ghost"
@@ -229,6 +234,7 @@ const Navbar = () => {
           </div>
         )}
       </nav>
+      <CartDrawer />
     </>
   );
 };

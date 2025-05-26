@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/hooks/use-auth";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
@@ -102,21 +103,23 @@ const AppContent = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="system" storageKey="zyra-theme">
-      <TooltipProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            <CartProvider>
-              <div className="min-h-screen w-full">
-                <Toaster />
-                <Sonner />
-                <AppContent />
-              </div>
-            </CartProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-    </ThemeProvider>
+    <HelmetProvider>
+      <ThemeProvider defaultTheme="system" storageKey="zyra-theme">
+        <TooltipProvider>
+          <BrowserRouter>
+            <AuthProvider>
+              <CartProvider>
+                <div className="min-h-screen w-full">
+                  <Toaster />
+                  <Sonner />
+                  <AppContent />
+                </div>
+              </CartProvider>
+            </AuthProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
+    </HelmetProvider>
   </QueryClientProvider>
 );
 
