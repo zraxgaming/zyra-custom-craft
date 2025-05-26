@@ -3,11 +3,24 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Star, Trash2, CheckCircle, XCircle } from "lucide-react";
+import { Star, Eye, Trash2, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Review } from "@/types/user";
+
+interface Review {
+  id: string;
+  rating: number;
+  title: string;
+  comment: string;
+  verified_purchase: boolean;
+  created_at: string;
+  products?: {
+    name: string;
+    images: string[];
+  };
+  user_id: string;
+}
 
 const AdminReviews = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -23,43 +36,16 @@ const AdminReviews = () => {
       const { data, error } = await supabase
         .from('reviews')
         .select(`
-          id,
-          rating,
-          title,
-          comment,
-          verified_purchase,
-          created_at,
-          products!reviews_product_id_fkey (
+          *,
+          products (
             name,
             images
-          ),
-          profiles!reviews_user_id_fkey (
-            display_name,
-            first_name,
-            last_name
           )
         `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-
-      // Transform the data to match Review interface
-      const transformedReviews: Review[] = (data || []).map(review => ({
-        ...review,
-        products: {
-          name: review.products?.name || 'Unknown Product',
-          images: Array.isArray(review.products?.images) 
-            ? review.products.images.filter((img: any) => typeof img === 'string')
-            : []
-        },
-        profiles: {
-          display_name: review.profiles?.display_name || '',
-          first_name: review.profiles?.first_name || '',
-          last_name: review.profiles?.last_name || ''
-        }
-      }));
-
-      setReviews(transformedReviews);
+      setReviews(data || []);
     } catch (error) {
       console.error('Error fetching reviews:', error);
       toast({
@@ -72,7 +58,7 @@ const AdminReviews = () => {
     }
   };
 
-  const handleDeleteReview = async (reviewId: string) => {
+  const handleDelete = async (reviewId: string) => {
     if (!confirm('Are you sure you want to delete this review?')) return;
 
     try {
@@ -83,7 +69,7 @@ const AdminReviews = () => {
 
       if (error) throw error;
 
-      setReviews(reviews.filter(review => review.id !== reviewId));
+      await fetchReviews();
       toast({
         title: "Success",
         description: "Review deleted successfully",
@@ -98,9 +84,15 @@ const AdminReviews = () => {
     }
   };
 
-  const getCustomerName = (review: Review) => {
-    const { first_name, last_name, display_name } = review.profiles;
-    return `${first_name || ''} ${last_name || ''}`.trim() || display_name || 'Anonymous';
+  const renderStars = (rating: number) => {
+    return Array.from({ length: 5 }, (_, i) => (
+      <Star
+        key={i}
+        className={`h-4 w-4 ${
+          i < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+        }`}
+      />
+    ));
   };
 
   if (loading) {
@@ -118,24 +110,16 @@ const AdminReviews = () => {
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold animate-slide-in-left">Reviews Management</h1>
-          <div className="animate-slide-in-right">
-            <Card className="px-4 py-2">
-              <div className="flex items-center gap-2">
-                <Star className="h-4 w-4 text-yellow-500" />
-                <span className="font-medium">{reviews.length} Total Reviews</span>
-              </div>
-            </Card>
-          </div>
         </div>
 
-        <div className="grid gap-6">
+        <div className="grid gap-4">
           {reviews.length === 0 ? (
             <Card className="animate-fade-in">
               <CardContent className="text-center py-12">
-                <Star className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-xl font-medium mb-2">No Reviews Yet</h3>
+                <MessageSquare className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-xl font-medium mb-2">No Reviews</h3>
                 <p className="text-muted-foreground">
-                  Customer reviews will appear here once submitted.
+                  No customer reviews have been submitted yet.
                 </p>
               </CardContent>
             </Card>
@@ -143,61 +127,67 @@ const AdminReviews = () => {
             reviews.map((review, index) => (
               <Card key={review.id} className="animate-slide-in-up hover:shadow-lg transition-all duration-300" style={{animationDelay: `${index * 50}ms`}}>
                 <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-4">
-                      <img
-                        src={review.products.images[0] || '/placeholder-product.jpg'}
-                        alt={review.products.name}
-                        className="w-16 h-16 object-cover rounded-lg"
-                      />
-                      <div>
-                        <h3 className="font-semibold text-lg">{review.products.name}</h3>
-                        <p className="text-muted-foreground">by {getCustomerName(review)}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className="flex items-center gap-1">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`h-4 w-4 ${
-                                  i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                                }`}
-                              />
-                            ))}
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex items-center">
+                            {renderStars(review.rating)}
                           </div>
+                          <span className="text-sm text-muted-foreground">
+                            {new Date(review.created_at).toLocaleDateString()}
+                          </span>
                           {review.verified_purchase && (
-                            <Badge className="bg-green-100 text-green-800 text-xs">
-                              <CheckCircle className="h-3 w-3 mr-1" />
+                            <Badge variant="default" className="text-xs">
                               Verified Purchase
                             </Badge>
                           )}
                         </div>
+                        
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="hover:scale-105 transition-transform"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDelete(review.id)}
+                            className="hover:scale-105 transition-transform"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">
-                        {new Date(review.created_at).toLocaleDateString()}
-                      </Badge>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteReview(review.id)}
-                        className="hover:scale-105 transition-transform"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+
+                      {review.title && (
+                        <h4 className="font-semibold text-lg">{review.title}</h4>
+                      )}
+
+                      {review.comment && (
+                        <p className="text-muted-foreground">{review.comment}</p>
+                      )}
+
+                      {review.products && (
+                        <div className="flex items-center space-x-3 pt-2 border-t">
+                          {review.products.images && review.products.images.length > 0 && (
+                            <img
+                              src={review.products.images[0] as string}
+                              alt={review.products.name}
+                              className="w-12 h-12 object-cover rounded"
+                            />
+                          )}
+                          <div>
+                            <p className="font-medium">{review.products.name}</p>
+                            <p className="text-sm text-muted-foreground">Product Review</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  {review.title && (
-                    <h4 className="font-medium text-lg mb-2">{review.title}</h4>
-                  )}
-                  
-                  {review.comment && (
-                    <p className="text-muted-foreground leading-relaxed">
-                      {review.comment}
-                    </p>
-                  )}
                 </CardContent>
               </Card>
             ))

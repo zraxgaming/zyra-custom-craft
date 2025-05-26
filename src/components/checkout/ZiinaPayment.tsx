@@ -29,15 +29,16 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, orderData, onSucces
       const { data: configData, error } = await supabase
         .from('site_config')
         .select('*')
-        .in('key', ['ziina_api_key', 'ziina_base_url'])
-        .maybeSingle();
+        .in('key', ['ziina_api_key', 'ziina_base_url']);
 
       if (error) throw error;
       
-      const config = configData?.reduce((acc: any, item: any) => {
-        acc[item.key] = item.value;
-        return acc;
-      }, {}) || {};
+      const config: any = {};
+      if (configData && Array.isArray(configData)) {
+        configData.forEach((item: any) => {
+          config[item.key] = item.value;
+        });
+      }
       
       setZiinaConfig(config);
     } catch (error) {
