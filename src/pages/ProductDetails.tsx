@@ -28,11 +28,12 @@ interface Product {
   stock_quantity: number;
 }
 
-const ProductDetail = () => {
+const ProductDetails = () => {
   const { slug } = useParams();
   const { toast } = useToast();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState(0);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -91,6 +92,10 @@ const ProductDetail = () => {
     );
   }
 
+  const imageUrl = Array.isArray(product.images) && product.images.length > 0 
+    ? product.images[selectedImage] 
+    : '/placeholder-product.jpg';
+
   return (
     <>
       <Navbar />
@@ -102,18 +107,41 @@ const ProductDetail = () => {
           </Link>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="aspect-square rounded-lg overflow-hidden bg-muted">
-              <img
-                src={Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : '/placeholder-product.jpg'}
-                alt={product.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = '/placeholder-product.jpg';
-                }}
-              />
+            {/* Product Images */}
+            <div className="space-y-4">
+              <div className="aspect-square rounded-lg overflow-hidden bg-muted">
+                <img
+                  src={imageUrl}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/placeholder-product.jpg';
+                  }}
+                />
+              </div>
+              {Array.isArray(product.images) && product.images.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto">
+                  {product.images.map((image, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedImage(index)}
+                      className={`flex-shrink-0 w-16 h-16 rounded-md overflow-hidden border-2 ${
+                        selectedImage === index ? 'border-primary' : 'border-transparent'
+                      }`}
+                    >
+                      <img
+                        src={image}
+                        alt={`${product.name} ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
+            {/* Product Info */}
             <div className="space-y-6">
               <div>
                 <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
@@ -191,4 +219,4 @@ const ProductDetail = () => {
   );
 };
 
-export default ProductDetail;
+export default ProductDetails;

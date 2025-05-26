@@ -1,150 +1,107 @@
 
 import React, { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Container } from "@/components/ui/container";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { Separator } from "@/components/ui/separator";
+import { User, Package, Heart } from "lucide-react";
 
 const Profile = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState({
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-    display_name: "",
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    username: ''
   });
-  const [orders, setOrders] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      fetchProfile();
-      fetchOrders();
-    }
+    const fetchProfile = async () => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') throw error;
+
+        if (data) {
+          setProfile(data);
+        } else {
+          setProfile(prev => ({
+            ...prev,
+            email: user.email || ''
+          }));
+        }
+      } catch (error: any) {
+        console.error('Error fetching profile:', error);
+      }
+    };
+
+    fetchProfile();
   }, [user]);
 
-  const fetchProfile = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user?.id)
-        .single();
-
-      if (error && error.code !== "PGRST116") {
-        throw error;
-      }
-
-      if (data) {
-        setProfile({
-          first_name: data.first_name || "",
-          last_name: data.last_name || "",
-          email: data.email || user?.email || "",
-          phone: data.phone || "",
-          display_name: data.display_name || "",
-        });
-      } else {
-        setProfile(prev => ({
-          ...prev,
-          email: user?.email || "",
-        }));
-      }
-    } catch (error) {
-      console.error("Error fetching profile:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchOrders = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("orders")
-        .select(`
-          *,
-          order_items (
-            *,
-            products (name, images)
-          )
-        `)
-        .eq("user_id", user?.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setOrders(data || []);
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-    }
-  };
-
-  const handleSaveProfile = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!user) return;
 
-    setIsSaving(true);
+    setLoading(true);
     try {
       const { error } = await supabase
-        .from("profiles")
+        .from('profiles')
         .upsert({
           id: user.id,
           ...profile,
+          updated_at: new Date().toISOString()
         });
 
       if (error) throw error;
 
       toast({
-        title: "Profile Updated",
-        description: "Your profile has been successfully updated.",
+        title: "Success",
+        description: "Profile updated successfully",
       });
     } catch (error: any) {
-      console.error("Error updating profile:", error);
+      console.error('Error updating profile:', error);
       toast({
-        title: "Update Failed",
-        description: error.message,
+        title: "Error",
+        description: error.message || "Failed to update profile",
         variant: "destructive",
       });
     } finally {
-      setIsSaving(false);
+      setLoading(false);
     }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setProfile(prev => ({ ...prev, [name]: value }));
   };
 
   if (!user) {
     return (
       <>
         <Navbar />
-        <Container className="py-12">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Please Login</h1>
-            <p className="text-muted-foreground">You need to be logged in to view your profile.</p>
-          </div>
-        </Container>
-        <Footer />
-      </>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <>
-        <Navbar />
-        <Container className="py-12">
-          <div className="max-w-4xl mx-auto">
-            <div className="animate-pulse space-y-6">
-              <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-              <div className="h-64 bg-gray-200 rounded"></div>
-            </div>
-          </div>
-        </Container>
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <Card>
+            <CardContent className="p-6 text-center">
+              <h1 className="text-2xl font-bold mb-4">Please sign in</h1>
+              <p className="text-muted-foreground">You need to be signed in to view your profile.</p>
+            </CardContent>
+          </Card>
+        </div>
         <Footer />
       </>
     );
@@ -153,14 +110,27 @@ const Profile = () => {
   return (
     <>
       <Navbar />
-      <Container className="py-12">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8">My Account</h1>
+      <div className="min-h-screen bg-background py-12">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold mb-2">My Profile</h1>
+            <p className="text-muted-foreground">Manage your account settings</p>
+          </div>
 
           <Tabs defaultValue="profile" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="profile">Profile</TabsTrigger>
-              <TabsTrigger value="orders">Orders</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="profile" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Profile
+              </TabsTrigger>
+              <TabsTrigger value="orders" className="flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Orders
+              </TabsTrigger>
+              <TabsTrigger value="wishlist" className="flex items-center gap-2">
+                <Heart className="h-4 w-4" />
+                Wishlist
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="profile">
@@ -168,72 +138,69 @@ const Profile = () => {
                 <CardHeader>
                   <CardTitle>Profile Information</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="first_name">First Name</Label>
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <Label htmlFor="first_name">First Name</Label>
+                        <Input
+                          id="first_name"
+                          name="first_name"
+                          value={profile.first_name}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="last_name">Last Name</Label>
+                        <Input
+                          id="last_name"
+                          name="last_name"
+                          value={profile.last_name}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="username">Username</Label>
                       <Input
-                        id="first_name"
-                        value={profile.first_name}
-                        onChange={(e) =>
-                          setProfile({ ...profile, first_name: e.target.value })
-                        }
+                        id="username"
+                        name="username"
+                        value={profile.username}
+                        onChange={handleInputChange}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="last_name">Last Name</Label>
+
+                    <div>
+                      <Label htmlFor="email">Email</Label>
                       <Input
-                        id="last_name"
-                        value={profile.last_name}
-                        onChange={(e) =>
-                          setProfile({ ...profile, last_name: e.target.value })
-                        }
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={profile.email}
+                        onChange={handleInputChange}
+                        disabled
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Email cannot be changed from this page
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        value={profile.phone}
+                        onChange={handleInputChange}
                       />
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="display_name">Display Name</Label>
-                    <Input
-                      id="display_name"
-                      value={profile.display_name}
-                      onChange={(e) =>
-                        setProfile({ ...profile, display_name: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={profile.email}
-                      onChange={(e) =>
-                        setProfile({ ...profile, email: e.target.value })
-                      }
-                      disabled
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input
-                      id="phone"
-                      value={profile.phone}
-                      onChange={(e) =>
-                        setProfile({ ...profile, phone: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  <Button
-                    onClick={handleSaveProfile}
-                    disabled={isSaving}
-                    className="w-full md:w-auto"
-                  >
-                    {isSaving ? "Saving..." : "Save Changes"}
-                  </Button>
+                    <Button type="submit" disabled={loading}>
+                      {loading ? "Updating..." : "Update Profile"}
+                    </Button>
+                  </form>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -244,74 +211,24 @@ const Profile = () => {
                   <CardTitle>Order History</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {orders.length === 0 ? (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">No orders found.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {orders.map((order: any) => (
-                        <div key={order.id} className="border rounded-lg p-4">
-                          <div className="flex justify-between items-start mb-4">
-                            <div>
-                              <h3 className="font-semibold">
-                                Order #{order.id.slice(0, 8)}
-                              </h3>
-                              <p className="text-sm text-muted-foreground">
-                                {new Date(order.created_at).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-semibold">
-                                ${order.total_amount.toFixed(2)}
-                              </p>
-                              <span
-                                className={`inline-block px-2 py-1 rounded-full text-xs ${
-                                  order.status === "delivered"
-                                    ? "bg-green-100 text-green-800"
-                                    : order.status === "processing"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : order.status === "shipped"
-                                    ? "bg-purple-100 text-purple-800"
-                                    : "bg-gray-100 text-gray-800"
-                                }`}
-                              >
-                                {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <Separator className="my-4" />
-                          
-                          <div className="space-y-2">
-                            {order.order_items?.map((item: any) => (
-                              <div key={item.id} className="flex items-center gap-4">
-                                {item.products?.images?.[0] && (
-                                  <img
-                                    src={item.products.images[0]}
-                                    alt={item.products.name}
-                                    className="w-12 h-12 object-cover rounded"
-                                  />
-                                )}
-                                <div className="flex-1">
-                                  <p className="font-medium">{item.products?.name}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    Quantity: {item.quantity} × ${item.price.toFixed(2)}
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <p className="text-muted-foreground">Your order history will appear here.</p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="wishlist">
+              <Card>
+                <CardHeader>
+                  <CardTitle>My Wishlist</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">Your wishlist items will appear here.</p>
                 </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
         </div>
-      </Container>
+      </div>
       <Footer />
     </>
   );
