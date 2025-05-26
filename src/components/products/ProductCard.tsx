@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Star, Eye, Palette, Package } from "lucide-react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import ProductCustomizer from "./ProductCustomizer";
-import { Product, CustomizationOptions } from "@/types/product";
+import { Product } from "@/types/product";
 
 interface ProductCardProps {
   product: Product;
@@ -23,15 +23,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const discountedPrice = product.discount_percentage 
     ? product.price * (1 - product.discount_percentage / 100)
     : product.price;
-
-  const customizationOptions: CustomizationOptions = {
-    id: '1',
-    allowText: true,
-    allowImage: true,
-    maxTextLength: 50,
-    maxImageCount: 1,
-    allowResizeRotate: true
-  };
 
   return (
     <Card className="group relative overflow-hidden bg-gradient-to-br from-card/80 to-card border-border/50 hover:border-primary/30 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2">
@@ -57,8 +48,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             </Button>
             {product.is_customizable && (
               <ProductCustomizer
-                product={product}
-                customizationOptions={customizationOptions}
+                productId={product.id}
                 trigger={
                   <Button
                     variant="secondary"
@@ -95,6 +85,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <Badge className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white">
               <Palette className="h-3 w-3 mr-1" />
               Custom
+            </Badge>
+          )}
+          {product.is_digital && (
+            <Badge className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white">
+              Digital
             </Badge>
           )}
         </div>
@@ -164,7 +159,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               id: product.id,
               name: product.name,
               price: discountedPrice,
-              image: product.images[0]
+              images: product.images
             }}
             inStock={product.in_stock}
             disabled={!product.in_stock}

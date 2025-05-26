@@ -5,14 +5,12 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import AdminLayout from '@/components/admin/AdminLayout';
 import ProductForm from '@/components/admin/ProductForm';
-import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const ProductEdit = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const { data: product, isLoading, error } = useQuery({
     queryKey: ['product', id],
@@ -34,14 +32,9 @@ const ProductEdit = () => {
   useEffect(() => {
     if (error) {
       console.error('Error loading product:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load product",
-        variant: "destructive",
-      });
       navigate('/admin/products');
     }
-  }, [error, navigate, toast]);
+  }, [error, navigate]);
 
   if (isLoading) {
     return (
@@ -90,17 +83,15 @@ const ProductEdit = () => {
             slug: product.slug,
             description: product.description,
             price: product.price,
-            images: Array.isArray(product.images) ? product.images : [],
+            images: Array.isArray(product.images) ? 
+              (product.images as any[]).filter(img => typeof img === 'string') : [],
             is_featured: product.is_featured || false,
             is_customizable: product.is_customizable || false,
-            stock_quantity: product.stock_quantity || 0
+            stock_quantity: product.stock_quantity || 0,
+            sku: product.sku || ''
           }}
           onSuccess={() => {
             console.log('Product updated successfully');
-            toast({
-              title: "Success",
-              description: "Product updated successfully",
-            });
             navigate('/admin/products');
           }}
         />

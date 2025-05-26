@@ -34,7 +34,8 @@ const Index = () => {
         slug: product.slug,
         description: product.description,
         price: product.price,
-        images: Array.isArray(product.images) ? product.images : [],
+        images: Array.isArray(product.images) ? 
+          (product.images as any[]).filter(img => typeof img === 'string') : [],
         rating: product.rating,
         review_count: product.review_count,
         is_new: product.is_new,
@@ -44,7 +45,11 @@ const Index = () => {
         stock_quantity: product.stock_quantity,
         category: product.category,
         is_featured: product.is_featured,
-        status: product.status
+        status: product.status,
+        sku: product.sku,
+        is_digital: product.is_digital,
+        featured: product.featured,
+        created_at: product.created_at
       }));
       
       return transformedProducts;

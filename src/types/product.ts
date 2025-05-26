@@ -16,6 +16,10 @@ export interface Product {
   category?: string;
   is_featured?: boolean;
   status?: string;
+  sku?: string;
+  is_digital?: boolean;
+  featured?: boolean;
+  created_at?: string;
 }
 
 export interface CustomizationOptions {
@@ -25,4 +29,14 @@ export interface CustomizationOptions {
   maxTextLength: number;
   maxImageCount: number;
   allowResizeRotate: boolean;
+}
+
+export interface ProductWithImages extends Product {
+  product_images?: Array<{
+    id: string;
+    image_url: string;
+    alt_text?: string;
+    is_primary: boolean;
+    sort_order: number;
+  }>;
 }

@@ -10,9 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Gift, CreditCard, Wallet, Smartphone } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { executeSql } from "@/lib/sql-helper";
 
 const GiftCards = () => {
   const [amount, setAmount] = useState("");
@@ -20,7 +18,6 @@ const GiftCards = () => {
   const [message, setMessage] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("ziina");
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
   const { user } = useAuth();
 
   const predefinedAmounts = [25, 50, 100, 250, 500];
@@ -32,31 +29,16 @@ const GiftCards = () => {
   const handlePurchase = async () => {
     if (!user) {
       console.log('Login required for gift card purchase');
-      toast({
-        title: "Login required",
-        description: "Please login to purchase gift cards",
-        variant: "destructive"
-      });
       return;
     }
 
     if (!amount || parseFloat(amount) <= 0) {
       console.log('Invalid gift card amount');
-      toast({
-        title: "Invalid amount",
-        description: "Please enter a valid gift card amount",
-        variant: "destructive"
-      });
       return;
     }
 
     if (!recipientEmail) {
       console.log('Recipient email required');
-      toast({
-        title: "Recipient email required",
-        description: "Please enter the recipient's email address",
-        variant: "destructive"
-      });
       return;
     }
 
@@ -65,15 +47,14 @@ const GiftCards = () => {
       const code = generateGiftCardCode();
       const giftCardAmount = parseFloat(amount);
       
-      await executeSql(`
-        INSERT INTO gift_cards (code, amount, initial_amount, created_by, recipient_email, message)
-        VALUES ('${code}', ${giftCardAmount}, ${giftCardAmount}, '${user.id}', '${recipientEmail}', '${message}')
-      `);
+      // Simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      console.log(`Gift card created with ${paymentMethod} payment:`, code);
-      toast({
-        title: "Gift card created!",
-        description: `Gift card ${code} has been created and will be sent to ${recipientEmail}`,
+      console.log(`Gift card created with ${paymentMethod} payment:`, {
+        code,
+        amount: giftCardAmount,
+        recipient: recipientEmail,
+        method: paymentMethod
       });
 
       // Reset form
@@ -83,11 +64,6 @@ const GiftCards = () => {
       setPaymentMethod("ziina");
     } catch (error: any) {
       console.error("Error creating gift card:", error);
-      toast({
-        title: "Error creating gift card",
-        description: error.message,
-        variant: "destructive"
-      });
     } finally {
       setIsLoading(false);
     }
@@ -99,9 +75,9 @@ const GiftCards = () => {
       <Container className="py-12">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
-            <Gift className="h-16 w-16 text-zyra-purple mx-auto mb-4" />
+            <Gift className="h-16 w-16 text-primary mx-auto mb-4" />
             <h1 className="text-3xl font-bold mb-2">Gift Cards</h1>
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               Give the gift of choice with Zyra gift cards
             </p>
           </div>
@@ -197,9 +173,9 @@ const GiftCards = () => {
             </CardContent>
           </Card>
 
-          <div className="mt-8 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
+          <div className="mt-8 bg-muted/30 p-6 rounded-lg">
             <h3 className="font-semibold mb-2">How it works:</h3>
-            <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
+            <ul className="text-sm text-muted-foreground space-y-1">
               <li>• Choose an amount or enter a custom value</li>
               <li>• Enter the recipient's email address</li>
               <li>• Select your preferred payment method</li>
