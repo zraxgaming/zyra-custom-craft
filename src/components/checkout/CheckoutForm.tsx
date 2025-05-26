@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Smartphone, CreditCard } from "lucide-react";
+import { Smartphone, CreditCard, pi } from "lucide-react";
 import PaymentProcessor from "./PaymentProcessor";
 
 interface CheckoutFormProps {
@@ -79,33 +79,36 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
 
   if (showPayment) {
     return (
-      <div className="max-w-md mx-auto">
+      <div className="max-w-md mx-auto animate-fade-in">
         <div className="mb-6">
           <Button 
             variant="outline" 
             onClick={() => setShowPayment(false)}
-            className="mb-4"
+            className="mb-4 hover-3d-lift"
           >
             ← Back to Details
           </Button>
           
-          <Card className="mb-4">
-            <CardContent className="p-4">
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span>${subtotal.toFixed(2)}</span>
+          <Card className="mb-4 card-premium border-border/50 shadow-xl">
+            <CardContent className="p-6">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center animate-slide-in-left">
+                  <span className="flex items-center gap-2">
+                    <pi className="h-4 w-4 text-muted-foreground" />
+                    Subtotal:
+                  </span>
+                  <span className="font-medium">${subtotal.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center animate-slide-in-left" style={{animationDelay: '0.1s'}}>
                   <span>Shipping:</span>
-                  <span>${shipping.toFixed(2)}</span>
+                  <span className="font-medium">${shipping.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center animate-slide-in-left" style={{animationDelay: '0.2s'}}>
                   <span>Tax:</span>
-                  <span>${tax.toFixed(2)}</span>
+                  <span className="font-medium">${tax.toFixed(2)}</span>
                 </div>
-                <Separator />
-                <div className="flex justify-between font-bold text-lg">
+                <Separator className="animate-scale-in" />
+                <div className="flex justify-between font-bold text-xl animate-bounce-in bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
                   <span>Total:</span>
                   <span>${total.toFixed(2)}</span>
                 </div>
@@ -114,28 +117,35 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
           </Card>
         </div>
         
-        <PaymentProcessor
-          amount={total}
-          currency="USD"
-          orderData={formData}
-          onSuccess={handlePaymentSuccess}
-          onError={handlePaymentError}
-          paymentMethod={formData.paymentMethod as 'ziina' | 'paypal'}
-        />
+        <div className="animate-scale-in">
+          <PaymentProcessor
+            amount={total}
+            currency="USD"
+            orderData={formData}
+            onSuccess={handlePaymentSuccess}
+            onError={handlePaymentError}
+            paymentMethod={formData.paymentMethod as 'ziina' | 'paypal'}
+          />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
-      <div className="space-y-6">
-        <Card className="border-border/50 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5">
-            <CardTitle>Contact Information</CardTitle>
+    <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <div className="space-y-8">
+        <Card className="border-border/50 shadow-xl card-premium animate-slide-in-left">
+          <CardHeader className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-primary/10 animate-morphing-gradient">
+            <CardTitle className="flex items-center gap-2">
+              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm animate-float-gentle">
+                <pi className="h-5 w-5 text-primary" />
+              </div>
+              Contact Information
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 p-6">
-            <div>
-              <Label htmlFor="email">Email *</Label>
+          <CardContent className="space-y-6 p-8">
+            <div className="animate-slide-in-up">
+              <Label htmlFor="email" className="text-base font-semibold">Email *</Label>
               <Input
                 id="email"
                 name="email"
@@ -143,124 +153,131 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
                 value={formData.email}
                 onChange={handleInputChange}
                 required
-                className="bg-background/50"
+                className="form-field mt-2 hover-magnetic"
+                placeholder="your@email.com"
               />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5">
+        <Card className="border-border/50 shadow-xl card-premium animate-slide-in-left" style={{animationDelay: '0.2s'}}>
+          <CardHeader className="bg-gradient-to-r from-secondary/10 via-primary/10 to-secondary/10">
             <CardTitle>Shipping Address</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 p-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="firstName">First Name *</Label>
+          <CardContent className="space-y-6 p-8">
+            <div className="grid grid-cols-2 gap-6">
+              <div className="animate-slide-in-up">
+                <Label htmlFor="firstName" className="text-base font-semibold">First Name *</Label>
                 <Input
                   id="firstName"
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleInputChange}
                   required
-                  className="bg-background/50"
+                  className="form-field mt-2 hover-magnetic"
+                  placeholder="John"
                 />
               </div>
-              <div>
-                <Label htmlFor="lastName">Last Name *</Label>
+              <div className="animate-slide-in-up" style={{animationDelay: '0.1s'}}>
+                <Label htmlFor="lastName" className="text-base font-semibold">Last Name *</Label>
                 <Input
                   id="lastName"
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleInputChange}
                   required
-                  className="bg-background/50"
+                  className="form-field mt-2 hover-magnetic"
+                  placeholder="Doe"
                 />
               </div>
             </div>
             
-            <div>
-              <Label htmlFor="address">Street Address *</Label>
+            <div className="animate-slide-in-up" style={{animationDelay: '0.2s'}}>
+              <Label htmlFor="address" className="text-base font-semibold">Street Address *</Label>
               <Input
                 id="address"
                 name="address"
                 value={formData.address}
                 onChange={handleInputChange}
                 required
-                className="bg-background/50"
+                className="form-field mt-2 hover-magnetic"
+                placeholder="123 Main Street"
               />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="city">City *</Label>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="animate-slide-in-up" style={{animationDelay: '0.3s'}}>
+                <Label htmlFor="city" className="text-base font-semibold">City *</Label>
                 <Input
                   id="city"
                   name="city"
                   value={formData.city}
                   onChange={handleInputChange}
                   required
-                  className="bg-background/50"
+                  className="form-field mt-2 hover-magnetic"
+                  placeholder="New York"
                 />
               </div>
-              <div>
-                <Label htmlFor="state">State *</Label>
+              <div className="animate-slide-in-up" style={{animationDelay: '0.4s'}}>
+                <Label htmlFor="state" className="text-base font-semibold">State *</Label>
                 <Input
                   id="state"
                   name="state"
                   value={formData.state}
                   onChange={handleInputChange}
                   required
-                  className="bg-background/50"
+                  className="form-field mt-2 hover-magnetic"
+                  placeholder="NY"
                 />
               </div>
             </div>
             
-            <div>
-              <Label htmlFor="zipCode">ZIP Code *</Label>
+            <div className="animate-slide-in-up" style={{animationDelay: '0.5s'}}>
+              <Label htmlFor="zipCode" className="text-base font-semibold">ZIP Code *</Label>
               <Input
                 id="zipCode"
                 name="zipCode"
                 value={formData.zipCode}
                 onChange={handleInputChange}
                 required
-                className="bg-background/50"
+                className="form-field mt-2 hover-magnetic"
+                placeholder="10001"
               />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5">
+        <Card className="border-border/50 shadow-xl card-premium animate-slide-in-left" style={{animationDelay: '0.4s'}}>
+          <CardHeader className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-primary/10">
             <CardTitle>Payment Method</CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent className="p-8">
             <RadioGroup
               value={formData.paymentMethod}
               onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value }))}
-              className="space-y-4"
+              className="space-y-6"
             >
-              <div className="flex items-center space-x-3 p-4 border-2 border-border rounded-lg hover:border-blue-500/50 transition-all duration-300 cursor-pointer">
+              <div className="flex items-center space-x-4 p-6 border-2 border-border rounded-xl hover:border-blue-500/50 transition-all duration-500 cursor-pointer hover-3d-lift hover-neon-glow animate-scale-in">
                 <RadioGroupItem value="ziina" id="ziina" />
-                <Label htmlFor="ziina" className="flex items-center gap-3 cursor-pointer flex-1">
-                  <div className="p-2 bg-gradient-to-r from-blue-500/10 to-purple-600/10 rounded-lg">
-                    <Smartphone className="h-5 w-5 text-blue-600" />
+                <Label htmlFor="ziina" className="flex items-center gap-4 cursor-pointer flex-1">
+                  <div className="p-3 bg-gradient-to-r from-blue-500/20 to-purple-600/20 rounded-xl animate-float-gentle">
+                    <Smartphone className="h-6 w-6 text-blue-600" />
                   </div>
                   <div>
-                    <div className="font-medium">Ziina (Default)</div>
+                    <div className="font-semibold text-lg">Ziina (Default)</div>
                     <div className="text-sm text-muted-foreground">Secure digital payment in AED</div>
                   </div>
                 </Label>
               </div>
 
-              <div className="flex items-center space-x-3 p-4 border-2 border-border rounded-lg hover:border-primary/50 transition-all duration-300 cursor-pointer">
+              <div className="flex items-center space-x-4 p-6 border-2 border-border rounded-xl hover:border-primary/50 transition-all duration-500 cursor-pointer hover-3d-lift animate-scale-in" style={{animationDelay: '0.2s'}}>
                 <RadioGroupItem value="paypal" id="paypal" />
-                <Label htmlFor="paypal" className="flex items-center gap-3 cursor-pointer flex-1">
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <CreditCard className="h-5 w-5 text-blue-600" />
+                <Label htmlFor="paypal" className="flex items-center gap-4 cursor-pointer flex-1">
+                  <div className="p-3 bg-blue-500/20 rounded-xl animate-particle-float">
+                    <CreditCard className="h-6 w-6 text-blue-600" />
                   </div>
                   <div>
-                    <div className="font-medium">PayPal</div>
+                    <div className="font-semibold text-lg">PayPal</div>
                     <div className="text-sm text-muted-foreground">Secure online payment</div>
                   </div>
                 </Label>
@@ -271,45 +288,54 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
       </div>
 
       <div className="space-y-6">
-        <Card className="border-border/50 shadow-lg sticky top-4">
-          <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5">
-            <CardTitle>Order Summary</CardTitle>
+        <Card className="border-border/50 shadow-xl card-premium sticky top-4 animate-slide-in-right">
+          <CardHeader className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-primary/10 animate-aurora">
+            <CardTitle className="text-xl">Order Summary</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 p-6">
-            {items.map((item) => (
-              <div key={item.id} className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <img
-                    src={item.image || '/placeholder-product.jpg'}
-                    alt={item.name}
-                    className="w-12 h-12 object-cover rounded"
-                  />
-                  <div>
-                    <p className="font-medium">{item.name}</p>
-                    <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+          <CardContent className="space-y-6 p-8">
+            <div className="space-y-4">
+              {items.map((item, index) => (
+                <div key={item.id} className="flex justify-between items-center p-4 rounded-lg bg-muted/30 hover-magnetic animate-slide-in-up" style={{animationDelay: `${index * 0.1}s`}}>
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <img
+                        src={item.image || '/placeholder-product.jpg'}
+                        alt={item.name}
+                        className="w-16 h-16 object-cover rounded-lg hover-3d-lift"
+                      />
+                      <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs rounded-full w-6 h-6 flex items-center justify-center animate-bounce">
+                        {item.quantity}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-lg">{item.name}</p>
+                      <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+                    </div>
                   </div>
+                  <p className="font-bold text-lg bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                    ${(item.price * item.quantity).toFixed(2)}
+                  </p>
                 </div>
-                <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
-              </div>
-            ))}
+              ))}
+            </div>
             
-            <Separator />
+            <Separator className="animate-scale-in" />
             
-            <div className="space-y-2">
-              <div className="flex justify-between">
+            <div className="space-y-4">
+              <div className="flex justify-between text-lg animate-slide-in-right">
                 <p>Subtotal</p>
-                <p>${subtotal.toFixed(2)}</p>
+                <p className="font-semibold">${subtotal.toFixed(2)}</p>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between text-lg animate-slide-in-right" style={{animationDelay: '0.1s'}}>
                 <p>Shipping</p>
-                <p>${shipping.toFixed(2)}</p>
+                <p className="font-semibold">${shipping.toFixed(2)}</p>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between text-lg animate-slide-in-right" style={{animationDelay: '0.2s'}}>
                 <p>Tax</p>
-                <p>${tax.toFixed(2)}</p>
+                <p className="font-semibold">${tax.toFixed(2)}</p>
               </div>
-              <Separator />
-              <div className="flex justify-between font-bold text-lg">
+              <Separator className="animate-scale-in" />
+              <div className="flex justify-between font-bold text-2xl animate-bounce-in bg-gradient-to-r from-primary via-purple-500 to-primary bg-clip-text text-transparent animate-text-shimmer">
                 <p>Total</p>
                 <p>${total.toFixed(2)}</p>
               </div>
@@ -317,7 +343,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
 
             <Button 
               onClick={handleContinueToPayment}
-              className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 transition-all duration-300 hover:scale-105"
+              className="w-full btn-premium text-xl py-8 animate-elastic-scale hover-ripple"
               size="lg"
             >
               Continue to Payment - ${total.toFixed(2)}
