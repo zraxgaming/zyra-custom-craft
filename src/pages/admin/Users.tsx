@@ -83,12 +83,12 @@ const AdminUsers = () => {
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={user.avatar_url} />
                         <AvatarFallback>
-                          {user.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
+                          {user.first_name?.charAt(0) || user.email?.charAt(0) || 'U'}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <h3 className="font-medium text-foreground">
-                          {user.full_name || 'Unnamed User'}
+                          {user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}
                         </h3>
                         <p className="text-sm text-muted-foreground">{user.email}</p>
                       </div>

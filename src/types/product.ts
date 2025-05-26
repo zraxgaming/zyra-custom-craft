@@ -19,7 +19,7 @@ export interface Product {
   is_new?: boolean;
   featured?: boolean;
   slug?: string;
-  images?: string[];
+  images: string[];
   meta_title?: string;
   meta_description?: string;
   weight?: number;
