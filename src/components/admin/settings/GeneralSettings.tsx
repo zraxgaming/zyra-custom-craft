@@ -1,186 +1,174 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { useSiteConfig } from "@/hooks/use-site-config";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Settings } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const GeneralSettings = () => {
-  const siteConfigResult = useSiteConfig();
   const { toast } = useToast();
-  const [formData, setFormData] = useState({
-    site_name: "",
-    site_description: "",
-    contact_email: "",
-    support_phone: "",
-    address: "",
-    business_hours: "",
-    newsletter_enabled: false,
-    abandoned_cart_enabled: false,
+  const [isLoading, setIsLoading] = useState(false);
+  const [settings, setSettings] = useState({
+    site_name: "Zyra",
+    site_description: "Premium E-commerce Platform",
+    contact_email: "hello@zyra.com",
+    phone: "+1 (555) 123-4567",
+    address: "123 Business St, City, State 12345",
+    maintenance_mode: false,
+    allow_registration: true,
+    store_open: true
   });
 
-  React.useEffect(() => {
-    if (siteConfigResult.data) {
-      setFormData({
-        site_name: siteConfigResult.data.site_name || "",
-        site_description: siteConfigResult.data.site_description || "",
-        contact_email: siteConfigResult.data.contact_email || "",
-        support_phone: siteConfigResult.data.support_phone || "",
-        address: siteConfigResult.data.address || "",
-        business_hours: siteConfigResult.data.business_hours || "",
-        newsletter_enabled: siteConfigResult.data.newsletter_enabled || false,
-        abandoned_cart_enabled: siteConfigResult.data.abandoned_cart_enabled || false,
-      });
-    }
-  }, [siteConfigResult.data]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSave = async () => {
+    setIsLoading(true);
     try {
-      // Since we don't have updateConfig, we'll show a success message for now
+      // Save general settings to site_config table
+      const configEntries = Object.entries(settings).map(([key, value]) => ({
+        key,
+        value: { data: value },
+        updated_at: new Date().toISOString()
+      }));
+
+      for (const entry of configEntries) {
+        const { error } = await supabase
+          .from('site_config')
+          .upsert(entry, { onConflict: 'key' });
+        
+        if (error) throw error;
+      }
+
       toast({
         title: "Settings saved",
-        description: "Your general settings have been updated successfully.",
+        description: "General settings have been updated successfully.",
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Error saving settings:", error);
       toast({
         title: "Error",
-        description: "Failed to save settings. Please try again.",
+        description: "Failed to save settings",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  if (siteConfigResult.isLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  const updateSetting = (key: string, value: any) => {
+    setSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-primary/10 rounded-lg">
-          <Settings className="h-5 w-5 text-primary" />
+    <Card>
+      <CardHeader>
+        <CardTitle>General Settings</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="site_name">Site Name</Label>
+            <Input
+              id="site_name"
+              value={settings.site_name}
+              onChange={(e) => updateSetting('site_name', e.target.value)}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="contact_email">Contact Email</Label>
+            <Input
+              id="contact_email"
+              type="email"
+              value={settings.contact_email}
+              onChange={(e) => updateSetting('contact_email', e.target.value)}
+            />
+          </div>
         </div>
-        <h2 className="text-2xl font-bold">General Settings</h2>
-      </div>
 
-      <Card className="animate-scale-in">
-        <CardHeader>
-          <CardTitle>Site Configuration</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="site_name">Site Name</Label>
-                <Input
-                  id="site_name"
-                  value={formData.site_name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, site_name: e.target.value }))}
-                  placeholder="Your Site Name"
-                />
-              </div>
+        <div className="space-y-2">
+          <Label htmlFor="site_description">Site Description</Label>
+          <Textarea
+            id="site_description"
+            value={settings.site_description}
+            onChange={(e) => updateSetting('site_description', e.target.value)}
+            rows={3}
+          />
+        </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="contact_email">Contact Email</Label>
-                <Input
-                  id="contact_email"
-                  type="email"
-                  value={formData.contact_email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, contact_email: e.target.value }))}
-                  placeholder="contact@yoursite.com"
-                />
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone Number</Label>
+            <Input
+              id="phone"
+              value={settings.phone}
+              onChange={(e) => updateSetting('phone', e.target.value)}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="address">Business Address</Label>
+            <Input
+              id="address"
+              value={settings.address}
+              onChange={(e) => updateSetting('address', e.target.value)}
+            />
+          </div>
+        </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="support_phone">Support Phone</Label>
-                <Input
-                  id="support_phone"
-                  value={formData.support_phone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, support_phone: e.target.value }))}
-                  placeholder="+1 (555) 123-4567"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="business_hours">Business Hours</Label>
-                <Input
-                  id="business_hours"
-                  value={formData.business_hours}
-                  onChange={(e) => setFormData(prev => ({ ...prev, business_hours: e.target.value }))}
-                  placeholder="Mon-Fri: 9AM-5PM"
-                />
-              </div>
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Store Settings</h3>
+          
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-medium">Store Status</h4>
+              <p className="text-sm text-muted-foreground">
+                Allow customers to place orders
+              </p>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="site_description">Site Description</Label>
-              <Textarea
-                id="site_description"
-                value={formData.site_description}
-                onChange={(e) => setFormData(prev => ({ ...prev, site_description: e.target.value }))}
-                placeholder="A brief description of your site"
-                rows={3}
-              />
+            <Switch
+              checked={settings.store_open}
+              onCheckedChange={(checked) => updateSetting('store_open', checked)}
+            />
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-medium">User Registration</h4>
+              <p className="text-sm text-muted-foreground">
+                Allow new users to register accounts
+              </p>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="address">Business Address</Label>
-              <Textarea
-                id="address"
-                value={formData.address}
-                onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                placeholder="123 Business St, City, State 12345"
-                rows={2}
-              />
+            <Switch
+              checked={settings.allow_registration}
+              onCheckedChange={(checked) => updateSetting('allow_registration', checked)}
+            />
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-medium">Maintenance Mode</h4>
+              <p className="text-sm text-muted-foreground">
+                Temporarily disable the store for maintenance
+              </p>
             </div>
+            <Switch
+              checked={settings.maintenance_mode}
+              onCheckedChange={(checked) => updateSetting('maintenance_mode', checked)}
+            />
+          </div>
+        </div>
 
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Features</h3>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="newsletter_enabled">Newsletter</Label>
-                  <p className="text-sm text-muted-foreground">Enable newsletter subscriptions</p>
-                </div>
-                <Switch
-                  id="newsletter_enabled"
-                  checked={formData.newsletter_enabled}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, newsletter_enabled: checked }))}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="abandoned_cart_enabled">Abandoned Cart Recovery</Label>
-                  <p className="text-sm text-muted-foreground">Send emails for abandoned carts</p>
-                </div>
-                <Switch
-                  id="abandoned_cart_enabled"
-                  checked={formData.abandoned_cart_enabled}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, abandoned_cart_enabled: checked }))}
-                />
-              </div>
-            </div>
-
-            <Button type="submit" className="w-full">
-              <Save className="h-4 w-4 mr-2" />
-              Save Settings
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+        <Button onClick={handleSave} disabled={isLoading}>
+          {isLoading ? 'Saving...' : 'Save Settings'}
+        </Button>
+      </CardContent>
+    </Card>
   );
 };
 
