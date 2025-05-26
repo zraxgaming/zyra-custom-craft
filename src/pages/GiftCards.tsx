@@ -8,7 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Gift, Sparkles, Heart, Star, CheckCircle, Clock, Mail } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import ZiinaPayment from "@/components/checkout/ZiinaPayment";
+import { Container } from "@/components/ui/container";
+import PaymentMethods from "@/components/checkout/PaymentMethods";
 
 const GiftCards = () => {
   const [selectedAmount, setSelectedAmount] = useState<number>(50);
@@ -60,7 +61,7 @@ const GiftCards = () => {
     setShowPayment(true);
   };
 
-  const handlePaymentSuccess = (transactionId: string) => {
+  const handlePaymentSuccess = (orderId: string) => {
     toast({
       title: "Gift Card Purchased!",
       description: `Gift card sent to ${recipientEmail}`,
@@ -75,45 +76,37 @@ const GiftCards = () => {
     setShowPayment(false);
   };
 
-  const handlePaymentError = (error: string) => {
-    toast({
-      title: "Payment Failed",
-      description: error,
-      variant: "destructive"
-    });
-    setShowPayment(false);
-  };
-
   if (showPayment) {
     return (
       <>
         <Navbar />
         <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background py-12">
-          <div className="container mx-auto px-4 max-w-md">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowPayment(false)}
-              className="mb-6 animate-slide-in-left hover:scale-105 hover:-translate-x-1 transition-all duration-300 hover:shadow-lg"
-            >
-              ← Back to Gift Card Details
-            </Button>
-            
-            <ZiinaPayment
-              amount={getCurrentAmount()}
-              orderData={{
-                type: 'gift_card',
-                amount: getCurrentAmount(),
-                recipientEmail,
-                senderName,
-                message,
-                email: recipientEmail,
-                firstName: senderName.split(' ')[0] || senderName,
-                lastName: senderName.split(' ')[1] || ''
-              }}
-              onSuccess={handlePaymentSuccess}
-              onError={handlePaymentError}
-            />
-          </div>
+          <Container>
+            <div className="max-w-2xl mx-auto">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowPayment(false)}
+                className="mb-6 animate-slide-in-left hover:scale-105 hover:-translate-x-1 transition-all duration-300 hover:shadow-lg"
+              >
+                ← Back to Gift Card Details
+              </Button>
+              
+              <PaymentMethods
+                total={getCurrentAmount()}
+                orderData={{
+                  type: 'gift_card',
+                  amount: getCurrentAmount(),
+                  recipientEmail,
+                  senderName,
+                  message,
+                  email: recipientEmail,
+                  firstName: senderName.split(' ')[0] || senderName,
+                  lastName: senderName.split(' ')[1] || ''
+                }}
+                onPaymentSuccess={handlePaymentSuccess}
+              />
+            </div>
+          </Container>
         </div>
         <Footer />
       </>
@@ -124,7 +117,7 @@ const GiftCards = () => {
     <>
       <Navbar />
       <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background py-12">
-        <div className="container mx-auto px-4">
+        <Container>
           {/* Enhanced Header */}
           <div className="text-center mb-12 animate-fade-in">
             <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-primary/20 via-purple-500/20 to-pink-500/20 rounded-full mb-6 animate-float hover:animate-bounce transition-all duration-300">
@@ -331,7 +324,7 @@ const GiftCards = () => {
               </CardContent>
             </Card>
           </div>
-        </div>
+        </Container>
       </div>
       <Footer />
     </>

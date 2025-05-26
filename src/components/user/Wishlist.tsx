@@ -2,128 +2,90 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { Heart, ShoppingCart, Trash2, Star } from "lucide-react";
+import { useWishlist } from "@/hooks/use-wishlist";
 import { useCart } from "@/components/cart/CartProvider";
+import { useToast } from "@/hooks/use-toast";
+import { Heart, ShoppingCart, Star, Loader2, X } from "lucide-react";
 import { Link } from "react-router-dom";
 
-interface WishlistItem {
-  id: string;
-  product_id: string;
-  product: {
-    id: string;
-    name: string;
-    price: number;
-    images: string[];
-    rating: number;
-    review_count: number;
-    slug: string;
-  };
-}
-
-const Wishlist: React.FC = () => {
-  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+const Wishlist = () => {
   const { user } = useAuth();
+  const { items, isLoading, removeFromWishlist } = useWishlist();
   const { addToCart } = useCart();
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (user) {
-      fetchWishlist();
-    }
-  }, [user]);
-
-  const fetchWishlist = async () => {
+  const handleAddToCart = async (product: any) => {
     try {
-      const { data, error } = await supabase
-        .from('wishlists')
-        .select(`
-          id,
-          product_id,
-          products (
-            id,
-            name,
-            price,
-            images,
-            rating,
-            review_count,
-            slug
-          )
-        `)
-        .eq('user_id', user?.id);
-
-      if (error) throw error;
-      setWishlistItems(data || []);
-    } catch (error: any) {
+      await addToCart({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.images?.[0] || '',
+        quantity: 1
+      });
+      
+      toast({
+        title: "Added to cart!",
+        description: `${product.name} has been added to your cart.`,
+      });
+    } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to load wishlist",
-        variant: "destructive"
+        description: "Failed to add item to cart",
+        variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const removeFromWishlist = async (itemId: string) => {
+  const handleRemoveFromWishlist = async (productId: string) => {
     try {
-      const { error } = await supabase
-        .from('wishlists')
-        .delete()
-        .eq('id', itemId);
-
-      if (error) throw error;
-
-      setWishlistItems(prev => prev.filter(item => item.id !== itemId));
-      toast({
-        title: "Removed from wishlist",
-        description: "Item has been removed from your wishlist"
-      });
-    } catch (error: any) {
+      await removeFromWishlist(productId);
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to remove item from wishlist",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
 
-  const addToCartFromWishlist = (product: any) => {
-    addToCart({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.images?.[0] || '/placeholder-product.jpg',
-      quantity: 1
-    });
-    toast({
-      title: "Added to cart",
-      description: `${product.name} has been added to your cart`
-    });
-  };
+  if (!user) {
+    return (
+      <Card className="animate-fade-in">
+        <CardContent className="text-center py-12">
+          <Heart className="h-16 w-16 mx-auto mb-4 text-muted-foreground animate-pulse" />
+          <h3 className="text-lg font-semibold mb-2">Please Sign In</h3>
+          <p className="text-muted-foreground mb-6">
+            You need to be signed in to view your wishlist.
+          </p>
+          <Button onClick={() => window.location.href = '/auth'} className="animate-bounce">
+            Sign In
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center p-8 animate-fade-in">
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
-  if (wishlistItems.length === 0) {
+  if (items.length === 0) {
     return (
-      <Card>
+      <Card className="animate-fade-in">
         <CardContent className="text-center py-12">
-          <Heart className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Your wishlist is empty</h3>
-          <p className="text-muted-foreground mb-4">
-            Save items you love to your wishlist and never lose track of them.
+          <Heart className="h-16 w-16 mx-auto mb-4 text-muted-foreground animate-bounce" />
+          <h3 className="text-lg font-semibold mb-2">Your Wishlist is Empty</h3>
+          <p className="text-muted-foreground mb-6">
+            Start adding products you love to your wishlist!
           </p>
-          <Button asChild>
-            <Link to="/shop">Continue Shopping</Link>
+          <Button onClick={() => window.location.href = '/shop'} className="animate-pulse">
+            Browse Products
           </Button>
         </CardContent>
       </Card>
@@ -131,67 +93,80 @@ const Wishlist: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <Heart className="h-6 w-6 text-primary" />
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex items-center gap-2 mb-6">
+        <Heart className="h-6 w-6 text-primary animate-pulse" />
         <h2 className="text-2xl font-bold">My Wishlist</h2>
-        <span className="text-muted-foreground">({wishlistItems.length} items)</span>
+        <span className="text-muted-foreground">({items.length} items)</span>
       </div>
-
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {wishlistItems.map((item) => (
-          <Card key={item.id} className="group hover:shadow-lg transition-shadow">
-            <CardContent className="p-4">
-              <div className="relative mb-4">
-                <img
-                  src={item.product.images?.[0] || '/placeholder-product.jpg'}
-                  alt={item.product.name}
-                  className="w-full h-48 object-cover rounded-lg"
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeFromWishlist(item.id)}
-                  className="absolute top-2 right-2 bg-white/80 hover:bg-white"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <div className="space-y-2">
-                <Link
-                  to={`/product/${item.product.slug}`}
-                  className="block hover:text-primary transition-colors"
-                >
-                  <h3 className="font-semibold line-clamp-2">{item.product.name}</h3>
-                </Link>
-
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`h-4 w-4 ${
-                          i < Math.floor(item.product.rating)
-                            ? 'text-yellow-400 fill-current'
-                            : 'text-gray-300'
-                        }`}
-                      />
-                    ))}
+        {items.map((item, index) => (
+          <Card key={item.id} className="group hover:shadow-lg transition-all duration-300 animate-slide-in-up" style={{animationDelay: `${index * 0.1}s`}}>
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleRemoveFromWishlist(item.product_id)}
+                className="absolute top-2 right-2 z-10 bg-white/80 hover:bg-white transition-all duration-200"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+              
+              <div className="aspect-square bg-gray-100 rounded-t-lg overflow-hidden">
+                {item.product?.images && item.product.images.length > 0 ? (
+                  <img 
+                    src={item.product.images[0]} 
+                    alt={item.product.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Heart className="h-12 w-12 text-gray-400" />
                   </div>
-                  <span className="text-sm text-muted-foreground">
-                    ({item.product.review_count})
-                  </span>
+                )}
+              </div>
+            </div>
+            
+            <CardContent className="p-4">
+              <div className="space-y-3">
+                <div>
+                  <h3 className="font-medium text-lg group-hover:text-primary transition-colors">
+                    <Link to={`/product/${item.product?.slug}`}>
+                      {item.product?.name}
+                    </Link>
+                  </h3>
+                  
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-4 w-4 ${
+                            i < Math.floor(item.product?.rating || 0)
+                              ? 'text-yellow-400 fill-current'
+                              : 'text-gray-300'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      ({item.product?.review_count || 0})
+                    </span>
+                  </div>
                 </div>
-
+                
                 <div className="flex items-center justify-between">
-                  <span className="text-xl font-bold">${item.product.price}</span>
+                  <span className="text-xl font-bold text-primary">
+                    ${item.product?.price?.toFixed(2)}
+                  </span>
+                  
                   <Button
-                    onClick={() => addToCartFromWishlist(item.product)}
+                    onClick={() => item.product && handleAddToCart(item.product)}
                     size="sm"
-                    className="flex items-center gap-2"
+                    className="hover:scale-105 transition-transform duration-200"
                   >
-                    <ShoppingCart className="h-4 w-4" />
+                    <ShoppingCart className="h-4 w-4 mr-2" />
                     Add to Cart
                   </Button>
                 </div>

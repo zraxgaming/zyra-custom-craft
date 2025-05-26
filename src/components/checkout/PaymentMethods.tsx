@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Wallet, Smartphone, Loader2 } from "lucide-react";
+import { Wallet, Smartphone, Loader2, CreditCard } from "lucide-react";
 
 interface PaymentMethodsProps {
   total: number;
@@ -107,38 +107,74 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
 
   const processPayPalPayment = async () => {
     try {
-      // PayPal integration using client ID and secret from environment
-      const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
-      const paypalClientSecret = process.env.PAYPAL_CLIENT_SECRET;
-
+      // Get PayPal client ID from environment
+      const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+      
       if (!paypalClientId) {
-        throw new Error('PayPal client ID not configured');
+        throw new Error('PayPal client ID not configured in environment variables');
       }
 
+      // Create PayPal order using their SDK
+      const paypalPayload = {
+        intent: 'CAPTURE',
+        purchase_units: [{
+          amount: {
+            currency_code: 'USD',
+            value: total.toFixed(2)
+          },
+          description: `Order payment for ${orderData.email}`
+        }],
+        application_context: {
+          return_url: `${window.location.origin}/order-success`,
+          cancel_url: `${window.location.origin}/order-failed`,
+          brand_name: 'Zyra Store',
+          landing_page: 'BILLING',
+          user_action: 'PAY_NOW'
+        }
+      };
+
+      // Get PayPal access token
+      const authResponse = await fetch('https://api-m.sandbox.paypal.com/v1/oauth2/token', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Accept-Language': 'en_US',
+          'Authorization': `Basic ${btoa(`${paypalClientId}:${import.meta.env.PAYPAL_CLIENT_SECRET || ''}`)}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: 'grant_type=client_credentials'
+      });
+
+      if (!authResponse.ok) {
+        throw new Error('Failed to authenticate with PayPal');
+      }
+
+      const authData = await authResponse.json();
+
       // Create PayPal order
-      const response = await fetch('/api/paypal/create-order', {
+      const orderResponse = await fetch('https://api-m.sandbox.paypal.com/v2/checkout/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authData.access_token}`,
         },
-        body: JSON.stringify({
-          amount: total.toFixed(2),
-          currency: 'USD',
-          orderData,
-          appliedCoupon,
-          appliedGiftCard
-        }),
+        body: JSON.stringify(paypalPayload)
       });
 
-      if (!response.ok) {
+      if (!orderResponse.ok) {
         throw new Error('Failed to create PayPal order');
       }
 
-      const { orderID, approvalUrl } = await response.json();
+      const orderData = await orderResponse.json();
+      const approvalUrl = orderData.links.find((link: any) => link.rel === 'approve')?.href;
+
+      if (!approvalUrl) {
+        throw new Error('No approval URL received from PayPal');
+      }
 
       // Store payment data for verification
       localStorage.setItem('pending_payment', JSON.stringify({
-        payment_id: orderID,
+        payment_id: orderData.id,
         amount: total,
         order_data: orderData,
         method: 'paypal',
@@ -218,7 +254,7 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
               <RadioGroupItem value="paypal" id="paypal" className="text-primary" />
               <Label htmlFor="paypal" className="flex items-center gap-3 cursor-pointer flex-1">
                 <div className="p-2 bg-blue-500/10 rounded-lg">
-                  <Wallet className="h-5 w-5 text-blue-600" />
+                  <CreditCard className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
                   <div className="font-medium">PayPal</div>

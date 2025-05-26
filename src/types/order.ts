@@ -33,11 +33,11 @@ export interface OrderItem {
   price: number;
   customization?: any;
   created_at?: string;
-  product?: {
+  product: {
     id: string;
     name: string;
-    images?: string[];
-    image_url?: string;
+    images: string[];
+    slug?: string;
   };
 }
 

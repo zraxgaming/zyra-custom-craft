@@ -1,14 +1,16 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { Smartphone, CreditCard, ShoppingBag, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { ShoppingBag, User, MapPin, CreditCard } from "lucide-react";
 import CouponForm from "./CouponForm";
+import GiftCardForm from "./GiftCardForm";
+import PaymentMethods from "./PaymentMethods";
 
 interface EnhancedCheckoutFormProps {
   items: any[];
@@ -16,31 +18,47 @@ interface EnhancedCheckoutFormProps {
   onPaymentSuccess: (orderId: string) => void;
 }
 
-const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ items, subtotal, onPaymentSuccess }) => {
+const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ 
+  items, 
+  subtotal, 
+  onPaymentSuccess 
+}) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [appliedGiftCard, setAppliedGiftCard] = useState<any>(null);
   const [formData, setFormData] = useState({
-    email: '',
+    email: user?.email || '',
     firstName: '',
     lastName: '',
     address: '',
     city: '',
     state: '',
     zipCode: '',
-    country: 'United States',
-    paymentMethod: 'ziina'
+    country: 'United States'
   });
-  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [deliveryOption, setDeliveryOption] = useState<'standard' | 'express'>('standard');
-  const { toast } = useToast();
 
-  const couponDiscount = appliedCoupon ? 
-    (appliedCoupon.discount_type === 'percentage' ? 
-      subtotal * (appliedCoupon.discount_value / 100) : 
-      appliedCoupon.discount_value) : 0;
-  
-  const tax = (subtotal - couponDiscount) * 0.08;
-  const shipping = deliveryOption === 'express' ? 15.00 : 5.00;
-  const total = subtotal - couponDiscount + tax + shipping;
+  const calculateDiscount = () => {
+    let discount = 0;
+    
+    if (appliedCoupon) {
+      if (appliedCoupon.discount_type === 'percentage') {
+        discount += subtotal * (appliedCoupon.discount_value / 100);
+      } else {
+        discount += appliedCoupon.discount_value;
+      }
+    }
+    
+    if (appliedGiftCard) {
+      discount += Math.min(appliedGiftCard.amount, subtotal - discount);
+    }
+    
+    return Math.max(0, discount);
+  };
+
+  const tax = Math.max(0, (subtotal - calculateDiscount()) * 0.08);
+  const shipping = 5.00;
+  const total = Math.max(0, subtotal + tax + shipping - calculateDiscount());
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -49,158 +67,34 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ items, subt
     }));
   };
 
-  const handleCouponApply = (coupon: any) => {
-    setAppliedCoupon(coupon);
-    toast({
-      title: "Coupon Applied!",
-      description: `${coupon.discount_value}${coupon.discount_type === 'percentage' ? '%' : '$'} discount applied.`,
-    });
-  };
-
-  const handleCouponRemove = () => {
-    setAppliedCoupon(null);
-    toast({
-      title: "Coupon Removed",
-      description: "Coupon discount has been removed from your order.",
-    });
-  };
-
-  // Function to send order confirmation email via Supabase Edge Function (SMTP)
-  const sendOrderConfirmationEmail = async (orderData: any) => {
-    try {
-      const response = await fetch('/functions/v1/send-order-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData),
-      });
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.message || 'Failed to send order confirmation email');
-      }
-      return await response.json();
-    } catch (error: any) {
-      console.error('Order email error:', error);
-      throw error;
-    }
-  };
-
-  const processZiinaPayment = async () => {
-    try {
-      const options = {
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer WlLcJdWu9Y6v9/z3pb7o/R7tARuTGnfnkUmcZQ3HoAuPPuJlTIP7ALY2vWO7DewJ',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          amount: Math.round(total * 3.67),
-          currency_code: 'AED',
-          message: `Order payment for ${formData.email}`,
-          success_url: 'https://shopzyra.vercel.app/order-success',
-          cancel_url: 'https://shopzyra.vercel.app/order-failed',
-          failure_url: 'https://shopzyra.vercel.app/order-failed',
-          test: true,
-          transaction_source: 'directApi',
-          expiry: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-          allow_tips: true
-        })
-      };
-
-      const response = await fetch('https://api-v2.ziina.com/api/payment_intent', options);
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.message || 'Failed to create Ziina payment');
-      }
-      const data = await response.json();
-      if (!data?.payment_url) throw new Error('No payment URL received from Ziina');
-      localStorage.setItem('pending_payment', JSON.stringify({
-        payment_id: data.id,
-        amount: Math.round(total * 3.67),
-        order_data: formData,
-        method: 'ziina'
-      }));
-
-      // Send order confirmation email via Supabase SMTP before redirect
-      await sendOrderConfirmationEmail({
-        email: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        zipCode: formData.zipCode,
-        country: formData.country,
-        items,
-        subtotal,
-        coupon: appliedCoupon,
-        shipping,
-        tax,
-        total,
-        paymentMethod: 'ziina',
-        deliveryOption
-      });
-
-      window.location.href = data.payment_url;
-    } catch (error: any) {
-      console.error('Ziina payment error:', error);
-      throw error;
-    }
-  };
-
-  const processPayPalPayment = async () => {
-    toast({
-      title: 'PayPal Not Supported',
-      description: 'Direct PayPal REST API calls are not supported from the frontend. Please use the PayPal JS SDK or contact support to enable PayPal.',
-      variant: 'destructive'
-    });
-    setIsProcessing(false);
-    return;
-  };
-
-  const handlePayment = async () => {
-    if (!formData.email || !formData.firstName || !formData.lastName) {
+  const validateForm = () => {
+    if (!formData.email || !formData.firstName || !formData.lastName || 
+        !formData.address || !formData.city || !formData.state || !formData.zipCode) {
       toast({
         title: "Missing information",
         description: "Please fill in all required fields",
         variant: "destructive"
       });
-      return;
+      return false;
     }
-
-    setIsProcessing(true);
-    
-    try {
-      if (formData.paymentMethod === 'ziina') {
-        await processZiinaPayment();
-      } else if (formData.paymentMethod === 'paypal') {
-        await processPayPalPayment();
-      }
-    } catch (error: any) {
-      toast({
-        title: "Payment Failed",
-        description: error.message,
-        variant: "destructive"
-      });
-      setIsProcessing(false);
-    }
+    return true;
   };
 
   return (
-    <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12">
-      <div className="space-y-8">
+    <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
+      {/* Left Column - Forms */}
+      <div className="lg:col-span-2 space-y-6">
         {/* Contact Information */}
-        <Card className="border-border/50 shadow-xl animate-slide-in-left">
-          <CardHeader className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-primary/10">
+        <Card className="animate-slide-in-left">
+          <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <ShoppingBag className="h-5 w-5 text-primary" />
+              <User className="h-5 w-5 text-primary" />
               Contact Information
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6 p-8">
-            <div className="animate-slide-in-up">
-              <Label htmlFor="email" className="text-base font-semibold">Email *</Label>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="email">Email *</Label>
               <Input
                 id="email"
                 name="email"
@@ -208,262 +102,203 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ items, subt
                 value={formData.email}
                 onChange={handleInputChange}
                 required
-                className="mt-2"
-                placeholder="your@email.com"
+                className="mt-1"
               />
             </div>
           </CardContent>
         </Card>
 
         {/* Shipping Address */}
-        <Card className="border-border/50 shadow-xl animate-slide-in-left" style={{animationDelay: '0.2s'}}>
-          <CardHeader className="bg-gradient-to-r from-secondary/10 via-primary/10 to-secondary/10">
-            <CardTitle>Shipping Address</CardTitle>
+        <Card className="animate-slide-in-left" style={{animationDelay: '0.1s'}}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-primary" />
+              Shipping Address
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6 p-8">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="animate-slide-in-up">
-                <Label htmlFor="firstName" className="text-base font-semibold">First Name *</Label>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="firstName">First Name *</Label>
                 <Input
                   id="firstName"
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleInputChange}
                   required
-                  className="mt-2"
-                  placeholder="John"
+                  className="mt-1"
                 />
               </div>
-              <div className="animate-slide-in-up" style={{animationDelay: '0.1s'}}>
-                <Label htmlFor="lastName" className="text-base font-semibold">Last Name *</Label>
+              <div>
+                <Label htmlFor="lastName">Last Name *</Label>
                 <Input
                   id="lastName"
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleInputChange}
                   required
-                  className="mt-2"
-                  placeholder="Doe"
+                  className="mt-1"
                 />
               </div>
             </div>
             
-            <div className="animate-slide-in-up" style={{animationDelay: '0.2s'}}>
-              <Label htmlFor="address" className="text-base font-semibold">Street Address *</Label>
+            <div>
+              <Label htmlFor="address">Address *</Label>
               <Input
                 id="address"
                 name="address"
                 value={formData.address}
                 onChange={handleInputChange}
                 required
-                className="mt-2"
-                placeholder="123 Main Street"
+                className="mt-1"
               />
             </div>
             
-            <div className="grid grid-cols-2 gap-6">
-              <div className="animate-slide-in-up" style={{animationDelay: '0.3s'}}>
-                <Label htmlFor="city" className="text-base font-semibold">City *</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="city">City *</Label>
                 <Input
                   id="city"
                   name="city"
                   value={formData.city}
                   onChange={handleInputChange}
                   required
-                  className="mt-2"
-                  placeholder="New York"
+                  className="mt-1"
                 />
               </div>
-              <div className="animate-slide-in-up" style={{animationDelay: '0.4s'}}>
-                <Label htmlFor="state" className="text-base font-semibold">State *</Label>
+              <div>
+                <Label htmlFor="state">State *</Label>
                 <Input
                   id="state"
                   name="state"
                   value={formData.state}
                   onChange={handleInputChange}
                   required
-                  className="mt-2"
-                  placeholder="NY"
+                  className="mt-1"
                 />
               </div>
             </div>
             
-            <div className="animate-slide-in-up" style={{animationDelay: '0.5s'}}>
-              <Label htmlFor="zipCode" className="text-base font-semibold">ZIP Code *</Label>
+            <div>
+              <Label htmlFor="zipCode">ZIP Code *</Label>
               <Input
                 id="zipCode"
                 name="zipCode"
                 value={formData.zipCode}
                 onChange={handleInputChange}
                 required
-                className="mt-2"
-                placeholder="10001"
+                className="mt-1"
               />
             </div>
           </CardContent>
         </Card>
 
-        {/* Payment Method */}
-        <Card className="border-border/50 shadow-xl animate-slide-in-left" style={{animationDelay: '0.4s'}}>
-          <CardHeader className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-primary/10">
-            <CardTitle>Payment Method</CardTitle>
-          </CardHeader>
-          <CardContent className="p-8">
-            <RadioGroup
-              value={formData.paymentMethod}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value }))}
-              className="space-y-6"
-            >
-              <div className="flex items-center space-x-4 p-6 border-2 border-border rounded-xl hover:border-blue-500/50 transition-all duration-500 cursor-pointer animate-scale-in">
-                <RadioGroupItem value="ziina" id="ziina" />
-                <Label htmlFor="ziina" className="flex items-center gap-4 cursor-pointer flex-1">
-                  <div className="p-3 bg-gradient-to-r from-blue-500/20 to-purple-600/20 rounded-xl">
-                    <Smartphone className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-lg">Ziina Payment</div>
-                    <div className="text-sm text-muted-foreground">Secure digital payment in AED</div>
-                  </div>
-                </Label>
-              </div>
+        {/* Coupon Form */}
+        <CouponForm
+          onCouponApply={setAppliedCoupon}
+          onCouponRemove={() => setAppliedCoupon(null)}
+          appliedCoupon={appliedCoupon}
+          orderTotal={subtotal}
+        />
 
-              <div className="flex items-center space-x-4 p-6 border-2 border-border rounded-xl hover:border-primary/50 transition-all duration-500 cursor-pointer animate-scale-in" style={{animationDelay: '0.2s'}}>
-                <RadioGroupItem value="paypal" id="paypal" />
-                <Label htmlFor="paypal" className="flex items-center gap-4 cursor-pointer flex-1">
-                  <div className="p-3 bg-blue-500/20 rounded-xl">
-                    <CreditCard className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-lg">PayPal</div>
-                    <div className="text-sm text-muted-foreground">Secure online payment</div>
-                  </div>
-                </Label>
-              </div>
-            </RadioGroup>
-          </CardContent>
-        </Card>
-
-        {/* Delivery Option */}
-        <Card className="border-border/50 shadow-xl animate-slide-in-left" style={{animationDelay: '0.3s'}}>
-          <CardHeader className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-primary/10">
-            <CardTitle>Delivery Option</CardTitle>
-          </CardHeader>
-          <CardContent className="p-8">
-            <RadioGroup
-              value={deliveryOption}
-              onValueChange={(value) => setDeliveryOption(value as 'standard' | 'express')}
-              className="space-y-4"
-            >
-              <div className="flex items-center space-x-4 p-4 border-2 border-border rounded-xl cursor-pointer">
-                <RadioGroupItem value="standard" id="standard" />
-                <Label htmlFor="standard" className="flex-1 cursor-pointer">
-                  <div className="font-semibold text-lg">Standard Delivery</div>
-                  <div className="text-sm text-muted-foreground">3-5 business days ($5.00)</div>
-                </Label>
-              </div>
-              <div className="flex items-center space-x-4 p-4 border-2 border-border rounded-xl cursor-pointer">
-                <RadioGroupItem value="express" id="express" />
-                <Label htmlFor="express" className="flex-1 cursor-pointer">
-                  <div className="font-semibold text-lg">Express Delivery</div>
-                  <div className="text-sm text-muted-foreground">1-2 business days ($15.00)</div>
-                </Label>
-              </div>
-            </RadioGroup>
-          </CardContent>
-        </Card>
+        {/* Gift Card Form */}
+        <GiftCardForm
+          onGiftCardApply={setAppliedGiftCard}
+          onGiftCardRemove={() => setAppliedGiftCard(null)}
+          appliedGiftCard={appliedGiftCard}
+          orderTotal={subtotal}
+        />
       </div>
 
-      {/* Order Summary */}
+      {/* Right Column - Order Summary & Payment */}
       <div className="space-y-6">
-        <Card className="border-border/50 shadow-xl sticky top-4 animate-slide-in-right">
-          <CardHeader className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-primary/10">
-            <CardTitle className="text-xl">Order Summary</CardTitle>
+        {/* Order Summary */}
+        <Card className="animate-slide-in-right">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShoppingBag className="h-5 w-5 text-primary" />
+              Order Summary
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6 p-8">
-            {/* Order Items */}
-            <div className="space-y-4">
+          <CardContent className="space-y-4">
+            {/* Items */}
+            <div className="space-y-3">
               {items.map((item, index) => (
-                <div key={item.id} className="flex justify-between items-center p-4 rounded-lg bg-muted/30 animate-slide-in-up" style={{animationDelay: `${index * 0.1}s`}}>
-                  <div className="flex items-center gap-4">
-                    <div className="relative">
-                      <img
-                        src={item.image || '/placeholder-product.jpg'}
-                        alt={item.name}
-                        className="w-16 h-16 object-cover rounded-lg"
-                      />
-                      <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs rounded-full w-6 h-6 flex items-center justify-center">
-                        {item.quantity}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="font-semibold text-lg">{item.name}</p>
-                      <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
-                    </div>
+                <div key={item.id} className="flex items-center gap-3 animate-fade-in" style={{animationDelay: `${index * 0.1}s`}}>
+                  <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden">
+                    <img
+                      src={item.image || '/placeholder-product.jpg'}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                  <p className="font-bold text-lg">${(item.price * item.quantity).toFixed(2)}</p>
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{item.name}</p>
+                    <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                  </div>
+                  <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
                 </div>
               ))}
             </div>
             
             <Separator />
-
-            {/* Coupon Section */}
-            <div className="space-y-4">
-              <h4 className="font-semibold">Coupon Code</h4>
-              <CouponForm
-                onCouponApply={handleCouponApply}
-                onCouponRemove={handleCouponRemove}
-                appliedCoupon={appliedCoupon}
-                orderTotal={total}
-              />
-            </div>
-
-            <Separator />
             
-            {/* Price Breakdown */}
-            <div className="space-y-4">
-              <div className="flex justify-between text-lg">
-                <p>Subtotal</p>
-                <p className="font-semibold">${subtotal.toFixed(2)}</p>
+            {/* Totals */}
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span>Subtotal</span>
+                <span>${subtotal.toFixed(2)}</span>
               </div>
+              
               {appliedCoupon && (
                 <div className="flex justify-between text-green-600">
-                  <p>Discount ({appliedCoupon.code})</p>
-                  <p className="font-semibold">-${couponDiscount.toFixed(2)}</p>
+                  <span>Coupon Discount</span>
+                  <span>-${appliedCoupon.discount_type === 'percentage' 
+                    ? (subtotal * (appliedCoupon.discount_value / 100)).toFixed(2)
+                    : appliedCoupon.discount_value.toFixed(2)
+                  }</span>
                 </div>
               )}
-              <div className="flex justify-between text-lg">
-                <p>Shipping ({deliveryOption === 'express' ? 'Express' : 'Standard'})</p>
-                <p className="font-semibold">${shipping.toFixed(2)}</p>
+              
+              {appliedGiftCard && (
+                <div className="flex justify-between text-purple-600">
+                  <span>Gift Card</span>
+                  <span>-${Math.min(appliedGiftCard.amount, subtotal - (appliedCoupon ? 
+                    (appliedCoupon.discount_type === 'percentage' 
+                      ? subtotal * (appliedCoupon.discount_value / 100)
+                      : appliedCoupon.discount_value) 
+                    : 0)).toFixed(2)}</span>
+                </div>
+              )}
+              
+              <div className="flex justify-between">
+                <span>Shipping</span>
+                <span>${shipping.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-lg">
-                <p>Tax</p>
-                <p className="font-semibold">${tax.toFixed(2)}</p>
+              
+              <div className="flex justify-between">
+                <span>Tax</span>
+                <span>${tax.toFixed(2)}</span>
               </div>
+              
               <Separator />
-              <div className="flex justify-between font-bold text-2xl bg-gradient-to-r from-primary via-purple-500 to-primary bg-clip-text text-transparent">
-                <p>Total</p>
-                <p>${total.toFixed(2)}</p>
+              
+              <div className="flex justify-between font-bold text-lg">
+                <span>Total</span>
+                <span>${total.toFixed(2)}</span>
               </div>
             </div>
-
-            <Button 
-              onClick={handlePayment}
-              className="w-full text-xl py-8 hover:scale-105 transition-transform"
-              size="lg"
-              disabled={isProcessing}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                `Pay ${formData.paymentMethod === 'ziina' ? `AED ${(total * 3.67).toFixed(2)}` : `$${total.toFixed(2)}`} with ${formData.paymentMethod === 'ziina' ? 'Ziina' : 'PayPal'}`
-              )}
-            </Button>
           </CardContent>
         </Card>
+
+        {/* Payment Methods */}
+        <PaymentMethods
+          total={total}
+          orderData={formData}
+          appliedCoupon={appliedCoupon}
+          appliedGiftCard={appliedGiftCard}
+          onPaymentSuccess={onPaymentSuccess}
+        />
       </div>
     </div>
   );
