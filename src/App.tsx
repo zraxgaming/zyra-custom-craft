@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -30,6 +29,16 @@ import Privacy from "./pages/Privacy";
 import Categories from "./pages/Categories";
 import NotFound from "./pages/NotFound";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import Inventory from "./pages/admin/Inventory";
+import Customers from "./pages/admin/Customers";
+import Newsletter from "./pages/admin/Newsletter";
+import Promotions from "./pages/admin/Promotions";
+import Coupons from "./pages/admin/Coupons";
+import Barcodes from "./pages/admin/Barcodes";
+import Scanner from "./pages/admin/Scanner";
+import Analytics from "./pages/admin/Analytics";
+import Settings from "./pages/admin/Settings";
+import CategoriesAdmin from "./pages/admin/Categories";
 
 const queryClient = new QueryClient();
 
@@ -72,6 +81,18 @@ const App = () => (
                 <Route path="/admin/products/edit/:id" element={<ProductEdit />} />
                 <Route path="/admin/barcode-scanner" element={<BarcodeScanner />} />
                 <Route path="/admin/ziina-integration" element={<AdminZiina />} />
+                <Route path="/admin/inventory" element={<Inventory />} />
+                <Route path="/admin/customers" element={<Customers />} />
+                <Route path="/admin/newsletter" element={<Newsletter />} />
+                <Route path="/admin/promotions" element={<Promotions />} />
+                <Route path="/admin/coupons" element={<Coupons />} />
+                <Route path="/admin/gift-cards" element={<GiftCards />} />
+                <Route path="/admin/barcodes" element={<Barcodes />} />
+                <Route path="/admin/scanner" element={<Scanner />} />
+                <Route path="/admin/contact" element={<Contact />} />
+                <Route path="/admin/analytics" element={<Analytics />} />
+                <Route path="/admin/settings" element={<Settings />} />
+                <Route path="/admin/categories" element={<CategoriesAdmin />} />
                 
                 {/* 404 Page */}
                 <Route path="*" element={<NotFound />} />
@@ -85,3 +106,5 @@ const App = () => (
 );
 
 export default App;
+
+// No further changes, just commit for tracking as requested.

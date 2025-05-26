@@ -30,6 +30,7 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ items, subt
   });
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [deliveryOption, setDeliveryOption] = useState<'standard' | 'express'>('standard');
   const { toast } = useToast();
 
   const couponDiscount = appliedCoupon ? 
@@ -38,7 +39,7 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ items, subt
       appliedCoupon.discount_value) : 0;
   
   const tax = (subtotal - couponDiscount) * 0.08;
-  const shipping = 5.00;
+  const shipping = deliveryOption === 'express' ? 15.00 : 5.00;
   const total = subtotal - couponDiscount + tax + shipping;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,7 +71,7 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ items, subt
       const { data: configData, error: configError } = await supabase
         .from('site_config')
         .select('*')
-        .in('key', ['ziina_api_key', 'ziina_merchant_id']);
+        .in('key', ['ziina_api_key']);
 
       if (configError) throw configError;
 
@@ -79,7 +80,7 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ items, subt
         return acc;
       }, {} as any);
 
-      if (!config.ziina_api_key || !config.ziina_merchant_id) {
+      if (!config.ziina_api_key) {
         throw new Error('Ziina payment is not configured. Please contact support.');
       }
 
@@ -94,7 +95,7 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ items, subt
         body: JSON.stringify({
           amount: paymentAmount,
           currency: 'AED',
-          merchant_id: config.ziina_merchant_id,
+          merchant_id: 'shopzyra',
           success_url: `${window.location.origin}/order-success`,
           cancel_url: `${window.location.origin}/order-failed`,
           customer_email: formData.email,
@@ -352,6 +353,35 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ items, subt
             </RadioGroup>
           </CardContent>
         </Card>
+
+        {/* Delivery Option */}
+        <Card className="border-border/50 shadow-xl animate-slide-in-left" style={{animationDelay: '0.3s'}}>
+          <CardHeader className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-primary/10">
+            <CardTitle>Delivery Option</CardTitle>
+          </CardHeader>
+          <CardContent className="p-8">
+            <RadioGroup
+              value={deliveryOption}
+              onValueChange={(value) => setDeliveryOption(value as 'standard' | 'express')}
+              className="space-y-4"
+            >
+              <div className="flex items-center space-x-4 p-4 border-2 border-border rounded-xl cursor-pointer">
+                <RadioGroupItem value="standard" id="standard" />
+                <Label htmlFor="standard" className="flex-1 cursor-pointer">
+                  <div className="font-semibold text-lg">Standard Delivery</div>
+                  <div className="text-sm text-muted-foreground">3-5 business days ($5.00)</div>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-4 p-4 border-2 border-border rounded-xl cursor-pointer">
+                <RadioGroupItem value="express" id="express" />
+                <Label htmlFor="express" className="flex-1 cursor-pointer">
+                  <div className="font-semibold text-lg">Express Delivery</div>
+                  <div className="text-sm text-muted-foreground">1-2 business days ($15.00)</div>
+                </Label>
+              </div>
+            </RadioGroup>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Order Summary */}
@@ -414,7 +444,7 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ items, subt
                 </div>
               )}
               <div className="flex justify-between text-lg">
-                <p>Shipping</p>
+                <p>Shipping ({deliveryOption === 'express' ? 'Express' : 'Standard'})</p>
                 <p className="font-semibold">${shipping.toFixed(2)}</p>
               </div>
               <div className="flex justify-between text-lg">
