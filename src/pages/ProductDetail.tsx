@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -5,20 +6,45 @@ import { Badge } from "@/components/ui/badge";
 import { Container } from "@/components/ui/container";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { Star, Heart, ShoppingCart, ArrowLeft, Minus, Plus } from "lucide-react";
+import { Star, Heart, ArrowLeft, Minus, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import WishlistButton from "@/components/products/WishlistButton";
 import ProductCustomizer from "@/components/products/ProductCustomizer";
 import ProductReviews from "@/components/reviews/ProductReviews";
 import { useCart } from "@/components/cart/CartProvider";
-import { Product, CustomizationOptions } from "@/types/product";
+import { AddToCartButton } from "@/components/cart/AddToCartButton";
+
+interface Product {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  price: number;
+  images: string[];
+  category: string;
+  in_stock: boolean;
+  rating: number;
+  review_count: number;
+  is_new: boolean;
+  discount_percentage: number;
+  status: 'draft' | 'published' | 'archived';
+  featured: boolean;
+  created_at: string;
+  customization_options?: any[];
+  categories?: {
+    name: string;
+    slug: string;
+  };
+  stock_quantity?: number;
+  is_customizable: boolean;
+  is_digital: boolean;
+}
 
 const ProductDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { addItem } = useCart();
   
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,9 +76,9 @@ const ProductDetail = () => {
 
       if (error) throw error;
       
-      // Transform customization options to match the interface
       const transformedProduct = {
         ...data,
+        images: Array.isArray(data.images) ? data.images as string[] : [],
         customization_options: data.customization_options?.map((option: any) => ({
           id: option.id,
           allowText: option.allow_text,
@@ -73,33 +99,6 @@ const ProductDetail = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleAddToCart = async () => {
-    if (!product) return;
-
-    const primaryImage = Array.isArray(product.images) && product.images.length > 0 
-      ? product.images[0] 
-      : undefined;
-
-    await addItem({
-      name: product.name,
-      productId: product.id,
-      quantity,
-      price: product.price,
-      customization,
-      image: primaryImage,
-      product: {
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        images: Array.isArray(product.images) ? product.images : [],
-        slug: product.slug,
-      },
-    });
-
-    setQuantity(1);
-    setCustomization({});
   };
 
   if (isLoading) {
@@ -240,25 +239,6 @@ const ProductDetail = () => {
               </p>
             </div>
 
-            {/* Customization Options */}
-            {hasCustomization && (
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg text-foreground">Customize Your Product</h3>
-                <ProductCustomizer
-                  productId={product.id}
-                  customizationOptions={product.customization_options?.[0] || {
-                    allowText: false,
-                    allowImage: false,
-                    maxTextLength: 100,
-                    maxImageCount: 1,
-                    allowResizeRotate: false
-                  }}
-                  customization={customization}
-                  onCustomizationChange={setCustomization}
-                />
-              </div>
-            )}
-
             {/* Quantity and Add to Cart */}
             <div className="space-y-4">
               <div className="flex items-center gap-4">
@@ -284,14 +264,12 @@ const ProductDetail = () => {
               </div>
 
               <div className="flex gap-4">
-                <Button
-                  onClick={handleAddToCart}
-                  className="flex-1 btn-animate"
-                  disabled={!product.in_stock}
-                >
-                  <ShoppingCart className="w-4 h-4 mr-2" />
-                  {product.in_stock ? "Add to Cart" : "Out of Stock"}
-                </Button>
+                <AddToCartButton 
+                  product={product} 
+                  quantity={quantity}
+                  customization={customization}
+                  className="flex-1"
+                />
                 <WishlistButton productId={product.id} />
               </div>
             </div>

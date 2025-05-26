@@ -1,11 +1,20 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Plus, Check } from "lucide-react";
+import { ShoppingCart, Check } from "lucide-react";
 import { useCart } from "./CartProvider";
-import { Product } from "@/types/product";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  images: string[];
+  slug: string;
+  in_stock?: boolean;
+  stock_status?: string;
+}
 
 interface AddToCartButtonProps {
   product: Product;
@@ -59,13 +68,6 @@ export const AddToCartButton: React.FC<AddToCartButtonProps> = ({
         image: Array.isArray(product.images) && product.images.length > 0 
           ? product.images[0] 
           : undefined,
-        product: {
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          images: Array.isArray(product.images) ? product.images : [],
-          slug: product.slug
-        }
       });
 
       setJustAdded(true);

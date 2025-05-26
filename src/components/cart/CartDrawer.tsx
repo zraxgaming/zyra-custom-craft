@@ -4,13 +4,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, X, Plus, Minus } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import { useCart } from "./CartProvider";
 import CartItem from "./CartItem";
 import { useNavigate } from "react-router-dom";
 
 const CartDrawer = () => {
-  const { state, toggleCart, totalItems, subtotal } = useCart();
+  const { isOpen, items, totalItems, subtotal, toggleCart } = useCart();
   const navigate = useNavigate();
 
   const handleCheckout = () => {
@@ -22,7 +22,7 @@ const CartDrawer = () => {
   const total = subtotal + tax;
 
   return (
-    <Sheet open={state.isOpen} onOpenChange={toggleCart}>
+    <Sheet open={isOpen} onOpenChange={toggleCart}>
       <SheetContent className="w-full sm:max-w-lg flex flex-col animate-slide-in-right">
         <SheetHeader className="animate-fade-in">
           <SheetTitle className="flex items-center gap-3 text-xl">
@@ -38,7 +38,7 @@ const CartDrawer = () => {
           </SheetTitle>
         </SheetHeader>
 
-        {state.items.length === 0 ? (
+        {items.length === 0 ? (
           <div className="flex-1 flex items-center justify-center animate-fade-in">
             <div className="text-center space-y-4">
               <div className="p-8 bg-muted/30 rounded-full w-fit mx-auto">
@@ -63,7 +63,7 @@ const CartDrawer = () => {
           <>
             <ScrollArea className="flex-1 -mx-6 px-6 animate-fade-in">
               <div className="space-y-4 py-2">
-                {state.items.map((item, index) => (
+                {items.map((item, index) => (
                   <div 
                     key={item.id} 
                     className="animate-scale-in"

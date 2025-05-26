@@ -107,11 +107,13 @@ interface CartContextType extends CartState {
   addToCart: (productId: string, quantity: number, customization?: Record<string, any>) => Promise<void>;
   addItem: (item: Omit<CartItem, 'id'>) => Promise<void>;
   removeFromCart: (itemId: string) => void;
+  removeItem: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
   clearCart: () => void;
   toggleCart: () => void;
   openCart: () => void;
   closeCart: () => void;
+  subtotal: number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -135,7 +137,6 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
   const addToCart = async (productId: string, quantity: number, customization?: Record<string, any>) => {
     try {
-      // Fetch product details
       const { data: product, error } = await supabase
         .from('products')
         .select('name, price, images')
@@ -155,7 +156,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         price: product.price,
         quantity,
         customization,
-        image: Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : undefined,
+        image: Array.isArray(product.images) && product.images.length > 0 ? product.images[0] as string : undefined,
       };
 
       dispatch({ type: "ADD_ITEM", payload: cartItem });
@@ -203,6 +204,10 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     dispatch({ type: "REMOVE_ITEM", payload: itemId });
   };
 
+  const removeItem = (itemId: string) => {
+    dispatch({ type: "REMOVE_ITEM", payload: itemId });
+  };
+
   const updateQuantity = (itemId: string, quantity: number) => {
     dispatch({ type: "UPDATE_QUANTITY", payload: { id: itemId, quantity } });
   };
@@ -230,11 +235,13 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         addToCart,
         addItem,
         removeFromCart,
+        removeItem,
         updateQuantity,
         clearCart,
         toggleCart,
         openCart,
         closeCart,
+        subtotal: state.totalPrice,
       }}
     >
       {children}

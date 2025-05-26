@@ -38,7 +38,7 @@ const Cart = () => {
             </p>
             <Button 
               onClick={() => navigate("/shop")}
-              className="bg-zyra-purple hover:bg-zyra-dark-purple btn-animate"
+              className="bg-primary hover:bg-primary/90 btn-animate"
             >
               Continue Shopping
             </Button>
@@ -87,8 +87,8 @@ const Cart = () => {
                       ${item.price.toFixed(2)} each
                     </p>
                     {item.customization && Object.keys(item.customization).length > 0 && (
-                      <div className="text-sm text-zyra-purple mt-1">
-                        <span className="px-2 py-1 bg-zyra-accent dark:bg-zyra-purple/20 rounded">
+                      <div className="text-sm text-primary mt-1">
+                        <span className="px-2 py-1 bg-primary/20 rounded">
                           Customized
                         </span>
                       </div>
@@ -161,14 +161,14 @@ const Cart = () => {
 
               <div className="mt-6 space-y-3">
                 <Button 
-                  className="w-full bg-zyra-purple hover:bg-zyra-dark-purple btn-animate"
+                  className="w-full bg-primary hover:bg-primary/90 btn-animate"
                   onClick={() => navigate("/checkout")}
                 >
                   Proceed to Checkout
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="w-full border-zyra-purple text-zyra-purple hover:bg-zyra-purple hover:text-white"
+                  className="w-full border-primary text-primary hover:bg-primary hover:text-white"
                   onClick={() => navigate("/shop")}
                 >
                   Continue Shopping

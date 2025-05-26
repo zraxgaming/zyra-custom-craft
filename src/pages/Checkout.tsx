@@ -99,8 +99,7 @@ const Checkout = () => {
           status: "pending",
           shipping_address: shippingInfo,
           payment_method: selectedPaymentMethod,
-          delivery_option: selectedDeliveryOption,
-          shipping_cost: shippingCost,
+          delivery_type: selectedDeliveryOption,
           subtotal: subtotal
         })
         .select()
@@ -124,7 +123,7 @@ const Checkout = () => {
       if (itemsError) throw itemsError;
 
       // Clear cart
-      await clearCart();
+      clearCart();
 
       // Redirect to success page
       navigate(`/order-success/${order.id}`);

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Container } from "@/components/ui/container";
@@ -8,68 +8,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Star, ShoppingCart, Heart, Filter, Grid, List, Sparkles } from "lucide-react";
-import { useCart } from "@/components/cart/CartProvider";
-import { useToast } from "@/hooks/use-toast";
+import { Search, Star, ShoppingCart, Heart, Grid, List, Sparkles } from "lucide-react";
 import SEOHead from "@/components/seo/SEOHead";
-import { supabase } from "@/integrations/supabase/client";
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  images: string[];
-  category: string;
-  rating: number;
-  review_count: number;
-  description: string;
-  is_new?: boolean;
-  discount_percentage: number;
-  in_stock: boolean;
-}
+import { useProducts } from "@/hooks/use-products";
+import { useCategories } from "@/hooks/use-categories";
+import { AddToCartButton } from "@/components/cart/AddToCartButton";
 
 const Products = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: products = [], isLoading } = useProducts();
+  const { data: categories = [] } = useCategories();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("featured");
   const [viewMode, setViewMode] = useState("grid");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const { addToCart } = useCart();
-  const { toast } = useToast();
-
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('status', 'published');
-
-      if (error) throw error;
-      setProducts(data || []);
-    } catch (error: any) {
-      console.error('Error fetching products:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load products",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddToCart = async (product: Product) => {
-    try {
-      await addToCart(product.id, 1);
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-    }
-  };
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -78,9 +29,22 @@ const Products = () => {
     return matchesSearch && matchesCategory;
   });
 
-  const categories = Array.from(new Set(products.map(p => p.category)));
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    switch (sortBy) {
+      case "price-low":
+        return a.price - b.price;
+      case "price-high":
+        return b.price - a.price;
+      case "rating":
+        return b.rating - a.rating;
+      case "newest":
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      default:
+        return 0;
+    }
+  });
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -147,7 +111,7 @@ const Products = () => {
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
                 {categories.map(category => (
-                  <SelectItem key={category} value={category}>{category}</SelectItem>
+                  <SelectItem key={category.id} value={category.name}>{category.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -187,7 +151,7 @@ const Products = () => {
 
           {/* Products Grid */}
           <div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "grid-cols-1"}`}>
-            {filteredProducts.map((product, index) => (
+            {sortedProducts.map((product, index) => (
               <Card 
                 key={product.id} 
                 className="group hover:shadow-2xl hover:scale-[1.02] transition-all duration-500 animate-fade-in bg-card/60 backdrop-blur-sm border-border/50 overflow-hidden hover-lift-lg"
@@ -241,7 +205,7 @@ const Products = () => {
                     {product.name}
                   </h3>
                   
-                  <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
+                  <p className="text-muted-foreground text-sm mb-4">
                     {product.description}
                   </p>
                   
@@ -259,21 +223,14 @@ const Products = () => {
                         </span>
                       )}
                     </div>
-                    <Button 
-                      onClick={() => handleAddToCart(product)}
-                      disabled={!product.in_stock}
-                      className="bg-primary hover:bg-primary/90 transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                    >
-                      <ShoppingCart className="h-4 w-4 mr-2" />
-                      {product.in_stock ? "Add to Cart" : "Out of Stock"}
-                    </Button>
+                    <AddToCartButton product={product} />
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
 
-          {filteredProducts.length === 0 && (
+          {sortedProducts.length === 0 && (
             <div className="text-center py-16 animate-fade-in">
               <div className="p-8 bg-muted/30 rounded-full w-fit mx-auto mb-6">
                 <Search className="h-16 w-16 text-muted-foreground" />

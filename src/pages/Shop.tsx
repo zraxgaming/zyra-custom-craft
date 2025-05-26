@@ -4,93 +4,59 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Container } from "@/components/ui/container";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, Grid, List, ShoppingCart, Heart, Star, Sparkles } from "lucide-react";
-import { useCart } from "@/components/cart/CartProvider";
-import { useToast } from "@/hooks/use-toast";
+import { Search, Filter, Grid, List, Heart, Star, Sparkles } from "lucide-react";
 import SEOHead from "@/components/seo/SEOHead";
+import { useProducts } from "@/hooks/use-products";
+import { useCategories } from "@/hooks/use-categories";
+import { AddToCartButton } from "@/components/cart/AddToCartButton";
 
 const Shop = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("featured");
   const [viewMode, setViewMode] = useState("grid");
-  const { addToCart } = useCart();
-  const { toast } = useToast();
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  
+  const { data: products = [], isLoading } = useProducts();
+  const { data: categories = [] } = useCategories();
 
-  const products = [
-    {
-      id: "1",
-      name: "Custom T-Shirt",
-      price: 29.99,
-      image: "/placeholder.svg",
-      category: "Clothing",
-      rating: 4.8,
-      reviews: 124,
-      description: "Premium quality custom t-shirt with your design",
-      isNew: true,
-      discount: 0
-    },
-    {
-      id: "2", 
-      name: "Personalized Mug",
-      price: 19.99,
-      image: "/placeholder.svg",
-      category: "Drinkware",
-      rating: 4.9,
-      reviews: 89,
-      description: "High-quality ceramic mug with custom printing",
-      isNew: false,
-      discount: 15
-    },
-    {
-      id: "3",
-      name: "Custom Phone Case",
-      price: 24.99,
-      image: "/placeholder.svg",
-      category: "Accessories",
-      rating: 4.7,
-      reviews: 156,
-      description: "Durable phone case with your personal design",
-      isNew: true,
-      discount: 0
-    },
-    {
-      id: "4",
-      name: "Custom Notebook",
-      price: 34.99,
-      image: "/placeholder.svg",
-      category: "Stationery",
-      rating: 4.6,
-      reviews: 67,
-      description: "Premium hardcover notebook with custom cover",
-      isNew: false,
-      discount: 20
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    switch (sortBy) {
+      case "price-low":
+        return a.price - b.price;
+      case "price-high":
+        return b.price - a.price;
+      case "rating":
+        return b.rating - a.rating;
+      case "newest":
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      default:
+        return 0;
     }
-  ];
+  });
 
-  const handleAddToCart = (product: any) => {
-    try {
-      addToCart(product.id, 1);
-      toast({
-        title: "Added to cart!",
-        description: `${product.name} has been added to your cart.`,
-      });
-    } catch (error) {
-      toast({
-        title: "Please sign in",
-        description: "You need to be signed in to add items to cart.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <Container className="py-12">
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        </Container>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -111,12 +77,10 @@ const Shop = () => {
         <section className="relative py-16 overflow-hidden">
           <Container className="relative z-10">
             <div className="text-center mb-12 animate-fade-in">
-              <div className="relative mb-8">
-                <Badge className="mb-6 bg-gradient-to-r from-primary to-purple-600 hover:scale-110 transition-transform duration-300 text-lg px-6 py-3" variant="outline">
-                  <Sparkles className="h-5 w-5 mr-3" />
-                  Premium Collection
-                </Badge>
-              </div>
+              <Badge className="mb-6 bg-gradient-to-r from-primary to-purple-600 hover:scale-110 transition-transform duration-300 text-lg px-6 py-3" variant="outline">
+                <Sparkles className="h-5 w-5 mr-3" />
+                Premium Collection
+              </Badge>
               <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent animate-scale-in">
                 Shop Custom Products
               </h1>
@@ -139,6 +103,19 @@ const Shop = () => {
                 className="pl-10 hover:scale-105 transition-transform duration-200"
               />
             </div>
+            
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-full md:w-48 hover:scale-105 transition-transform duration-200">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map(category => (
+                  <SelectItem key={category.id} value={category.name}>{category.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-full md:w-48 hover:scale-105 transition-transform duration-200">
                 <SelectValue placeholder="Sort by" />
@@ -151,6 +128,7 @@ const Shop = () => {
                 <SelectItem value="newest">Newest</SelectItem>
               </SelectContent>
             </Select>
+            
             <div className="flex gap-2">
               <Button
                 variant={viewMode === "grid" ? "default" : "outline"}
@@ -173,7 +151,7 @@ const Shop = () => {
 
           {/* Products Grid */}
           <div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
-            {filteredProducts.map((product, index) => (
+            {sortedProducts.map((product, index) => (
               <Card 
                 key={product.id} 
                 className="group hover:shadow-2xl hover:scale-[1.02] transition-all duration-500 animate-fade-in bg-card/60 backdrop-blur-sm border-border/50 overflow-hidden hover-lift-lg"
@@ -181,7 +159,7 @@ const Shop = () => {
               >
                 <div className="relative overflow-hidden">
                   <img
-                    src={product.image}
+                    src={Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : "/placeholder.svg"}
                     alt={product.name}
                     className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
                   />
@@ -194,14 +172,14 @@ const Shop = () => {
                     <Badge className="bg-primary/90 text-primary-foreground">
                       {product.category}
                     </Badge>
-                    {product.isNew && (
+                    {product.is_new && (
                       <Badge className="bg-green-500 text-white">
                         New
                       </Badge>
                     )}
-                    {product.discount > 0 && (
+                    {product.discount_percentage > 0 && (
                       <Badge className="bg-red-500 text-white">
-                        {product.discount}% OFF
+                        {product.discount_percentage}% OFF
                       </Badge>
                     )}
                   </div>
@@ -220,7 +198,7 @@ const Shop = () => {
                       />
                     ))}
                     <span className="text-sm font-medium ml-1">{product.rating}</span>
-                    <span className="text-sm text-muted-foreground">({product.reviews})</span>
+                    <span className="text-sm text-muted-foreground">({product.review_count})</span>
                   </div>
                   
                   <h3 className="text-lg font-semibold mb-2 group-hover:text-primary transition-colors duration-300">
@@ -234,31 +212,25 @@ const Shop = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-2xl font-bold text-primary">
-                        ${product.discount > 0 
-                          ? (product.price * (1 - product.discount / 100)).toFixed(2)
+                        ${product.discount_percentage > 0 
+                          ? (product.price * (1 - product.discount_percentage / 100)).toFixed(2)
                           : product.price.toFixed(2)
                         }
                       </span>
-                      {product.discount > 0 && (
+                      {product.discount_percentage > 0 && (
                         <span className="text-sm text-muted-foreground line-through">
                           ${product.price.toFixed(2)}
                         </span>
                       )}
                     </div>
-                    <Button 
-                      onClick={() => handleAddToCart(product)}
-                      className="bg-primary hover:bg-primary/90 transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                    >
-                      <ShoppingCart className="h-4 w-4 mr-2" />
-                      Add to Cart
-                    </Button>
+                    <AddToCartButton product={product} />
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
 
-          {filteredProducts.length === 0 && (
+          {sortedProducts.length === 0 && (
             <div className="text-center py-16 animate-fade-in">
               <div className="p-8 bg-muted/30 rounded-full w-fit mx-auto mb-6">
                 <Search className="h-16 w-16 text-muted-foreground" />
