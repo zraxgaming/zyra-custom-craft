@@ -37,7 +37,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ onSuccess, category }) => {
       .replace(/[^a-z0-9 -]/g, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
-      .trim('-');
+      .replace(/^-+|-+$/g, '');
   };
 
   const handleNameChange = (name: string) => {

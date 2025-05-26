@@ -4,29 +4,37 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Package, CreditCard, MapPin, User } from "lucide-react";
+import { ArrowLeft, Package, User, CreditCard, Truck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { OrderDetail as OrderDetailType, ShippingAddress } from "@/types/order";
-import CustomerInfo from "@/components/admin/order/CustomerInfo";
-import OrderSummary from "@/components/admin/order/OrderSummary";
-import PaymentInfo from "@/components/admin/order/PaymentInfo";
+import { useAuth } from "@/contexts/AuthContext";
+import { OrderDetail } from "@/types/order";
 
-const OrderDetail = () => {
+const OrderDetailPage = () => {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [order, setOrder] = useState<OrderDetailType | null>(null);
+  const [order, setOrder] = useState<OrderDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isUpdating, setIsUpdating] = useState(false);
+
+  React.useEffect(() => {
+    if (!user) {
+      navigate("/auth");
+      toast({
+        title: "Access denied",
+        description: "You need to be logged in to access this page.",
+        variant: "destructive",
+      });
+    }
+  }, [user, navigate, toast]);
 
   useEffect(() => {
-    if (id) {
+    if (id && user) {
       fetchOrder();
     }
-  }, [id]);
+  }, [id, user]);
 
   const fetchOrder = async () => {
     try {
@@ -34,22 +42,20 @@ const OrderDetail = () => {
         .from("orders")
         .select(`
           *,
-          order_items (
-            *,
-            products (
-              name,
-              images,
-              slug
-            )
-          ),
           profiles (
             id,
+            email,
             display_name,
             first_name,
-            last_name,
-            email,
-            phone,
-            avatar_url
+            last_name
+          ),
+          order_items (
+            *,
+            product:products (
+              id,
+              name,
+              images
+            )
           )
         `)
         .eq("id", id)
@@ -57,45 +63,22 @@ const OrderDetail = () => {
 
       if (error) throw error;
 
-      // Parse JSON addresses and ensure proper typing with failsafes
-      const parsedShippingAddress: ShippingAddress | null = data.shipping_address 
-        ? (typeof data.shipping_address === 'string' 
-           ? JSON.parse(data.shipping_address) 
-           : data.shipping_address)
-        : null;
-
-      const parsedBillingAddress: ShippingAddress | null = data.billing_address 
-        ? (typeof data.billing_address === 'string' 
-           ? JSON.parse(data.billing_address) 
-           : data.billing_address)
-        : null;
-
-      const parsedOrder: OrderDetailType = {
+      const orderDetail: OrderDetail = {
         ...data,
-        status: data.status as "pending" | "processing" | "shipped" | "delivered" | "cancelled",
-        payment_status: data.payment_status as "pending" | "paid" | "failed" | "refunded",
-        shipping_address: parsedShippingAddress || {
-          name: '',
-          street: '',
-          city: '',
-          state: '',
-          zipCode: '',
-          country: ''
-        },
-        billing_address: parsedBillingAddress,
-        profiles: data.profiles || {
-          id: '',
-          email: null
-        },
-        order_items: data.order_items || [],
-        currency: data.currency || 'USD',
-        tracking_number: data.tracking_number || undefined,
-        delivery_option: data.delivery_type || 'standard',
-        shipping_cost: 0, // Default value
-        subtotal: data.total_amount || 0 // Use total_amount as fallback
+        payment_status: data.payment_status as any,
+        status: data.status as any,
+        order_items: data.order_items.map((item: any) => ({
+          ...item,
+          customization: item.customization,
+          product: item.product ? {
+            id: item.product.id,
+            name: item.product.name,
+            images: Array.isArray(item.product.images) ? item.product.images : []
+          } : undefined
+        }))
       };
 
-      setOrder(parsedOrder);
+      setOrder(orderDetail);
     } catch (error: any) {
       console.error("Error fetching order:", error);
       toast({
@@ -108,104 +91,19 @@ const OrderDetail = () => {
     }
   };
 
-  const updateOrderStatus = async (newStatus: string) => {
-    if (!order) return;
-
-    setIsUpdating(true);
-    try {
-      const { error } = await supabase
-        .from("orders")
-        .update({ status: newStatus })
-        .eq("id", order.id);
-
-      if (error) throw error;
-
-      setOrder({ 
-        ...order, 
-        status: newStatus as "pending" | "processing" | "shipped" | "delivered" | "cancelled"
-      });
-      toast({
-        title: "Order updated",
-        description: `Order status changed to ${newStatus}`,
-      });
-    } catch (error: any) {
-      console.error("Error updating order:", error);
-      toast({
-        title: "Error updating order",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const updateOrder = async (field: string, value: string) => {
-    if (!order) return;
-
-    setIsUpdating(true);
-    try {
-      const { error } = await supabase
-        .from("orders")
-        .update({ [field]: value })
-        .eq("id", order.id);
-
-      if (error) throw error;
-
-      setOrder({ ...order, [field]: value } as OrderDetailType);
-      toast({
-        title: "Order updated",
-        description: `${field} updated successfully`,
-      });
-    } catch (error: any) {
-      console.error("Error updating order:", error);
-      toast({
-        title: "Error updating order",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const sendManualEmail = async () => {
-    if (!order) return;
-
-    setIsUpdating(true);
-    try {
-      const { error } = await supabase.functions.invoke('send-order-email', {
-        body: { orderId: order.id }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Email sent",
-        description: "Order confirmation email sent successfully",
-      });
-    } catch (error: any) {
-      console.error("Error sending email:", error);
-      toast({
-        title: "Error sending email",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "pending": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
-      case "processing": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
-      case "shipped": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
-      case "delivered": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-      case "cancelled": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
-      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+      case "delivered": return "bg-green-500";
+      case "shipped": return "bg-blue-500";
+      case "processing": return "bg-yellow-500";
+      case "cancelled": return "bg-red-500";
+      default: return "bg-gray-500";
     }
   };
+
+  if (!user) {
+    return null;
+  }
 
   if (isLoading) {
     return (
@@ -223,8 +121,8 @@ const OrderDetail = () => {
         <div className="p-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-foreground">Order not found</h1>
-            <Button onClick={() => navigate("/admin")} className="mt-4">
-              Back to Dashboard
+            <Button onClick={() => navigate("/admin/orders")} className="mt-4">
+              Back to Orders
             </Button>
           </div>
         </div>
@@ -240,7 +138,7 @@ const OrderDetail = () => {
             <Button
               variant="outline"
               size="icon"
-              onClick={() => navigate("/admin")}
+              onClick={() => navigate("/admin/orders")}
               className="text-foreground border-border"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -248,57 +146,143 @@ const OrderDetail = () => {
             <div>
               <h1 className="text-3xl font-bold text-foreground">Order #{order.id.slice(-8)}</h1>
               <p className="text-muted-foreground">
-                Created on {new Date(order.created_at).toLocaleDateString()}
+                Placed on {new Date(order.created_at).toLocaleDateString()}
               </p>
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
-            <Badge className={getStatusColor(order.status)}>
-              {order.status}
-            </Badge>
-            <Select
-              value={order.status}
-              onValueChange={updateOrderStatus}
-              disabled={isUpdating}
-            >
-              <SelectTrigger className="w-40 bg-background text-foreground border-border">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-background border-border">
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="processing">Processing</SelectItem>
-                <SelectItem value="shipped">Shipped</SelectItem>
-                <SelectItem value="delivered">Delivered</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Badge className={getStatusColor(order.status)}>
+            {order.status}
+          </Badge>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <Card className="bg-card border-border">
-              <OrderSummary 
-                order={order} 
-                isUpdating={isUpdating} 
-                updateOrder={updateOrder}
-                sendManualEmail={sendManualEmail}
-              />
-            </Card>
-
-            <Card className="bg-card border-border">
-              <PaymentInfo 
-                order={order} 
-                isUpdating={isUpdating} 
-                updateOrder={updateOrder}
-                sendManualEmail={sendManualEmail}
-              />
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Order Items
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {order.order_items.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between p-4 border rounded">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center">
+                          {item.product?.images?.[0] ? (
+                            <img 
+                              src={item.product.images[0]} 
+                              alt={item.product.name}
+                              className="w-full h-full object-cover rounded-lg"
+                            />
+                          ) : (
+                            <Package className="h-6 w-6 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-foreground">
+                            {item.product?.name || 'Unknown Product'}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            Quantity: {item.quantity}
+                          </p>
+                          {item.customization && (
+                            <p className="text-sm text-muted-foreground">
+                              Customized
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium text-foreground">${item.price}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Total: ${(item.price * item.quantity).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
             </Card>
           </div>
 
           <div className="space-y-6">
-            <CustomerInfo order={order} />
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Customer Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-medium text-foreground">Name</h4>
+                  <p className="text-muted-foreground">
+                    {order.profiles?.display_name || 
+                     `${order.profiles?.first_name || ''} ${order.profiles?.last_name || ''}`.trim() || 
+                     'N/A'}
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-foreground">Email</h4>
+                  <p className="text-muted-foreground">{order.profiles?.email || 'N/A'}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Payment Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-medium text-foreground">Total Amount</h4>
+                  <p className="text-2xl font-bold text-foreground">${order.total_amount}</p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-foreground">Payment Status</h4>
+                  <Badge variant={order.payment_status === 'paid' ? 'default' : 'secondary'}>
+                    {order.payment_status}
+                  </Badge>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-foreground">Payment Method</h4>
+                  <p className="text-muted-foreground">{order.payment_method || 'N/A'}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {order.delivery_type && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Truck className="h-5 w-5" />
+                    Delivery Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-foreground">Delivery Type</h4>
+                    <p className="text-muted-foreground">{order.delivery_type}</p>
+                  </div>
+                  
+                  {order.tracking_number && (
+                    <div>
+                      <h4 className="text-sm font-medium text-foreground">Tracking Number</h4>
+                      <p className="text-muted-foreground">{order.tracking_number}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
@@ -306,4 +290,4 @@ const OrderDetail = () => {
   );
 };
 
-export default OrderDetail;
+export default OrderDetailPage;

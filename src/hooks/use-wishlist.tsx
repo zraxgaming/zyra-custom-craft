@@ -47,9 +47,34 @@ export const useWishlist = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
-      setItems(data || []);
+      
+      // Transform the data to ensure proper typing
+      const transformedData: WishlistItem[] = (data || []).map(item => ({
+        id: item.id,
+        product_id: item.product_id,
+        user_id: item.user_id,
+        created_at: item.created_at,
+        product: item.product ? {
+          id: item.product.id,
+          name: item.product.name,
+          price: item.product.price,
+          slug: item.product.slug,
+          images: Array.isArray(item.product.images) 
+            ? item.product.images 
+            : typeof item.product.images === 'string'
+            ? [item.product.images]
+            : []
+        } : undefined
+      }));
+      
+      setItems(transformedData);
     } catch (error: any) {
       console.error('Error fetching wishlist:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load wishlist items",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -70,7 +95,17 @@ export const useWishlist = () => {
         .from('wishlists')
         .insert({ product_id: productId, user_id: user.id });
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') {
+          toast({
+            title: "Already in wishlist",
+            description: "This item is already in your wishlist.",
+            variant: "destructive",
+          });
+          return;
+        }
+        throw error;
+      }
 
       toast({
         title: "Added to wishlist!",
@@ -108,6 +143,11 @@ export const useWishlist = () => {
       fetchWishlist();
     } catch (error: any) {
       console.error('Error removing from wishlist:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove item from wishlist.",
+        variant: "destructive",
+      });
     }
   };
 

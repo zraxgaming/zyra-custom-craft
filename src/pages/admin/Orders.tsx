@@ -7,12 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Search, Eye, ShoppingCart } from "lucide-react";
+import { Search, Eye, Package, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Order } from "@/types/order";
 
-const AdminOrders = () => {
+const Orders = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -39,16 +39,24 @@ const AdminOrders = () => {
         .select(`
           *,
           profiles (
+            id,
+            email,
+            display_name,
             first_name,
-            last_name,
-            email
+            last_name
           )
         `)
         .order("created_at", { ascending: false });
           
       if (error) throw error;
       
-      setOrders(data || []);
+      const typedOrders: Order[] = (data || []).map(order => ({
+        ...order,
+        payment_status: order.payment_status as 'pending' | 'paid' | 'failed' | 'refunded',
+        status: order.status as 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+      }));
+      
+      setOrders(typedOrders);
     } catch (error: any) {
       console.error("Error fetching orders:", error);
       toast({
@@ -72,8 +80,7 @@ const AdminOrders = () => {
     return (
       order.id.toLowerCase().includes(searchLower) ||
       order.profiles?.email?.toLowerCase().includes(searchLower) ||
-      order.profiles?.first_name?.toLowerCase().includes(searchLower) ||
-      order.profiles?.last_name?.toLowerCase().includes(searchLower)
+      order.profiles?.display_name?.toLowerCase().includes(searchLower)
     );
   });
 
@@ -82,7 +89,6 @@ const AdminOrders = () => {
       case "delivered": return "bg-green-100 text-green-800";
       case "shipped": return "bg-blue-100 text-blue-800";
       case "processing": return "bg-yellow-100 text-yellow-800";
-      case "pending": return "bg-orange-100 text-orange-800";
       case "cancelled": return "bg-red-100 text-red-800";
       default: return "bg-gray-100 text-gray-800";
     }
@@ -91,10 +97,9 @@ const AdminOrders = () => {
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
       case "paid": return "bg-green-100 text-green-800";
-      case "pending": return "bg-yellow-100 text-yellow-800";
       case "failed": return "bg-red-100 text-red-800";
-      case "refunded": return "bg-orange-100 text-orange-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "refunded": return "bg-purple-100 text-purple-800";
+      default: return "bg-yellow-100 text-yellow-800";
     }
   };
 
@@ -112,7 +117,7 @@ const AdminOrders = () => {
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-lg">
-              <ShoppingCart className="h-5 w-5 text-primary" />
+              <Package className="h-5 w-5 text-primary" />
             </div>
             <h1 className="text-3xl font-bold">Orders</h1>
           </div>
@@ -160,17 +165,22 @@ const AdminOrders = () => {
                       #{order.id.slice(-8)}
                     </TableCell>
                     <TableCell>
-                      <div>
-                        <div className="font-medium">
-                          {order.profiles?.first_name} {order.profiles?.last_name}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {order.profiles?.email}
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <div className="font-medium">
+                            {order.profiles?.display_name || 
+                             `${order.profiles?.first_name || ''} ${order.profiles?.last_name || ''}`.trim() || 
+                             'Unknown Customer'}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {order.profiles?.email}
+                          </div>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="font-medium">
-                      ${order.total_amount} {order.currency || 'USD'}
+                      ${order.total_amount}
                     </TableCell>
                     <TableCell>
                       <Badge className={getPaymentStatusColor(order.payment_status)}>
@@ -208,4 +218,4 @@ const AdminOrders = () => {
   );
 };
 
-export default AdminOrders;
+export default Orders;

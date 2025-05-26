@@ -1,29 +1,24 @@
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Star, User } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface Review {
   id: string;
-  product_id: string;
-  user_id: string;
   rating: number;
-  title: string;
-  comment: string;
-  verified_purchase: boolean;
+  title?: string;
+  comment?: string;
   created_at: string;
-  updated_at: string;
+  user_id: string;
+  verified_purchase: boolean;
   profiles?: {
-    display_name?: string;
     first_name?: string;
     last_name?: string;
-    avatar_url?: string;
   };
 }
 
@@ -35,13 +30,14 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [newReview, setNewReview] = useState({
     rating: 0,
     title: '',
     comment: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
 
   useEffect(() => {
     fetchReviews();
@@ -49,29 +45,21 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
 
   const fetchReviews = async () => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       const { data, error } = await supabase
         .from('reviews')
         .select(`
           *,
           profiles (
-            display_name,
             first_name,
-            last_name,
-            avatar_url
+            last_name
           )
         `)
         .eq('product_id', productId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-
-      // Filter out any reviews with profile errors
-      const validReviews = (data || []).filter(review => 
-        !review.profiles || typeof review.profiles === 'object'
-      ) as Review[];
-
-      setReviews(validReviews);
+      setReviews(data || []);
     } catch (error: any) {
       console.error('Error fetching reviews:', error);
       toast({
@@ -80,16 +68,15 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleSubmitReview = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmitReview = async () => {
     if (!user) {
       toast({
         title: "Please sign in",
-        description: "You need to be signed in to leave a review",
+        description: "You need to be signed in to leave a review.",
         variant: "destructive",
       });
       return;
@@ -98,176 +85,208 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
     if (newReview.rating === 0) {
       toast({
         title: "Rating required",
-        description: "Please select a rating",
+        description: "Please select a star rating.",
         variant: "destructive",
       });
       return;
     }
 
+    setIsSubmitting(true);
     try {
-      setSubmitting(true);
       const { error } = await supabase
         .from('reviews')
         .insert({
           product_id: productId,
           user_id: user.id,
           rating: newReview.rating,
-          title: newReview.title,
-          comment: newReview.comment,
-          verified_purchase: false
+          title: newReview.title || null,
+          comment: newReview.comment || null
         });
 
       if (error) throw error;
 
       toast({
         title: "Review submitted!",
-        description: "Thank you for your review",
+        description: "Thank you for your review.",
       });
 
       setNewReview({ rating: 0, title: '', comment: '' });
+      setShowReviewForm(false);
       fetchReviews();
     } catch (error: any) {
       console.error('Error submitting review:', error);
       toast({
         title: "Error",
-        description: "Failed to submit review",
+        description: "Failed to submit review.",
         variant: "destructive",
       });
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
-  const renderStars = (rating: number, interactive = false, onRatingChange?: (rating: number) => void) => {
+  const renderStars = (rating: number, interactive = false, onRate?: (rating: number) => void) => {
     return (
-      <div className="flex gap-1">
+      <div className="flex items-center gap-1">
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
-            className={`h-5 w-5 ${
+            className={`h-4 w-4 ${
               star <= rating 
                 ? 'fill-yellow-400 text-yellow-400' 
-                : 'text-gray-300'
+                : 'text-muted-foreground'
             } ${interactive ? 'cursor-pointer hover:text-yellow-400' : ''}`}
-            onClick={interactive && onRatingChange ? () => onRatingChange(star) : undefined}
+            onClick={() => interactive && onRate?.(star)}
           />
         ))}
       </div>
     );
   };
 
-  const getDisplayName = (review: Review) => {
-    if (review.profiles?.display_name) return review.profiles.display_name;
-    if (review.profiles?.first_name || review.profiles?.last_name) {
-      return `${review.profiles.first_name || ''} ${review.profiles.last_name || ''}`.trim();
-    }
-    return 'Anonymous User';
-  };
-
-  if (loading) {
-    return <div className="flex justify-center p-8">Loading reviews...</div>;
-  }
+  const averageRating = reviews.length > 0 
+    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length 
+    : 0;
 
   return (
     <div className="space-y-6">
-      <h3 className="text-2xl font-bold">Customer Reviews</h3>
-      
+      {/* Reviews Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            Customer Reviews
+            {user && !showReviewForm && (
+              <Button onClick={() => setShowReviewForm(true)}>
+                Write a Review
+              </Button>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4 mb-4">
+            <div className="text-3xl font-bold">{averageRating.toFixed(1)}</div>
+            {renderStars(Math.round(averageRating))}
+            <span className="text-muted-foreground">
+              ({reviews.length} review{reviews.length !== 1 ? 's' : ''})
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Review Form */}
-      {user && (
+      {showReviewForm && (
         <Card>
           <CardHeader>
             <CardTitle>Write a Review</CardTitle>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmitReview} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Rating</label>
-                {renderStars(newReview.rating, true, (rating) => 
-                  setNewReview(prev => ({ ...prev, rating }))
-                )}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Title</label>
-                <Input
-                  value={newReview.title}
-                  onChange={(e) => setNewReview(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Review title"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Comment</label>
-                <Textarea
-                  value={newReview.comment}
-                  onChange={(e) => setNewReview(prev => ({ ...prev, comment: e.target.value }))}
-                  placeholder="Share your thoughts about this product"
-                  rows={4}
-                  required
-                />
-              </div>
-              
-              <Button type="submit" disabled={submitting}>
-                {submitting ? 'Submitting...' : 'Submit Review'}
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Rating *</label>
+              {renderStars(newReview.rating, true, (rating) => 
+                setNewReview(prev => ({ ...prev, rating }))
+              )}
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium mb-2 block">Title (Optional)</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border rounded-md"
+                placeholder="Summary of your review"
+                value={newReview.title}
+                onChange={(e) => setNewReview(prev => ({ ...prev, title: e.target.value }))}
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium mb-2 block">Review (Optional)</label>
+              <Textarea
+                placeholder="Tell others about your experience with this product"
+                value={newReview.comment}
+                onChange={(e) => setNewReview(prev => ({ ...prev, comment: e.target.value }))}
+                rows={4}
+              />
+            </div>
+            
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleSubmitReview}
+                disabled={isSubmitting || newReview.rating === 0}
+              >
+                {isSubmitting ? 'Submitting...' : 'Submit Review'}
               </Button>
-            </form>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowReviewForm(false)}
+              >
+                Cancel
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
 
       {/* Reviews List */}
       <div className="space-y-4">
-        {reviews.length === 0 ? (
-          <p className="text-center py-8 text-muted-foreground">
-            No reviews yet. Be the first to review this product!
-          </p>
-        ) : (
+        {isLoading ? (
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-4">
+                  <div className="animate-pulse space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 h-4 bg-muted rounded"></div>
+                      <div className="w-32 h-4 bg-muted rounded"></div>
+                    </div>
+                    <div className="w-full h-4 bg-muted rounded"></div>
+                    <div className="w-3/4 h-4 bg-muted rounded"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : reviews.length > 0 ? (
           reviews.map((review) => (
             <Card key={review.id}>
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0">
-                    {review.profiles?.avatar_url ? (
-                      <img
-                        src={review.profiles.avatar_url}
-                        alt={getDisplayName(review)}
-                        className="w-10 h-10 rounded-full"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                        <User className="w-6 h-6 text-gray-500" />
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h4 className="font-semibold">{getDisplayName(review)}</h4>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">
+                      {review.profiles?.first_name || 'Anonymous'}
                       {review.verified_purchase && (
-                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                        <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
                           Verified Purchase
                         </span>
                       )}
-                    </div>
-                    
-                    <div className="flex items-center gap-2 mb-2">
-                      {renderStars(review.rating)}
-                      <span className="text-sm text-gray-500">
-                        {new Date(review.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                    
-                    {review.title && (
-                      <h5 className="font-medium mb-2">{review.title}</h5>
-                    )}
-                    
-                    <p className="text-gray-700">{review.comment}</p>
+                    </span>
                   </div>
+                  <span className="text-sm text-muted-foreground">
+                    {new Date(review.created_at).toLocaleDateString()}
+                  </span>
                 </div>
+                
+                <div className="mb-2">
+                  {renderStars(review.rating)}
+                </div>
+                
+                {review.title && (
+                  <h4 className="font-medium mb-1">{review.title}</h4>
+                )}
+                
+                {review.comment && (
+                  <p className="text-muted-foreground">{review.comment}</p>
+                )}
               </CardContent>
             </Card>
           ))
+        ) : (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <div className="text-muted-foreground">
+                No reviews yet. Be the first to review this product!
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

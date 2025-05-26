@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -295,11 +294,7 @@ const ProductDetail = () => {
 
         {/* Product Reviews */}
         <div className="mt-16">
-          <ProductReviews 
-            productId={product.id} 
-            averageRating={product.rating}
-            totalReviews={product.review_count}
-          />
+          <ProductReviews productId={product.id} />
         </div>
       </Container>
       <Footer />

@@ -1,4 +1,20 @@
 
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  product_id: string;
+  quantity: number;
+  price: number;
+  customization?: any;
+  created_at: string;
+  product?: {
+    id: string;
+    name: string;
+    images?: string[];
+    image_url?: string;
+  };
+}
+
 export interface Order {
   id: string;
   user_id: string;
@@ -25,30 +41,6 @@ export interface Order {
   };
 }
 
-export interface OrderItem {
-  id: string;
-  order_id: string;
-  product_id: string;
-  quantity: number;
-  price: number;
-  customization?: any;
-  created_at: string;
-  product?: {
-    id: string;
-    name: string;
-    images?: string[];
-    image_url?: string;
-  };
-}
-
 export interface OrderDetail extends Order {
-  order_items?: OrderItem[];
-}
-
-export interface ShippingAddress {
-  street: string;
-  city: string;
-  state: string;
-  postal_code: string;
-  country: string;
+  order_items: OrderItem[];
 }
