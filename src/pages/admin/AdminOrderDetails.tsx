@@ -1,18 +1,18 @@
 
-import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Package, User, CreditCard, MapPin } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Package, User, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import AdminLayout from "@/components/admin/AdminLayout";
 import type { OrderDetail, OrderItem } from "@/types/order";
+import OrderSummary from "@/components/admin/order/OrderSummary";
+import AdminLayout from "@/components/admin/AdminLayout";
 
 const AdminOrderDetails = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,12 +30,13 @@ const AdminOrderDetails = () => {
         .from('orders')
         .select(`
           *,
-          profiles:user_id (
+          profiles (
             id,
             email,
             display_name,
             first_name,
-            last_name
+            last_name,
+            full_name
           )
         `)
         .eq('id', id)
@@ -47,7 +48,7 @@ const AdminOrderDetails = () => {
         .from('order_items')
         .select(`
           *,
-          product:products!order_items_product_id_fkey (
+          product:products (
             id,
             name,
             images,
@@ -58,14 +59,38 @@ const AdminOrderDetails = () => {
 
       if (itemsError) throw itemsError;
 
-      setOrder(orderData);
-      setOrderItems(itemsData || []);
+      // Transform the order data to match OrderDetail type
+      const transformedOrder: OrderDetail = {
+        ...orderData,
+        profiles: orderData.profiles ? {
+          id: orderData.profiles.id,
+          email: orderData.profiles.email,
+          display_name: orderData.profiles.display_name,
+          first_name: orderData.profiles.first_name,
+          last_name: orderData.profiles.last_name,
+          full_name: orderData.profiles.full_name,
+        } : undefined
+      };
+
+      // Transform the items data to match OrderItem type
+      const transformedItems: OrderItem[] = (itemsData || []).map(item => ({
+        ...item,
+        product: {
+          ...item.product,
+          images: Array.isArray(item.product.images) ? 
+            (item.product.images as any[]).filter(img => typeof img === 'string') : 
+            []
+        }
+      }));
+
+      setOrder(transformedOrder);
+      setOrderItems(transformedItems);
     } catch (error) {
       console.error('Error fetching order details:', error);
       toast({
         title: "Error",
-        description: "Failed to load order details",
-        variant: "destructive"
+        description: "Failed to fetch order details",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -75,9 +100,30 @@ const AdminOrderDetails = () => {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-1/4"></div>
-          <div className="h-64 bg-muted rounded"></div>
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/admin/orders">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Orders
+              </Link>
+            </Button>
+            <div className="h-8 bg-gray-200 rounded w-48 animate-pulse"></div>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i}>
+                  <CardContent className="p-6">
+                    <div className="space-y-2">
+                      <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
         </div>
       </AdminLayout>
     );
@@ -86,147 +132,98 @@ const AdminOrderDetails = () => {
   if (!order) {
     return (
       <AdminLayout>
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Order Not Found</h2>
-          <Link to="/admin/orders">
-            <Button>
+        <div className="text-center py-8">
+          <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-lg font-medium mb-2">Order not found</h3>
+          <p className="text-muted-foreground mb-4">
+            The order you're looking for doesn't exist or has been removed.
+          </p>
+          <Button asChild>
+            <Link to="/admin/orders">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Orders
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </AdminLayout>
     );
   }
 
+  // Add order_items to the order object for OrderSummary
+  const orderWithItems = {
+    ...order,
+    order_items: orderItems
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Link to="/admin/orders">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/admin/orders">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Orders
+              </Link>
             </Button>
-          </Link>
-          <h1 className="text-3xl font-bold">Order Details</h1>
+            <h1 className="text-2xl font-bold">Order #{order.id.slice(-8)}</h1>
+            <Badge variant={order.status === 'completed' ? 'default' : 'secondary'}>
+              {order.status}
+            </Badge>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  Order Items
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {orderItems.map((item) => (
-                    <div key={item.id} className="flex items-center space-x-4 p-4 border rounded-lg">
-                      <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
-                        {item.product.images?.[0] ? (
-                          <img 
-                            src={item.product.images[0]} 
-                            alt={item.product.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Package className="h-6 w-6 text-gray-400" />
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex-1">
-                        <h4 className="font-medium">{item.product.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Quantity: {item.quantity}
-                        </p>
-                        {item.customization && (
-                          <p className="text-xs text-muted-foreground">
-                            Customization: {JSON.stringify(item.customization)}
-                          </p>
-                        )}
-                      </div>
-                      
-                      <div className="text-right">
-                        <p className="font-medium">${item.price.toFixed(2)}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Total: ${(item.price * item.quantity).toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-6">
+            <OrderSummary order={orderWithItems} />
           </div>
 
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Customer
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <p className="font-medium">
-                    {order.profiles?.display_name || order.profiles?.first_name || 'N/A'}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {order.profiles?.email}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            {order.profiles && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Customer Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <span className="font-medium">Name:</span>
+                    <span className="ml-2">
+                      {order.profiles.full_name || order.profiles.display_name || 'N/A'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-medium">Email:</span>
+                    <span className="ml-2">{order.profiles.email || 'N/A'}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CreditCard className="h-5 w-5" />
-                  Payment
+                  Payment Information
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Status:</span>
-                    <Badge>{order.payment_status}</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Method:</span>
-                    <span className="capitalize">{order.payment_method || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between font-bold">
-                    <span>Total:</span>
-                    <span>${order.total_amount.toFixed(2)}</span>
-                  </div>
+              <CardContent className="space-y-4">
+                <div>
+                  <span className="font-medium">Payment Method:</span>
+                  <span className="ml-2 capitalize">{order.payment_method || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="font-medium">Payment Status:</span>
+                  <span className="ml-2">
+                    <Badge variant={order.payment_status === 'paid' ? 'default' : 'secondary'}>
+                      {order.payment_status}
+                    </Badge>
+                  </span>
                 </div>
               </CardContent>
             </Card>
-
-            {order.shipping_address && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5" />
-                    Shipping Address
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-sm">
-                    {typeof order.shipping_address === 'string' 
-                      ? order.shipping_address 
-                      : JSON.stringify(order.shipping_address, null, 2)
-                    }
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
         </div>
       </div>

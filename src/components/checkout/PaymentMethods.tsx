@@ -14,19 +14,24 @@ interface PaymentMethodsProps {
   total: number;
   onPaymentSuccess: (orderId: string) => void;
   orderData: any;
+  appliedCoupon?: any;
+  appliedGiftCard?: any;
 }
 
 const PaymentMethods: React.FC<PaymentMethodsProps> = ({ 
   total, 
   onPaymentSuccess, 
-  orderData 
+  orderData,
+  appliedCoupon,
+  appliedGiftCard
 }) => {
   const [selectedMethod, setSelectedMethod] = useState("ziina");
   const [isProcessing, setIsProcessing] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
   const { toast } = useToast();
 
-  const finalTotal = Math.max(0, total);
+  // Ensure total is never negative
+  const finalTotal = Math.max(0, total || 0);
 
   const handleZiinaPayment = async () => {
     if (!phoneNumber) {
@@ -44,7 +49,9 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
         body: {
           amount: finalTotal,
           phone: phoneNumber,
-          order_data: orderData
+          order_data: orderData,
+          applied_coupon: appliedCoupon,
+          applied_gift_card: appliedGiftCard
         }
       });
 
@@ -65,7 +72,8 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
     }
   };
 
-  const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID || process.env.PAYPAL_CLIENT_ID;
+  // Get PayPal client ID from environment variables
+  const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
 
   const createPayPalOrder = (data: any, actions: any) => {
     return actions.order.create({
@@ -164,7 +172,7 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
           <div className="animate-slide-in-up">
             <PayPalScriptProvider
               options={{
-                "client-id": paypalClientId,
+                clientId: paypalClientId,
                 currency: "USD"
               }}
             >
