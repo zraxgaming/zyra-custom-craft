@@ -56,7 +56,7 @@ export const useProducts = () => {
         review_count: product.review_count || 0,
         is_new: product.is_new || false,
         discount_percentage: product.discount_percentage || 0,
-        featured: product.featured || false,
+        featured: product.featured || product.is_featured || false,
         images: Array.isArray(product.images) ? product.images : [],
         category: product.categories?.name || product.category || 'Uncategorized',
         is_customizable: product.is_customizable || false,

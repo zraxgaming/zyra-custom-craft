@@ -10,10 +10,16 @@ import Categories from "@/components/home/Categories";
 import Newsletter from "@/components/home/Newsletter";
 
 const Index = () => {
-  const { data: products = [] } = useProducts();
-  const { data: categories = [] } = useCategories();
+  const { data: products = [], isLoading: productsLoading } = useProducts();
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
   
-  const featuredProducts = products.filter(p => p.is_new || p.discount_percentage > 0 || p.featured).slice(0, 8);
+  // Show featured, new, or discounted products, fallback to first 8 products
+  const featuredProducts = products.filter(p => 
+    p.featured || p.is_featured || p.is_new || (p.discount_percentage && p.discount_percentage > 0)
+  ).slice(0, 8);
+  
+  // If no featured products, show first 8 products
+  const displayProducts = featuredProducts.length > 0 ? featuredProducts : products.slice(0, 8);
 
   return (
     <div className="min-h-screen bg-background">
@@ -21,13 +27,13 @@ const Index = () => {
       <main>
         <Hero />
         
-        {featuredProducts.length > 0 && (
+        {!productsLoading && displayProducts.length > 0 && (
           <section className="py-16 bg-muted/30">
-            <FeaturedProducts products={featuredProducts} />
+            <FeaturedProducts products={displayProducts} />
           </section>
         )}
         
-        {categories.length > 0 && (
+        {!categoriesLoading && categories.length > 0 && (
           <section className="py-16">
             <Categories />
           </section>

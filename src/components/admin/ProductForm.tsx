@@ -16,30 +16,67 @@ interface ProductFormProps {
 const ProductForm: React.FC<ProductFormProps> = ({ onSuccess, product }) => {
   const [categories, setCategories] = useState<any[]>([]);
   const [formData, setFormData] = useState({
-    name: product?.name || "",
-    description: product?.description || "",
-    short_description: product?.short_description || "",
-    price: product?.price || "",
-    category: product?.category || "",
-    images: product?.images?.[0] || "",
-    stock_quantity: product?.stock_quantity || 0,
-    sku: product?.sku || "",
-    barcode: product?.barcode || "",
-    status: product?.status || "draft",
-    in_stock: product?.in_stock ?? true,
-    is_customizable: product?.is_customizable ?? false,
-    is_featured: product?.is_featured ?? false
+    name: "",
+    description: "",
+    short_description: "",
+    price: "",
+    category: "",
+    images: "",
+    stock_quantity: 0,
+    sku: "",
+    barcode: "",
+    status: "published",
+    in_stock: true,
+    is_customizable: false,
+    is_featured: false
   });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+    if (product && product.id) {
+      fetchProductData();
+    }
+  }, [product]);
+
+  const fetchProductData = async () => {
+    if (!product?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', product.id)
+        .single();
+        
+      if (error) throw error;
+      
+      if (data) {
+        setFormData({
+          name: data.name || "",
+          description: data.description || "",
+          short_description: data.short_description || "",
+          price: data.price?.toString() || "",
+          category: data.category || "",
+          images: Array.isArray(data.images) && data.images.length > 0 ? data.images[0] : "",
+          stock_quantity: data.stock_quantity || 0,
+          sku: data.sku || "",
+          barcode: data.barcode || "",
+          status: data.status || "published",
+          in_stock: data.in_stock ?? true,
+          is_customizable: data.is_customizable ?? false,
+          is_featured: data.is_featured ?? false
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching product:', error);
+    }
+  };
 
   // Auto-generate SKU when name changes (only for new products if SKU is empty)
   useEffect(() => {
-    if (!product && formData.name && !formData.sku) {
+    if (!product?.id && formData.name && !formData.sku) {
       const generatedSku = generateSKU(formData.name);
       setFormData(prev => ({ ...prev, sku: generatedSku }));
     }
@@ -47,7 +84,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSuccess, product }) => {
 
   // Auto-generate barcode when SKU changes (only for new products if barcode is empty)
   useEffect(() => {
-    if (!product && formData.sku && !formData.barcode) {
+    if (!product?.id && formData.sku && !formData.barcode) {
       const generatedBarcode = generateBarcode();
       setFormData(prev => ({ ...prev, barcode: generatedBarcode }));
     }
@@ -105,7 +142,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSuccess, product }) => {
         images: formData.images ? [formData.images] : []
       };
 
-      if (product) {
+      if (product?.id) {
         const { error } = await supabase
           .from('products')
           .update(productData)
@@ -143,141 +180,157 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSuccess, product }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-h-[70vh] overflow-y-auto">
-      <div className="grid grid-cols-2 gap-4">
+    <div className="bg-card rounded-lg border p-6 animate-fade-in">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Product Name *</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              required
+              className="transition-all duration-300 focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="price">Price ($) *</Label>
+            <Input
+              id="price"
+              type="number"
+              step="0.01"
+              value={formData.price}
+              onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+              required
+              className="transition-all duration-300 focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+        </div>
+
         <div className="space-y-2">
-          <Label htmlFor="name">Product Name</Label>
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            rows={3}
+            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="category">Category *</Label>
+            <select
+              id="category"
+              value={formData.category}
+              onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+              className="w-full px-3 py-2 border border-border rounded-md transition-all duration-300 focus:ring-2 focus:ring-primary/20"
+              required
+            >
+              <option value="">Select Category</option>
+              {categories.map((cat) => (
+                <option key={cat.name} value={cat.name}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="stock_quantity">Stock Quantity</Label>
+            <Input
+              id="stock_quantity"
+              type="number"
+              value={formData.stock_quantity}
+              onChange={(e) => setFormData(prev => ({ ...prev, stock_quantity: Number(e.target.value) }))}
+              className="transition-all duration-300 focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="sku">SKU</Label>
+            <Input
+              id="sku"
+              value={formData.sku}
+              onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
+              placeholder="Auto-generated if empty"
+              className="transition-all duration-300 focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="barcode">Barcode</Label>
+            <Input
+              id="barcode"
+              value={formData.barcode}
+              onChange={(e) => setFormData(prev => ({ ...prev, barcode: e.target.value }))}
+              placeholder="Auto-generated if empty"
+              className="transition-all duration-300 focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="images">Image URL</Label>
           <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-            required
+            id="images"
+            type="url"
+            value={formData.images}
+            onChange={(e) => setFormData(prev => ({ ...prev, images: e.target.value }))}
+            placeholder="https://example.com/image.jpg"
+            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20"
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="price">Price ($)</Label>
-          <Input
-            id="price"
-            type="number"
-            step="0.01"
-            value={formData.price}
-            onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-            required
-          />
-        </div>
-      </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="flex items-center space-x-2">
+            <input
+              id="in_stock"
+              type="checkbox"
+              checked={formData.in_stock}
+              onChange={(e) => setFormData(prev => ({ ...prev, in_stock: e.target.checked }))}
+              className="rounded border-border"
+            />
+            <Label htmlFor="in_stock">In Stock</Label>
+          </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          value={formData.description}
-          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-          rows={3}
-        />
-      </div>
+          <div className="flex items-center space-x-2">
+            <input
+              id="is_customizable"
+              type="checkbox"
+              checked={formData.is_customizable}
+              onChange={(e) => setFormData(prev => ({ ...prev, is_customizable: e.target.checked }))}
+              className="rounded border-border"
+            />
+            <Label htmlFor="is_customizable">Customizable</Label>
+          </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="category">Category</Label>
-          <select
-            id="category"
-            value={formData.category}
-            onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-            className="w-full px-3 py-2 border border-border rounded-md"
-            required
-          >
-            <option value="">Select Category</option>
-            {categories.map((cat) => (
-              <option key={cat.name} value={cat.name}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center space-x-2">
+            <input
+              id="is_featured"
+              type="checkbox"
+              checked={formData.is_featured}
+              onChange={(e) => setFormData(prev => ({ ...prev, is_featured: e.target.checked }))}
+              className="rounded border-border"
+            />
+            <Label htmlFor="is_featured">Featured</Label>
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="stock_quantity">Stock Quantity</Label>
-          <Input
-            id="stock_quantity"
-            type="number"
-            value={formData.stock_quantity}
-            onChange={(e) => setFormData(prev => ({ ...prev, stock_quantity: Number(e.target.value) }))}
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="sku">SKU</Label>
-          <Input
-            id="sku"
-            value={formData.sku}
-            onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
-            placeholder="Enter custom SKU or auto-generated"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="barcode">Barcode</Label>
-          <Input
-            id="barcode"
-            value={formData.barcode}
-            onChange={(e) => setFormData(prev => ({ ...prev, barcode: e.target.value }))}
-            placeholder="Enter custom barcode or auto-generated"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="images">Image URL</Label>
-        <Input
-          id="images"
-          type="url"
-          value={formData.images}
-          onChange={(e) => setFormData(prev => ({ ...prev, images: e.target.value }))}
-          placeholder="https://example.com/image.jpg"
-        />
-      </div>
-
-      <div className="grid grid-cols-3 gap-4">
-        <div className="flex items-center space-x-2">
-          <input
-            id="in_stock"
-            type="checkbox"
-            checked={formData.in_stock}
-            onChange={(e) => setFormData(prev => ({ ...prev, in_stock: e.target.checked }))}
-          />
-          <Label htmlFor="in_stock">In Stock</Label>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <input
-            id="is_customizable"
-            type="checkbox"
-            checked={formData.is_customizable}
-            onChange={(e) => setFormData(prev => ({ ...prev, is_customizable: e.target.checked }))}
-          />
-          <Label htmlFor="is_customizable">Customizable</Label>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <input
-            id="is_featured"
-            type="checkbox"
-            checked={formData.is_featured}
-            onChange={(e) => setFormData(prev => ({ ...prev, is_featured: e.target.checked }))}
-          />
-          <Label htmlFor="is_featured">Featured</Label>
-        </div>
-      </div>
-
-      <Button type="submit" disabled={isLoading} className="w-full">
-        <Save className="h-4 w-4 mr-2" />
-        {isLoading ? "Saving..." : (product ? "Update Product" : "Create Product")}
-      </Button>
-    </form>
+        <Button 
+          type="submit" 
+          disabled={isLoading} 
+          className="w-full hover:scale-105 transition-all duration-300"
+        >
+          <Save className="h-4 w-4 mr-2" />
+          {isLoading ? "Saving..." : (product?.id ? "Update Product" : "Create Product")}
+        </Button>
+      </form>
+    </div>
   );
 };
 

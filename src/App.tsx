@@ -49,6 +49,7 @@ import AdminBarcodeScanner from "./pages/admin/BarcodeScanner";
 import AdminScanner from "./pages/admin/Scanner";
 import AdminZiina from "./pages/admin/Ziina";
 import ProductEdit from "./pages/admin/ProductEdit";
+import ProductNew from "./pages/admin/ProductNew";
 
 // Contexts & Providers
 import { AuthProvider } from "./contexts/AuthContext";
@@ -101,6 +102,7 @@ function AppContent() {
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
         <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
+        <Route path="/admin/products/new" element={<AdminRoute><ProductNew /></AdminRoute>} />
         <Route path="/admin/products/:id/edit" element={<AdminRoute><ProductEdit /></AdminRoute>} />
         <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
         <Route path="/admin/inventory" element={<AdminRoute><AdminInventory /></AdminRoute>} />

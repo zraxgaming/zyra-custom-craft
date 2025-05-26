@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Save } from 'lucide-react';
 
 interface CategoryFormProps {
   onSuccess: () => void;
@@ -44,7 +45,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ onSuccess, category }) => {
     setFormData(prev => ({
       ...prev,
       name,
-      slug: generateSlug(name)
+      slug: category ? prev.slug : generateSlug(name) // Only auto-generate for new categories
     }));
   };
 
@@ -63,7 +64,11 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ onSuccess, category }) => {
     setIsLoading(true);
     try {
       const categoryData = {
-        ...formData,
+        name: formData.name.trim(),
+        slug: formData.slug || generateSlug(formData.name),
+        description: formData.description.trim() || null,
+        is_active: formData.is_active,
+        sort_order: formData.sort_order,
         updated_at: new Date().toISOString()
       };
 
@@ -82,7 +87,10 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ onSuccess, category }) => {
       } else {
         const { error } = await supabase
           .from('categories')
-          .insert(categoryData);
+          .insert({
+            ...categoryData,
+            created_at: new Date().toISOString()
+          });
         
         if (error) throw error;
         
@@ -106,63 +114,74 @@ const CategoryForm: React.FC<CategoryFormProps> = ({ onSuccess, category }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="name">Name *</Label>
-        <Input
-          id="name"
-          value={formData.name}
-          onChange={(e) => handleNameChange(e.target.value)}
-          placeholder="Category name"
-          required
-        />
-      </div>
+    <div className="bg-card rounded-lg border p-6 animate-fade-in">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="name">Name *</Label>
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) => handleNameChange(e.target.value)}
+            placeholder="Category name"
+            required
+            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
 
-      <div>
-        <Label htmlFor="slug">Slug</Label>
-        <Input
-          id="slug"
-          value={formData.slug}
-          onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-          placeholder="category-slug"
-        />
-      </div>
+        <div className="space-y-2">
+          <Label htmlFor="slug">Slug</Label>
+          <Input
+            id="slug"
+            value={formData.slug}
+            onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+            placeholder="category-slug"
+            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
 
-      <div>
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          value={formData.description}
-          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-          placeholder="Category description"
-          rows={3}
-        />
-      </div>
+        <div className="space-y-2">
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            placeholder="Category description"
+            rows={3}
+            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
 
-      <div>
-        <Label htmlFor="sort_order">Sort Order</Label>
-        <Input
-          id="sort_order"
-          type="number"
-          value={formData.sort_order}
-          onChange={(e) => setFormData(prev => ({ ...prev, sort_order: parseInt(e.target.value) || 0 }))}
-          placeholder="0"
-        />
-      </div>
+        <div className="space-y-2">
+          <Label htmlFor="sort_order">Sort Order</Label>
+          <Input
+            id="sort_order"
+            type="number"
+            value={formData.sort_order}
+            onChange={(e) => setFormData(prev => ({ ...prev, sort_order: parseInt(e.target.value) || 0 }))}
+            placeholder="0"
+            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
 
-      <div className="flex items-center space-x-2">
-        <Switch
-          id="is_active"
-          checked={formData.is_active}
-          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
-        />
-        <Label htmlFor="is_active">Active</Label>
-      </div>
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="is_active"
+            checked={formData.is_active}
+            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+          />
+          <Label htmlFor="is_active">Active</Label>
+        </div>
 
-      <Button type="submit" disabled={isLoading} className="w-full">
-        {isLoading ? 'Saving...' : category ? 'Update Category' : 'Create Category'}
-      </Button>
-    </form>
+        <Button 
+          type="submit" 
+          disabled={isLoading} 
+          className="w-full hover:scale-105 transition-all duration-300"
+        >
+          <Save className="h-4 w-4 mr-2" />
+          {isLoading ? 'Saving...' : category ? 'Update Category' : 'Create Category'}
+        </Button>
+      </form>
+    </div>
   );
 };
 

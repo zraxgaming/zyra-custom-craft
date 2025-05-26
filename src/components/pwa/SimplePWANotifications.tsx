@@ -18,13 +18,18 @@ const SimplePWANotifications = () => {
       return;
     }
 
-    // Check current permission status
+    // Only show toast if permission is explicitly denied
     if (Notification.permission === 'denied') {
-      toast({
-        title: "Notifications Disabled",
-        description: "Notifications are blocked. Enable them in your browser settings to receive updates.",
-        variant: "destructive",
-      });
+      // Show toast only once per session
+      const hasShownNotificationWarning = sessionStorage.getItem('notificationWarningShown');
+      if (!hasShownNotificationWarning) {
+        toast({
+          title: "Notifications Disabled",
+          description: "Enable notifications in browser settings to receive updates.",
+          variant: "destructive",
+        });
+        sessionStorage.setItem('notificationWarningShown', 'true');
+      }
     }
   }, [toast]);
 
