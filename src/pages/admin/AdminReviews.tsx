@@ -1,36 +1,35 @@
 
 import React, { useState, useEffect } from "react";
-import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
+import { Star, Eye, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Star, MessageSquare, Check, X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import AdminLayout from "@/components/admin/AdminLayout";
 
 interface Review {
   id: string;
   rating: number;
-  title?: string;
-  comment?: string;
-  verified_purchase: boolean;
+  title: string;
+  comment: string;
   created_at: string;
-  product_id: string;
+  verified_purchase: boolean;
   user_id: string;
+  product_id: string;
   products?: {
     name: string;
   };
   profiles?: {
-    display_name?: string;
-    email?: string;
+    display_name: string;
+    email: string;
   };
 }
 
 const AdminReviews = () => {
-  const { toast } = useToast();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchReviews();
@@ -38,18 +37,40 @@ const AdminReviews = () => {
 
   const fetchReviews = async () => {
     try {
-      const { data, error } = await supabase
+      // Get reviews first
+      const { data: reviewsData, error: reviewsError } = await supabase
         .from('reviews')
-        .select(`
-          *,
-          products (name),
-          profiles (display_name, email)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setReviews(data || []);
-    } catch (error: any) {
+      if (reviewsError) throw reviewsError;
+
+      // Get products and profiles separately
+      const reviewsWithDetails = await Promise.all(
+        (reviewsData || []).map(async (review) => {
+          const [productResult, profileResult] = await Promise.all([
+            supabase
+              .from('products')
+              .select('name')
+              .eq('id', review.product_id)
+              .single(),
+            supabase
+              .from('profiles')
+              .select('display_name, email')
+              .eq('id', review.user_id)
+              .single()
+          ]);
+
+          return {
+            ...review,
+            products: productResult.data,
+            profiles: profileResult.data
+          };
+        })
+      );
+
+      setReviews(reviewsWithDetails);
+    } catch (error) {
       console.error('Error fetching reviews:', error);
       toast({
         title: "Error",
@@ -62,8 +83,6 @@ const AdminReviews = () => {
   };
 
   const deleteReview = async (reviewId: string) => {
-    if (!confirm('Are you sure you want to delete this review?')) return;
-
     try {
       const { error } = await supabase
         .from('reviews')
@@ -72,12 +91,12 @@ const AdminReviews = () => {
 
       if (error) throw error;
 
-      await fetchReviews();
+      setReviews(reviews.filter(review => review.id !== reviewId));
       toast({
         title: "Success",
         description: "Review deleted successfully",
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to delete review",
@@ -91,7 +110,7 @@ const AdminReviews = () => {
       <Star
         key={i}
         className={`h-4 w-4 ${
-          i < rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+          i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
         }`}
       />
     ));
@@ -109,120 +128,84 @@ const AdminReviews = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <MessageSquare className="h-5 w-5 text-primary" />
-            </div>
-            <h1 className="text-3xl font-bold">Reviews Management</h1>
-          </div>
+          <h1 className="text-3xl font-bold">Reviews Management</h1>
+          <Badge variant="outline" className="animate-pulse">
+            {reviews.length} Total Reviews
+          </Badge>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Reviews</CardTitle>
-              <MessageSquare className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{reviews.length}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Average Rating</CardTitle>
-              <Star className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {reviews.length > 0 
-                  ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
-                  : '0.0'
-                }
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Verified Reviews</CardTitle>
-              <Check className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {reviews.filter(review => review.verified_purchase).length}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>All Reviews</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead>Review</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {reviews.map((review) => (
-                  <TableRow key={review.id}>
-                    <TableCell className="font-medium">
-                      {review.products?.name || 'Unknown Product'}
-                    </TableCell>
-                    <TableCell>
-                      {review.profiles?.display_name || review.profiles?.email || 'Anonymous'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        {renderStars(review.rating)}
-                        <span className="ml-1 text-sm">({review.rating})</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="max-w-xs">
-                      {review.title && (
-                        <div className="font-medium text-sm">{review.title}</div>
+        <div className="grid gap-6">
+          {reviews.map((review, index) => (
+            <Card key={review.id} className="animate-slide-in-up hover:shadow-lg transition-all duration-300" style={{animationDelay: `${index * 100}ms`}}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex">{renderStars(review.rating)}</div>
+                      <span className="font-medium">{review.rating}/5</span>
+                      {review.verified_purchase && (
+                        <Badge variant="secondary" className="text-xs">
+                          Verified Purchase
+                        </Badge>
                       )}
-                      {review.comment && (
-                        <div className="text-sm text-muted-foreground truncate">
-                          {review.comment}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
+                    </div>
+                    <CardTitle className="text-lg">{review.title}</CardTitle>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="hover:scale-105 transition-transform"
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Product
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => deleteReview(review.id)}
+                      className="hover:scale-105 transition-transform"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-muted-foreground">{review.comment}</p>
+                
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <div className="space-y-1">
+                    <p className="font-medium">Product: {review.products?.name || 'Unknown Product'}</p>
+                    <p className="text-sm text-muted-foreground">
+                      By: {review.profiles?.display_name || review.profiles?.email || 'Anonymous'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-muted-foreground">
                       {new Date(review.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={review.verified_purchase ? "default" : "secondary"}>
-                        {review.verified_purchase ? "Verified" : "Unverified"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => deleteReview(review.id)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+          
+          {reviews.length === 0 && (
+            <Card className="animate-fade-in">
+              <CardContent className="text-center py-8">
+                <Star className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Reviews Yet</h3>
+                <p className="text-muted-foreground">
+                  Customer reviews will appear here once they start reviewing products.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
     </AdminLayout>
   );

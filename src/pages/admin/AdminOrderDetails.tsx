@@ -53,45 +53,48 @@ const AdminOrderDetails = () => {
 
   const fetchOrderDetails = async () => {
     try {
-      const { data, error } = await supabase
+      // First get the order
+      const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .select(`
-          *,
-          profiles:user_id (
-            id,
-            email,
-            display_name,
-            first_name,
-            last_name
-          ),
-          order_items (
-            id,
-            product_id,
-            quantity,
-            price,
-            customization,
-            products (
-              id,
-              name,
-              images
-            )
-          )
-        `)
+        .select('*')
         .eq('id', id)
         .single();
 
-      if (error) throw error;
-      
-      // Transform the data to ensure it matches OrderDetails interface
+      if (orderError) throw orderError;
+
+      // Get profile data separately
+      let profileData = null;
+      if (orderData.user_id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, email, display_name, first_name, last_name')
+          .eq('id', orderData.user_id)
+          .single();
+        
+        profileData = profile;
+      }
+
+      // Get order items with products
+      const { data: orderItems } = await supabase
+        .from('order_items')
+        .select(`
+          id,
+          product_id,
+          quantity,
+          price,
+          customization,
+          products (
+            id,
+            name,
+            images
+          )
+        `)
+        .eq('order_id', id);
+
       const transformedOrder: OrderDetails = {
-        ...data,
-        profiles: data.profiles ? {
-          id: data.profiles.id,
-          email: data.profiles.email || '',
-          display_name: data.profiles.display_name,
-          first_name: data.profiles.first_name,
-          last_name: data.profiles.last_name
-        } : undefined
+        ...orderData,
+        profiles: profileData,
+        order_items: orderItems || []
       };
       
       setOrder(transformedOrder);
@@ -158,7 +161,7 @@ const AdminOrderDetails = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Order #{order.id.slice(-8)}</h1>
           <div className="flex gap-2">
@@ -172,7 +175,7 @@ const AdminOrderDetails = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
+          <Card className="animate-slide-in-left">
             <CardHeader>
               <CardTitle>Customer Information</CardTitle>
             </CardHeader>
@@ -184,7 +187,7 @@ const AdminOrderDetails = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="animate-slide-in-right">
             <CardHeader>
               <CardTitle>Order Summary</CardTitle>
             </CardHeader>
@@ -199,14 +202,14 @@ const AdminOrderDetails = () => {
           </Card>
         </div>
 
-        <Card>
+        <Card className="animate-fade-in-up">
           <CardHeader>
             <CardTitle>Order Items</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {order.order_items?.map((item) => (
-                <div key={item.id} className="flex items-center space-x-4 p-4 border rounded-lg">
+              {order.order_items?.map((item, index) => (
+                <div key={item.id} className="flex items-center space-x-4 p-4 border rounded-lg animate-slide-in-up" style={{animationDelay: `${index * 100}ms`}}>
                   <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
                     {item.products?.images && item.products.images.length > 0 ? (
                       <img 
@@ -238,7 +241,7 @@ const AdminOrderDetails = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="animate-bounce-in">
           <CardHeader>
             <CardTitle>Order Actions</CardTitle>
           </CardHeader>
@@ -247,18 +250,21 @@ const AdminOrderDetails = () => {
               <Button 
                 onClick={() => updateOrderStatus('processing')}
                 disabled={order.status === 'processing'}
+                className="hover:scale-105 transition-transform"
               >
                 Mark as Processing
               </Button>
               <Button 
                 onClick={() => updateOrderStatus('shipped')}
                 disabled={order.status === 'shipped'}
+                className="hover:scale-105 transition-transform"
               >
                 Mark as Shipped
               </Button>
               <Button 
                 onClick={() => updateOrderStatus('completed')}
                 disabled={order.status === 'completed'}
+                className="hover:scale-105 transition-transform"
               >
                 Mark as Completed
               </Button>

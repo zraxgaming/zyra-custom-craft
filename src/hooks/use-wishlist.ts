@@ -45,7 +45,9 @@ export const useWishlist = () => {
         name: item.products?.name || '',
         slug: item.products?.slug || '',
         price: item.products?.price || 0,
-        images: Array.isArray(item.products?.images) ? item.products.images : [],
+        images: Array.isArray(item.products?.images) 
+          ? (item.products.images as string[]).filter(img => typeof img === 'string')
+          : [],
         rating: item.products?.rating,
         review_count: item.products?.review_count
       }));

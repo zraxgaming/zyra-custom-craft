@@ -1,221 +1,217 @@
 
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/contexts/AuthContext";
-import AdminLayout from "@/components/admin/AdminLayout";
-import { Search, Eye, Package, Users } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Search, Eye, Package, DollarSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Order } from "@/types/order";
+import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
+import AdminLayout from "@/components/admin/AdminLayout";
 
-const Orders = () => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
+interface Order {
+  id: string;
+  total_amount: number;
+  status: string;
+  payment_status: string;
+  created_at: string;
+  user_id: string;
+  profiles?: {
+    display_name?: string;
+    email?: string;
+    first_name?: string;
+    last_name?: string;
+  };
+}
+
+const AdminOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  React.useEffect(() => {
-    if (!user) {
-      navigate("/auth");
-      toast({
-        title: "Access denied",
-        description: "You need to be logged in to access this page.",
-        variant: "destructive",
-      });
-    }
-  }, [user, navigate, toast]);
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
   const fetchOrders = async () => {
     try {
-      setIsLoading(true);
-      const { data, error } = await supabase
-        .from("orders")
-        .select(`
-          *,
-          profiles (
-            id,
-            email,
-            display_name,
-            first_name,
-            last_name
-          )
-        `)
-        .order("created_at", { ascending: false });
-          
-      if (error) throw error;
-      
-      const typedOrders: Order[] = (data || []).map(order => ({
-        ...order,
-        payment_status: order.payment_status as 'pending' | 'paid' | 'failed' | 'refunded',
-        status: order.status as 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
-      }));
-      
-      setOrders(typedOrders);
-    } catch (error: any) {
-      console.error("Error fetching orders:", error);
+      // Get orders first
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (ordersError) throw ordersError;
+
+      // Get profiles for each order
+      const ordersWithProfiles = await Promise.all(
+        (ordersData || []).map(async (order) => {
+          if (order.user_id) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('display_name, email, first_name, last_name')
+              .eq('id', order.user_id)
+              .single();
+            
+            return { ...order, profiles: profile };
+          }
+          return order;
+        })
+      );
+
+      setOrders(ordersWithProfiles);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
       toast({
-        title: "Error fetching orders",
-        description: error.message,
+        title: "Error",
+        description: "Failed to load orders",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (user) {
-      fetchOrders();
-    }
-  }, [user]);
-
-  const filteredOrders = orders.filter((order) => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      order.id.toLowerCase().includes(searchLower) ||
-      order.profiles?.email?.toLowerCase().includes(searchLower) ||
-      order.profiles?.display_name?.toLowerCase().includes(searchLower)
-    );
-  });
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "delivered": return "bg-green-100 text-green-800";
-      case "shipped": return "bg-blue-100 text-blue-800";
-      case "processing": return "bg-yellow-100 text-yellow-800";
-      case "cancelled": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'processing':
+        return 'bg-blue-100 text-blue-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getPaymentStatusColor = (status: string) => {
-    switch (status) {
-      case "paid": return "bg-green-100 text-green-800";
-      case "failed": return "bg-red-100 text-red-800";
-      case "refunded": return "bg-purple-100 text-purple-800";
-      default: return "bg-yellow-100 text-yellow-800";
+  const getCustomerName = (order: Order) => {
+    if (order.profiles) {
+      const { first_name, last_name, display_name, email } = order.profiles;
+      return `${first_name || ''} ${last_name || ''}`.trim() || display_name || email || 'Unknown Customer';
     }
+    return 'Unknown Customer';
   };
 
-  if (!user) {
+  const filteredOrders = orders.filter(order => {
+    const customerName = getCustomerName(order).toLowerCase();
+    const orderId = order.id.toLowerCase();
+    const search = searchTerm.toLowerCase();
+    
+    return customerName.includes(search) || orderId.includes(search);
+  });
+
+  if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
     <AdminLayout>
-      <div className="p-6 animate-fade-in">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Package className="h-5 w-5 text-primary" />
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold animate-slide-in-left">Orders Management</h1>
+          <div className="flex gap-4 animate-slide-in-right">
+            <Card className="px-4 py-2">
+              <div className="flex items-center gap-2">
+                <Package className="h-4 w-4 text-primary" />
+                <span className="font-medium">{orders.length} Total Orders</span>
+              </div>
+            </Card>
+            <Card className="px-4 py-2">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-green-500" />
+                <span className="font-medium">
+                  ${orders.reduce((sum, order) => sum + order.total_amount, 0).toFixed(2)}
+                </span>
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        <Card className="animate-slide-in-up">
+          <CardHeader>
+            <CardTitle>Search Orders</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search orders by customer name or order ID..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
-            <h1 className="text-3xl font-bold">Orders</h1>
-          </div>
-        </div>
-        
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search orders by ID, customer email, or name..."
-            className="pl-10"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        
-        {isLoading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          </div>
-        ) : filteredOrders.length === 0 ? (
-          <div className="bg-muted rounded-lg p-12 text-center animate-scale-in">
-            <h3 className="text-xl font-medium mb-2">No orders found</h3>
-            <p className="text-muted-foreground">
-              {searchTerm ? "Try adjusting your search terms." : "No orders have been placed yet."}
-            </p>
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow overflow-hidden animate-slide-in-right">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order ID</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Payment Status</TableHead>
-                  <TableHead>Order Status</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredOrders.map((order) => (
-                  <TableRow key={order.id} className="hover:bg-muted/50 transition-colors">
-                    <TableCell className="font-medium">
-                      #{order.id.slice(-8)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <div className="font-medium">
-                            {order.profiles?.display_name || 
-                             `${order.profiles?.first_name || ''} ${order.profiles?.last_name || ''}`.trim() || 
-                             'Unknown Customer'}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {order.profiles?.email}
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      ${order.total_amount}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getPaymentStatusColor(order.payment_status)}>
-                        {order.payment_status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-4">
+          {filteredOrders.map((order, index) => (
+            <Card key={order.id} className="animate-slide-in-up hover:shadow-lg transition-all duration-300" style={{animationDelay: `${index * 50}ms`}}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-4">
+                      <h3 className="font-semibold text-lg">Order #{order.id.slice(-8)}</h3>
                       <Badge className={getStatusColor(order.status)}>
                         {order.status}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(order.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="hover:scale-110 transition-transform"
-                          onClick={() => navigate(`/admin/orders/${order.id}`)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+                      <Badge className={getStatusColor(order.payment_status)}>
+                        Payment: {order.payment_status}
+                      </Badge>
+                    </div>
+                    <p className="text-muted-foreground">
+                      Customer: {getCustomerName(order)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Date: {new Date(order.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-primary">
+                        ${order.total_amount.toFixed(2)}
+                      </p>
+                    </div>
+                    
+                    <Button asChild className="hover:scale-105 transition-transform">
+                      <Link to={`/admin/orders/${order.id}`}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Details
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+          
+          {filteredOrders.length === 0 && (
+            <Card className="animate-fade-in">
+              <CardContent className="text-center py-8">
+                <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Orders Found</h3>
+                <p className="text-muted-foreground">
+                  {searchTerm ? "No orders match your search." : "Orders will appear here once customers start purchasing."}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
     </AdminLayout>
   );
 };
 
-export default Orders;
+export default AdminOrders;
