@@ -34,3 +34,8 @@ export interface Product {
   created_at?: string;
   updated_at?: string;
 }
+
+// Export a type that ensures images is always defined for components that require it
+export interface ProductWithImages extends Product {
+  images: string[];
+}
