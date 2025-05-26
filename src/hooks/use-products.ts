@@ -28,6 +28,7 @@ export interface Product {
   is_digital: boolean;
   sku?: string;
   barcode?: string;
+  stock_status?: string;
 }
 
 export const useProducts = () => {
@@ -43,7 +44,6 @@ export const useProducts = () => {
             slug
           )
         `)
-        .eq("status", "published")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -62,7 +62,9 @@ export const useProducts = () => {
         is_customizable: product.is_customizable || false,
         is_digital: product.is_digital || false,
         description: product.description || "",
-        slug: product.slug || product.id
+        slug: product.slug || product.id,
+        in_stock: product.stock_quantity > 0 && product.stock_status !== 'out_of_stock',
+        stock_status: product.stock_quantity <= 0 ? 'out_of_stock' : (product.stock_status || 'in_stock')
       })) as Product[];
     },
   });

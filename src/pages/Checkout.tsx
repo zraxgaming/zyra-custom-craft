@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/components/cart/CartProvider";
@@ -34,13 +34,19 @@ const Checkout = () => {
     deliveryType: 'standard'
   });
 
-  if (!user) {
-    navigate('/auth');
-    return null;
-  }
+  useEffect(() => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
 
-  if (items.length === 0) {
-    navigate('/shop');
+    if (items.length === 0) {
+      navigate('/shop');
+      return;
+    }
+  }, [user, items, navigate]);
+
+  if (!user || items.length === 0) {
     return null;
   }
 
@@ -60,6 +66,25 @@ const Checkout = () => {
     setIsSubmitting(true);
 
     try {
+      // Check stock availability before processing order
+      const stockChecks = await Promise.all(
+        items.map(async (item) => {
+          const { data: product, error } = await supabase
+            .from('products')
+            .select('stock_quantity, name')
+            .eq('id', item.productId)
+            .single();
+
+          if (error) throw error;
+          
+          if (product.stock_quantity < item.quantity) {
+            throw new Error(`Insufficient stock for ${product.name}. Available: ${product.stock_quantity}, Requested: ${item.quantity}`);
+          }
+          
+          return { productId: item.productId, availableStock: product.stock_quantity };
+        })
+      );
+
       // Create order
       const { data: order, error: orderError } = await supabase
         .from('orders')
@@ -110,6 +135,25 @@ const Checkout = () => {
 
       if (itemsError) throw itemsError;
 
+      // Update stock quantities
+      await Promise.all(
+        items.map(async (item) => {
+          const stockCheck = stockChecks.find(check => check.productId === item.productId);
+          const newStockQuantity = stockCheck!.availableStock - item.quantity;
+          
+          const { error: stockError } = await supabase
+            .from('products')
+            .update({ 
+              stock_quantity: newStockQuantity,
+              stock_status: newStockQuantity <= 0 ? 'out_of_stock' : 'in_stock',
+              in_stock: newStockQuantity > 0
+            })
+            .eq('id', item.productId);
+
+          if (stockError) throw stockError;
+        })
+      );
+
       // Clear cart and redirect
       clearCart();
       toast({
@@ -122,7 +166,7 @@ const Checkout = () => {
       console.error('Error placing order:', error);
       toast({
         title: "Error",
-        description: "Failed to place order. Please try again.",
+        description: error.message || "Failed to place order. Please try again.",
         variant: "destructive",
       });
     } finally {

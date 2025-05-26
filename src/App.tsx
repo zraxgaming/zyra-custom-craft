@@ -58,8 +58,7 @@ import { WishlistProvider } from "./components/wishlist/WishlistProvider";
 // Components
 import { usePageTracking } from "./hooks/usePageTracking";
 import PWAInstallPrompt from "./components/pwa/PWAInstallPrompt";
-import PWANotifications from "./components/pwa/PWANotifications";
-import PushNotificationManager from "./components/pwa/PushNotificationManager";
+import SimplePWANotifications from "./components/pwa/SimplePWANotifications";
 import ServiceWorkerUpdater from "./components/pwa/ServiceWorkerUpdater";
 import NetworkStatus from "./components/pwa/NetworkStatus";
 import SEOHead from "./components/seo/SEOHead";
@@ -125,8 +124,7 @@ function AppContent() {
       
       {/* PWA Components */}
       <PWAInstallPrompt />
-      <PWANotifications />
-      <PushNotificationManager />
+      <SimplePWANotifications />
       <ServiceWorkerUpdater />
       <NetworkStatus />
       

@@ -14,6 +14,7 @@ interface Product {
   slug: string;
   in_stock?: boolean;
   stock_status?: string;
+  stock_quantity?: number;
 }
 
 interface AddToCartButtonProps {
@@ -56,6 +57,16 @@ export const AddToCartButton: React.FC<AddToCartButtonProps> = ({
       return;
     }
 
+    // Check stock before adding
+    if (!product.in_stock || product.stock_status === 'out_of_stock' || (product.stock_quantity && product.stock_quantity < quantity)) {
+      toast({
+        title: "Out of Stock",
+        description: "This item is currently out of stock.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsAdding(true);
     
     try {
@@ -84,7 +95,7 @@ export const AddToCartButton: React.FC<AddToCartButtonProps> = ({
     }
   };
 
-  const isOutOfStock = product.in_stock === false || product.stock_status === 'out_of_stock';
+  const isOutOfStock = !product.in_stock || product.stock_status === 'out_of_stock' || (product.stock_quantity !== undefined && product.stock_quantity <= 0);
 
   return (
     <Button

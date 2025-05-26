@@ -18,6 +18,8 @@ interface Product {
   discount_percentage?: number;
   in_stock: boolean;
   slug: string;
+  stock_quantity?: number;
+  stock_status?: string;
 }
 
 interface ProductCardProps {
@@ -28,6 +30,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const discountedPrice = product.discount_percentage 
     ? product.price * (1 - product.discount_percentage / 100)
     : product.price;
+
+  const isOutOfStock = !product.in_stock || product.stock_status === 'out_of_stock' || (product.stock_quantity !== undefined && product.stock_quantity <= 0);
 
   return (
     <Card className="group hover:shadow-lg transition-all duration-300 overflow-hidden hover:scale-[1.02] animate-fade-in">
@@ -50,8 +54,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           {product.discount_percentage && product.discount_percentage > 0 && (
             <Badge variant="destructive" className="animate-bounce">-{product.discount_percentage}%</Badge>
           )}
-          {!product.in_stock && (
+          {isOutOfStock && (
             <Badge variant="secondary">Out of Stock</Badge>
+          )}
+          {product.stock_quantity !== undefined && product.stock_quantity <= 5 && product.stock_quantity > 0 && (
+            <Badge variant="outline" className="bg-orange-500 text-white">Only {product.stock_quantity} left</Badge>
           )}
         </div>
 
@@ -106,6 +113,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             </span>
           )}
         </div>
+
+        {/* Stock Info */}
+        {product.stock_quantity !== undefined && (
+          <div className="text-sm text-muted-foreground mb-2">
+            {isOutOfStock ? (
+              <span className="text-red-500 font-medium">Out of Stock</span>
+            ) : (
+              <span className="text-green-600">
+                {product.stock_quantity} in stock
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Add to Cart Button */}
         <AddToCartButton 
