@@ -1,434 +1,178 @@
 
-import React, { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import React, { useState } from "react";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import { Container } from "@/components/ui/container";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Grid, List, Star, ShoppingCart, Heart } from "lucide-react";
-import { useCart } from "@/components/cart/CartProvider";
-import { useWishlist } from "@/hooks/use-wishlist";
-import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, Filter, Grid, List, Sparkles } from "lucide-react";
 import SEOHead from "@/components/seo/SEOHead";
-
-interface Product {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  price: number;
-  images: string[];
-  category: string;
-  in_stock: boolean;
-  featured: boolean;
-  is_new: boolean;
-  rating: number;
-  review_count: number;
-  stock_quantity: number;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-}
+import { Badge } from "@/components/ui/badge";
+import ProductGrid from "@/components/shop/ProductGrid";
+import ProductFilters from "@/components/shop/ProductFilters";
+import { useProducts } from "@/hooks/use-products";
+import { useCategories } from "@/hooks/use-categories";
 
 const Shop = () => {
+  const { data: products = [], isLoading: productsLoading } = useProducts();
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [priceRange, setPriceRange] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [sortBy, setSortBy] = useState("featured");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12;
+  const [showFilters, setShowFilters] = useState(false);
 
-  const { addItem } = useCart();
-  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
-  const { toast } = useToast();
-
-  // Fetch products from Supabase
-  const { data: products = [], isLoading: productsLoading } = useQuery({
-    queryKey: ['products'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('status', 'published');
-      
-      if (error) throw error;
-      return data as Product[];
-    }
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = !selectedCategory || product.category === selectedCategory;
+    return matchesSearch && matchesCategory;
   });
 
-  // Fetch categories from Supabase
-  const { data: categories = [] } = useQuery({
-    queryKey: ['categories'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order');
-      
-      if (error) throw error;
-      return data as Category[];
-    }
-  });
-
-  // Filter and sort products
-  const filteredProducts = useMemo(() => {
-    let filtered = products.filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          product.description?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesCategory = selectedCategory === "all" || product.category === selectedCategory;
-      
-      const matchesPrice = (() => {
-        switch (priceRange) {
-          case "under-25": return product.price < 25;
-          case "25-50": return product.price >= 25 && product.price <= 50;
-          case "50-100": return product.price >= 50 && product.price <= 100;
-          case "over-100": return product.price > 100;
-          default: return true;
-        }
-      })();
-
-      return matchesSearch && matchesCategory && matchesPrice;
-    });
-
-    // Sort products
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
     switch (sortBy) {
       case "price-low":
-        return filtered.sort((a, b) => a.price - b.price);
+        return a.price - b.price;
       case "price-high":
-        return filtered.sort((a, b) => b.price - a.price);
-      case "name":
-        return filtered.sort((a, b) => a.name.localeCompare(b.name));
+        return b.price - a.price;
       case "rating":
-        return filtered.sort((a, b) => b.rating - a.rating);
+        return (b.rating || 0) - (a.rating || 0);
       case "newest":
-        return filtered.sort((a, b) => (b.is_new ? 1 : 0) - (a.is_new ? 1 : 0));
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      case "name":
+        return a.name.localeCompare(b.name);
       default:
-        return filtered.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+        return 0;
     }
-  }, [products, searchTerm, selectedCategory, priceRange, sortBy]);
+  });
 
-  // Pagination
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  const paginatedProducts = filteredProducts.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  const handleAddToCart = (product: Product) => {
-    addItem({
-      productId: product.id,
-      name: product.name,
-      price: product.price,
-      quantity: 1,
-      image: product.images[0],
-    });
-    
-    toast({
-      title: "Added to cart",
-      description: `${product.name} has been added to your cart.`,
-    });
-  };
-
-  const handleWishlistToggle = (product: Product) => {
-    if (isInWishlist(product.id)) {
-      removeFromWishlist(product.id);
-      toast({
-        title: "Removed from wishlist",
-        description: `${product.name} has been removed from your wishlist.`,
-      });
-    } else {
-      addToWishlist(product);
-      toast({
-        title: "Added to wishlist",
-        description: `${product.name} has been added to your wishlist.`,
-      });
-    }
-  };
-
-  if (productsLoading) {
-    return (
-      <div className="container py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="animate-pulse">
-              <div className="bg-gray-200 aspect-square rounded-lg mb-4"></div>
-              <div className="h-4 bg-gray-200 rounded mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const isLoading = productsLoading || categoriesLoading;
 
   return (
     <>
       <SEOHead 
-        title="Shop - Browse Our Products"
-        description="Discover our wide range of high-quality products. Filter by category, price, and more to find exactly what you're looking for."
-        keywords="shop, products, online store, ecommerce"
+        title="Shop - Zyra"
+        description="Discover our premium collection of customizable products. Shop the latest designs and create something unique."
+        url="https://zyra.lovable.app/shop"
       />
+      <Navbar />
       
-      <div className="container py-8 animate-fade-in">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-4 animate-slide-in-right">Shop</h1>
-          <p className="text-muted-foreground text-lg">
-            Discover our amazing collection of products
-          </p>
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-purple-500/10 relative overflow-hidden">
+        {/* Animated Background */}
+        <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.05] pointer-events-none">
+          <div className="absolute top-20 left-20 w-96 h-96 bg-gradient-to-br from-primary to-purple-500 rounded-full blur-3xl animate-float"></div>
+          <div className="absolute bottom-40 right-10 w-80 h-80 bg-gradient-to-br from-pink-500 to-orange-500 rounded-full blur-3xl animate-float-reverse"></div>
         </div>
 
-        {/* Filters and Search */}
-        <div className="mb-8 space-y-4 lg:space-y-0 lg:flex lg:items-center lg:gap-4 animate-scale-in">
-          {/* Search */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search products..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+        {/* Hero Section */}
+        <section className="relative py-16 overflow-hidden">
+          <Container className="relative z-10">
+            <div className="text-center mb-12 animate-fade-in">
+              <Badge className="mb-6 bg-gradient-to-r from-primary to-purple-600 hover:scale-110 transition-transform duration-300 text-lg px-6 py-3" variant="outline">
+                <Sparkles className="h-5 w-5 mr-3" />
+                Premium Collection
+              </Badge>
+              <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent animate-scale-in">
+                Shop Collection
+              </h1>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto animate-slide-in-right">
+                Discover our curated selection of premium products. Customize, personalize, and make it yours.
+              </p>
+            </div>
+          </Container>
+        </section>
 
-          {/* Category Filter */}
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-full lg:w-48">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.slug}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Search and Filters */}
+        <Container className="py-8 relative z-10">
+          <div className="flex flex-col lg:flex-row gap-6 mb-8 animate-fade-in">
+            {/* Search */}
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search products..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 hover:scale-105 transition-transform duration-200"
+                />
+              </div>
+            </div>
 
-          {/* Price Filter */}
-          <Select value={priceRange} onValueChange={setPriceRange}>
-            <SelectTrigger className="w-full lg:w-48">
-              <SelectValue placeholder="Price Range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Prices</SelectItem>
-              <SelectItem value="under-25">Under $25</SelectItem>
-              <SelectItem value="25-50">$25 - $50</SelectItem>
-              <SelectItem value="50-100">$50 - $100</SelectItem>
-              <SelectItem value="over-100">Over $100</SelectItem>
-            </SelectContent>
-          </Select>
+            {/* Category Filter */}
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-full lg:w-48 hover:scale-105 transition-transform duration-200">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Categories</SelectItem>
+                {categories.map(category => (
+                  <SelectItem key={category.id} value={category.name}>{category.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          {/* Sort */}
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-full lg:w-48">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="featured">Featured</SelectItem>
-              <SelectItem value="newest">Newest</SelectItem>
-              <SelectItem value="price-low">Price: Low to High</SelectItem>
-              <SelectItem value="price-high">Price: High to Low</SelectItem>
-              <SelectItem value="name">Name A-Z</SelectItem>
-              <SelectItem value="rating">Highest Rated</SelectItem>
-            </SelectContent>
-          </Select>
+            {/* Sort */}
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-full lg:w-48 hover:scale-105 transition-transform duration-200">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="featured">Featured</SelectItem>
+                <SelectItem value="price-low">Price: Low to High</SelectItem>
+                <SelectItem value="price-high">Price: High to Low</SelectItem>
+                <SelectItem value="rating">Highest Rated</SelectItem>
+                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="name">Name A-Z</SelectItem>
+              </SelectContent>
+            </Select>
 
-          {/* View Mode */}
-          <div className="flex">
-            <Button
-              variant={viewMode === "grid" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("grid")}
-              className="rounded-r-none hover:scale-105 transition-transform"
-            >
-              <Grid className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === "list" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("list")}
-              className="rounded-l-none hover:scale-105 transition-transform"
-            >
-              <List className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Results */}
-        <div className="mb-6 flex justify-between items-center">
-          <p className="text-muted-foreground">
-            Showing {paginatedProducts.length} of {filteredProducts.length} products
-          </p>
-        </div>
-
-        {/* Products Grid/List */}
-        {paginatedProducts.length > 0 ? (
-          <div className={`grid gap-6 mb-8 ${
-            viewMode === "grid" 
-              ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
-              : "grid-cols-1"
-          }`}>
-            {paginatedProducts.map((product, index) => (
-              <Card 
-                key={product.id} 
-                className={`group overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1 animate-fade-in ${
-                  viewMode === "list" ? "flex" : ""
-                }`}
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className={`relative ${viewMode === "list" ? "w-48 flex-shrink-0" : "aspect-square"}`}>
-                  {product.images && product.images.length > 0 ? (
-                    <img
-                      src={product.images[0]}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                      <span className="text-gray-400">No image</span>
-                    </div>
-                  )}
-                  
-                  {/* Badges */}
-                  <div className="absolute top-2 left-2 flex flex-col gap-1">
-                    {product.is_new && (
-                      <Badge className="bg-green-500 hover:bg-green-600 animate-pulse">
-                        New
-                      </Badge>
-                    )}
-                    {product.featured && (
-                      <Badge className="bg-purple-500 hover:bg-purple-600">
-                        Featured
-                      </Badge>
-                    )}
-                    {!product.in_stock && (
-                      <Badge variant="destructive">
-                        Out of Stock
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Wishlist Button */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-2 right-2 bg-white/80 hover:bg-white hover:scale-110 transition-all"
-                    onClick={() => handleWishlistToggle(product)}
-                  >
-                    <Heart 
-                      className={`h-4 w-4 ${
-                        isInWishlist(product.id) ? "fill-red-500 text-red-500" : ""
-                      }`} 
-                    />
-                  </Button>
-                </div>
-
-                <CardContent className={`p-4 flex-1 ${viewMode === "list" ? "flex flex-col justify-between" : ""}`}>
-                  <div className="space-y-2">
-                    <h3 className="font-semibold line-clamp-2 group-hover:text-primary transition-colors">
-                      {product.name}
-                    </h3>
-                    
-                    {viewMode === "list" && product.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-3">
-                        {product.description}
-                      </p>
-                    )}
-                    
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-4 w-4 ${
-                              i < Math.floor(product.rating)
-                                ? "fill-yellow-400 text-yellow-400"
-                                : "text-gray-300"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        ({product.review_count})
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <p className="text-xl font-bold text-primary">
-                        ${product.price.toFixed(2)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {product.stock_quantity} in stock
-                      </p>
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={() => handleAddToCart(product)}
-                    disabled={!product.in_stock}
-                    className="w-full mt-4 hover:scale-105 transition-transform"
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    {product.in_stock ? "Add to Cart" : "Out of Stock"}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12 animate-fade-in">
-            <div className="text-6xl mb-4">🛍️</div>
-            <h3 className="text-xl font-semibold mb-2">No products found</h3>
-            <p className="text-muted-foreground">
-              Try adjusting your search or filter criteria
-            </p>
-          </div>
-        )}
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-center gap-2 animate-fade-in">
-            <Button
-              variant="outline"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(currentPage - 1)}
-              className="hover:scale-105 transition-transform"
-            >
-              Previous
-            </Button>
-            
-            {[...Array(totalPages)].map((_, i) => (
+            {/* View Mode Toggle */}
+            <div className="flex gap-2">
               <Button
-                key={i}
-                variant={currentPage === i + 1 ? "default" : "outline"}
-                onClick={() => setCurrentPage(i + 1)}
-                className="hover:scale-105 transition-transform"
+                variant={viewMode === "grid" ? "default" : "outline"}
+                size="icon"
+                onClick={() => setViewMode("grid")}
+                className="hover:scale-110 transition-transform duration-200"
               >
-                {i + 1}
+                <Grid className="h-4 w-4" />
               </Button>
-            ))}
-            
+              <Button
+                variant={viewMode === "list" ? "default" : "outline"}
+                size="icon"
+                onClick={() => setViewMode("list")}
+                className="hover:scale-110 transition-transform duration-200"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Filters Toggle */}
             <Button
               variant="outline"
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(currentPage + 1)}
-              className="hover:scale-105 transition-transform"
+              onClick={() => setShowFilters(!showFilters)}
+              className="lg:hidden hover:scale-110 transition-transform duration-200"
             >
-              Next
+              <Filter className="h-4 w-4 mr-2" />
+              Filters
             </Button>
           </div>
-        )}
+
+          <div className="flex gap-8">
+            {/* Sidebar Filters */}
+            <div className={`${showFilters ? 'block' : 'hidden'} lg:block w-full lg:w-64 animate-slide-in-left`}>
+              <ProductFilters />
+            </div>
+
+            {/* Products Grid */}
+            <div className="flex-1 animate-fade-in">
+              <ProductGrid products={sortedProducts} isLoading={isLoading} />
+            </div>
+          </div>
+        </Container>
       </div>
+      
+      <Footer />
     </>
   );
 };

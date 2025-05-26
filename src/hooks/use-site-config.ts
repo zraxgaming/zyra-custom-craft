@@ -18,6 +18,11 @@ export interface SiteConfig {
   newsletter_enabled: boolean;
   abandoned_cart_enabled: boolean;
   brevo_api_key?: string;
+  vapid_public_key?: string;
+  vapid_private_key?: string;
+  notifications_enabled?: boolean;
+  ziina_api_key?: string;
+  paypal_client_id?: string;
 }
 
 const defaultConfig: SiteConfig = {
