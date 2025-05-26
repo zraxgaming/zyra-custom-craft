@@ -43,11 +43,12 @@ const AdminOrderDetails = () => {
         .from('order_items')
         .select(`
           id,
+          order_id,
+          product_id,
           quantity,
           price,
           customization,
-          product_id,
-          products!inner (
+          product:products!order_items_product_id_fkey (
             id,
             name,
             images
@@ -70,15 +71,16 @@ const AdminOrderDetails = () => {
 
       const transformedItems = (itemsData || []).map(item => ({
         id: item.id,
+        order_id: item.order_id,
         product_id: item.product_id,
         quantity: item.quantity,
         price: item.price,
         customization: item.customization,
         product: {
-          id: item.products.id,
-          name: item.products.name,
-          images: Array.isArray(item.products.images) 
-            ? item.products.images.filter(img => typeof img === 'string') 
+          id: item.product?.id || '',
+          name: item.product?.name || 'Unknown Product',
+          images: Array.isArray(item.product?.images) 
+            ? item.product.images.filter(img => typeof img === 'string') 
             : []
         }
       }));
