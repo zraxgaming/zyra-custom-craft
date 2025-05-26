@@ -1,59 +1,35 @@
 
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { ArrowLeft, Package, DollarSign, User, MapPin, Edit, Save, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "@/components/admin/AdminLayout";
-
-interface OrderDetails {
-  id: string;
-  status: string;
-  payment_status: string;
-  total_amount: number;
-  created_at: string;
-  shipping_address: any;
-  billing_address: any;
-  user_id: string;
-  payment_method: string;
-  tracking_number?: string;
-  notes?: string;
-  profiles?: {
-    id: string;
-    email?: string;
-    display_name?: string;
-    first_name?: string;
-    last_name?: string;
-  };
-  order_items?: Array<{
-    id: string;
-    product_id: string;
-    quantity: number;
-    price: number;
-    customization?: any;
-    products?: {
-      id: string;
-      name: string;
-      images: string[];
-    };
-  }>;
-}
+import OrderSummary from "@/components/admin/order/OrderSummary";
+import PaymentInfo from "@/components/admin/order/PaymentInfo";
+import { OrderDetail } from "@/types/order";
 
 const AdminOrderDetails = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
-  const [order, setOrder] = useState<OrderDetails | null>(null);
+  const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
-    fetchOrderDetails();
+    if (id) {
+      fetchOrderDetails();
+    }
   }, [id]);
 
   const fetchOrderDetails = async () => {
     try {
-      // First get the order
+      // Fetch order details
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select('*')
@@ -62,28 +38,16 @@ const AdminOrderDetails = () => {
 
       if (orderError) throw orderError;
 
-      // Get profile data separately
-      let profileData = null;
-      if (orderData.user_id) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id, email, display_name, first_name, last_name')
-          .eq('id', orderData.user_id)
-          .single();
-        
-        profileData = profile;
-      }
-
-      // Get order items with products
-      const { data: orderItems } = await supabase
+      // Fetch order items with product details
+      const { data: itemsData, error: itemsError } = await supabase
         .from('order_items')
         .select(`
           id,
-          product_id,
           quantity,
           price,
           customization,
-          products (
+          product_id,
+          products!inner (
             id,
             name,
             images
@@ -91,14 +55,40 @@ const AdminOrderDetails = () => {
         `)
         .eq('order_id', id);
 
-      const transformedOrder: OrderDetails = {
+      if (itemsError) throw itemsError;
+
+      // Fetch profile information
+      let profileData = null;
+      if (orderData.user_id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('display_name, email, first_name, last_name')
+          .eq('id', orderData.user_id)
+          .single();
+        profileData = profile;
+      }
+
+      const transformedItems = (itemsData || []).map(item => ({
+        id: item.id,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        price: item.price,
+        customization: item.customization,
+        product: {
+          id: item.products.id,
+          name: item.products.name,
+          images: Array.isArray(item.products.images) 
+            ? item.products.images.filter(img => typeof img === 'string') 
+            : []
+        }
+      }));
+
+      setOrder({
         ...orderData,
-        profiles: profileData,
-        order_items: orderItems || []
-      };
-      
-      setOrder(transformedOrder);
-    } catch (error: any) {
+        order_items: transformedItems,
+        profiles: profileData
+      });
+    } catch (error) {
       console.error('Error fetching order details:', error);
       toast({
         title: "Error",
@@ -110,26 +100,31 @@ const AdminOrderDetails = () => {
     }
   };
 
-  const updateOrderStatus = async (newStatus: string) => {
+  const updateOrder = async (field: string, value: string) => {
+    if (!order) return;
+
+    setIsUpdating(true);
     try {
       const { error } = await supabase
         .from('orders')
-        .update({ status: newStatus })
-        .eq('id', id);
+        .update({ [field]: value })
+        .eq('id', order.id);
 
       if (error) throw error;
 
-      setOrder(prev => prev ? { ...prev, status: newStatus } : null);
+      setOrder({ ...order, [field]: value });
       toast({
         title: "Success",
-        description: "Order status updated successfully",
+        description: "Order updated successfully",
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to update order status",
+        description: "Failed to update order",
         variant: "destructive",
       });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -146,131 +141,121 @@ const AdminOrderDetails = () => {
   if (!order) {
     return (
       <AdminLayout>
-        <div className="text-center py-8">
+        <div className="text-center py-12">
           <h2 className="text-2xl font-bold mb-4">Order not found</h2>
-          <p className="text-muted-foreground">The requested order could not be found.</p>
+          <Button onClick={() => navigate('/admin/orders')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Orders
+          </Button>
         </div>
       </AdminLayout>
     );
   }
 
-  const customer = order.profiles;
-  const customerName = customer 
-    ? `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || customer.display_name || customer.email
-    : 'Unknown Customer';
-
   return (
     <AdminLayout>
       <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Order #{order.id.slice(-8)}</h1>
-          <div className="flex gap-2">
-            <Badge variant={order.status === 'completed' ? 'default' : 'secondary'}>
-              {order.status}
-            </Badge>
-            <Badge variant={order.payment_status === 'paid' ? 'default' : 'destructive'}>
-              {order.payment_status}
-            </Badge>
+        <div className="flex items-center gap-4 animate-slide-in-left">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/admin/orders')}
+            className="hover:scale-105 transition-transform"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Orders
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Order Details</h1>
+            <p className="text-muted-foreground">
+              Order #{order.id.slice(-8)} • {new Date(order.created_at).toLocaleDateString()}
+            </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="animate-slide-in-left">
-            <CardHeader>
-              <CardTitle>Customer Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p><strong>Name:</strong> {customerName}</p>
-              <p><strong>Email:</strong> {customer?.email || 'N/A'}</p>
-              <p><strong>Order Date:</strong> {new Date(order.created_at).toLocaleDateString()}</p>
-              <p><strong>Payment Method:</strong> {order.payment_method || 'N/A'}</p>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Order Details */}
+          <div className="lg:col-span-2 space-y-6">
+            <OrderSummary order={order} />
+          </div>
 
-          <Card className="animate-slide-in-right">
-            <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p><strong>Total:</strong> ${order.total_amount.toFixed(2)}</p>
-              <p><strong>Status:</strong> {order.status}</p>
-              <p><strong>Payment Status:</strong> {order.payment_status}</p>
-              {order.tracking_number && (
-                <p><strong>Tracking:</strong> {order.tracking_number}</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="animate-fade-in-up">
-          <CardHeader>
-            <CardTitle>Order Items</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {order.order_items?.map((item, index) => (
-                <div key={item.id} className="flex items-center space-x-4 p-4 border rounded-lg animate-slide-in-up" style={{animationDelay: `${index * 100}ms`}}>
-                  <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
-                    {item.products?.images && item.products.images.length > 0 ? (
-                      <img 
-                        src={item.products.images[0]} 
-                        alt={item.products.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-200"></div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium">{item.products?.name || 'Product'}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Quantity: {item.quantity} × ${item.price.toFixed(2)}
+          {/* Right Column - Customer & Payment Info */}
+          <div className="space-y-6">
+            {/* Customer Information */}
+            <Card className="animate-slide-in-right">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Customer Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium">Name</h4>
+                    <p className="text-muted-foreground">
+                      {order.profiles 
+                        ? `${order.profiles.first_name || ''} ${order.profiles.last_name || ''}`.trim() 
+                          || order.profiles.display_name 
+                          || order.profiles.email
+                        : 'Unknown Customer'
+                      }
                     </p>
-                    {item.customization && (
-                      <p className="text-xs text-muted-foreground">
-                        Customized
-                      </p>
-                    )}
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">${(item.quantity * item.price).toFixed(2)}</p>
+                  
+                  {order.profiles?.email && (
+                    <div>
+                      <h4 className="text-sm font-medium">Email</h4>
+                      <p className="text-muted-foreground">{order.profiles.email}</p>
+                    </div>
+                  )}
+                  
+                  <div>
+                    <h4 className="text-sm font-medium">User ID</h4>
+                    <p className="text-xs text-muted-foreground font-mono">
+                      {order.user_id || 'Guest'}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
 
-        <Card className="animate-bounce-in">
-          <CardHeader>
-            <CardTitle>Order Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2">
-              <Button 
-                onClick={() => updateOrderStatus('processing')}
-                disabled={order.status === 'processing'}
-                className="hover:scale-105 transition-transform"
-              >
-                Mark as Processing
-              </Button>
-              <Button 
-                onClick={() => updateOrderStatus('shipped')}
-                disabled={order.status === 'shipped'}
-                className="hover:scale-105 transition-transform"
-              >
-                Mark as Shipped
-              </Button>
-              <Button 
-                onClick={() => updateOrderStatus('completed')}
-                disabled={order.status === 'completed'}
-                className="hover:scale-105 transition-transform"
-              >
-                Mark as Completed
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+            {/* Payment Information */}
+            <Card className="animate-slide-in-right" style={{animationDelay: '200ms'}}>
+              <PaymentInfo 
+                order={order}
+                isUpdating={isUpdating}
+                updateOrder={updateOrder}
+              />
+            </Card>
+
+            {/* Shipping Address */}
+            {order.shipping_address && (
+              <Card className="animate-slide-in-right" style={{animationDelay: '400ms'}}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5" />
+                    Shipping Address
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm text-muted-foreground">
+                    {typeof order.shipping_address === 'object' ? (
+                      <div className="space-y-1">
+                        <p>{order.shipping_address.firstName} {order.shipping_address.lastName}</p>
+                        <p>{order.shipping_address.address}</p>
+                        <p>{order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.zipCode}</p>
+                        <p>{order.shipping_address.country}</p>
+                        {order.shipping_address.phone && <p>Phone: {order.shipping_address.phone}</p>}
+                      </div>
+                    ) : (
+                      <p>{order.shipping_address}</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
       </div>
     </AdminLayout>
   );

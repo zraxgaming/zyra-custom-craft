@@ -7,24 +7,16 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  stock_quantity: number;
-  status: string;
-  category: string;
-  images: string[];
-  created_at: string;
-}
+import { Product } from "@/types/product";
 
 const AdminProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchProducts();
@@ -38,7 +30,19 @@ const AdminProducts = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setProducts(data || []);
+
+      // Transform the data to match our Product interface
+      const transformedProducts: Product[] = (data || []).map(product => ({
+        ...product,
+        images: Array.isArray(product.images) 
+          ? product.images.filter(img => typeof img === 'string') as string[]
+          : [],
+        is_featured: product.is_featured || false,
+        is_customizable: product.is_customizable || false,
+        stock_quantity: product.stock_quantity || 0
+      }));
+
+      setProducts(transformedProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast({
@@ -52,6 +56,8 @@ const AdminProducts = () => {
   };
 
   const deleteProduct = async (productId: string) => {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+
     try {
       const { error } = await supabase
         .from('products')
@@ -94,7 +100,10 @@ const AdminProducts = () => {
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold animate-slide-in-left">Products Management</h1>
-          <Button className="animate-slide-in-right hover:scale-105 transition-transform">
+          <Button 
+            className="animate-slide-in-right hover:scale-105 transition-transform"
+            onClick={() => navigate('/admin/products/new')}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Add Product
           </Button>
@@ -154,16 +163,26 @@ const AdminProducts = () => {
                     <div className="text-right">
                       <p className="text-2xl font-bold text-primary">${product.price.toFixed(2)}</p>
                       <p className="text-sm text-muted-foreground">
-                        Added {new Date(product.created_at).toLocaleDateString()}
+                        Added {new Date(product.created_at || '').toLocaleDateString()}
                       </p>
                     </div>
                     
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="hover:scale-105 transition-transform">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="hover:scale-105 transition-transform"
+                        onClick={() => navigate(`/product/${product.slug}`)}
+                      >
                         <Eye className="h-4 w-4 mr-2" />
                         View
                       </Button>
-                      <Button variant="outline" size="sm" className="hover:scale-105 transition-transform">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="hover:scale-105 transition-transform"
+                        onClick={() => navigate(`/admin/products/${product.id}/edit`)}
+                      >
                         <Edit className="h-4 w-4 mr-2" />
                         Edit
                       </Button>
@@ -191,7 +210,7 @@ const AdminProducts = () => {
                 <p className="text-muted-foreground mb-4">
                   {searchTerm ? "No products match your search." : "Start by adding your first product."}
                 </p>
-                <Button>
+                <Button onClick={() => navigate('/admin/products/new')}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Product
                 </Button>

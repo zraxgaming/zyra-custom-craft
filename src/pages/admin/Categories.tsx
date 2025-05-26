@@ -1,177 +1,250 @@
 
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useAuth } from "@/hooks/use-auth";
-import AdminLayout from "@/components/admin/AdminLayout";
-import { Plus, Search, Edit, Trash, Eye } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Search, Edit, Trash2, Eye, FolderOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useCategories } from "@/hooks/use-categories";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import CategoryForm from "@/components/admin/CategoryForm";
+import { useToast } from "@/hooks/use-toast";
+import AdminLayout from "@/components/admin/AdminLayout";
 
-const Categories = () => {
-  const { isAdmin, isLoading } = useAuth();
-  const navigate = useNavigate();
-  const { data: categories = [], refetch } = useCategories();
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  icon?: string;
+  image_url?: string;
+  is_active: boolean;
+  sort_order: number;
+  parent_id?: string;
+  created_at: string;
+}
+
+const AdminCategories = () => {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  React.useEffect(() => {
-    if (!isLoading && !isAdmin) {
-      navigate("/");
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
       toast({
-        title: "Access denied",
-        description: "You don't have permission to access this page.",
+        title: "Error",
+        description: "Failed to load categories",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
-  }, [isAdmin, isLoading, navigate, toast]);
+  };
 
-  const deleteCategory = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this category?")) return;
-    
+  const deleteCategory = async (categoryId: string) => {
+    if (!confirm('Are you sure you want to delete this category?')) return;
+
     try {
       const { error } = await supabase
-        .from("categories")
+        .from('categories')
         .delete()
-        .eq("id", id);
-        
+        .eq('id', categoryId);
+
       if (error) throw error;
-      
-      refetch();
+
+      setCategories(categories.filter(category => category.id !== categoryId));
       toast({
-        title: "Category deleted",
-        description: "The category has been deleted successfully.",
+        title: "Success",
+        description: "Category deleted successfully",
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
-        title: "Error deleting category",
-        description: error.message,
+        title: "Error",
+        description: "Failed to delete category",
         variant: "destructive",
       });
     }
   };
 
-  const filteredCategories = categories.filter((category) => 
-    category.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  const toggleCategoryStatus = async (categoryId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .update({ is_active: !currentStatus })
+        .eq('id', categoryId);
+
+      if (error) throw error;
+
+      setCategories(categories.map(cat => 
+        cat.id === categoryId ? { ...cat, is_active: !currentStatus } : cat
+      ));
+
+      toast({
+        title: "Success",
+        description: `Category ${!currentStatus ? 'activated' : 'deactivated'} successfully`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update category status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const filteredCategories = categories.filter(category =>
+    category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    category.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
     <AdminLayout>
-      <div className="p-6 animate-fade-in">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Categories</h1>
-          <Button onClick={() => setIsAddDialogOpen(true)} className="hover:scale-105 transition-transform">
-            <Plus className="mr-2 h-4 w-4" /> Add Category
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold animate-slide-in-left">Categories Management</h1>
+          <Button className="animate-slide-in-right hover:scale-105 transition-transform">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Category
           </Button>
         </div>
-        
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search categories..."
-            className="pl-10"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        
-        {filteredCategories.length === 0 ? (
-          <div className="bg-muted rounded-lg p-12 text-center animate-scale-in">
-            <h3 className="text-xl font-medium mb-2">No categories found</h3>
-            <p className="text-muted-foreground mb-6">
-              {searchTerm ? "Try a different search term or" : "Start by"} adding a new category.
-            </p>
-            <Button onClick={() => setIsAddDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Add Category
-            </Button>
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow overflow-hidden animate-slide-in-right">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Slug</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Sort Order</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCategories.map((category) => (
-                  <TableRow key={category.id} className="hover:bg-muted/50 transition-colors">
-                    <TableCell className="font-medium">{category.name}</TableCell>
-                    <TableCell>{category.slug}</TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        category.is_active 
-                          ? "bg-green-100 text-green-800" 
-                          : "bg-red-100 text-red-800"
-                      }`}>
-                        {category.is_active ? "Active" : "Inactive"}
-                      </span>
-                    </TableCell>
-                    <TableCell>{category.sort_order}</TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button variant="ghost" size="icon" className="hover:scale-110 transition-transform">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="hover:scale-110 transition-transform">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => deleteCategory(category.id)}
-                          className="hover:scale-110 transition-transform text-red-600 hover:text-red-700"
-                        >
-                          <Trash className="h-4 w-4" />
-                        </Button>
+
+        <Card className="animate-slide-in-up">
+          <CardHeader>
+            <CardTitle>Search Categories</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search categories by name or description..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-6">
+          {filteredCategories.map((category, index) => (
+            <Card key={category.id} className="animate-slide-in-up hover:shadow-lg transition-all duration-300" style={{animationDelay: `${index * 100}ms`}}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                      {category.image_url ? (
+                        <img 
+                          src={category.image_url} 
+                          alt={category.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <FolderOpen className="h-8 w-8 text-gray-400" />
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="font-semibold text-lg">{category.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {category.description || 'No description'}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={category.is_active ? 'default' : 'secondary'}>
+                          {category.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                        <Badge variant="outline">
+                          Sort: {category.sort_order}
+                        </Badge>
+                        {category.icon && (
+                          <span className="text-lg">{category.icon}</span>
+                        )}
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground">
+                        Created {new Date(category.created_at).toLocaleDateString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Slug: {category.slug}
+                      </p>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" className="hover:scale-105 transition-transform">
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
+                      </Button>
+                      <Button variant="outline" size="sm" className="hover:scale-105 transition-transform">
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                      <Button 
+                        variant={category.is_active ? "secondary" : "default"}
+                        size="sm"
+                        onClick={() => toggleCategoryStatus(category.id, category.is_active)}
+                        className="hover:scale-105 transition-transform"
+                      >
+                        {category.is_active ? 'Deactivate' : 'Activate'}
+                      </Button>
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => deleteCategory(category.id)}
+                        className="hover:scale-105 transition-transform"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+          
+          {filteredCategories.length === 0 && (
+            <Card className="animate-fade-in">
+              <CardContent className="text-center py-8">
+                <FolderOpen className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Categories Found</h3>
+                <p className="text-muted-foreground mb-4">
+                  {searchTerm ? "No categories match your search." : "Start by adding your first category."}
+                </p>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Category
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
-      
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Add New Category</DialogTitle>
-          </DialogHeader>
-          <CategoryForm 
-            onSuccess={() => {
-              setIsAddDialogOpen(false);
-              refetch();
-            }} 
-          />
-        </DialogContent>
-      </Dialog>
     </AdminLayout>
   );
 };
 
-export default Categories;
+export default AdminCategories;
