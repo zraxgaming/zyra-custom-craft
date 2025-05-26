@@ -24,6 +24,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSuccess, product }) => {
     images: product?.images?.[0] || "",
     stock_quantity: product?.stock_quantity || 0,
     sku: product?.sku || "",
+    barcode: product?.barcode || "",
     status: product?.status || "draft",
     in_stock: product?.in_stock ?? true,
     is_customizable: product?.is_customizable ?? false,
@@ -35,6 +36,22 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSuccess, product }) => {
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  // Auto-generate SKU when name changes (only for new products)
+  useEffect(() => {
+    if (!product && formData.name && !formData.sku) {
+      const generatedSku = generateSKU(formData.name);
+      setFormData(prev => ({ ...prev, sku: generatedSku }));
+    }
+  }, [formData.name, product]);
+
+  // Auto-generate barcode when SKU changes (only for new products)
+  useEffect(() => {
+    if (!product && formData.sku && !formData.barcode) {
+      const generatedBarcode = generateBarcode();
+      setFormData(prev => ({ ...prev, barcode: generatedBarcode }));
+    }
+  }, [formData.sku, product]);
 
   const fetchCategories = async () => {
     try {
@@ -49,6 +66,24 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSuccess, product }) => {
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
+  };
+
+  const generateSKU = (name: string) => {
+    const prefix = name.substring(0, 3).toUpperCase();
+    const timestamp = Date.now().toString().slice(-6);
+    return `${prefix}-${timestamp}`;
+  };
+
+  const generateBarcode = () => {
+    // Generate a 13-digit EAN barcode
+    const randomDigits = Math.floor(Math.random() * 1000000000000).toString().padStart(12, '0');
+    // Simple checksum calculation for EAN-13
+    let checksum = 0;
+    for (let i = 0; i < 12; i++) {
+      checksum += parseInt(randomDigits[i]) * (i % 2 === 0 ? 1 : 3);
+    }
+    checksum = (10 - (checksum % 10)) % 10;
+    return randomDigits + checksum.toString();
   };
 
   const generateSlug = (name: string) => {
@@ -91,7 +126,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSuccess, product }) => {
         
         toast({
           title: "Product created",
-          description: "The product has been created successfully.",
+          description: "The product has been created successfully with auto-generated SKU and barcode.",
         });
       }
 
@@ -169,6 +204,28 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSuccess, product }) => {
             type="number"
             value={formData.stock_quantity}
             onChange={(e) => setFormData(prev => ({ ...prev, stock_quantity: Number(e.target.value) }))}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="sku">SKU {!product && "(Auto-generated)"}</Label>
+          <Input
+            id="sku"
+            value={formData.sku}
+            onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
+            placeholder="Auto-generated from product name"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="barcode">Barcode {!product && "(Auto-generated)"}</Label>
+          <Input
+            id="barcode"
+            value={formData.barcode}
+            onChange={(e) => setFormData(prev => ({ ...prev, barcode: e.target.value }))}
+            placeholder="Auto-generated EAN-13 barcode"
           />
         </div>
       </div>

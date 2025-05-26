@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Search, Package, AlertCircle, Plus, Edit } from "lucide-react";
+import { Search, Package, Plus, Edit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -260,7 +260,7 @@ const Scanner = () => {
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={() => window.open(`/admin/products/${productInfo.id}/edit`, '_blank')}
+                      onClick={() => window.open(`/admin/products/edit/${productInfo.id}`, '_blank')}
                     >
                       <Edit className="h-4 w-4 mr-2" />
                       Edit Product
@@ -307,7 +307,7 @@ const Scanner = () => {
               </div>
             </div>
           </CardContent>
-        </div>
+        </Card>
       </div>
     </AdminLayout>
   );
