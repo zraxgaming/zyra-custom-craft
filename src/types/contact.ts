@@ -8,7 +8,7 @@ export interface ContactFormData {
 
 export interface ContactSubmission extends ContactFormData {
   id: string;
-  status: 'open' | 'in_progress' | 'closed';
+  status: 'unread' | 'read' | 'replied';
   admin_reply?: string;
   user_id?: string;
   created_at: string;

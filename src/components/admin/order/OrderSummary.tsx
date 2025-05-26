@@ -6,10 +6,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from "@/components/ui/button";
 import { ChevronDown, Mail } from "lucide-react";
 import { format } from "date-fns";
-import { OrderItem } from "@/types/order";
+import { OrderItem, OrderDetail } from "@/types/order";
 
 interface OrderSummaryProps {
-  order: any;
+  order: OrderDetail;
   isUpdating: boolean;
   updateOrder: (field: string, value: string) => Promise<void>;
   sendManualEmail: () => Promise<void>;
@@ -21,7 +21,7 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
   updateOrder,
   sendManualEmail
 }) => {
-  const orderTotal = order.order_items?.reduce((acc: number, item: any) => {
+  const orderTotal = order.order_items?.reduce((acc: number, item: OrderItem) => {
     return acc + (item.price * item.quantity);
   }, 0) || 0;
 
@@ -132,11 +132,10 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
             </TableRow>
             <TableRow>
               <TableCell colSpan={3} className="text-right font-medium">
-                Shipping ({order.delivery_type || order.delivery_option || 'standard'})
+                Shipping ({order.delivery_type || 'standard'})
               </TableCell>
               <TableCell className="font-medium">
-                ${order.shipping_cost ? order.shipping_cost.toFixed(2) : 
-                  (order.delivery_type === "express" ? "15.00" : "5.00")}
+                ${order.delivery_type === "express" ? "15.00" : "5.00"}
               </TableCell>
             </TableRow>
             <TableRow>

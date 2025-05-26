@@ -1,118 +1,94 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Container } from "@/components/ui/container";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/components/cart/CartProvider";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import PaymentMethods from "@/components/checkout/PaymentMethods";
-import OrderSummary from "@/components/checkout/OrderSummary";
-import { ShoppingCart, MapPin, CreditCard, Check } from "lucide-react";
-
-interface ShippingAddress {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
-}
+import { Container } from "@/components/ui/container";
 
 const Checkout = () => {
+  const { user } = useAuth();
+  const { items, subtotal, clearCart } = useCart();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
-  const { items, totalPrice, clearCart } = useCart();
-  const [currentStep, setCurrentStep] = useState(1);
-  const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    address: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    country: "United States"
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    email: user?.email || '',
+    firstName: '',
+    lastName: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: 'United States',
+    paymentMethod: 'credit_card',
+    deliveryType: 'standard'
   });
-  const [paymentMethod, setPaymentMethod] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
 
-  useEffect(() => {
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign in to complete your order",
-        variant: "destructive"
-      });
-      navigate("/auth?redirect=" + encodeURIComponent("/checkout"));
-      return;
-    }
+  if (!user) {
+    navigate('/auth');
+    return null;
+  }
 
-    if (items.length === 0) {
-      toast({
-        title: "Empty cart",
-        description: "Your cart is empty",
-        variant: "destructive"
-      });
-      navigate("/cart");
-      return;
-    }
+  if (items.length === 0) {
+    navigate('/shop');
+    return null;
+  }
 
-    // Pre-fill user information
-    if (user) {
-      setShippingAddress(prev => ({
-        ...prev,
-        email: user.email || ""
-      }));
-    }
-  }, [user, items, navigate, toast]);
+  const tax = subtotal * 0.08;
+  const shipping = formData.deliveryType === 'express' ? 15 : 5;
+  const total = subtotal + tax + shipping;
 
-  const handleShippingSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validate shipping address
-    const requiredFields = ['firstName', 'lastName', 'email', 'address', 'city', 'state', 'zipCode'];
-    const missingFields = requiredFields.filter(field => !shippingAddress[field as keyof ShippingAddress]);
-    
-    if (missingFields.length > 0) {
-      toast({
-        title: "Missing information",
-        description: "Please fill in all required fields",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setCurrentStep(2);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
   };
 
-  const handlePaymentComplete = async () => {
-    setIsProcessing(true);
-    
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
     try {
-      // Create order in database
+      // Create order
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
-          user_id: user?.id,
-          total_amount: totalPrice + 10, // Add shipping cost
-          payment_status: 'paid',
-          payment_method: paymentMethod,
-          status: 'processing',
-          shipping_address: shippingAddress,
-          billing_address: shippingAddress
+          user_id: user.id,
+          total_amount: total,
+          payment_status: 'pending',
+          payment_method: formData.paymentMethod,
+          status: 'pending',
+          currency: 'USD',
+          delivery_type: formData.deliveryType,
+          shipping_address: {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            address: formData.address,
+            city: formData.city,
+            state: formData.state,
+            zipCode: formData.zipCode,
+            country: formData.country
+          },
+          billing_address: {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            address: formData.address,
+            city: formData.city,
+            state: formData.state,
+            zipCode: formData.zipCode,
+            country: formData.country
+          }
         })
         .select()
         .single();
@@ -134,227 +110,230 @@ const Checkout = () => {
 
       if (itemsError) throw itemsError;
 
-      // Clear cart
+      // Clear cart and redirect
       clearCart();
-      
       toast({
         title: "Order placed successfully!",
-        description: `Order #${order.id.slice(-8)} has been created`,
+        description: "Thank you for your purchase. You will receive a confirmation email shortly.",
       });
 
       navigate(`/order-success/${order.id}`);
     } catch (error: any) {
+      console.error('Error placing order:', error);
       toast({
-        title: "Order failed",
-        description: error.message || "Failed to create order",
-        variant: "destructive"
+        title: "Error",
+        description: "Failed to place order. Please try again.",
+        variant: "destructive",
       });
     } finally {
-      setIsProcessing(false);
+      setIsSubmitting(false);
     }
   };
 
-  const shippingCost = 10;
-  const total = totalPrice + shippingCost;
-
-  const steps = [
-    { number: 1, title: "Shipping", icon: MapPin },
-    { number: 2, title: "Payment", icon: CreditCard },
-    { number: 3, title: "Complete", icon: Check }
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5">
+    <>
       <Navbar />
-      
-      <Container className="py-8 animate-fade-in">
-        <div className="max-w-6xl mx-auto">
-          {/* Progress Steps */}
-          <div className="mb-8">
-            <div className="flex items-center justify-center space-x-8">
-              {steps.map((step, index) => (
-                <div key={step.number} className="flex items-center">
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
-                    currentStep >= step.number
-                      ? "bg-primary border-primary text-primary-foreground"
-                      : "border-muted-foreground text-muted-foreground"
-                  }`}>
-                    <step.icon className="h-5 w-5" />
-                  </div>
-                  <span className={`ml-2 text-sm font-medium ${
-                    currentStep >= step.number ? "text-primary" : "text-muted-foreground"
-                  }`}>
-                    {step.title}
-                  </span>
-                  {index < steps.length - 1 && (
-                    <div className={`w-16 h-0.5 ml-4 ${
-                      currentStep > step.number ? "bg-primary" : "bg-muted-foreground/30"
-                    }`} />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Content */}
-            <div className="lg:col-span-2 space-y-6">
-              {currentStep === 1 && (
-                <Card className="hover:shadow-lg transition-all duration-300">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5" />
-                      Shipping Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleShippingSubmit} className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="firstName">First Name *</Label>
-                          <Input
-                            id="firstName"
-                            value={shippingAddress.firstName}
-                            onChange={(e) => setShippingAddress(prev => ({ ...prev, firstName: e.target.value }))}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="lastName">Last Name *</Label>
-                          <Input
-                            id="lastName"
-                            value={shippingAddress.lastName}
-                            onChange={(e) => setShippingAddress(prev => ({ ...prev, lastName: e.target.value }))}
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="email">Email *</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            value={shippingAddress.email}
-                            onChange={(e) => setShippingAddress(prev => ({ ...prev, email: e.target.value }))}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="phone">Phone</Label>
-                          <Input
-                            id="phone"
-                            value={shippingAddress.phone}
-                            onChange={(e) => setShippingAddress(prev => ({ ...prev, phone: e.target.value }))}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="address">Address *</Label>
+      <div className="min-h-screen bg-background py-12">
+        <Container>
+          <div className="max-w-4xl mx-auto">
+            <h1 className="text-3xl font-bold mb-8">Checkout</h1>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Contact Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <Label htmlFor="email">Email</Label>
                         <Input
-                          id="address"
-                          value={shippingAddress.address}
-                          onChange={(e) => setShippingAddress(prev => ({ ...prev, address: e.target.value }))}
+                          id="email"
+                          name="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={handleInputChange}
                           required
                         />
                       </div>
+                    </CardContent>
+                  </Card>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="city">City *</Label>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Shipping Address</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="firstName">First Name</Label>
                           <Input
-                            id="city"
-                            value={shippingAddress.city}
-                            onChange={(e) => setShippingAddress(prev => ({ ...prev, city: e.target.value }))}
+                            id="firstName"
+                            name="firstName"
+                            value={formData.firstName}
+                            onChange={handleInputChange}
                             required
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="state">State *</Label>
+                        <div>
+                          <Label htmlFor="lastName">Last Name</Label>
                           <Input
-                            id="state"
-                            value={shippingAddress.state}
-                            onChange={(e) => setShippingAddress(prev => ({ ...prev, state: e.target.value }))}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="zipCode">ZIP Code *</Label>
-                          <Input
-                            id="zipCode"
-                            value={shippingAddress.zipCode}
-                            onChange={(e) => setShippingAddress(prev => ({ ...prev, zipCode: e.target.value }))}
+                            id="lastName"
+                            name="lastName"
+                            value={formData.lastName}
+                            onChange={handleInputChange}
                             required
                           />
                         </div>
                       </div>
+                      
+                      <div>
+                        <Label htmlFor="address">Address</Label>
+                        <Input
+                          id="address"
+                          name="address"
+                          value={formData.address}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="city">City</Label>
+                          <Input
+                            id="city"
+                            name="city"
+                            value={formData.city}
+                            onChange={handleInputChange}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="state">State</Label>
+                          <Input
+                            id="state"
+                            name="state"
+                            value={formData.state}
+                            onChange={handleInputChange}
+                            required
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="zipCode">ZIP Code</Label>
+                        <Input
+                          id="zipCode"
+                          name="zipCode"
+                          value={formData.zipCode}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                      <Button type="submit" className="w-full hover:scale-105 transition-transform duration-200">
-                        Continue to Payment
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              )}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Delivery Options</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <RadioGroup
+                        value={formData.deliveryType}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, deliveryType: value }))}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="standard" id="standard" />
+                          <Label htmlFor="standard">Standard Delivery (5-7 days) - $5.00</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="express" id="express" />
+                          <Label htmlFor="express">Express Delivery (1-2 days) - $15.00</Label>
+                        </div>
+                      </RadioGroup>
+                    </CardContent>
+                  </Card>
 
-              {currentStep === 2 && (
-                <PaymentMethods
-                  total={total}
-                  onPaymentMethodSelect={setPaymentMethod}
-                  onPaymentComplete={handlePaymentComplete}
-                />
-              )}
-            </div>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Payment Method</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <RadioGroup
+                        value={formData.paymentMethod}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value }))}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="credit_card" id="credit_card" />
+                          <Label htmlFor="credit_card">Credit Card</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="paypal" id="paypal" />
+                          <Label htmlFor="paypal">PayPal</Label>
+                        </div>
+                      </RadioGroup>
+                    </CardContent>
+                  </Card>
 
-            {/* Order Summary */}
-            <div className="space-y-6">
-              <Card className="hover:shadow-lg transition-all duration-300">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ShoppingCart className="h-5 w-5" />
-                    Order Summary
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <OrderSummary
-                    items={items}
-                    subtotal={totalPrice}
-                    shippingCost={shippingCost}
-                    total={total}
-                  />
-                </CardContent>
-              </Card>
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    size="lg"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Processing...' : `Place Order - $${total.toFixed(2)}`}
+                  </Button>
+                </form>
+              </div>
 
-              {currentStep === 2 && (
+              <div>
                 <Card>
                   <CardHeader>
-                    <CardTitle>Shipping Address</CardTitle>
+                    <CardTitle>Order Summary</CardTitle>
                   </CardHeader>
-                  <CardContent className="text-sm space-y-1">
-                    <p className="font-medium">{shippingAddress.firstName} {shippingAddress.lastName}</p>
-                    <p>{shippingAddress.address}</p>
-                    <p>{shippingAddress.city}, {shippingAddress.state} {shippingAddress.zipCode}</p>
-                    <p>{shippingAddress.email}</p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentStep(1)}
-                      className="mt-2"
-                    >
-                      Edit Address
-                    </Button>
+                  <CardContent className="space-y-4">
+                    {items.map((item) => (
+                      <div key={item.id} className="flex justify-between">
+                        <div>
+                          <p className="font-medium">{item.name}</p>
+                          <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+                        </div>
+                        <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
+                      </div>
+                    ))}
+                    
+                    <Separator />
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <p>Subtotal</p>
+                        <p>${subtotal.toFixed(2)}</p>
+                      </div>
+                      <div className="flex justify-between">
+                        <p>Shipping</p>
+                        <p>${shipping.toFixed(2)}</p>
+                      </div>
+                      <div className="flex justify-between">
+                        <p>Tax</p>
+                        <p>${tax.toFixed(2)}</p>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between font-bold text-lg">
+                        <p>Total</p>
+                        <p>${total.toFixed(2)}</p>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
-              )}
+              </div>
             </div>
           </div>
-        </div>
-      </Container>
-      
+        </Container>
+      </div>
       <Footer />
-    </div>
+    </>
   );
 };
 

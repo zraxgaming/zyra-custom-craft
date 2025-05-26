@@ -5,11 +5,11 @@ import { useTrackPageView } from '@/hooks/use-analytics';
 
 const PageTracker = () => {
   const location = useLocation();
-  const trackPageView = useTrackPageView();
+  const { trackPageView } = useTrackPageView();
 
   useEffect(() => {
-    trackPageView.mutate(location.pathname);
-  }, [location.pathname]);
+    trackPageView(location.pathname);
+  }, [location.pathname, trackPageView]);
 
   return null;
 };

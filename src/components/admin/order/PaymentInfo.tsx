@@ -13,10 +13,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem
 } from "@/components/ui/dropdown-menu";
-import { OrderDetail } from "@/types/order";
+import { Order } from "@/types/order";
 
 interface PaymentInfoProps {
-  order: OrderDetail;
+  order: Order;
   isUpdating?: boolean;
   updateOrder?: (field: string, value: string) => Promise<void>;
   sendManualEmail?: () => Promise<void>;

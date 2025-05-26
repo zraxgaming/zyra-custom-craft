@@ -5,6 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from 'react-helmet-async';
+
+// Pages
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
@@ -18,6 +20,8 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Wishlist from "./pages/Wishlist";
 import OrderSuccess from "./pages/OrderSuccess";
+
+// Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminProducts from "./pages/admin/Products";
 import AdminOrders from "./pages/admin/Orders";
@@ -25,9 +29,13 @@ import AdminAnalytics from "./pages/admin/Analytics";
 import AdminSettings from "./pages/admin/Settings";
 import AdminUsers from "./pages/admin/Users";
 import AdminReports from "./pages/admin/Reports";
+
+// Contexts & Providers
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./components/cart/CartProvider";
 import { WishlistProvider } from "./components/wishlist/WishlistProvider";
+
+// Components
 import { usePageTracking } from "./hooks/usePageTracking";
 import PWAInstallPrompt from "./components/pwa/PWAInstallPrompt";
 import PWANotifications from "./components/pwa/PWANotifications";
@@ -56,6 +64,7 @@ function AppContent() {
         <Route path="/" element={<Index />} />
         <Route path="/shop" element={<Shop />} />
         <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/products/:slug" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/auth" element={<Auth />} />

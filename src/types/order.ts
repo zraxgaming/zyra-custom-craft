@@ -33,4 +33,22 @@ export interface OrderItem {
   price: number;
   customization?: any;
   created_at: string;
+  product?: {
+    id: string;
+    name: string;
+    images?: string[];
+    image_url?: string;
+  };
+}
+
+export interface OrderDetail extends Order {
+  order_items?: OrderItem[];
+}
+
+export interface ShippingAddress {
+  street: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  country: string;
 }

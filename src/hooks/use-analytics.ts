@@ -88,3 +88,12 @@ export const useAnalytics = (dateRange?: { start: Date; end: Date }) => {
 
   return { data, isLoading, error, refetch: fetchAnalytics };
 };
+
+export const useTrackPageView = () => {
+  // Simple page tracking hook
+  const trackPageView = (path: string) => {
+    console.log('Page view tracked:', path);
+  };
+
+  return { trackPageView };
+};
