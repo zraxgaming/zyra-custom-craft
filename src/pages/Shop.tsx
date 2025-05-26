@@ -18,16 +18,37 @@ const Shop = () => {
   const { data: products = [], isLoading: productsLoading } = useProducts();
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("featured");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showFilters, setShowFilters] = useState(false);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  const [inStock, setInStock] = useState(false);
+  const [featured, setFeatured] = useState(false);
+  const [customizable, setCustomizable] = useState(false);
+
+  const handleCategoryChange = (categoryId: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(categoryId) 
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !selectedCategory || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const matchesCategory = selectedCategories.length === 0 || 
+                           selectedCategories.some(catId => {
+                             const category = categories.find(c => c.id === catId);
+                             return category && product.category === category.name;
+                           });
+    const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
+    const matchesStock = !inStock || product.in_stock;
+    const matchesFeatured = !featured || product.featured || product.is_featured;
+    const matchesCustomizable = !customizable || product.is_customizable;
+    
+    return matchesSearch && matchesCategory && matchesPrice && matchesStock && matchesFeatured && matchesCustomizable;
   });
 
   const sortedProducts = [...filteredProducts].sort((a, b) => {
@@ -99,19 +120,6 @@ const Shop = () => {
               </div>
             </div>
 
-            {/* Category Filter */}
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full lg:w-48 hover:scale-105 transition-transform duration-200">
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
-                {categories.map(category => (
-                  <SelectItem key={category.id} value={category.name}>{category.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
             {/* Sort */}
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-full lg:w-48 hover:scale-105 transition-transform duration-200">
@@ -161,7 +169,19 @@ const Shop = () => {
           <div className="flex gap-8">
             {/* Sidebar Filters */}
             <div className={`${showFilters ? 'block' : 'hidden'} lg:block w-full lg:w-64 animate-slide-in-left`}>
-              <ProductFilters />
+              <ProductFilters 
+                categories={categories}
+                selectedCategories={selectedCategories}
+                onCategoryChange={handleCategoryChange}
+                priceRange={priceRange}
+                onPriceChange={setPriceRange}
+                inStock={inStock}
+                onInStockChange={setInStock}
+                featured={featured}
+                onFeaturedChange={setFeatured}
+                customizable={customizable}
+                onCustomizableChange={setCustomizable}
+              />
             </div>
 
             {/* Products Grid */}

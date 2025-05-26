@@ -1,124 +1,118 @@
 
 import React from "react";
-import { Slider } from "@/components/ui/slider";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Button } from "@/components/ui/button";
 
-interface ProductFiltersProps {
-  categories: { name: string; id: string }[];
+export interface ProductFiltersProps {
+  categories: Array<{ id: string; name: string; }>;
   selectedCategories: string[];
-  onCategoryChange: (category: string) => void;
+  onCategoryChange: (categoryId: string) => void;
   priceRange: [number, number];
-  onPriceRangeChange: (range: [number, number]) => void;
-  maxPrice: number;
-  showInStockOnly: boolean;
-  onShowInStockChange: (value: boolean) => void;
-  onResetFilters: () => void;
+  onPriceChange: (range: [number, number]) => void;
+  inStock: boolean;
+  onInStockChange: (inStock: boolean) => void;
+  featured: boolean;
+  onFeaturedChange: (featured: boolean) => void;
+  customizable: boolean;
+  onCustomizableChange: (customizable: boolean) => void;
 }
 
 const ProductFilters: React.FC<ProductFiltersProps> = ({
-  categories = [],
-  selectedCategories = [],
+  categories,
+  selectedCategories,
   onCategoryChange,
-  priceRange = [0, 1000],
-  onPriceRangeChange,
-  maxPrice = 1000,
-  showInStockOnly = false,
-  onShowInStockChange,
-  onResetFilters,
+  priceRange,
+  onPriceChange,
+  inStock,
+  onInStockChange,
+  featured,
+  onFeaturedChange,
+  customizable,
+  onCustomizableChange,
 }) => {
-  const toggleCategory = (category: string) => {
-    if (onCategoryChange) {
-      onCategoryChange(category);
-    }
-  };
-
-  const handlePriceChange = (values: number[]) => {
-    if (onPriceRangeChange && values.length >= 2) {
-      onPriceRangeChange([values[0], values[1]]);
-    }
-  };
-
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h3 className="text-lg font-medium text-foreground">Filters</h3>
-        <Button
-          variant="link"
-          className="mt-2 px-0 text-sm hover:text-primary transition-colors"
-          onClick={onResetFilters}
-        >
-          Reset all filters
-        </Button>
-      </div>
-
-      <Accordion type="multiple" className="w-full" defaultValue={["categories", "price"]}>
-        <AccordionItem value="categories" className="animate-fade-in">
-          <AccordionTrigger className="hover:text-primary transition-colors">Categories</AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-2 pt-1">
-              {categories.map((category) => (
-                <div key={category.id} className="flex items-center space-x-2 animate-scale-in">
-                  <Checkbox
-                    id={`category-${category.id}`}
-                    checked={selectedCategories.includes(category.name)}
-                    onCheckedChange={() => toggleCategory(category.name)}
-                  />
-                  <Label
-                    htmlFor={`category-${category.id}`}
-                    className="cursor-pointer text-sm hover:text-primary transition-colors"
-                  >
-                    {category.name}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem value="price" className="animate-fade-in">
-          <AccordionTrigger className="hover:text-primary transition-colors">Price Range</AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-4 pt-2">
-              <Slider
-                value={[priceRange[0] || 0, priceRange[1] || maxPrice]}
-                min={0}
-                max={maxPrice}
-                step={5}
-                onValueChange={handlePriceChange}
-                className="py-4"
-              />
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>${priceRange[0] || 0}</span>
-                <span>${priceRange[1] || maxPrice}</span>
-              </div>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem value="stock" className="animate-fade-in">
-          <AccordionTrigger className="hover:text-primary transition-colors">Availability</AccordionTrigger>
-          <AccordionContent>
-            <div className="flex items-center space-x-2">
+    <div className="space-y-6">
+      <Card className="animate-fade-in">
+        <CardHeader>
+          <CardTitle className="text-lg">Categories</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {categories.map((category) => (
+            <div key={category.id} className="flex items-center space-x-2">
               <Checkbox
-                id="in-stock"
-                checked={showInStockOnly}
-                onCheckedChange={(checked) => onShowInStockChange(checked as boolean)}
+                id={category.id}
+                checked={selectedCategories.includes(category.id)}
+                onCheckedChange={() => onCategoryChange(category.id)}
               />
-              <Label htmlFor="in-stock" className="cursor-pointer text-sm hover:text-primary transition-colors">
-                Show in-stock items only
+              <Label htmlFor={category.id} className="text-sm">
+                {category.name}
               </Label>
             </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card className="animate-fade-in" style={{ animationDelay: "100ms" }}>
+        <CardHeader>
+          <CardTitle className="text-lg">Price Range</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Slider
+            value={priceRange}
+            onValueChange={(value) => onPriceChange(value as [number, number])}
+            max={1000}
+            min={0}
+            step={10}
+            className="w-full"
+          />
+          <div className="flex justify-between text-sm text-muted-foreground">
+            <span>${priceRange[0]}</span>
+            <span>${priceRange[1]}</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="animate-fade-in" style={{ animationDelay: "200ms" }}>
+        <CardHeader>
+          <CardTitle className="text-lg">Filters</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="in-stock"
+              checked={inStock}
+              onCheckedChange={onInStockChange}
+            />
+            <Label htmlFor="in-stock" className="text-sm">
+              In Stock Only
+            </Label>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="featured"
+              checked={featured}
+              onCheckedChange={onFeaturedChange}
+            />
+            <Label htmlFor="featured" className="text-sm">
+              Featured Products
+            </Label>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="customizable"
+              checked={customizable}
+              onCheckedChange={onCustomizableChange}
+            />
+            <Label htmlFor="customizable" className="text-sm">
+              Customizable
+            </Label>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

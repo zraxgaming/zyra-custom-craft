@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Camera, Upload, Search, Package, ShoppingCart, Plus } from "lucide-react";
+import { Camera, Upload, Search, Package, ShoppingCart, Plus, Eye, Edit } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 const BarcodeScanner = () => {
   const [scannedData, setScannedData] = useState<string>("");
@@ -16,6 +17,7 @@ const BarcodeScanner = () => {
   const [isSearching, setIsSearching] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -44,13 +46,17 @@ const BarcodeScanner = () => {
 
   const handleSearch = async (barcode: string) => {
     setIsSearching(true);
+    setSearchResult(null);
+    
     try {
+      console.log("Searching for barcode:", barcode);
+      
       // First, search for products by barcode
       const { data: productData, error: productError } = await supabase
         .from("products")
         .select("*")
         .eq("barcode", barcode)
-        .single();
+        .maybeSingle();
 
       if (productData) {
         setSearchResult({
@@ -72,7 +78,7 @@ const BarcodeScanner = () => {
           products (*)
         `)
         .eq("barcode_data", barcode)
-        .single();
+        .maybeSingle();
 
       if (barcodeData) {
         setSearchResult({
@@ -91,10 +97,10 @@ const BarcodeScanner = () => {
         .from("orders")
         .select(`
           *,
-          profiles (email, first_name, last_name)
+          profiles (email, first_name, last_name, display_name, full_name)
         `)
         .or(`id.eq.${barcode},tracking_number.eq.${barcode}`)
-        .single();
+        .maybeSingle();
 
       if (orderData) {
         setSearchResult({
@@ -147,12 +153,14 @@ const BarcodeScanner = () => {
     if (!scannedData.trim()) return;
 
     try {
+      const { data: user } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase
         .from("barcode_generations")
         .insert({
           barcode_data: scannedData,
           barcode_type: "qr",
-          generated_by: (await supabase.auth.getUser()).data.user?.id
+          generated_by: user?.user?.id
         })
         .select()
         .single();
@@ -181,7 +189,7 @@ const BarcodeScanner = () => {
           <Button 
             onClick={generateBarcode}
             disabled={!scannedData.trim()}
-            className="bg-primary hover:bg-primary/90"
+            className="bg-primary hover:bg-primary/90 hover:scale-105 transition-transform"
           >
             <Plus className="mr-2 h-4 w-4" />
             Generate Barcode
@@ -201,7 +209,7 @@ const BarcodeScanner = () => {
               <Button
                 onClick={startCameraScanning}
                 disabled={isScanning}
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300"
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 transition-all duration-300"
               >
                 <Camera className="mr-2 h-4 w-4" />
                 {isScanning ? "Scanning..." : "Start Camera Scan"}
@@ -223,7 +231,7 @@ const BarcodeScanner = () => {
                   <Button
                     onClick={() => fileInputRef.current?.click()}
                     variant="outline"
-                    className="w-full text-foreground border-border hover:bg-muted transition-all duration-300"
+                    className="w-full text-foreground border-border hover:bg-muted hover:scale-105 transition-all duration-300"
                   >
                     <Upload className="mr-2 h-4 w-4" />
                     Choose Image
@@ -246,7 +254,7 @@ const BarcodeScanner = () => {
                   <Button 
                     onClick={handleManualEntry} 
                     disabled={!scannedData.trim() || isSearching}
-                    className="bg-primary text-primary-foreground hover:bg-primary/90"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 transition-transform"
                   >
                     <Search className="h-4 w-4" />
                   </Button>
@@ -291,6 +299,26 @@ const BarcodeScanner = () => {
                             <p className="text-muted-foreground">
                               Status: {searchResult.data.in_stock ? 'In Stock' : 'Out of Stock'}
                             </p>
+                            <div className="flex gap-2 mt-3">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => navigate(`/products/${searchResult.data.slug}`)}
+                                className="hover:scale-105 transition-transform"
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Product
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => navigate(`/admin/products/edit/${searchResult.data.id}`)}
+                                className="hover:scale-105 transition-transform"
+                              >
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit Product
+                              </Button>
+                            </div>
                           </div>
                         )}
                         
@@ -302,10 +330,21 @@ const BarcodeScanner = () => {
                             </div>
                             <p className="text-foreground font-medium">Order #{searchResult.data.id.slice(0, 8)}</p>
                             <p className="text-muted-foreground">
-                              Customer: {searchResult.data.profiles?.first_name} {searchResult.data.profiles?.last_name}
+                              Customer: {searchResult.data.profiles?.display_name || 
+                                        `${searchResult.data.profiles?.first_name} ${searchResult.data.profiles?.last_name}` || 
+                                        searchResult.data.profiles?.email || 'Guest'}
                             </p>
                             <p className="text-muted-foreground">Total: ${searchResult.data.total_amount}</p>
                             <p className="text-muted-foreground">Status: {searchResult.data.status}</p>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => navigate(`/admin/orders/${searchResult.data.id}`)}
+                              className="mt-3 hover:scale-105 transition-transform"
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Order
+                            </Button>
                           </div>
                         )}
                         
@@ -317,7 +356,18 @@ const BarcodeScanner = () => {
                             </div>
                             <p className="text-muted-foreground">Type: {searchResult.data.barcode_type}</p>
                             {searchResult.data.products && (
-                              <p className="text-foreground">Product: {searchResult.data.products.name}</p>
+                              <>
+                                <p className="text-foreground">Product: {searchResult.data.products.name}</p>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => navigate(`/admin/products/edit/${searchResult.data.products.id}`)}
+                                  className="mt-3 hover:scale-105 transition-transform"
+                                >
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit Product
+                                </Button>
+                              </>
                             )}
                           </div>
                         )}
@@ -330,30 +380,12 @@ const BarcodeScanner = () => {
                     <div className="mt-2 space-y-2">
                       <Button 
                         variant="outline" 
-                        className="w-full text-foreground border-border hover:bg-muted transition-all duration-300"
+                        className="w-full text-foreground border-border hover:bg-muted hover:scale-105 transition-all duration-300"
                         onClick={() => handleSearch(scannedData)}
                       >
                         <Search className="mr-2 h-4 w-4" />
                         Search Again
                       </Button>
-                      {searchResult?.type === 'product' && (
-                        <Button 
-                          variant="outline" 
-                          className="w-full text-foreground border-border hover:bg-muted"
-                          onClick={() => window.open(`/admin/products/edit/${searchResult.data.id}`, '_blank')}
-                        >
-                          Edit Product
-                        </Button>
-                      )}
-                      {searchResult?.type === 'order' && (
-                        <Button 
-                          variant="outline" 
-                          className="w-full text-foreground border-border hover:bg-muted"
-                          onClick={() => window.open(`/admin/orders/${searchResult.data.id}`, '_blank')}
-                        >
-                          View Order
-                        </Button>
-                      )}
                     </div>
                   </div>
                 </div>
