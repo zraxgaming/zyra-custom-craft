@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { search, Package, AlertCircle, Plus, Edit } from "lucide-react";
+import { Search, Package, AlertCircle, Plus, Edit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -152,7 +152,7 @@ const Scanner = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <search className="h-5 w-5" />
+                <Search className="h-5 w-5" />
                 Search Product
               </CardTitle>
             </CardHeader>
@@ -171,7 +171,7 @@ const Scanner = () => {
                     onClick={() => handleScan(scanResult)}
                     disabled={isLoading || !scanResult.trim()}
                   >
-                    <search className="h-4 w-4" />
+                    <Search className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -285,7 +285,7 @@ const Scanner = () => {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center p-4 bg-muted/50 rounded-lg">
-                <search className="h-8 w-8 text-primary mx-auto mb-2" />
+                <Search className="h-8 w-8 text-primary mx-auto mb-2" />
                 <h4 className="font-medium mb-1">Search Products</h4>
                 <p className="text-sm text-muted-foreground">
                   Enter barcode, SKU, or product name to find items in your inventory
@@ -307,7 +307,7 @@ const Scanner = () => {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </div>
       </div>
     </AdminLayout>
   );

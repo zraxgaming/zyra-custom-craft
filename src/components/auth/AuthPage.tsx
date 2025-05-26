@@ -114,18 +114,37 @@ const AuthPage = () => {
               <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
                 {isLogin ? "Welcome Back" : "Create Account"}
               </CardTitle>
+              <p className="text-muted-foreground">
+                {isLogin ? "Sign in to your account" : "Join us today"}
+              </p>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Google Sign In */}
+              <GoogleSignIn />
+              
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <Separator className="w-full" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">
+                    Or continue with email
+                  </span>
+                </div>
+              </div>
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 {!isLogin && (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">
-                        <User className="h-4 w-4 inline mr-2" />
+                      <Label htmlFor="firstName" className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
                         First Name
                       </Label>
                       <Input
                         id="firstName"
+                        type="text"
+                        placeholder="John"
                         value={formData.firstName}
                         onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
                         required={!isLogin}
@@ -135,6 +154,8 @@ const AuthPage = () => {
                       <Label htmlFor="lastName">Last Name</Label>
                       <Input
                         id="lastName"
+                        type="text"
+                        placeholder="Doe"
                         value={formData.lastName}
                         onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
                         required={!isLogin}
@@ -144,13 +165,14 @@ const AuthPage = () => {
                 )}
                 
                 <div className="space-y-2">
-                  <Label htmlFor="email">
-                    <Mail className="h-4 w-4 inline mr-2" />
+                  <Label htmlFor="email" className="flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
                     Email
                   </Label>
                   <Input
                     id="email"
                     type="email"
+                    placeholder="Enter your email"
                     value={formData.email}
                     onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                     required
@@ -158,44 +180,37 @@ const AuthPage = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="password">
-                    <Lock className="h-4 w-4 inline mr-2" />
+                  <Label htmlFor="password" className="flex items-center gap-2">
+                    <Lock className="h-4 w-4" />
                     Password
                   </Label>
                   <Input
                     id="password"
                     type="password"
+                    placeholder="Enter your password"
                     value={formData.password}
                     onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                     required
                   />
                 </div>
                 
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Loading..." : (isLogin ? "Sign In" : "Create Account")}
+                <Button 
+                  type="submit" 
+                  className="w-full bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Processing..." : (isLogin ? "Sign In" : "Create Account")}
                 </Button>
               </form>
               
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <Separator className="w-full" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">
-                    Or continue with
-                  </span>
-                </div>
-              </div>
-              
-              <GoogleSignIn />
-              
               <div className="text-center">
                 <Button
+                  type="button"
                   variant="link"
                   onClick={() => setIsLogin(!isLogin)}
-                  className="text-primary"
+                  className="text-primary hover:underline"
                 >
-                  {isLogin ? "Need an account? Sign up" : "Already have an account? Sign in"}
+                  {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
                 </Button>
               </div>
             </CardContent>
