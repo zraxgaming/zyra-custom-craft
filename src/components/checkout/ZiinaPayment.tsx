@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -18,13 +17,16 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, orderData, onSucces
 
   const handleZiinaPayment = async () => {
     setIsProcessing(true);
-    
     try {
+      // Always use AED for Ziina
+      const paymentAmount = amount * 3.67;
       const { data, error } = await supabase.functions.invoke('ziina-payment', {
         body: {
-          amount: amount,
+          amount: paymentAmount,
+          currency: 'AED',
+          // Use consistent URLs for success and cancel/failure
           success_url: `${window.location.origin}/order-success`,
-          cancel_url: `${window.location.origin}/checkout`,
+          cancel_url: `${window.location.origin}/order-failed`,
           order_data: orderData
         }
       });
@@ -38,31 +40,26 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, orderData, onSucces
       }
 
       if (data?.payment_url) {
-        console.log('Redirecting to Ziina payment:', data.payment_url);
-        
         // Store payment data for later verification
         localStorage.setItem('pending_payment', JSON.stringify({
           payment_id: data.payment_id,
-          amount: amount,
-          order_data: orderData
+          amount: paymentAmount,
+          order_data: orderData,
+          method: 'ziina'
         }));
-        
         // Redirect to actual Ziina payment page
         window.location.href = data.payment_url;
       } else {
         throw new Error('No payment URL received from Ziina');
       }
-
     } catch (error: any) {
       console.error('Ziina payment error:', error);
       const errorMessage = error.message || "Ziina payment failed. Please try again.";
-      
       toast({
         title: "Payment Failed",
         description: errorMessage,
         variant: "destructive",
       });
-      
       onError(errorMessage);
     } finally {
       setIsProcessing(false);
