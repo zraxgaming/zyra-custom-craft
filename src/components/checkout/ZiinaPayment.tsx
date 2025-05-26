@@ -7,11 +7,12 @@ import { Loader2, Smartphone } from "lucide-react";
 
 interface ZiinaPaymentProps {
   amount: number;
+  orderData: any;
   onSuccess: (transactionId: string) => void;
   onError: (error: string) => void;
 }
 
-const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, onSuccess, onError }) => {
+const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, orderData, onSuccess, onError }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
@@ -22,10 +23,9 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, onSuccess, onError 
       const { data, error } = await supabase.functions.invoke('ziina-payment', {
         body: {
           amount: amount,
-          currency: 'AED',
           success_url: `${window.location.origin}/order-success`,
           cancel_url: `${window.location.origin}/checkout`,
-          test: true
+          order_data: orderData
         }
       });
 
@@ -33,20 +33,24 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, onSuccess, onError 
         throw error;
       }
 
-      if (data?.payment_id) {
-        console.log('Ziina payment initiated:', data);
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      if (data?.payment_url) {
+        console.log('Redirecting to Ziina payment:', data.payment_url);
         
-        // Simulate payment processing completion
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Store payment data for later verification
+        localStorage.setItem('pending_payment', JSON.stringify({
+          payment_id: data.payment_id,
+          amount: amount,
+          order_data: orderData
+        }));
         
-        toast({
-          title: "Payment Successful",
-          description: `Ziina payment of AED ${(amount * 3.67).toFixed(2)} processed successfully`,
-        });
-        
-        onSuccess(data.payment_id);
+        // Redirect to actual Ziina payment page
+        window.location.href = data.payment_url;
       } else {
-        throw new Error('No payment ID received from Ziina');
+        throw new Error('No payment URL received from Ziina');
       }
 
     } catch (error: any) {
@@ -69,7 +73,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, onSuccess, onError 
     <div className="space-y-4">
       <div className="flex items-center border rounded-md p-3 bg-background hover:bg-muted/50 transition-colors">
         <div className="flex items-center">
-          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded mr-2 flex items-center justify-center text-white font-bold animate-pulse">
+          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded mr-2 flex items-center justify-center text-white font-bold">
             <Smartphone className="h-4 w-4" />
           </div>
           <span className="text-foreground font-medium">Pay with Ziina (AED)</span>
@@ -85,7 +89,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, onSuccess, onError 
         {isProcessing ? (
           <>
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            Processing Ziina Payment...
+            Redirecting to Ziina...
           </>
         ) : (
           `Pay AED ${(amount * 3.67).toFixed(2)} with Ziina`
@@ -93,7 +97,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, onSuccess, onError 
       </Button>
       
       <div className="text-xs text-muted-foreground text-center bg-muted/30 p-2 rounded">
-        🔒 Secure payment processing in UAE Dirhams via Ziina
+        🔒 Secure payment processing via Ziina Payment Gateway
       </div>
     </div>
   );

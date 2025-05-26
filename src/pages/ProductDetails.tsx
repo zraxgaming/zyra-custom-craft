@@ -19,7 +19,6 @@ const ProductDetails = () => {
   const { toast } = useToast();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState(0);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -37,7 +36,9 @@ const ProductDetails = () => {
         // Transform the data to match our Product interface
         const transformedProduct: Product = {
           ...data,
-          images: Array.isArray(data.images) ? data.images : []
+          images: Array.isArray(data.images) 
+            ? data.images.filter(img => typeof img === 'string') as string[]
+            : []
         };
         
         setProduct(transformedProduct);

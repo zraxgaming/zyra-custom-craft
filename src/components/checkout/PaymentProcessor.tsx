@@ -31,25 +31,26 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
       const { data, error } = await supabase.functions.invoke('ziina-payment', {
         body: {
           amount: amount,
-          currency: 'AED',
-          order_data: orderData,
           success_url: `${window.location.origin}/order-success`,
-          cancel_url: `${window.location.origin}/checkout`
+          cancel_url: `${window.location.origin}/checkout`,
+          order_data: orderData
         }
       });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
-      // Simulate actual payment processing
       if (data?.payment_url) {
-        // In real implementation, redirect to Ziina payment page
-        window.open(data.payment_url, '_blank');
+        // Store payment data for verification
+        localStorage.setItem('pending_payment', JSON.stringify({
+          payment_id: data.payment_id,
+          amount: amount,
+          order_data: orderData,
+          method: 'ziina'
+        }));
         
-        // For demo, simulate success after delay
-        setTimeout(() => {
-          const transactionId = `ziina_${Date.now()}`;
-          onSuccess(transactionId);
-        }, 3000);
+        // Redirect to real Ziina payment
+        window.location.href = data.payment_url;
       } else {
         throw new Error('No payment URL received from Ziina');
       }
@@ -61,32 +62,12 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
 
   const processPayPalPayment = async () => {
     try {
-      // In real implementation, you would integrate with PayPal SDK
-      // For now, simulate the payment process
-      const paypalResponse = await fetch('/api/paypal/create-payment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: amount,
-          currency: currency,
-          order_data: orderData
-        })
+      // For now, simulate PayPal until real integration is added
+      toast({
+        title: "PayPal Integration",
+        description: "PayPal integration coming soon. Please use Ziina for now.",
+        variant: "destructive",
       });
-
-      if (!paypalResponse.ok) {
-        // Simulate PayPal payment for demo
-        const transactionId = `paypal_${Date.now()}`;
-        onSuccess(transactionId);
-        return;
-      }
-
-      const data = await paypalResponse.json();
-      
-      if (data.approval_url) {
-        window.open(data.approval_url, '_blank');
-      }
     } catch (error: any) {
       console.error('PayPal payment error:', error);
       onError(error.message || 'PayPal payment failed');
@@ -127,7 +108,7 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
             <p className="text-sm text-muted-foreground">
               {paymentMethod === 'ziina' 
                 ? 'You will be redirected to Ziina to complete your payment securely.'
-                : 'You will be redirected to PayPal to complete your payment securely.'
+                : 'PayPal integration coming soon. Please use Ziina for now.'
               }
             </p>
             <p className="font-medium mt-2">
@@ -141,7 +122,7 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
           
           <Button
             onClick={handlePayment}
-            disabled={isProcessing}
+            disabled={isProcessing || (paymentMethod === 'paypal')}
             className="w-full"
             size="lg"
           >

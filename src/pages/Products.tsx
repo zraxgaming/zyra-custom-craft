@@ -29,7 +29,12 @@ const Products = () => {
         // Transform the data to match our Product interface
         const transformedProducts: Product[] = (data || []).map(product => ({
           ...product,
-          images: Array.isArray(product.images) ? product.images : []
+          images: Array.isArray(product.images) 
+            ? product.images.filter(img => typeof img === 'string') as string[]
+            : [],
+          is_featured: product.is_featured || false,
+          is_customizable: product.is_customizable || false,
+          stock_quantity: product.stock_quantity || 0
         }));
         
         setProducts(transformedProducts);
