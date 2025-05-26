@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useCart } from '@/components/cart/CartProvider';
 import { useAuth } from '@/hooks/use-auth';
@@ -15,10 +16,10 @@ const EmailNotificationService: React.FC<EmailNotificationServiceProps> = ({
 }) => {
   const { items } = useCart();
   const { user } = useAuth();
-  const { config } = useSiteConfig();
+  const siteConfigResult = useSiteConfig();
 
   useEffect(() => {
-    if (!enableAbandonedCart || !user || items.length === 0 || !config.abandoned_cart_enabled || !config.brevo_api_key) {
+    if (!enableAbandonedCart || !user || items.length === 0 || !siteConfigResult.data?.abandoned_cart_enabled || !siteConfigResult.data?.brevo_api_key) {
       return;
     }
 
@@ -27,10 +28,10 @@ const EmailNotificationService: React.FC<EmailNotificationServiceProps> = ({
     }, abandonedCartDelay * 60 * 1000);
 
     return () => clearTimeout(timer);
-  }, [items, user, enableAbandonedCart, abandonedCartDelay, config]);
+  }, [items, user, enableAbandonedCart, abandonedCartDelay, siteConfigResult.data]);
 
   const sendAbandonedCartEmail = async () => {
-    if (!user?.email || !config.brevo_api_key) return;
+    if (!user?.email || !siteConfigResult.data?.brevo_api_key) return;
 
     try {
       console.log('Sending abandoned cart email to:', user.email);
@@ -41,7 +42,7 @@ const EmailNotificationService: React.FC<EmailNotificationServiceProps> = ({
             <h2 style="color: #333; margin-bottom: 20px;">Don't forget your items!</h2>
             <p style="color: #666; line-height: 1.6;">Hi there!</p>
             <p style="color: #666; line-height: 1.6;">
-              You have ${items.length} item(s) waiting in your cart at ${config.site_name || 'Zyra'}. 
+              You have ${items.length} item(s) waiting in your cart at ${siteConfigResult.data?.site_name || 'Zyra'}. 
               Don't miss out on these great products!
             </p>
             <div style="margin: 30px 0;">
@@ -72,10 +73,10 @@ const EmailNotificationService: React.FC<EmailNotificationServiceProps> = ({
       await supabase.functions.invoke('send-brevo-email', {
         body: {
           to: user.email,
-          subject: `Don't forget your ${items.length} item(s) in cart! - ${config.site_name || 'Zyra'}`,
+          subject: `Don't forget your ${items.length} item(s) in cart! - ${siteConfigResult.data?.site_name || 'Zyra'}`,
           content: emailContent,
           type: 'abandoned-cart',
-          api_key: config.brevo_api_key
+          api_key: siteConfigResult.data?.brevo_api_key
         }
       });
       
@@ -86,7 +87,7 @@ const EmailNotificationService: React.FC<EmailNotificationServiceProps> = ({
   };
 
   const sendOrderConfirmation = async (orderData: any) => {
-    if (!user?.email || !config.brevo_api_key) return;
+    if (!user?.email || !siteConfigResult.data?.brevo_api_key) return;
 
     try {
       console.log('Sending order confirmation email to:', user.email);
@@ -116,7 +117,7 @@ const EmailNotificationService: React.FC<EmailNotificationServiceProps> = ({
             </div>
             
             <p style="color: #666; line-height: 1.6;">
-              Thank you for choosing ${config.site_name || 'Zyra'}!
+              Thank you for choosing ${siteConfigResult.data?.site_name || 'Zyra'}!
             </p>
           </div>
         </div>
@@ -125,10 +126,10 @@ const EmailNotificationService: React.FC<EmailNotificationServiceProps> = ({
       await supabase.functions.invoke('send-brevo-email', {
         body: {
           to: user.email,
-          subject: `Order Confirmation #${orderData.id?.slice(0, 8)} - ${config.site_name || 'Zyra'}`,
+          subject: `Order Confirmation #${orderData.id?.slice(0, 8)} - ${siteConfigResult.data?.site_name || 'Zyra'}`,
           content: emailContent,
           type: 'order-confirmation',
-          api_key: config.brevo_api_key
+          api_key: siteConfigResult.data?.brevo_api_key
         }
       });
       
@@ -139,7 +140,7 @@ const EmailNotificationService: React.FC<EmailNotificationServiceProps> = ({
   };
 
   const sendNewsletterWelcome = async (email: string, name?: string) => {
-    if (!config.brevo_api_key || !config.newsletter_enabled) return;
+    if (!siteConfigResult.data?.brevo_api_key || !siteConfigResult.data?.newsletter_enabled) return;
 
     try {
       console.log('Sending newsletter welcome email to:', email);
@@ -147,7 +148,7 @@ const EmailNotificationService: React.FC<EmailNotificationServiceProps> = ({
       const emailContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
           <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <h2 style="color: #8B5CF6; margin-bottom: 20px;">Welcome to ${config.site_name || 'Zyra'}! 🎉</h2>
+            <h2 style="color: #8B5CF6; margin-bottom: 20px;">Welcome to ${siteConfigResult.data?.site_name || 'Zyra'}! 🎉</h2>
             <p style="color: #666; line-height: 1.6;">
               ${name ? `Hi ${name}` : 'Hello'}! Thank you for subscribing to our newsletter.
             </p>
@@ -170,7 +171,7 @@ const EmailNotificationService: React.FC<EmailNotificationServiceProps> = ({
               </a>
             </div>
             <p style="color: #666; line-height: 1.6; text-align: center;">
-              Welcome to the ${config.site_name || 'Zyra'} family!
+              Welcome to the ${siteConfigResult.data?.site_name || 'Zyra'} family!
             </p>
           </div>
         </div>
@@ -179,10 +180,10 @@ const EmailNotificationService: React.FC<EmailNotificationServiceProps> = ({
       await supabase.functions.invoke('send-brevo-email', {
         body: {
           to: email,
-          subject: `Welcome to ${config.site_name || 'Zyra'} Newsletter! 🎉`,
+          subject: `Welcome to ${siteConfigResult.data?.site_name || 'Zyra'} Newsletter! 🎉`,
           content: emailContent,
           type: 'newsletter-welcome',
-          api_key: config.brevo_api_key
+          api_key: siteConfigResult.data?.brevo_api_key
         }
       });
       
@@ -196,7 +197,7 @@ const EmailNotificationService: React.FC<EmailNotificationServiceProps> = ({
   React.useEffect(() => {
     (window as any).sendOrderConfirmation = sendOrderConfirmation;
     (window as any).sendNewsletterWelcome = sendNewsletterWelcome;
-  }, [user, config]);
+  }, [user, siteConfigResult.data]);
 
   return null;
 };
