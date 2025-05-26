@@ -1,13 +1,12 @@
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
-export interface Referral {
+interface Referral {
   id: string;
   referrer_id: string;
-  referred_id?: string;
+  referred_id: string;
   referral_code: string;
   status: string;
   reward_earned: boolean;
@@ -15,134 +14,110 @@ export interface Referral {
   updated_at: string;
 }
 
+interface ReferralStats {
+  totalReferrals: number;
+  activeReferrals: number;
+  pendingReferrals: number;
+  totalRewards: number;
+  referralCode: string;
+}
+
 export const useReferrals = () => {
   const { user } = useAuth();
-
-  return useQuery({
-    queryKey: ["referrals", user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-
-      const { data, error } = await supabase
-        .from("referrals")
-        .select("*")
-        .eq("referrer_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      return data as Referral[];
-    },
-    enabled: !!user,
+  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [stats, setStats] = useState<ReferralStats>({
+    totalReferrals: 0,
+    activeReferrals: 0,
+    pendingReferrals: 0,
+    totalRewards: 0,
+    referralCode: ''
   });
-};
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-export const useCreateReferralCode = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (user) {
+      fetchReferrals();
+    }
+  }, [user]);
 
-  return useMutation({
-    mutationFn: async () => {
-      if (!user) throw new Error("User not authenticated");
+  const fetchReferrals = async () => {
+    if (!user) return;
 
-      // Check if user already has a referral code
-      const { data: existing } = await supabase
-        .from("referrals")
-        .select("referral_code")
-        .eq("referrer_id", user.id)
-        .eq("status", "active")
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Fetch user's referrals
+      const { data: referralData, error: referralError } = await supabase
+        .from('referrals')
+        .select('*')
+        .eq('referrer_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (referralError) throw referralError;
+
+      // Get user profile for referral code
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username, id')
+        .eq('id', user.id)
         .single();
 
-      if (existing) {
-        return existing.referral_code;
-      }
+      const referralCode = profile?.username || `USER${user.id.slice(-6).toUpperCase()}`;
 
-      // Generate unique referral code
-      const code = `REF${user.id.slice(0, 8).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      const referrals = referralData || [];
+      const totalReferrals = referrals.length;
+      const activeReferrals = referrals.filter(r => r.status === 'active').length;
+      const pendingReferrals = referrals.filter(r => r.status === 'pending').length;
+      const totalRewards = referrals.filter(r => r.reward_earned).length * 10; // $10 per referral
 
+      setReferrals(referrals);
+      setStats({
+        totalReferrals,
+        activeReferrals,
+        pendingReferrals,
+        totalRewards,
+        referralCode
+      });
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const createReferral = async (referredUserId: string) => {
+    if (!user) return;
+
+    try {
       const { data, error } = await supabase
-        .from("referrals")
+        .from('referrals')
         .insert({
           referrer_id: user.id,
-          referral_code: code,
-          status: "active"
+          referred_id: referredUserId,
+          referral_code: stats.referralCode,
+          status: 'pending'
         })
-        .select("referral_code")
+        .select()
         .single();
 
       if (error) throw error;
-      return data.referral_code;
-    },
-    onSuccess: (code) => {
-      toast({
-        title: "Referral code created!",
-        description: `Your referral code: ${code}`,
-      });
-      queryClient.invalidateQueries({ queryKey: ["referrals"] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error creating referral code",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-};
 
-export const useApplyReferralCode = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
+      await fetchReferrals();
+      return data;
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    }
+  };
 
-  return useMutation({
-    mutationFn: async (code: string) => {
-      if (!user) throw new Error("User not authenticated");
-
-      // Find the referral code
-      const { data: referral, error: findError } = await supabase
-        .from("referrals")
-        .select("*")
-        .eq("referral_code", code)
-        .eq("status", "active")
-        .single();
-
-      if (findError || !referral) {
-        throw new Error("Invalid referral code");
-      }
-
-      if (referral.referrer_id === user.id) {
-        throw new Error("You cannot use your own referral code");
-      }
-
-      if (referral.referred_id) {
-        throw new Error("This referral code has already been used");
-      }
-
-      // Update the referral with the new user
-      const { error: updateError } = await supabase
-        .from("referrals")
-        .update({
-          referred_id: user.id,
-          status: "completed"
-        })
-        .eq("id", referral.id);
-
-      if (updateError) throw updateError;
-
-      return referral;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Referral code applied!",
-        description: "You've successfully used a referral code.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error applying referral code",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  return {
+    referrals,
+    stats,
+    isLoading,
+    error,
+    refetch: fetchReferrals,
+    createReferral
+  };
 };

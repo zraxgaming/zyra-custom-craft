@@ -1,7 +1,7 @@
 
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 export const usePageTracking = () => {
@@ -14,11 +14,12 @@ export const usePageTracking = () => {
         // Generate a session ID if not exists
         let sessionId = sessionStorage.getItem('session_id');
         if (!sessionId) {
-          sessionId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+          sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           sessionStorage.setItem('session_id', sessionId);
         }
 
-        await supabase
+        // Track the page view
+        const { error } = await supabase
           .from('page_views')
           .insert({
             path: location.pathname,
@@ -27,12 +28,18 @@ export const usePageTracking = () => {
             user_agent: navigator.userAgent,
             referrer: document.referrer || null
           });
+
+        if (error) {
+          console.error('Error tracking page view:', error);
+        }
       } catch (error) {
-        // Silently fail - don't interrupt user experience
-        console.error('Error tracking page view:', error);
+        console.error('Error in page tracking:', error);
       }
     };
 
+    // Track page view on route change
     trackPageView();
-  }, [location.pathname, user?.id]);
+  }, [location.pathname, user]);
+
+  return null;
 };

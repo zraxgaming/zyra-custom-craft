@@ -1,78 +1,74 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/hooks/use-auth";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
-import { TrendingUp, Users, Eye, Clock } from "lucide-react";
+import { Users, ShoppingCart, DollarSign, TrendingUp, Activity } from "lucide-react";
 
-const RealTimeAnalytics = () => {
+interface AnalyticsData {
+  totalUsers: number;
+  totalOrders: number;
+  totalRevenue: number;
+  activeUsers: number;
+  conversionRate: number;
+}
+
+const RealTimeAnalytics: React.FC = () => {
   const { user } = useAuth();
-  const [analytics, setAnalytics] = useState({
-    todayViews: 0,
-    uniqueVisitors: 0,
-    bounceRate: 0,
-    avgSessionDuration: 0,
-    monthlyData: [],
-    recentData: []
+  const [analytics, setAnalytics] = useState<AnalyticsData>({
+    totalUsers: 0,
+    totalOrders: 0,
+    totalRevenue: 0,
+    activeUsers: 0,
+    conversionRate: 0
   });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      fetchAnalytics();
-      const interval = setInterval(fetchAnalytics, 30000); // Update every 30 seconds
-      return () => clearInterval(interval);
-    }
-  }, [user]);
+    fetchAnalytics();
+    const interval = setInterval(fetchAnalytics, 30000); // Update every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchAnalytics = async () => {
     try {
-      // Fetch page views for today
-      const today = new Date().toISOString().split('T')[0];
-      const { data: pageViews } = await supabase
-        .from('page_views')
-        .select('*')
-        .gte('timestamp', today);
+      // Fetch total users
+      const { count: userCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
 
-      // Calculate metrics
-      const todayViews = pageViews?.length || 0;
-      const uniqueVisitors = new Set(pageViews?.map(view => view.session_id)).size;
+      // Fetch total orders
+      const { count: orderCount } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true });
+
+      // Fetch total revenue
+      const { data: revenueData } = await supabase
+        .from('orders')
+        .select('total_amount')
+        .eq('payment_status', 'paid');
+
+      const totalRevenue = revenueData?.reduce((sum, order) => sum + Number(order.total_amount), 0) || 0;
+
+      // Fetch active users (users who logged in last 24 hours)
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
       
-      // Mock data for demonstration (in a real app, you'd calculate these from actual data)
-      const bounceRate = Math.round(Math.random() * 30 + 20); // 20-50%
-      const avgSessionDuration = Math.round(Math.random() * 180 + 120); // 2-5 minutes
+      const { count: activeUserCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('updated_at', yesterday.toISOString());
 
-      // Generate monthly data for the last 6 months
-      const monthlyData = [];
-      for (let i = 5; i >= 0; i--) {
-        const date = new Date();
-        date.setMonth(date.getMonth() - i);
-        monthlyData.push({
-          month: date.toLocaleDateString('en-US', { month: 'short' }),
-          views: Math.round(Math.random() * 5000 + 1000),
-          visitors: Math.round(Math.random() * 2000 + 500)
-        });
-      }
-
-      // Generate recent hourly data
-      const recentData = [];
-      for (let i = 23; i >= 0; i--) {
-        const hour = new Date();
-        hour.setHours(hour.getHours() - i);
-        recentData.push({
-          time: hour.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-          views: Math.round(Math.random() * 100 + 10)
-        });
-      }
+      // Calculate conversion rate
+      const conversionRate = userCount && orderCount ? (orderCount / userCount) * 100 : 0;
 
       setAnalytics({
-        todayViews,
-        uniqueVisitors,
-        bounceRate,
-        avgSessionDuration,
-        monthlyData,
-        recentData
+        totalUsers: userCount || 0,
+        totalOrders: orderCount || 0,
+        totalRevenue,
+        activeUsers: activeUserCount || 0,
+        conversionRate: Number(conversionRate.toFixed(2))
       });
     } catch (error) {
       console.error('Error fetching analytics:', error);
@@ -81,102 +77,75 @@ const RealTimeAnalytics = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-scale-in">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Today's Views</p>
-                <p className="text-2xl font-bold text-foreground">{analytics.todayViews}</p>
-              </div>
-              <Eye className="h-8 w-8 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 animate-fade-in">
+      <Card className="hover:shadow-lg transition-all duration-300 hover:scale-105">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+          <Users className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold animate-pulse">{analytics.totalUsers}</div>
+          <Badge variant="secondary" className="mt-2">
+            <Activity className="h-3 w-3 mr-1" />
+            Live
+          </Badge>
+        </CardContent>
+      </Card>
 
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-scale-in" style={{ animationDelay: '100ms' }}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Unique Visitors</p>
-                <p className="text-2xl font-bold text-foreground">{analytics.uniqueVisitors}</p>
-              </div>
-              <Users className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
+      <Card className="hover:shadow-lg transition-all duration-300 hover:scale-105">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+          <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold animate-pulse">{analytics.totalOrders}</div>
+          <Badge variant="secondary" className="mt-2">
+            <Activity className="h-3 w-3 mr-1" />
+            Live
+          </Badge>
+        </CardContent>
+      </Card>
 
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-scale-in" style={{ animationDelay: '200ms' }}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Bounce Rate</p>
-                <p className="text-2xl font-bold text-foreground">{analytics.bounceRate}%</p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-orange-500" />
-            </div>
-          </CardContent>
-        </Card>
+      <Card className="hover:shadow-lg transition-all duration-300 hover:scale-105">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+          <DollarSign className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold animate-pulse">${analytics.totalRevenue.toFixed(2)}</div>
+          <Badge variant="secondary" className="mt-2">
+            <Activity className="h-3 w-3 mr-1" />
+            Live
+          </Badge>
+        </CardContent>
+      </Card>
 
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-scale-in" style={{ animationDelay: '300ms' }}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Avg. Session</p>
-                <p className="text-2xl font-bold text-foreground">{Math.floor(analytics.avgSessionDuration / 60)}m {analytics.avgSessionDuration % 60}s</p>
-              </div>
-              <Clock className="h-8 w-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="hover:shadow-lg transition-all duration-300 hover:scale-105">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold animate-pulse">{analytics.activeUsers}</div>
+          <Badge variant="secondary" className="mt-2">
+            24h Active
+          </Badge>
+        </CardContent>
+      </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-scale-in" style={{ animationDelay: '400ms' }}>
-          <CardHeader>
-            <CardTitle>Monthly Traffic</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={analytics.monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="views" fill="#8884d8" name="Page Views" />
-                <Bar dataKey="visitors" fill="#82ca9d" name="Unique Visitors" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50 animate-scale-in" style={{ animationDelay: '500ms' }}>
-          <CardHeader>
-            <CardTitle>Real-time Activity (Last 24h)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={analytics.recentData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="time" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="views" stroke="#8884d8" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="hover:shadow-lg transition-all duration-300 hover:scale-105">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
+          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold animate-pulse">{analytics.conversionRate}%</div>
+          <Badge variant="secondary" className="mt-2">
+            Orders/Users
+          </Badge>
+        </CardContent>
+      </Card>
     </div>
   );
 };

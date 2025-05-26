@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/contexts/AuthContext';
 
 const GoogleSignIn: React.FC = () => {
   const { signInWithGoogle } = useAuth();
@@ -18,7 +18,7 @@ const GoogleSignIn: React.FC = () => {
     <Button
       type="button"
       variant="outline"
-      className="w-full"
+      className="w-full hover:scale-105 transition-transform duration-200"
       onClick={handleGoogleSignIn}
     >
       <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">

@@ -1,53 +1,28 @@
 
-export interface ShippingAddress {
-  name: string;
-  street: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
-  phone?: string;
-}
-
-export interface Profile {
-  id: string;
-  display_name?: string;
-  first_name?: string;
-  last_name?: string;
-  full_name?: string;
-  email?: string;
-  phone?: string;
-  avatar_url?: string;
-}
-
-export interface Product {
-  id: string;
-  name: string;
-  price: number;
-  image_url?: string;
-  images?: string[];
-  description?: string;
-  slug?: string;
-}
-
 export interface Order {
   id: string;
   user_id: string;
+  profile_id?: string;
   total_amount: number;
-  status: string;
-  shipping_address: ShippingAddress;
-  payment_method: string;
-  delivery_option: string;
-  delivery_type?: string;
-  shipping_cost: number;
-  subtotal: number;
-  created_at: string;
-  updated_at: string;
-  payment_status?: string;
+  payment_status: 'pending' | 'paid' | 'failed' | 'refunded';
+  payment_method?: string;
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   currency?: string;
-  billing_address?: ShippingAddress;
+  delivery_type?: string;
   tracking_number?: string;
-  profiles?: Profile;
+  notes?: string;
+  shipping_address?: any;
+  billing_address?: any;
+  created_at: string;
+  updated_at?: string;
+  profiles?: {
+    id: string;
+    email?: string;
+    display_name?: string;
+    first_name?: string;
+    last_name?: string;
+    full_name?: string;
+  };
 }
 
 export interface OrderItem {
@@ -57,10 +32,5 @@ export interface OrderItem {
   quantity: number;
   price: number;
   customization?: any;
-  product?: Product;
-}
-
-export interface OrderDetail extends Order {
-  order_items: OrderItem[];
-  profiles: Profile;
+  created_at: string;
 }

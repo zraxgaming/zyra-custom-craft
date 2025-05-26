@@ -27,6 +27,7 @@ import AdminUsers from "./pages/admin/Users";
 import AdminReports from "./pages/admin/Reports";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./components/cart/CartProvider";
+import { WishlistProvider } from "./components/wishlist/WishlistProvider";
 import { usePageTracking } from "./hooks/usePageTracking";
 import PWAInstallPrompt from "./components/pwa/PWAInstallPrompt";
 import PWANotifications from "./components/pwa/PWANotifications";
@@ -34,8 +35,16 @@ import PushNotificationManager from "./components/pwa/PushNotificationManager";
 import ServiceWorkerUpdater from "./components/pwa/ServiceWorkerUpdater";
 import NetworkStatus from "./components/pwa/NetworkStatus";
 import SEOHead from "./components/seo/SEOHead";
+import AdminRoute from "./components/admin/AdminRoute";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 3,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
 function AppContent() {
   usePageTracking();
@@ -59,13 +68,13 @@ function AppContent() {
         <Route path="/order-success/:orderId?" element={<OrderSuccess />} />
         
         {/* Admin Routes */}
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/products" element={<AdminProducts />} />
-        <Route path="/admin/orders" element={<AdminOrders />} />
-        <Route path="/admin/analytics" element={<AdminAnalytics />} />
-        <Route path="/admin/settings" element={<AdminSettings />} />
-        <Route path="/admin/users" element={<AdminUsers />} />
-        <Route path="/admin/reports" element={<AdminReports />} />
+        <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+        <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
+        <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
+        <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
+        <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+        <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+        <Route path="/admin/reports" element={<AdminRoute><AdminReports /></AdminRoute>} />
       </Routes>
       
       {/* PWA Components */}
@@ -88,9 +97,11 @@ function App() {
         <TooltipProvider>
           <BrowserRouter>
             <AuthProvider>
-              <CartProvider>
-                <AppContent />
-              </CartProvider>
+              <WishlistProvider>
+                <CartProvider>
+                  <AppContent />
+                </CartProvider>
+              </WishlistProvider>
             </AuthProvider>
           </BrowserRouter>
         </TooltipProvider>

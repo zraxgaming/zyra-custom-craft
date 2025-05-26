@@ -3,8 +3,9 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Star, ShoppingCart } from "lucide-react";
+import { Star, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AddToCartButton } from "@/components/cart/AddToCartButton";
 
 interface Product {
   id: string;
@@ -29,14 +30,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     : product.price;
 
   return (
-    <Card className="group hover:shadow-lg transition-all duration-300 overflow-hidden">
+    <Card className="group hover:shadow-lg transition-all duration-300 overflow-hidden hover:scale-[1.02] animate-fade-in">
       <div className="relative">
-        <Link to={`/products/${product.slug}`}>
+        <Link to={`/product/${product.id}`}>
           <div className="aspect-square overflow-hidden">
             <img
               src={product.images?.[0] || "/placeholder.svg"}
               alt={product.name}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
           </div>
         </Link>
@@ -44,27 +45,38 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         {/* Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1">
           {product.is_new && (
-            <Badge className="bg-green-500 hover:bg-green-600">New</Badge>
+            <Badge className="bg-green-500 hover:bg-green-600 animate-pulse">New</Badge>
           )}
           {product.discount_percentage && product.discount_percentage > 0 && (
-            <Badge variant="destructive">-{product.discount_percentage}%</Badge>
+            <Badge variant="destructive" className="animate-bounce">-{product.discount_percentage}%</Badge>
           )}
           {!product.in_stock && (
             <Badge variant="secondary">Out of Stock</Badge>
           )}
         </div>
+
+        {/* Wishlist Button */}
+        <div className="absolute top-2 right-2">
+          <Button
+            size="icon"
+            variant="outline"
+            className="h-8 w-8 bg-background/80 backdrop-blur-sm hover:bg-background hover:scale-110 transition-all duration-200"
+          >
+            <Heart className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
-      <CardContent className="p-4">
-        <Link to={`/products/${product.slug}`}>
-          <h3 className="font-semibold text-lg mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+      <CardContent className="p-4 space-y-3">
+        <Link to={`/product/${product.id}`}>
+          <h3 className="font-semibold text-lg mb-2 line-clamp-2 group-hover:text-primary transition-colors duration-200">
             {product.name}
           </h3>
         </Link>
 
         {/* Rating */}
         {product.rating && product.rating > 0 && (
-          <div className="flex items-center gap-1 mb-2">
+          <div className="flex items-center gap-1">
             <div className="flex">
               {[...Array(5)].map((_, i) => (
                 <Star
@@ -96,14 +108,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
 
         {/* Add to Cart Button */}
-        <Button 
-          className="w-full" 
-          disabled={!product.in_stock}
-          variant={product.in_stock ? "default" : "secondary"}
-        >
-          <ShoppingCart className="w-4 h-4 mr-2" />
-          {product.in_stock ? "Add to Cart" : "Out of Stock"}
-        </Button>
+        <AddToCartButton 
+          product={product}
+          className="w-full hover:scale-105 transition-transform duration-200"
+        />
       </CardContent>
     </Card>
   );

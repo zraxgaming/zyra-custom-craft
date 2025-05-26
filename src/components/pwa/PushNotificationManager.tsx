@@ -1,265 +1,94 @@
 
-import React, { useEffect, useState } from 'react';
-import { useAuth } from '@/hooks/use-auth';
-import { useCart } from '@/components/cart/CartProvider';
-import { useSiteConfig } from '@/hooks/use-site-config';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import React, { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
-interface PushNotificationManagerProps {
-  enableAbandonedCart?: boolean;
-  enableOrderUpdates?: boolean;
-  enableStockAlerts?: boolean;
-  enablePromotions?: boolean;
-}
-
-// Extend Window interface to include abandonedCartTimeout
-declare global {
-  interface Window {
-    abandonedCartTimeout?: NodeJS.Timeout;
-  }
-}
-
-const PushNotificationManager: React.FC<PushNotificationManagerProps> = ({
-  enableAbandonedCart = true,
-  enableOrderUpdates = true,
-  enableStockAlerts = true,
-  enablePromotions = true
-}) => {
+const PushNotificationManager: React.FC = () => {
   const { user } = useAuth();
-  const { items } = useCart();
-  const siteConfigResult = useSiteConfig();
   const { toast } = useToast();
-  const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
+  const [isSupported, setIsSupported] = useState(false);
 
   useEffect(() => {
     checkPushSupport();
-  }, []);
-
-  useEffect(() => {
-    if (user && isSubscribed) {
-      setupOrderUpdatesListener();
-      setupStockAlertsListener();
+    if (user) {
+      registerServiceWorker();
     }
-  }, [user, isSubscribed]);
+  }, [user]);
 
-  useEffect(() => {
-    if (enableAbandonedCart && user && items.length > 0) {
-      scheduleAbandonedCartNotification();
-    }
-  }, [items, user, enableAbandonedCart]);
+  const checkPushSupport = () => {
+    const supported = 'serviceWorker' in navigator && 'PushManager' in window;
+    setIsSupported(supported);
+  };
 
-  const checkPushSupport = async () => {
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      try {
-        const registration = await navigator.serviceWorker.ready;
-        const existingSubscription = await registration.pushManager.getSubscription();
-        
-        if (existingSubscription) {
-          setSubscription(existingSubscription);
-          setIsSubscribed(true);
-        }
-      } catch (error) {
-        console.error('Error checking push subscription:', error);
+  const registerServiceWorker = async () => {
+    if (!isSupported) return;
+
+    try {
+      const registration = await navigator.serviceWorker.register('/sw.js');
+      console.log('Service Worker registered:', registration);
+
+      // Check for existing subscription
+      const existingSubscription = await registration.pushManager.getSubscription();
+      if (existingSubscription) {
+        setSubscription(existingSubscription);
       }
+    } catch (error) {
+      console.error('Service Worker registration failed:', error);
     }
   };
 
   const subscribeToPush = async () => {
-    try {
-      const permission = await Notification.requestPermission();
-      
-      if (permission !== 'granted') {
-        toast({
-          title: "Notifications blocked",
-          description: "Please enable notifications in your browser settings.",
-          variant: "destructive"
-        });
-        return;
-      }
+    if (!isSupported || !user) return;
 
+    try {
       const registration = await navigator.serviceWorker.ready;
-      const newSubscription = await registration.pushManager.subscribe({
+      
+      const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(siteConfigResult.data?.vapid_public_key || '')
+        applicationServerKey: urlBase64ToUint8Array(
+          // This would be your VAPID public key in a real app
+          'BEl62iUYgUivxIkv69yViEuiBIa40HI6Gat3VhLryfuuQJ4U-Byt6QwPgQ4VvG0_LsQGHfHaQjc4LwLg_CJhP5Y'
+        )
       });
 
-      setSubscription(newSubscription);
-      setIsSubscribed(true);
-
-      // For now, we'll skip saving to database since push_subscriptions table doesn't exist
-      console.log('Push subscription created:', newSubscription);
-
+      setSubscription(subscription);
+      
+      // In a real app, you'd send this subscription to your server
+      console.log('Push subscription:', subscription);
+      
       toast({
-        title: "Notifications enabled",
-        description: "You'll receive updates about your orders and special offers.",
+        title: "Push notifications enabled!",
+        description: "You'll receive notifications about your orders and updates.",
       });
     } catch (error) {
-      console.error('Error subscribing to push notifications:', error);
+      console.error('Push subscription failed:', error);
       toast({
-        title: "Error enabling notifications",
-        description: "Please try again later.",
+        title: "Subscription failed",
+        description: "Could not enable push notifications",
         variant: "destructive"
       });
     }
   };
 
-  const scheduleAbandonedCartNotification = () => {
-    // Clear any existing timeouts
-    if (window.abandonedCartTimeout) {
-      clearTimeout(window.abandonedCartTimeout);
-    }
-
-    // Schedule notification for 30 minutes
-    window.abandonedCartTimeout = setTimeout(async () => {
-      if (items.length > 0 && user) {
-        await sendPushNotification({
-          title: "Don't forget your cart! 🛍️",
-          body: `You have ${items.length} item(s) waiting for you`,
-          icon: '/icon-192.png',
-          badge: '/icon-192.png',
-          tag: 'abandoned-cart',
-          data: {
-            type: 'abandoned-cart',
-            url: '/cart'
-          }
-        });
-      }
-    }, 30 * 60 * 1000); // 30 minutes
-  };
-
-  const setupOrderUpdatesListener = () => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel('order-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders',
-          filter: `user_id=eq.${user.id}`
-        },
-        async (payload) => {
-          const order = payload.new;
-          const oldOrder = payload.old;
-
-          if (order.status !== oldOrder.status) {
-            let title = "Order Update";
-            let body = "";
-
-            switch (order.status) {
-              case 'processing':
-                title = "Order Confirmed! ✅";
-                body = `Your order #${order.id.slice(0, 8)} is being processed`;
-                break;
-              case 'shipped':
-                title = "Order Shipped! 📦";
-                body = `Your order #${order.id.slice(0, 8)} is on its way`;
-                break;
-              case 'delivered':
-                title = "Order Delivered! 🎉";
-                body = `Your order #${order.id.slice(0, 8)} has been delivered`;
-                break;
-            }
-
-            await sendPushNotification({
-              title,
-              body,
-              icon: '/icon-192.png',
-              tag: 'order-update',
-              data: {
-                type: 'order-update',
-                orderId: order.id,
-                url: `/order/${order.id}`
-              }
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
-
-  const setupStockAlertsListener = () => {
-    const channel = supabase
-      .channel('stock-alerts')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'products'
-        },
-        async (payload) => {
-          const product = payload.new;
-          const oldProduct = payload.old;
-
-          // Low stock alert
-          if (product.stock_quantity <= 5 && oldProduct.stock_quantity > 5) {
-            await sendPushNotification({
-              title: "Low Stock Alert! ⚠️",
-              body: `${product.name} is running low (${product.stock_quantity} left)`,
-              icon: '/icon-192.png',
-              tag: 'stock-alert',
-              data: {
-                type: 'stock-alert',
-                productId: product.id,
-                url: `/product/${product.id}`
-              }
-            });
-          }
-
-          // Back in stock
-          if (!oldProduct.in_stock && product.in_stock) {
-            await sendPushNotification({
-              title: "Back in Stock! 🎉",
-              body: `${product.name} is available again`,
-              icon: '/icon-192.png',
-              tag: 'back-in-stock',
-              data: {
-                type: 'back-in-stock',
-                productId: product.id,
-                url: `/product/${product.id}`
-              }
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
-
-  const sendPushNotification = async (notificationData: {
-    title: string;
-    body: string;
-    icon?: string;
-    badge?: string;
-    tag?: string;
-    data?: any;
-  }) => {
-    if (!isSubscribed || !subscription) return;
+  const unsubscribeFromPush = async () => {
+    if (!subscription) return;
 
     try {
-      await supabase.functions.invoke('send-push-notification', {
-        body: {
-          subscription: subscription.toJSON(),
-          notification: notificationData
-        }
+      await subscription.unsubscribe();
+      setSubscription(null);
+      
+      toast({
+        title: "Push notifications disabled",
+        description: "You won't receive push notifications anymore",
       });
     } catch (error) {
-      console.error('Error sending push notification:', error);
+      console.error('Push unsubscription failed:', error);
     }
   };
 
+  // Helper function to convert VAPID key
   const urlBase64ToUint8Array = (base64String: string) => {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)
@@ -275,19 +104,9 @@ const PushNotificationManager: React.FC<PushNotificationManagerProps> = ({
     return outputArray;
   };
 
-  // Auto-subscribe if user is logged in and hasn't been asked
-  useEffect(() => {
-    if (user && !isSubscribed && !localStorage.getItem('push-permission-asked')) {
-      const timer = setTimeout(() => {
-        subscribeToPush();
-        localStorage.setItem('push-permission-asked', 'true');
-      }, 5000); // Ask after 5 seconds
-
-      return () => clearTimeout(timer);
-    }
-  }, [user, isSubscribed]);
-
-  return null; // This component doesn't render anything
+  // This component manages push notifications in the background
+  // It doesn't render any UI
+  return null;
 };
 
 export default PushNotificationManager;

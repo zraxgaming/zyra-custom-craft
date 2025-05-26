@@ -18,7 +18,7 @@ export interface Product {
   is_digital?: boolean;
   is_new?: boolean;
   featured?: boolean;
-  slug?: string;
+  slug: string;
   images: string[];
   meta_title?: string;
   meta_description?: string;
@@ -38,4 +38,5 @@ export interface Product {
 // Export a type that ensures images is always defined for components that require it
 export interface ProductWithImages extends Product {
   images: string[];
+  slug: string;
 }

@@ -1,217 +1,179 @@
 
-import React, { useState, useEffect } from "react";
-import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useCart } from "@/components/cart/CartProvider";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
-import ZiinaPayment from "./ZiinaPayment";
+import { useAuth } from "@/contexts/AuthContext";
+import { CreditCard, Smartphone, Wallet, DollarSign } from "lucide-react";
 
-export interface PaymentMethodsProps {
-  selectedMethod: string;
-  onMethodChange: (method: string) => void;
-  shippingInfo?: any;
-  deliveryOption?: string;
+interface PaymentMethodsProps {
+  total: number;
+  onPaymentMethodSelect: (method: string) => void;
+  onPaymentComplete: () => void;
 }
 
 const PaymentMethods: React.FC<PaymentMethodsProps> = ({
-  selectedMethod,
-  onMethodChange,
-  shippingInfo,
-  deliveryOption = "standard"
+  total,
+  onPaymentMethodSelect,
+  onPaymentComplete
 }) => {
-  const [paypalClientId, setPaypalClientId] = useState<string>("");
-  const [loading, setLoading] = useState(true);
+  const [selectedMethod, setSelectedMethod] = useState<string>("");
+  const [cardDetails, setCardDetails] = useState({
+    number: "",
+    expiry: "",
+    cvv: "",
+    name: ""
+  });
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
-  const { items, totalPrice, clearCart } = useCart();
   const { user } = useAuth();
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
-    
-    if (clientId) {
-      setPaypalClientId(clientId);
-      setLoading(false);
-    } else {
-      console.error("PayPal client ID is not defined in environment variables");
+  const handlePayment = async () => {
+    if (!selectedMethod) {
       toast({
-        title: "Payment configuration error",
-        description: "PayPal client ID is missing. Please check environment configuration.",
-        variant: "destructive",
+        title: "Payment method required",
+        description: "Please select a payment method",
+        variant: "destructive"
       });
-      setLoading(false);
+      return;
     }
-  }, [toast]);
 
-  const createOrder = async (paymentMethod: string, paymentId?: string) => {
+    setIsProcessing(true);
+
     try {
-      if (!user || !shippingInfo) {
-        throw new Error("User or shipping information missing");
-      }
-
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          user_id: user.id,
-          total_amount: totalPrice,
-          status: "pending",
-          shipping_address: shippingInfo,
-          payment_method: paymentMethod,
-          delivery_type: deliveryOption,
-          payment_status: paymentMethod === "paypal" ? "paid" : "pending"
-        })
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        product_id: item.productId,
-        quantity: item.quantity,
-        price: item.price,
-        customization: item.customization
-      }));
-
-      const { error: itemsError } = await supabase
-        .from("order_items")
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
-
-      clearCart();
-      return order.id;
-    } catch (error: any) {
-      console.error("Order creation error:", error);
-      throw error;
+      // Simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      toast({
+        title: "Payment successful!",
+        description: `Payment of $${total.toFixed(2)} processed successfully`,
+      });
+      
+      onPaymentComplete();
+    } catch (error) {
+      toast({
+        title: "Payment failed",
+        description: "There was an error processing your payment",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="font-medium text-lg mb-4 text-foreground">Payment Method</div>
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <Card className="bg-card/60 backdrop-blur-sm border-border/50 animate-fade-in">
-      <CardContent className="pt-6">
-        <div className="font-medium text-lg mb-4 text-foreground flex items-center gap-2">
-          💳 Payment Method
-        </div>
-        
-        <Tabs value={selectedMethod} onValueChange={onMethodChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-muted/50">
-            <TabsTrigger value="ziina" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-600 transition-all duration-300">
-              Ziina (AED)
-            </TabsTrigger>
-            <TabsTrigger value="paypal" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-700 transition-all duration-300">
-              PayPal (USD)
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="ziina" className="mt-4 space-y-4">
-            <ZiinaPayment />
-          </TabsContent>
-          
-          <TabsContent value="paypal" className="mt-4 space-y-4">
-            <div className="space-y-4">
-              <div className="flex items-center border rounded-md p-3 bg-background hover:bg-muted/50 transition-colors">
-                <div className="flex items-center">
-                  <img 
-                    src="https://img.icons8.com/color/48/000000/paypal.png" 
-                    alt="PayPal" 
-                    className="h-8 mr-2 animate-bounce" 
-                  />
-                  <span className="text-foreground font-medium">PayPal or Credit/Debit Card</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-center gap-3 p-2 bg-muted/30 rounded">
-                <img src="https://img.icons8.com/color/32/000000/visa.png" alt="Visa" className="h-6 hover:scale-110 transition-transform" />
-                <img src="https://img.icons8.com/color/32/000000/mastercard.png" alt="Mastercard" className="h-6 hover:scale-110 transition-transform" />
-                <img src="https://img.icons8.com/color/32/000000/amex.png" alt="American Express" className="h-6 hover:scale-110 transition-transform" />
-              </div>
+    <Card className="w-full animate-fade-in">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <CreditCard className="h-5 w-5" />
+          Payment Methods
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <RadioGroup
+          value={selectedMethod}
+          onValueChange={(value) => {
+            setSelectedMethod(value);
+            onPaymentMethodSelect(value);
+          }}
+          className="space-y-4"
+        >
+          <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+            <RadioGroupItem value="card" id="card" />
+            <Label htmlFor="card" className="flex items-center gap-2 cursor-pointer">
+              <CreditCard className="h-4 w-4" />
+              Credit/Debit Card
+            </Label>
+          </div>
 
-              {paypalClientId && (
-                <div className="animate-slide-in-up">
-                  <PayPalScriptProvider options={{ 
-                    clientId: paypalClientId,
-                    currency: "USD",
-                    intent: "capture",
-                    components: "buttons",
-                    'enable-funding': "card",
-                    'disable-funding': "paylater,venmo"
-                  }}>
-                    <PayPalButtons
-                      style={{ 
-                        layout: "horizontal",
-                        color: "blue",
-                        shape: "rect",
-                        label: "pay",
-                        height: 50
-                      }}
-                      createOrder={(data, actions) => {
-                        return actions.order.create({
-                          purchase_units: [
-                            {
-                              amount: {
-                                currency_code: "USD",
-                                value: totalPrice.toFixed(2),
-                              },
-                            },
-                          ],
-                        });
-                      }}
-                      onApprove={async (data, actions) => {
-                        try {
-                          const details = await actions.order!.capture();
-                          
-                          const orderId = await createOrder("paypal", details.id);
-                          
-                          toast({
-                            title: "Payment successful! 🎉",
-                            description: `Transaction completed by ${details.payer?.name?.given_name}`,
-                          });
+          <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+            <RadioGroupItem value="paypal" id="paypal" />
+            <Label htmlFor="paypal" className="flex items-center gap-2 cursor-pointer">
+              <Wallet className="h-4 w-4" />
+              PayPal
+            </Label>
+          </div>
 
-                          navigate(`/order-success/${orderId}`);
-                          
-                        } catch (error: any) {
-                          console.error("PayPal order creation error:", error);
-                          toast({
-                            title: "Order creation failed",
-                            description: "Payment was successful but order creation failed. Please contact support.",
-                            variant: "destructive",
-                          });
-                          navigate("/order-failed");
-                        }
-                      }}
-                      onError={(err) => {
-                        console.error("PayPal Checkout onError", err);
-                        toast({
-                          title: "Payment failed",
-                          description: "There was an error processing your PayPal payment",
-                          variant: "destructive",
-                        });
-                      }}
-                    />
-                  </PayPalScriptProvider>
-                </div>
-              )}
+          <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+            <RadioGroupItem value="ziina" id="ziina" />
+            <Label htmlFor="ziina" className="flex items-center gap-2 cursor-pointer">
+              <Smartphone className="h-4 w-4" />
+              Ziina
+            </Label>
+          </div>
+
+          <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+            <RadioGroupItem value="cash" id="cash" />
+            <Label htmlFor="cash" className="flex items-center gap-2 cursor-pointer">
+              <DollarSign className="h-4 w-4" />
+              Cash on Delivery
+            </Label>
+          </div>
+        </RadioGroup>
+
+        {selectedMethod === "card" && (
+          <div className="space-y-4 animate-slide-in-right">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="cardName">Cardholder Name</Label>
+                <Input
+                  id="cardName"
+                  placeholder="John Doe"
+                  value={cardDetails.name}
+                  onChange={(e) => setCardDetails(prev => ({ ...prev, name: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cardNumber">Card Number</Label>
+                <Input
+                  id="cardNumber"
+                  placeholder="1234 5678 9012 3456"
+                  value={cardDetails.number}
+                  onChange={(e) => setCardDetails(prev => ({ ...prev, number: e.target.value }))}
+                />
+              </div>
             </div>
-          </TabsContent>
-        </Tabs>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="expiry">Expiry Date</Label>
+                <Input
+                  id="expiry"
+                  placeholder="MM/YY"
+                  value={cardDetails.expiry}
+                  onChange={(e) => setCardDetails(prev => ({ ...prev, expiry: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cvv">CVV</Label>
+                <Input
+                  id="cvv"
+                  placeholder="123"
+                  value={cardDetails.cvv}
+                  onChange={(e) => setCardDetails(prev => ({ ...prev, cvv: e.target.value }))}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="pt-4 border-t">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-lg font-semibold">Total:</span>
+            <span className="text-2xl font-bold text-primary">${total.toFixed(2)}</span>
+          </div>
+          
+          <Button
+            onClick={handlePayment}
+            disabled={!selectedMethod || isProcessing}
+            className="w-full hover:scale-105 transition-transform duration-200"
+            size="lg"
+          >
+            {isProcessing ? "Processing..." : `Pay $${total.toFixed(2)}`}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
