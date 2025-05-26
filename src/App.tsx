@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,6 +27,7 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import OrderSuccess from "./pages/OrderSuccess";
 import OrderFailed from "./pages/OrderFailed";
+import CategoryPage from "./pages/CategoryPage";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -60,6 +62,7 @@ const AppContent = () => {
       {/* Public Routes */}
       <Route path="/home" element={<Index />} />
       <Route path="/shop" element={<Shop />} />
+      <Route path="/categories" element={<CategoryPage />} />
       <Route path="/products/:slug" element={<ProductDetail />} />
       <Route path="/customize/:productId" element={<ProductCustomizer />} />
       <Route path="/about" element={<About />} />

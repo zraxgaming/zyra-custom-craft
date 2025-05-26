@@ -16,38 +16,41 @@ const Shop = () => {
   const [searchParams] = useSearchParams();
   const { data: products = [], isLoading, error } = useProducts();
   
+  // Ensure products is an array and transform safely
+  const safeProducts = Array.isArray(products) ? products : [];
+  
   // Transform products to match the filter hook's Product interface
-  const transformedProducts = products.map(product => ({
-    id: product.id,
-    name: product.name,
-    price: product.price,
+  const transformedProducts = safeProducts.map(product => ({
+    id: product.id || '',
+    name: product.name || '',
+    price: product.price || 0,
     category: product.category || "Uncategorized",
-    in_stock: product.in_stock,
+    in_stock: product.in_stock || false,
     rating: product.rating || 0,
     created_at: product.created_at || new Date().toISOString(),
     featured: product.featured || false
   }));
 
   const {
-    filteredProducts,
-    searchTerm,
+    filteredProducts = [],
+    searchTerm = '',
     setSearchTerm,
-    sortOption,
+    sortOption = 'featured',
     setSortOption,
-    selectedCategories,
+    selectedCategories = [],
     toggleCategory,
-    priceRange,
+    priceRange = [0, 1000],
     setPriceRange,
-    maxPrice,
-    showInStockOnly,
+    maxPrice = 1000,
+    showInStockOnly = false,
     setShowInStockOnly,
     resetFilters,
-    categories,
-  } = useProductFilters(transformedProducts);
+    categories = [],
+  } = useProductFilters(transformedProducts) || {};
 
   // Transform filtered products back to full Product type for display
   const fullFilteredProducts = filteredProducts.map(filteredProduct => {
-    const originalProduct = products?.find(p => p.id === filteredProduct.id);
+    const originalProduct = safeProducts.find(p => p.id === filteredProduct.id);
     return originalProduct ? {
       ...originalProduct,
       description: originalProduct.description || "",
@@ -98,39 +101,17 @@ const Shop = () => {
     );
   }
 
-  const shopStructuredData = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    "name": "Shop - Premium Products",
-    "description": "Browse our collection of premium customizable products",
-    "url": "https://zyra.lovable.app/shop",
-    "mainEntity": {
-      "@type": "ItemList",
-      "numberOfItems": fullFilteredProducts.length,
-      "itemListElement": fullFilteredProducts.slice(0, 10).map((product, index) => ({
-        "@type": "Product",
-        "position": index + 1,
-        "name": product.name,
-        "description": product.description,
-        "image": product.images?.[0],
-        "offers": {
-          "@type": "Offer",
-          "price": product.price,
-          "priceCurrency": "USD",
-          "availability": product.in_stock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
-        }
-      }))
-    }
-  };
-
   // Transform categories to match expected interface
   const categoryOptions = categories.map(category => ({
     name: category,
     id: category
   }));
 
-  // Ensure priceRange is a tuple
-  const priceRangeTuple: [number, number] = [priceRange[0] || 0, priceRange[1] || maxPrice];
+  // Ensure priceRange is a valid tuple
+  const priceRangeTuple: [number, number] = [
+    priceRange?.[0] || 0, 
+    priceRange?.[1] || maxPrice || 1000
+  ];
 
   return (
     <>
@@ -138,7 +119,6 @@ const Shop = () => {
         title="Shop Premium Products - Zyra"
         description="Discover our collection of premium customizable products. From personalized items to luxury goods, find exactly what you're looking for."
         keywords="shop, premium products, customizable items, personalized goods, luxury shopping, e-commerce"
-        structuredData={shopStructuredData}
         url="https://zyra.lovable.app/shop"
       />
       <Navbar />

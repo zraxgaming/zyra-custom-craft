@@ -24,18 +24,26 @@ interface ProductFiltersProps {
 }
 
 const ProductFilters: React.FC<ProductFiltersProps> = ({
-  categories,
-  selectedCategories,
+  categories = [],
+  selectedCategories = [],
   onCategoryChange,
-  priceRange,
+  priceRange = [0, 1000],
   onPriceRangeChange,
-  maxPrice,
-  showInStockOnly,
+  maxPrice = 1000,
+  showInStockOnly = false,
   onShowInStockChange,
   onResetFilters,
 }) => {
   const toggleCategory = (category: string) => {
-    onCategoryChange(category);
+    if (onCategoryChange) {
+      onCategoryChange(category);
+    }
+  };
+
+  const handlePriceChange = (values: number[]) => {
+    if (onPriceRangeChange && values.length >= 2) {
+      onPriceRangeChange([values[0], values[1]]);
+    }
   };
 
   return (
@@ -80,16 +88,16 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
           <AccordionContent>
             <div className="space-y-4 pt-2">
               <Slider
-                value={[priceRange[0], priceRange[1]]}
+                value={[priceRange[0] || 0, priceRange[1] || maxPrice]}
                 min={0}
                 max={maxPrice}
                 step={5}
-                onValueChange={(values) => onPriceRangeChange([values[0], values[1]])}
+                onValueChange={handlePriceChange}
                 className="py-4"
               />
               <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>${priceRange[0]}</span>
-                <span>${priceRange[1]}</span>
+                <span>${priceRange[0] || 0}</span>
+                <span>${priceRange[1] || maxPrice}</span>
               </div>
             </div>
           </AccordionContent>
