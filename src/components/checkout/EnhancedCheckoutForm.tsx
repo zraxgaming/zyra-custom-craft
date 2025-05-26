@@ -65,16 +65,37 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ items, subt
     });
   };
 
+  // Function to send order confirmation email via Supabase Edge Function (SMTP)
+  const sendOrderConfirmationEmail = async (orderData: any) => {
+    try {
+      const response = await fetch('/functions/v1/send-order-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || 'Failed to send order confirmation email');
+      }
+      return await response.json();
+    } catch (error: any) {
+      console.error('Order email error:', error);
+      throw error;
+    }
+  };
+
   const processZiinaPayment = async () => {
     try {
       const options = {
         method: 'POST',
         headers: {
-          Authorization: 'Bearer WlLcJdWu9Y6v9/z3pb7o/ R7tARuTGnfnkUmcZQ3HoAuPPuJlT IP7ALY2vWO7DewJ"',
+          Authorization: 'Bearer WlLcJdWu9Y6v9/z3pb7o/R7tARuTGnfnkUmcZQ3HoAuPPuJlTIP7ALY2vWO7DewJ',
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          amount: total * 3.67, // Convert to AED
+          amount: Math.round(total * 3.67),
           currency_code: 'AED',
           message: `Order payment for ${formData.email}`,
           success_url: 'https://shopzyra.vercel.app/order-success',
@@ -82,21 +103,45 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ items, subt
           failure_url: 'https://shopzyra.vercel.app/order-failed',
           test: true,
           transaction_source: 'directApi',
-          expiry: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 min expiry
+          expiry: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
           allow_tips: true
         })
       };
 
       const response = await fetch('https://api-v2.ziina.com/api/payment_intent', options);
-      if (!response.ok) throw new Error('Failed to create Ziina payment');
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || 'Failed to create Ziina payment');
+      }
       const data = await response.json();
       if (!data?.payment_url) throw new Error('No payment URL received from Ziina');
       localStorage.setItem('pending_payment', JSON.stringify({
         payment_id: data.id,
-        amount: total * 3.67,
+        amount: Math.round(total * 3.67),
         order_data: formData,
         method: 'ziina'
       }));
+
+      // Send order confirmation email via Supabase SMTP before redirect
+      await sendOrderConfirmationEmail({
+        email: formData.email,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode,
+        country: formData.country,
+        items,
+        subtotal,
+        coupon: appliedCoupon,
+        shipping,
+        tax,
+        total,
+        paymentMethod: 'ziina',
+        deliveryOption
+      });
+
       window.location.href = data.payment_url;
     } catch (error: any) {
       console.error('Ziina payment error:', error);
@@ -105,62 +150,13 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ items, subt
   };
 
   const processPayPalPayment = async () => {
-    try {
-      // Use the provided client ID
-      const paypalClientId = 'AakQlS4LnTALA8eLZu1MkcIxjhvtfcM8cR5NlQMnyysTQ2TW3k5ymWgHtMj5JSX_DnJ-DoFRBLpZtGN7';
-      if (!paypalClientId) {
-        throw new Error('PayPal is not configured. Please contact support.');
-      }
-
-      // Create PayPal order using the REST API
-      const response = await fetch('https://api-m.sandbox.paypal.com/v2/checkout/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Basic ${btoa(paypalClientId + ':')}` // No secret for client-side, but required for sandbox
-        },
-        body: JSON.stringify({
-          intent: 'CAPTURE',
-          purchase_units: [
-            {
-              amount: {
-                currency_code: 'USD',
-                value: total.toFixed(2)
-              },
-              description: `Order payment for ${formData.email}`
-            }
-          ],
-          application_context: {
-            brand_name: 'Shop Zyra',
-            landing_page: 'LOGIN',
-            user_action: 'PAY_NOW',
-            return_url: `${window.location.origin}/order-success`,
-            cancel_url: `${window.location.origin}/order-failed`
-          }
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create PayPal order');
-      }
-
-      const data = await response.json();
-      const approvalUrl = data.links?.find((l: any) => l.rel === 'approve')?.href;
-      if (!approvalUrl) throw new Error('No approval URL received from PayPal');
-
-      localStorage.setItem('pending_payment', JSON.stringify({
-        payment_id: data.id,
-        amount: total,
-        order_data: formData,
-        method: 'paypal'
-      }));
-
-      // Redirect to PayPal approval page
-      window.location.href = approvalUrl;
-    } catch (error: any) {
-      console.error('PayPal payment error:', error);
-      throw error;
-    }
+    toast({
+      title: 'PayPal Not Supported',
+      description: 'Direct PayPal REST API calls are not supported from the frontend. Please use the PayPal JS SDK or contact support to enable PayPal.',
+      variant: 'destructive'
+    });
+    setIsProcessing(false);
+    return;
   };
 
   const handlePayment = async () => {
