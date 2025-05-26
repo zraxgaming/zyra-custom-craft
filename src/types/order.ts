@@ -15,6 +15,7 @@ export interface Order {
   created_at: string;
   updated_at?: string;
   profile_id?: string;
+  order_items?: OrderItem[];
   profiles?: {
     id: string;
     email?: string;
@@ -38,6 +39,10 @@ export interface OrderItem {
     name: string;
     images: string[];
     slug?: string;
+    image_url?: string;
+    rating?: number;
+    review_count?: number;
+    price?: number;
   };
 }
 

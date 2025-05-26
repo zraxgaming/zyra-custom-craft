@@ -7,6 +7,8 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  isLoading: boolean;
+  isAdmin: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -24,12 +26,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      checkAdminStatus(session?.user);
       setLoading(false);
     });
 
@@ -38,6 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+        checkAdminStatus(session?.user);
         setLoading(false);
       }
     );
@@ -45,14 +50,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
+  const checkAdminStatus = async (user: User | null) => {
+    if (!user) {
+      setIsAdmin(false);
+      return;
+    }
+
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      
+      setIsAdmin(data?.role === 'admin');
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      setIsAdmin(false);
+    }
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
+    setIsAdmin(false);
   };
 
   const value = {
     user,
     session,
     loading,
+    isLoading: loading,
+    isAdmin,
     signOut,
   };
 

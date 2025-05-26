@@ -11,7 +11,7 @@ import { Link } from "react-router-dom";
 
 const Wishlist = () => {
   const { user } = useAuth();
-  const { items, isLoading, removeFromWishlist } = useWishlist();
+  const { items, isLoading, removeFromWishlist } = useWishlist(user?.id);
   const { addToCart } = useCart();
   const { toast } = useToast();
 
