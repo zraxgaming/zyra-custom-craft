@@ -5,13 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Container } from "@/components/ui/container";
-import { ArrowLeft, CreditCard, Truck, Shield } from "lucide-react";
+import { ArrowLeft, CreditCard, Truck, Shield, Sparkles } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useCart } from "@/components/cart/CartProvider";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import OrderSummary from "@/components/checkout/OrderSummary";
 import AddressForm from "@/components/checkout/AddressForm";
 import PaymentMethods from "@/components/checkout/PaymentMethods";
@@ -22,9 +21,8 @@ const Checkout = () => {
   const { items, clearCart, subtotal } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
   const [shippingCost, setShippingCost] = useState(10);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("card");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("ziina");
   const [selectedDeliveryOption, setSelectedDeliveryOption] = useState("standard");
   
   const [shippingInfo, setShippingInfo] = useState({
@@ -70,88 +68,13 @@ const Checkout = () => {
     setShippingCost(option === "express" ? 25 : 10);
   };
 
-  const validateForm = () => {
-    const required = ["firstName", "lastName", "email", "phone", "address", "city", "state", "zipCode"];
-    for (const field of required) {
-      if (!shippingInfo[field as keyof typeof shippingInfo]) {
-        toast({
-          title: "Missing information",
-          description: `Please fill in your ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}.`,
-          variant: "destructive",
-        });
-        return false;
-      }
-    }
-    return true;
-  };
-
-  const createOrder = async () => {
-    if (!validateForm()) return;
-
-    setIsLoading(true);
-    try {
-      // Create order in database
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          user_id: user!.id,
-          total_amount: total,
-          status: "pending",
-          shipping_address: shippingInfo,
-          payment_method: selectedPaymentMethod,
-          delivery_type: selectedDeliveryOption,
-          subtotal: subtotal
-        })
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      // Create order items
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        product_id: item.productId,
-        quantity: item.quantity,
-        price: item.price,
-        customization: item.customization
-      }));
-
-      const { error: itemsError } = await supabase
-        .from("order_items")
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
-
-      // Clear cart
-      clearCart();
-
-      // Redirect to success page
-      navigate(`/order-success/${order.id}`);
-
-      toast({
-        title: "Order placed successfully!",
-        description: "You will receive a confirmation email shortly.",
-      });
-
-    } catch (error: any) {
-      console.error("Checkout error:", error);
-      toast({
-        title: "Checkout failed",
-        description: error.message || "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
-      navigate("/order-failed");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   if (!user || items.length === 0) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-purple-500/10">
         <Navbar />
         <Container className="py-12">
-          <div className="text-center">
+          <div className="text-center animate-fade-in">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
             <h1 className="text-2xl font-bold mb-4">Loading...</h1>
           </div>
         </Container>
@@ -161,30 +84,40 @@ const Checkout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-purple-500/10 relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.05] pointer-events-none">
+        <div className="absolute top-20 left-20 w-96 h-96 bg-gradient-to-br from-primary to-purple-500 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute bottom-40 right-10 w-80 h-80 bg-gradient-to-br from-pink-500 to-orange-500 rounded-full blur-3xl animate-float-reverse"></div>
+      </div>
+
       <Navbar />
-      <Container className="py-8">
-        <div className="mb-6">
+      <Container className="py-8 relative z-10">
+        <div className="mb-6 animate-fade-in">
           <Button
             variant="ghost"
             onClick={() => navigate(-1)}
-            className="mb-4"
+            className="mb-4 hover:scale-105 transition-transform"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <h1 className="text-3xl font-bold text-foreground">Checkout</h1>
-          <p className="text-muted-foreground">Complete your purchase</p>
+          <div className="text-center mb-8">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent animate-scale-in">
+              Checkout
+            </h1>
+            <p className="text-xl text-muted-foreground animate-slide-in-right">Complete your purchase securely</p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Forms */}
           <div className="lg:col-span-2 space-y-6">
             {/* Shipping Information */}
-            <Card>
+            <Card className="bg-card/60 backdrop-blur-sm border-border/50 animate-slide-in-left">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Truck className="h-5 w-5" />
+                  <Truck className="h-5 w-5 text-primary" />
                   Shipping Information
                 </CardTitle>
               </CardHeader>
@@ -197,9 +130,12 @@ const Checkout = () => {
             </Card>
 
             {/* Delivery Options */}
-            <Card>
+            <Card className="bg-card/60 backdrop-blur-sm border-border/50 animate-slide-in-left" style={{ animationDelay: '100ms' }}>
               <CardHeader>
-                <CardTitle>Delivery Options</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Delivery Options
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <DeliveryOptions
@@ -210,27 +146,24 @@ const Checkout = () => {
             </Card>
 
             {/* Payment Method */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5" />
-                  Payment Method
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <PaymentMethods
-                  selectedMethod={selectedPaymentMethod}
-                  onMethodChange={setSelectedPaymentMethod}
-                />
-              </CardContent>
-            </Card>
+            <div className="animate-slide-in-left" style={{ animationDelay: '200ms' }}>
+              <PaymentMethods
+                selectedMethod={selectedPaymentMethod}
+                onMethodChange={setSelectedPaymentMethod}
+                shippingInfo={shippingInfo}
+                deliveryOption={selectedDeliveryOption}
+              />
+            </div>
           </div>
 
           {/* Right Column - Order Summary */}
           <div className="space-y-6">
-            <Card className="sticky top-4">
+            <Card className="sticky top-4 bg-card/60 backdrop-blur-sm border-border/50 animate-slide-in-right">
               <CardHeader>
-                <CardTitle>Order Summary</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                  Order Summary
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <OrderSummary
@@ -242,18 +175,17 @@ const Checkout = () => {
                 
                 <Separator className="my-4" />
                 
-                <Button
-                  onClick={createOrder}
-                  disabled={isLoading}
-                  className="w-full"
-                  size="lg"
-                >
-                  {isLoading ? "Processing..." : `Place Order - AED ${total.toFixed(2)}`}
-                </Button>
-
-                <div className="flex items-center justify-center gap-2 mt-4 text-sm text-muted-foreground">
-                  <Shield className="h-4 w-4" />
-                  Secure checkout powered by Ziina
+                <div className="space-y-4">
+                  <div className="text-center p-4 bg-muted/30 rounded-lg">
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                      <Shield className="h-4 w-4" />
+                      Secure checkout powered by {selectedPaymentMethod === 'ziina' ? 'Ziina' : 'PayPal'}
+                    </div>
+                  </div>
+                  
+                  <div className="text-xs text-center text-muted-foreground bg-gradient-to-r from-primary/5 via-purple-500/5 to-pink-500/5 p-3 rounded">
+                    🔒 Your payment information is encrypted and secure
+                  </div>
                 </div>
               </CardContent>
             </Card>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,12 +43,24 @@ const AdminProducts = () => {
 
       if (error) throw error;
 
-      // Transform the data to match Product interface
+      // Transform the data to match Product interface with proper type handling
       const transformedProducts: Product[] = (data || []).map(product => ({
-        ...product,
-        images: Array.isArray(product.images) ? product.images : 
-                typeof product.images === 'string' ? [product.images] : 
-                []
+        id: product.id,
+        name: product.name || '',
+        description: product.description || '',
+        price: Number(product.price) || 0,
+        category: product.category || '',
+        sku: product.sku || '',
+        stock_quantity: Number(product.stock_quantity) || 0,
+        is_featured: Boolean(product.is_featured),
+        is_customizable: Boolean(product.is_customizable),
+        slug: product.slug || '',
+        in_stock: Boolean(product.in_stock),
+        status: product.status || 'published',
+        created_at: product.created_at || '',
+        images: Array.isArray(product.images) 
+          ? (product.images as any[]).map(img => typeof img === 'string' ? img : JSON.stringify(img))
+          : []
       }));
 
       setProducts(transformedProducts);
@@ -201,21 +212,21 @@ const AdminProducts = () => {
 
         <div className="relative z-10 p-6">
           {/* Header */}
-          <div className="text-center mb-12 animate-fade-in">
-            <Badge className="mb-6 bg-gradient-to-r from-primary to-purple-600 hover:scale-110 transition-transform duration-300 text-lg px-6 py-3" variant="outline">
+          <div className="text-center mb-8 animate-fade-in">
+            <Badge className="mb-4 bg-gradient-to-r from-primary to-purple-600 hover:scale-110 transition-transform duration-300 text-lg px-6 py-3" variant="outline">
               <Package className="h-5 w-5 mr-3" />
               Product Management
             </Badge>
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent animate-scale-in">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent animate-scale-in">
               Products
             </h1>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto animate-slide-in-right">
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto animate-slide-in-right">
               Manage your product catalog with advanced editing tools and real-time updates.
             </p>
           </div>
 
           {/* Action Button */}
-          <div className="mb-8 animate-fade-in">
+          <div className="mb-6 animate-fade-in">
             <Button 
               onClick={() => {
                 setShowForm(true);
@@ -231,7 +242,7 @@ const AdminProducts = () => {
 
           {/* Product Form */}
           {showForm && (
-            <Card className="mb-8 bg-card/60 backdrop-blur-sm border-border/50 animate-scale-in">
+            <Card className="mb-6 bg-card/60 backdrop-blur-sm border-border/50 animate-scale-in">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-primary" />
@@ -239,7 +250,7 @@ const AdminProducts = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Product Name</Label>
                     <Input
@@ -332,12 +343,12 @@ const AdminProducts = () => {
           )}
 
           {/* Products Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {products.map((product, index) => (
               <Card 
                 key={product.id} 
-                className="hover:shadow-2xl transition-all duration-500 animate-scale-in bg-card/60 backdrop-blur-sm border-border/50 hover:scale-105"
-                style={{ animationDelay: `${index * 100}ms` }}
+                className="hover:shadow-xl transition-all duration-300 animate-scale-in bg-card/60 backdrop-blur-sm border-border/50 hover:scale-105"
+                style={{ animationDelay: `${index * 50}ms` }}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -345,16 +356,16 @@ const AdminProducts = () => {
                       <CardTitle className="text-lg font-semibold mb-2 text-foreground">
                         {product.name}
                       </CardTitle>
-                      <p className="text-2xl font-bold text-primary">${product.price}</p>
+                      <p className="text-xl font-bold text-primary">${product.price}</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1 flex-wrap">
                       {product.is_featured && (
-                        <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500">
+                        <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-xs">
                           Featured
                         </Badge>
                       )}
                       {product.is_customizable && (
-                        <Badge className="bg-gradient-to-r from-purple-500 to-pink-500">
+                        <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-xs">
                           Custom
                         </Badge>
                       )}
@@ -362,7 +373,7 @@ const AdminProducts = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <div className="text-sm text-muted-foreground">
                       <p><strong>Category:</strong> {product.category || "N/A"}</p>
                       <p><strong>SKU:</strong> {product.sku || "N/A"}</p>
@@ -382,7 +393,7 @@ const AdminProducts = () => {
                         onClick={() => handleEdit(product)}
                         className="flex-1 border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300"
                       >
-                        <Edit className="h-4 w-4 mr-2" />
+                        <Edit className="h-4 w-4 mr-1" />
                         Edit
                       </Button>
                       <Button
@@ -391,7 +402,7 @@ const AdminProducts = () => {
                         onClick={() => handleDelete(product.id)}
                         className="flex-1 border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300"
                       >
-                        <Trash2 className="h-4 w-4 mr-2" />
+                        <Trash2 className="h-4 w-4 mr-1" />
                         Delete
                       </Button>
                     </div>
@@ -402,11 +413,11 @@ const AdminProducts = () => {
           </div>
 
           {products.length === 0 && (
-            <Card className="text-center py-12 bg-card/60 backdrop-blur-sm border-border/50 animate-fade-in">
+            <Card className="text-center py-8 bg-card/60 backdrop-blur-sm border-border/50 animate-fade-in">
               <CardContent>
-                <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2 text-foreground">No products yet</h3>
-                <p className="text-muted-foreground mb-6">Get started by creating your first product.</p>
+                <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2 text-foreground">No products yet</h3>
+                <p className="text-muted-foreground mb-4">Get started by creating your first product.</p>
                 <Button 
                   onClick={() => {
                     setShowForm(true);
