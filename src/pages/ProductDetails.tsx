@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -13,20 +12,7 @@ import Footer from "@/components/layout/Footer";
 import AddToCartButton from "@/components/cart/AddToCartButton";
 import WishlistButton from "@/components/products/WishlistButton";
 import ProductCustomizer from "@/components/products/ProductCustomizer";
-
-interface Product {
-  id: string;
-  name: string;
-  slug: string;
-  price: number;
-  description: string;
-  images: string[];
-  rating: number;
-  review_count: number;
-  is_customizable: boolean;
-  in_stock: boolean;
-  stock_quantity: number;
-}
+import { Product } from "@/types/product";
 
 const ProductDetails = () => {
   const { slug } = useParams();
@@ -47,7 +33,14 @@ const ProductDetails = () => {
           .single();
 
         if (error) throw error;
-        setProduct(data);
+        
+        // Transform the data to match our Product interface
+        const transformedProduct: Product = {
+          ...data,
+          images: Array.isArray(data.images) ? data.images : []
+        };
+        
+        setProduct(transformedProduct);
       } catch (error: any) {
         console.error('Error fetching product:', error);
         toast({
@@ -92,48 +85,48 @@ const ProductDetails = () => {
     );
   }
 
-  const imageUrl = Array.isArray(product.images) && product.images.length > 0 
+  const imageUrl = Array.isArray(product?.images) && product.images.length > 0 
     ? product.images[selectedImage] 
     : '/placeholder-product.jpg';
 
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-background py-8">
+      <div className="min-h-screen bg-background py-8 animate-fade-in">
         <div className="container mx-auto px-4">
-          <Link to="/shop" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6">
+          <Link to="/shop" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 hover:scale-105 transition-all duration-300 animate-slide-in-left">
             <ArrowLeft className="h-4 w-4" />
             Back to Shop
           </Link>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Product Images */}
-            <div className="space-y-4">
-              <div className="aspect-square rounded-lg overflow-hidden bg-muted">
+            <div className="space-y-4 animate-scale-in">
+              <div className="aspect-square rounded-lg overflow-hidden bg-muted hover:shadow-2xl transition-all duration-500">
                 <img
                   src={imageUrl}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
+                  alt={product?.name}
+                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.src = '/placeholder-product.jpg';
                   }}
                 />
               </div>
-              {Array.isArray(product.images) && product.images.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto">
+              {Array.isArray(product?.images) && product.images.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto animate-slide-in-up">
                   {product.images.map((image, index) => (
                     <button
                       key={index}
                       onClick={() => setSelectedImage(index)}
-                      className={`flex-shrink-0 w-16 h-16 rounded-md overflow-hidden border-2 ${
-                        selectedImage === index ? 'border-primary' : 'border-transparent'
+                      className={`flex-shrink-0 w-16 h-16 rounded-md overflow-hidden border-2 transition-all duration-300 hover:scale-110 ${
+                        selectedImage === index ? 'border-primary shadow-lg animate-pulse-glow' : 'border-transparent hover:border-primary/50'
                       }`}
                     >
                       <img
                         src={image}
                         alt={`${product.name} ${index + 1}`}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
                       />
                     </button>
                   ))}
@@ -142,7 +135,7 @@ const ProductDetails = () => {
             </div>
 
             {/* Product Info */}
-            <div className="space-y-6">
+            <div className="space-y-6 animate-slide-in-right">
               <div>
                 <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
                 <div className="flex items-center gap-4 mb-4">

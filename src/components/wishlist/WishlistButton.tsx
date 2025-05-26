@@ -39,9 +39,9 @@ const WishlistButton: React.FC<WishlistButtonProps> = ({
         .select('id')
         .eq('user_id', user.id)
         .eq('product_id', productId)
-        .maybeSingle();
+        .single();
 
-      if (error) {
+      if (error && error.code !== 'PGRST116') {
         throw error;
       }
 
@@ -114,11 +114,11 @@ const WishlistButton: React.FC<WishlistButtonProps> = ({
       variant={variant}
       onClick={toggleWishlist}
       disabled={isLoading}
-      className={`hover:scale-110 hover:rotate-12 transition-all duration-300 group ${isInWishlist ? 'text-red-500 hover:text-red-600' : ''} ${className}`}
+      className={`hover:scale-110 transition-all duration-300 ${isInWishlist ? 'text-red-500 hover:text-red-600' : ''} ${className}`}
     >
       <Heart 
-        className={`h-4 w-4 transition-all duration-300 group-hover:scale-125 ${
-          isInWishlist ? 'fill-current animate-pulse text-red-500' : 'hover:text-red-400'
+        className={`h-4 w-4 transition-all duration-300 ${
+          isInWishlist ? 'fill-current animate-pulse' : 'hover:scale-125'
         }`} 
       />
     </Button>

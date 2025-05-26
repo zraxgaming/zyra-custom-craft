@@ -8,35 +8,29 @@ export interface Product {
   images: string[];
   rating?: number;
   review_count?: number;
-  is_new?: boolean;
-  is_customizable?: boolean;
-  discount_percentage?: number;
-  in_stock: boolean;
-  stock_quantity?: number;
-  category?: string;
   is_featured?: boolean;
-  status?: string;
-  sku?: string;
-  is_digital?: boolean;
+  is_customizable?: boolean;
+  stock_quantity?: number;
+  in_stock?: boolean;
+  category?: string;
   featured?: boolean;
+  is_new?: boolean;
+  category_id?: string;
+  barcode?: string;
+  cost_price?: number;
   created_at?: string;
-}
-
-export interface CustomizationOptions {
-  id: string;
-  allowText: boolean;
-  allowImage: boolean;
-  maxTextLength: number;
-  maxImageCount: number;
-  allowResizeRotate: boolean;
-}
-
-export interface ProductWithImages extends Product {
-  product_images?: Array<{
-    id: string;
-    image_url: string;
-    alt_text?: string;
-    is_primary: boolean;
-    sort_order: number;
-  }>;
+  updated_at?: string;
+  dimensions_height?: number;
+  dimensions_length?: number;
+  dimensions_width?: number;
+  discount_percentage?: number;
+  is_digital?: boolean;
+  manage_stock?: boolean;
+  meta_description?: string;
+  meta_title?: string;
+  short_description?: string;
+  sku?: string;
+  status?: string;
+  stock_status?: string;
+  weight?: number;
 }
