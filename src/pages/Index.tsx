@@ -59,9 +59,9 @@ const Index = () => {
   return (
     <>
       <SEOHead />
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background floating-dots-bg particle-field-bg page-transition">
         <Navbar />
-        <Container>
+        <Container className="content-reveal">
           <Hero />
           <Categories />
           <FeaturedProducts products={featuredProducts || []} isLoading={isLoading} />

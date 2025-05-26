@@ -1,0 +1,280 @@
+
+/* Animated Dotted Backgrounds */
+@keyframes dotted-move {
+  0% {
+    background-position: 0% 0%;
+  }
+  25% {
+    background-position: 100% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  75% {
+    background-position: 0% 100%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+@keyframes floating-dots {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+    opacity: 0.3;
+  }
+  25% {
+    transform: translateY(-10px) rotate(90deg);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(-5px) rotate(180deg);
+    opacity: 1;
+  }
+  75% {
+    transform: translateY(-15px) rotate(270deg);
+    opacity: 0.5;
+  }
+}
+
+@keyframes grid-flow {
+  0% {
+    background-position: 0% 0%;
+    opacity: 0.1;
+  }
+  50% {
+    background-position: 50% 50%;
+    opacity: 0.3;
+  }
+  100% {
+    background-position: 100% 100%;
+    opacity: 0.1;
+  }
+}
+
+@keyframes particle-field {
+  0%, 100% {
+    transform: translateX(0) translateY(0) scale(1);
+    opacity: 0.2;
+  }
+  33% {
+    transform: translateX(-20px) translateY(-10px) scale(1.2);
+    opacity: 0.6;
+  }
+  66% {
+    transform: translateX(20px) translateY(10px) scale(0.8);
+    opacity: 0.4;
+  }
+}
+
+@keyframes mesh-gradient {
+  0%, 100% {
+    background-position: 0% 50%;
+    filter: hue-rotate(0deg);
+  }
+  25% {
+    background-position: 100% 50%;
+    filter: hue-rotate(90deg);
+  }
+  50% {
+    background-position: 100% 100%;
+    filter: hue-rotate(180deg);
+  }
+  75% {
+    background-position: 0% 100%;
+    filter: hue-rotate(270deg);
+  }
+}
+
+/* Background Pattern Classes */
+.dotted-bg {
+  background-image: radial-gradient(circle, rgba(139, 92, 246, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+  animation: dotted-move 20s ease-in-out infinite;
+}
+
+.floating-dots-bg {
+  position: relative;
+  overflow: hidden;
+}
+
+.floating-dots-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 25% 25%, rgba(139, 92, 246, 0.1) 2px, transparent 2px),
+    radial-gradient(circle at 75% 75%, rgba(99, 102, 241, 0.08) 1px, transparent 1px),
+    radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.06) 1.5px, transparent 1px);
+  background-size: 60px 60px, 40px 40px, 80px 80px;
+  animation: floating-dots 15s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.grid-bg {
+  background-image: 
+    linear-gradient(rgba(139, 92, 246, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 92, 246, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  animation: grid-flow 12s ease-in-out infinite;
+}
+
+.particle-field-bg {
+  position: relative;
+  overflow: hidden;
+}
+
+.particle-field-bg::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  right: -50%;
+  bottom: -50%;
+  background-image: 
+    radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.05) 1px, transparent 1px),
+    radial-gradient(circle at 80% 20%, rgba(99, 102, 241, 0.04) 2px, transparent 2px),
+    radial-gradient(circle at 20% 80%, rgba(168, 85, 247, 0.03) 1px, transparent 1px),
+    radial-gradient(circle at 80% 80%, rgba(236, 72, 153, 0.04) 1.5px, transparent 1px);
+  background-size: 100px 100px, 150px 150px, 80px 80px, 120px 120px;
+  animation: particle-field 25s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.mesh-gradient-bg {
+  background: linear-gradient(45deg, 
+    rgba(139, 92, 246, 0.05),
+    rgba(99, 102, 241, 0.03),
+    rgba(168, 85, 247, 0.04),
+    rgba(236, 72, 153, 0.02)
+  );
+  background-size: 400% 400%;
+  animation: mesh-gradient 30s ease infinite;
+}
+
+/* Enhanced Page Transitions */
+.page-transition {
+  animation: page-enter 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes page-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(40px) scale(0.98);
+    filter: blur(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+/* Subtle Content Animations */
+.content-reveal {
+  animation: content-slide-up 0.6s ease-out forwards;
+}
+
+@keyframes content-slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stagger-children > * {
+  animation: content-slide-up 0.6s ease-out forwards;
+  animation-delay: calc(var(--stagger-delay, 0.1s) * var(--index, 0));
+}
+
+/* Interactive Hover Enhancements */
+.hover-glow-subtle {
+  transition: all 0.3s ease;
+}
+
+.hover-glow-subtle:hover {
+  box-shadow: 
+    0 0 20px rgba(139, 92, 246, 0.1),
+    0 0 40px rgba(139, 92, 246, 0.05);
+  transform: translateY(-2px);
+}
+
+.floating-element {
+  animation: gentle-float 6s ease-in-out infinite;
+}
+
+@keyframes gentle-float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(1deg);
+  }
+}
+
+/* Loading Dots Animation */
+.loading-dots-animated {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.loading-dots-animated span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: dot-bounce 1.4s ease-in-out infinite both;
+}
+
+.loading-dots-animated span:nth-child(1) { animation-delay: -0.32s; }
+.loading-dots-animated span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes dot-bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Responsive Optimizations */
+@media (max-width: 768px) {
+  .dotted-bg,
+  .floating-dots-bg::before,
+  .particle-field-bg::after {
+    animation-duration: 15s;
+  }
+  
+  .mesh-gradient-bg {
+    animation-duration: 20s;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .dotted-bg,
+  .floating-dots-bg::before,
+  .grid-bg,
+  .particle-field-bg::after,
+  .mesh-gradient-bg,
+  .floating-element {
+    animation: none;
+  }
+  
+  .page-transition,
+  .content-reveal {
+    animation-duration: 0.1s;
+  }
+}

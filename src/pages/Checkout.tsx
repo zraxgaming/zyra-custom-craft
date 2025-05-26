@@ -37,11 +37,13 @@ const Checkout = () => {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-background py-12">
-        <Container>
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold mb-2">Checkout</h1>
-            <p className="text-muted-foreground">Review your order and complete your purchase</p>
+      <div className="min-h-screen bg-background py-12 dotted-bg mesh-gradient-bg page-transition">
+        <Container className="content-reveal">
+          <div className="text-center mb-8 floating-element">
+            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary via-purple-500 to-primary bg-clip-text text-transparent animate-text-shimmer">
+              Checkout
+            </h1>
+            <p className="text-muted-foreground text-lg">Review your order and complete your purchase</p>
           </div>
           
           <CheckoutForm 

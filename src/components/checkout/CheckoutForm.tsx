@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Smartphone, CreditCard, pi } from "lucide-react";
+import { Smartphone, CreditCard, ShoppingBag } from "lucide-react";
 import PaymentProcessor from "./PaymentProcessor";
 
 interface CheckoutFormProps {
@@ -94,7 +94,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
               <div className="space-y-3">
                 <div className="flex justify-between items-center animate-slide-in-left">
                   <span className="flex items-center gap-2">
-                    <pi className="h-4 w-4 text-muted-foreground" />
+                    <ShoppingBag className="h-4 w-4 text-muted-foreground" />
                     Subtotal:
                   </span>
                   <span className="font-medium">${subtotal.toFixed(2)}</span>
@@ -138,7 +138,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
           <CardHeader className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-primary/10 animate-morphing-gradient">
             <CardTitle className="flex items-center gap-2">
               <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm animate-float-gentle">
-                <pi className="h-5 w-5 text-primary" />
+                <ShoppingBag className="h-5 w-5 text-primary" />
               </div>
               Contact Information
             </CardTitle>
