@@ -20,9 +20,17 @@ import Privacy from "@/pages/Privacy";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminProducts from "@/pages/admin/Products";
 import AdminOrders from "@/pages/admin/Orders";
+import AdminOrderDetails from "@/pages/admin/AdminOrderDetails";
 import AdminCustomers from "@/pages/admin/Customers";
 import AdminAnalytics from "@/pages/admin/Analytics";
 import AdminSettings from "@/pages/admin/Settings";
+import AdminGiftCards from "@/pages/admin/GiftCards";
+import AdminCoupons from "@/pages/admin/AdminCoupons";
+import AdminReviews from "@/pages/admin/AdminReviews";
+import AdminContactSubmissions from "@/pages/admin/AdminContactSubmissions";
+import Coupons from "@/pages/admin/Coupons";
+import Promotions from "@/pages/admin/Promotions";
+import AdminZiina from "@/pages/admin/Ziina";
 import NotFound from "@/components/NotFound";
 import "./App.css";
 
@@ -65,9 +73,16 @@ function App() {
                 <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/products" element={<AdminProducts />} />
                 <Route path="/admin/orders" element={<AdminOrders />} />
+                <Route path="/admin/orders/:id" element={<AdminOrderDetails />} />
                 <Route path="/admin/customers" element={<AdminCustomers />} />
                 <Route path="/admin/analytics" element={<AdminAnalytics />} />
                 <Route path="/admin/settings" element={<AdminSettings />} />
+                <Route path="/admin/gift-cards" element={<AdminGiftCards />} />
+                <Route path="/admin/coupons" element={<AdminCoupons />} />
+                <Route path="/admin/reviews" element={<AdminReviews />} />
+                <Route path="/admin/contact" element={<AdminContactSubmissions />} />
+                <Route path="/admin/promotions" element={<Promotions />} />
+                <Route path="/admin/ziina" element={<AdminZiina />} />
                 
                 {/* Catch all route */}
                 <Route path="*" element={<NotFound />} />

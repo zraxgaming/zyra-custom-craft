@@ -22,7 +22,7 @@ interface OrderDetails {
   notes?: string;
   profiles?: {
     id: string;
-    email: string;
+    email?: string;
     display_name?: string;
     first_name?: string;
     last_name?: string;
@@ -81,7 +81,20 @@ const AdminOrderDetails = () => {
         .single();
 
       if (error) throw error;
-      setOrder(data);
+      
+      // Transform the data to ensure it matches OrderDetails interface
+      const transformedOrder: OrderDetails = {
+        ...data,
+        profiles: data.profiles ? {
+          id: data.profiles.id,
+          email: data.profiles.email || '',
+          display_name: data.profiles.display_name,
+          first_name: data.profiles.first_name,
+          last_name: data.profiles.last_name
+        } : undefined
+      };
+      
+      setOrder(transformedOrder);
     } catch (error: any) {
       console.error('Error fetching order details:', error);
       toast({

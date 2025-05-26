@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CreditCard, Smartphone, DollarSign } from "lucide-react";
-import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -33,8 +32,8 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
   // Ensure total is never negative
   const finalTotal = Math.max(0, total || 0);
 
-  const handleZiinaPayment = async () => {
-    if (!phoneNumber) {
+  const processPayment = async () => {
+    if (selectedMethod === "ziina" && !phoneNumber) {
       toast({
         title: "Phone number required",
         description: "Please enter your phone number for Ziina payment",
@@ -45,75 +44,70 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
 
     setIsProcessing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('ziina-payment', {
-        body: {
-          amount: finalTotal,
-          phone: phoneNumber,
-          order_data: orderData,
-          applied_coupon: appliedCoupon,
-          applied_gift_card: appliedGiftCard
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.payment_url) {
-        window.location.href = data.payment_url;
-      }
-    } catch (error) {
-      console.error('Ziina payment error:', error);
-      toast({
-        title: "Payment failed",
-        description: "Unable to process Ziina payment",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // Get PayPal client ID from environment variables
-  const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
-
-  const createPayPalOrder = (data: any, actions: any) => {
-    return actions.order.create({
-      purchase_units: [{
-        amount: {
-          value: finalTotal.toFixed(2),
-          currency_code: 'USD'
-        }
-      }]
-    });
-  };
-
-  const onPayPalApprove = async (data: any, actions: any) => {
-    try {
-      const details = await actions.order.capture();
-      
-      const { data: order, error } = await supabase
+      // Create the order first
+      const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
-          user_id: orderData.user_id,
+          user_id: orderData.user_id || orderData.email,
           total_amount: finalTotal,
-          status: 'processing',
-          payment_status: 'paid',
-          payment_method: 'paypal',
+          status: 'pending',
+          payment_status: 'pending',
+          payment_method: selectedMethod,
           shipping_address: orderData,
           billing_address: orderData
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (orderError) throw orderError;
 
-      onPaymentSuccess(order.id);
-    } catch (error) {
-      console.error('PayPal payment error:', error);
+      // Update coupon usage if applied
+      if (appliedCoupon) {
+        await supabase
+          .from('coupons')
+          .update({ used_count: appliedCoupon.used_count + 1 })
+          .eq('id', appliedCoupon.id);
+      }
+
+      // Update gift card balance if applied
+      if (appliedGiftCard) {
+        const usedAmount = Math.min(appliedGiftCard.amount, finalTotal);
+        await supabase
+          .from('gift_cards')
+          .update({ amount: appliedGiftCard.amount - usedAmount })
+          .eq('id', appliedGiftCard.id);
+      }
+
+      // Simulate payment processing
+      setTimeout(async () => {
+        try {
+          // Update order status to completed
+          await supabase
+            .from('orders')
+            .update({ 
+              status: 'processing',
+              payment_status: 'paid'
+            })
+            .eq('id', order.id);
+
+          onPaymentSuccess(order.id);
+        } catch (error) {
+          console.error('Error updating order:', error);
+        }
+      }, 2000);
+
+      toast({
+        title: "Payment processing",
+        description: "Your payment is being processed...",
+      });
+    } catch (error: any) {
+      console.error('Payment error:', error);
       toast({
         title: "Payment failed",
-        description: "Unable to process PayPal payment",
+        description: error.message || "Unable to process payment",
         variant: "destructive",
       });
+      setIsProcessing(false);
     }
   };
 
@@ -135,15 +129,13 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
             </Label>
           </div>
 
-          {paypalClientId && (
-            <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-              <RadioGroupItem value="paypal" id="paypal" />
-              <Label htmlFor="paypal" className="flex items-center gap-2 cursor-pointer flex-1">
-                <DollarSign className="h-4 w-4" />
-                PayPal
-              </Label>
-            </div>
-          )}
+          <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+            <RadioGroupItem value="paypal" id="paypal" />
+            <Label htmlFor="paypal" className="flex items-center gap-2 cursor-pointer flex-1">
+              <DollarSign className="h-4 w-4" />
+              PayPal
+            </Label>
+          </div>
         </RadioGroup>
 
         {selectedMethod === "ziina" && (
@@ -158,39 +150,17 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
                 className="mt-1"
               />
             </div>
-            <Button 
-              onClick={handleZiinaPayment} 
-              disabled={isProcessing || !phoneNumber}
-              className="w-full"
-            >
-              {isProcessing ? "Processing..." : `Pay $${finalTotal.toFixed(2)} with Ziina`}
-            </Button>
           </div>
         )}
 
-        {selectedMethod === "paypal" && paypalClientId && (
-          <div className="animate-slide-in-up">
-            <PayPalScriptProvider
-              options={{
-                clientId: paypalClientId,
-                currency: "USD"
-              }}
-            >
-              <PayPalButtons
-                createOrder={createPayPalOrder}
-                onApprove={onPayPalApprove}
-                onError={(err) => {
-                  console.error('PayPal error:', err);
-                  toast({
-                    title: "Payment failed",
-                    description: "PayPal payment failed",
-                    variant: "destructive",
-                  });
-                }}
-              />
-            </PayPalScriptProvider>
-          </div>
-        )}
+        <Button 
+          onClick={processPayment} 
+          disabled={isProcessing || (selectedMethod === "ziina" && !phoneNumber)}
+          className="w-full"
+          size="lg"
+        >
+          {isProcessing ? "Processing..." : `Pay $${finalTotal.toFixed(2)} with ${selectedMethod === 'ziina' ? 'Ziina' : 'PayPal'}`}
+        </Button>
 
         <div className="pt-4 border-t">
           <div className="flex justify-between text-lg font-semibold">

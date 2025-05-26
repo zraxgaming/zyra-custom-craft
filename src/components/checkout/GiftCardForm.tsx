@@ -3,14 +3,16 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Gift, X, Loader2 } from "lucide-react";
+import { Gift, X } from "lucide-react";
 
 interface GiftCardFormProps {
   onGiftCardApply: (giftCard: any) => void;
   onGiftCardRemove: () => void;
-  appliedGiftCard: any;
+  appliedGiftCard?: any;
   orderTotal: number;
 }
 
@@ -25,7 +27,14 @@ const GiftCardForm: React.FC<GiftCardFormProps> = ({
   const { toast } = useToast();
 
   const applyGiftCard = async () => {
-    if (!giftCardCode.trim()) return;
+    if (!giftCardCode.trim()) {
+      toast({
+        title: "Invalid gift card",
+        description: "Please enter a gift card code",
+        variant: "destructive"
+      });
+      return;
+    }
 
     setIsApplying(true);
     try {
@@ -37,45 +46,29 @@ const GiftCardForm: React.FC<GiftCardFormProps> = ({
         .single();
 
       if (error || !giftCard) {
-        toast({
-          title: "Invalid Gift Card",
-          description: "The gift card code you entered is not valid or has expired.",
-          variant: "destructive"
-        });
-        return;
+        throw new Error('Invalid gift card code');
       }
 
-      // Check if gift card has expired
+      // Check if gift card is expired
       if (giftCard.expires_at && new Date(giftCard.expires_at) < new Date()) {
-        toast({
-          title: "Expired Gift Card",
-          description: "This gift card has expired.",
-          variant: "destructive"
-        });
-        return;
+        throw new Error('This gift card has expired');
       }
 
-      // Check if gift card has sufficient balance
+      // Check if gift card has balance
       if (giftCard.amount <= 0) {
-        toast({
-          title: "No Balance",
-          description: "This gift card has no remaining balance.",
-          variant: "destructive"
-        });
-        return;
+        throw new Error('This gift card has no remaining balance');
       }
 
       onGiftCardApply(giftCard);
       setGiftCardCode("");
-      
       toast({
-        title: "Gift Card Applied!",
-        description: `$${giftCard.amount} gift card balance applied.`,
+        title: "Gift card applied",
+        description: `Applied $${Math.min(giftCard.amount, orderTotal).toFixed(2)} from your gift card`
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
-        title: "Error",
-        description: "Failed to apply gift card. Please try again.",
+        title: "Invalid gift card",
+        description: error.message,
         variant: "destructive"
       });
     } finally {
@@ -86,58 +79,59 @@ const GiftCardForm: React.FC<GiftCardFormProps> = ({
   const removeGiftCard = () => {
     onGiftCardRemove();
     toast({
-      title: "Gift Card Removed",
-      description: "Gift card has been removed from your order.",
+      title: "Gift card removed",
+      description: "The gift card has been removed from your order"
     });
   };
 
   return (
-    <Card className="animate-fade-in">
+    <Card className="animate-slide-in-left" style={{animationDelay: '0.3s'}}>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
+        <CardTitle className="flex items-center gap-2">
           <Gift className="h-5 w-5 text-primary" />
           Gift Card
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {appliedGiftCard ? (
-          <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
-            <div>
-              <p className="font-medium text-purple-800 dark:text-purple-200">
+          <div className="flex items-center justify-between p-3 bg-purple-50 border border-purple-200 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-purple-100 text-purple-700 border-purple-300">
                 {appliedGiftCard.code}
-              </p>
-              <p className="text-sm text-purple-600 dark:text-purple-300">
-                Balance: ${appliedGiftCard.amount}
-              </p>
+              </Badge>
+              <span className="text-sm text-purple-700">
+                ${Math.min(appliedGiftCard.amount, orderTotal).toFixed(2)} applied
+              </span>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={removeGiftCard}
-              className="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-200"
+              className="h-6 w-6 p-0 hover:bg-red-100"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3 w-3" />
             </Button>
           </div>
         ) : (
-          <div className="flex gap-2">
-            <Input
-              placeholder="Enter gift card code"
-              value={giftCardCode}
-              onChange={(e) => setGiftCardCode(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && applyGiftCard()}
-              className="flex-1"
-            />
-            <Button
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="giftcard">Enter gift card code</Label>
+              <Input
+                id="giftcard"
+                value={giftCardCode}
+                onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
+                placeholder="GIFT-XXXXXXXXXX"
+                className="mt-1"
+                onKeyPress={(e) => e.key === 'Enter' && applyGiftCard()}
+              />
+            </div>
+            <Button 
               onClick={applyGiftCard}
-              disabled={!giftCardCode.trim() || isApplying}
+              disabled={isApplying || !giftCardCode.trim()}
+              className="w-full"
               variant="outline"
             >
-              {isApplying ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                "Apply"
-              )}
+              {isApplying ? 'Applying...' : 'Apply Gift Card'}
             </Button>
           </div>
         )}

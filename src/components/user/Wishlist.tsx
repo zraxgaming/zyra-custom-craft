@@ -2,7 +2,6 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Heart, ShoppingCart, Star, Trash2 } from "lucide-react";
 import { useWishlist } from "@/hooks/use-wishlist";
 import { useToast } from "@/hooks/use-toast";
@@ -137,7 +136,7 @@ const Wishlist = () => {
                 <Button 
                   size="sm" 
                   variant="destructive" 
-                  onClick={() => handleRemoveFromWishlist(item.id)}
+                  onClick={() => handleRemoveFromWishlist(item.product_id)}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Remove

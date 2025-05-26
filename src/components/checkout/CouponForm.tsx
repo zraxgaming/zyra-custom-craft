@@ -3,14 +3,16 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Tag, X, Loader2 } from "lucide-react";
+import { Percent, X } from "lucide-react";
 
 interface CouponFormProps {
   onCouponApply: (coupon: any) => void;
   onCouponRemove: () => void;
-  appliedCoupon: any;
+  appliedCoupon?: any;
   orderTotal: number;
 }
 
@@ -25,7 +27,14 @@ const CouponForm: React.FC<CouponFormProps> = ({
   const { toast } = useToast();
 
   const applyCoupon = async () => {
-    if (!couponCode.trim()) return;
+    if (!couponCode.trim()) {
+      toast({
+        title: "Invalid coupon",
+        description: "Please enter a coupon code",
+        variant: "destructive"
+      });
+      return;
+    }
 
     setIsApplying(true);
     try {
@@ -37,55 +46,34 @@ const CouponForm: React.FC<CouponFormProps> = ({
         .single();
 
       if (error || !coupon) {
-        toast({
-          title: "Invalid Coupon",
-          description: "The coupon code you entered is not valid or has expired.",
-          variant: "destructive"
-        });
-        return;
+        throw new Error('Invalid coupon code');
       }
 
-      // Check if coupon has expired
+      // Check if coupon is expired
       if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
-        toast({
-          title: "Expired Coupon",
-          description: "This coupon has expired.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Check if coupon has reached usage limit
-      if (coupon.max_uses && coupon.used_count >= coupon.max_uses) {
-        toast({
-          title: "Coupon Limit Reached",
-          description: "This coupon has reached its usage limit.",
-          variant: "destructive"
-        });
-        return;
+        throw new Error('This coupon has expired');
       }
 
       // Check minimum purchase requirement
       if (coupon.min_purchase && orderTotal < coupon.min_purchase) {
-        toast({
-          title: "Minimum Purchase Required",
-          description: `This coupon requires a minimum purchase of $${coupon.min_purchase}.`,
-          variant: "destructive"
-        });
-        return;
+        throw new Error(`Minimum purchase of $${coupon.min_purchase} required`);
+      }
+
+      // Check usage limit
+      if (coupon.max_uses && coupon.used_count >= coupon.max_uses) {
+        throw new Error('This coupon has reached its usage limit');
       }
 
       onCouponApply(coupon);
       setCouponCode("");
-      
       toast({
-        title: "Coupon Applied!",
-        description: `${coupon.discount_value}${coupon.discount_type === 'percentage' ? '%' : '$'} discount applied.`,
+        title: "Coupon applied",
+        description: `You saved ${coupon.discount_type === 'percentage' ? coupon.discount_value + '%' : '$' + coupon.discount_value}!`
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
-        title: "Error",
-        description: "Failed to apply coupon. Please try again.",
+        title: "Invalid coupon",
+        description: error.message,
         variant: "destructive"
       });
     } finally {
@@ -96,61 +84,62 @@ const CouponForm: React.FC<CouponFormProps> = ({
   const removeCoupon = () => {
     onCouponRemove();
     toast({
-      title: "Coupon Removed",
-      description: "Coupon discount has been removed from your order.",
+      title: "Coupon removed",
+      description: "The coupon has been removed from your order"
     });
   };
 
   return (
-    <Card className="animate-fade-in">
+    <Card className="animate-slide-in-left" style={{animationDelay: '0.2s'}}>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Tag className="h-5 w-5 text-primary" />
+        <CardTitle className="flex items-center gap-2">
+          <Percent className="h-5 w-5 text-primary" />
           Coupon Code
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {appliedCoupon ? (
-          <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-            <div>
-              <p className="font-medium text-green-800 dark:text-green-200">
+          <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">
                 {appliedCoupon.code}
-              </p>
-              <p className="text-sm text-green-600 dark:text-green-300">
+              </Badge>
+              <span className="text-sm text-green-700">
                 {appliedCoupon.discount_type === 'percentage' 
                   ? `${appliedCoupon.discount_value}% off`
                   : `$${appliedCoupon.discount_value} off`
                 }
-              </p>
+              </span>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={removeCoupon}
-              className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200"
+              className="h-6 w-6 p-0 hover:bg-red-100"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3 w-3" />
             </Button>
           </div>
         ) : (
-          <div className="flex gap-2">
-            <Input
-              placeholder="Enter coupon code"
-              value={couponCode}
-              onChange={(e) => setCouponCode(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && applyCoupon()}
-              className="flex-1"
-            />
-            <Button
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="coupon">Enter coupon code</Label>
+              <Input
+                id="coupon"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                placeholder="SAVE10"
+                className="mt-1"
+                onKeyPress={(e) => e.key === 'Enter' && applyCoupon()}
+              />
+            </div>
+            <Button 
               onClick={applyCoupon}
-              disabled={!couponCode.trim() || isApplying}
+              disabled={isApplying || !couponCode.trim()}
+              className="w-full"
               variant="outline"
             >
-              {isApplying ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                "Apply"
-              )}
+              {isApplying ? 'Applying...' : 'Apply Coupon'}
             </Button>
           </div>
         )}
