@@ -50,17 +50,11 @@ export const useWishlist = () => {
       
       // Transform the data to ensure proper typing
       const transformedData: WishlistItem[] = (data || []).map(item => ({
-        id: item.id,
-        product_id: item.product_id,
-        user_id: item.user_id,
-        created_at: item.created_at,
+        ...item,
         product: item.product ? {
-          id: item.product.id,
-          name: item.product.name,
-          price: item.product.price,
-          slug: item.product.slug,
+          ...item.product,
           images: Array.isArray(item.product.images) 
-            ? item.product.images 
+            ? item.product.images.map((img: any) => typeof img === 'string' ? img : String(img))
             : typeof item.product.images === 'string'
             ? [item.product.images]
             : []

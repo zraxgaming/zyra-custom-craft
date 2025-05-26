@@ -34,3 +34,7 @@ export interface Product {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface ProductWithImages extends Product {
+  images: string[];
+}

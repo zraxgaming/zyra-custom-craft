@@ -46,20 +46,32 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
   const fetchReviews = async () => {
     try {
       setIsLoading(true);
+      // Simplified query without the problematic relation
       const { data, error } = await supabase
         .from('reviews')
-        .select(`
-          *,
-          profiles (
-            first_name,
-            last_name
-          )
-        `)
+        .select('*')
         .eq('product_id', productId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setReviews(data || []);
+      
+      // Fetch user profiles separately if needed
+      const reviewsWithProfiles = await Promise.all(
+        (data || []).map(async (review) => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('id', review.user_id)
+            .single();
+          
+          return {
+            ...review,
+            profiles: profile
+          };
+        })
+      );
+      
+      setReviews(reviewsWithProfiles);
     } catch (error: any) {
       console.error('Error fetching reviews:', error);
       toast({

@@ -10,13 +10,6 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import { Plus, Search, Edit, Trash, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import ProductForm from "@/components/admin/ProductForm";
 import { Product } from "@/types/product";
 
 const Products = () => {
@@ -24,8 +17,7 @@ const Products = () => {
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   React.useEffect(() => {
@@ -49,16 +41,17 @@ const Products = () => {
           
       if (error) throw error;
       
-      const typedProducts: Product[] = (data || []).map(product => ({
+      // Transform the data to ensure proper typing
+      const transformedProducts: Product[] = (data || []).map(product => ({
         ...product,
         images: Array.isArray(product.images) 
-          ? product.images 
+          ? product.images.map((img: any) => typeof img === 'string' ? img : String(img))
           : typeof product.images === 'string'
           ? [product.images]
           : []
       }));
       
-      setProducts(typedProducts);
+      setProducts(transformedProducts);
     } catch (error: any) {
       console.error("Error fetching products:", error);
       toast({
@@ -75,7 +68,6 @@ const Products = () => {
     if (!confirm("Are you sure you want to delete this product?")) return;
     
     try {
-      setIsLoading(true);
       const { error } = await supabase
         .from("products")
         .delete()
@@ -94,8 +86,6 @@ const Products = () => {
         description: error.message,
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -105,11 +95,14 @@ const Products = () => {
     }
   }, [user]);
 
-  const filteredProducts = products.filter((product) => 
-    product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = products.filter((product) => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      product.name.toLowerCase().includes(searchLower) ||
+      product.sku?.toLowerCase().includes(searchLower) ||
+      product.category?.toLowerCase().includes(searchLower)
+    );
+  });
 
   if (!user) {
     return (
@@ -124,7 +117,7 @@ const Products = () => {
       <div className="p-6 animate-fade-in">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Products</h1>
-          <Button onClick={() => setIsAddDialogOpen(true)} className="hover:scale-105 transition-transform">
+          <Button onClick={() => navigate("/admin/products/new")} className="hover:scale-105 transition-transform">
             <Plus className="mr-2 h-4 w-4" /> Add Product
           </Button>
         </div>
@@ -149,7 +142,7 @@ const Products = () => {
             <p className="text-muted-foreground mb-6">
               {searchTerm ? "Try a different search term or" : "Start by"} adding a new product.
             </p>
-            <Button onClick={() => setIsAddDialogOpen(true)}>
+            <Button onClick={() => navigate("/admin/products/new")}>
               <Plus className="mr-2 h-4 w-4" /> Add Product
             </Button>
           </div>
@@ -160,7 +153,6 @@ const Products = () => {
                 <TableRow>
                   <TableHead>Product</TableHead>
                   <TableHead>SKU</TableHead>
-                  <TableHead>Category</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Stock</TableHead>
                   <TableHead>Status</TableHead>
@@ -171,8 +163,8 @@ const Products = () => {
                 {filteredProducts.map((product) => (
                   <TableRow key={product.id} className="hover:bg-muted/50 transition-colors">
                     <TableCell>
-                      <div className="flex items-center space-x-4">
-                        <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
                           {product.images?.[0] ? (
                             <img 
                               src={product.images[0]} 
@@ -180,46 +172,35 @@ const Products = () => {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <div className="text-muted-foreground">No Image</div>
+                            <div className="text-xs text-muted-foreground">No image</div>
                           )}
                         </div>
                         <div>
-                          <h3 className="font-medium text-foreground">{product.name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {product.short_description || product.description || 'No description'}
-                          </p>
+                          <div className="font-medium">{product.name}</div>
+                          <div className="text-sm text-muted-foreground">{product.category}</div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="font-mono text-sm">{product.sku || 'N/A'}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{product.category || 'Uncategorized'}</Badge>
-                    </TableCell>
+                    <TableCell>{product.sku || '-'}</TableCell>
                     <TableCell className="font-medium">${product.price}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          product.in_stock 
-                            ? "bg-green-100 text-green-800" 
-                            : "bg-red-100 text-red-800"
-                        }`}>
-                          {product.in_stock ? "In Stock" : "Out of Stock"}
-                        </span>
-                        {product.stock_quantity !== undefined && (
-                          <span className="text-sm text-muted-foreground">
-                            ({product.stock_quantity})
-                          </span>
-                        )}
-                      </div>
+                      <Badge variant={product.stock_quantity && product.stock_quantity > 0 ? "default" : "destructive"}>
+                        {product.stock_quantity || 0} in stock
+                      </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={product.status === 'draft' ? 'secondary' : 'default'}>
+                      <Badge variant={product.status === 'active' ? "default" : "secondary"}>
                         {product.status || 'draft'}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        <Button variant="ghost" size="icon" className="hover:scale-110 transition-transform">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="hover:scale-110 transition-transform"
+                          onClick={() => navigate(`/product/${product.id}`)}
+                        >
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button 
@@ -234,7 +215,6 @@ const Products = () => {
                           variant="ghost"
                           size="icon"
                           onClick={() => deleteProduct(product.id)}
-                          disabled={isLoading}
                           className="hover:scale-110 transition-transform text-red-600 hover:text-red-700"
                         >
                           <Trash className="h-4 w-4" />
@@ -248,20 +228,6 @@ const Products = () => {
           </div>
         )}
       </div>
-      
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add New Product</DialogTitle>
-          </DialogHeader>
-          <ProductForm 
-            onSuccess={() => {
-              setIsAddDialogOpen(false);
-              fetchProducts();
-            }} 
-          />
-        </DialogContent>
-      </Dialog>
     </AdminLayout>
   );
 };

@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from 'react-helmet-async';
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 
 // Pages
 import Index from "./pages/Index";
@@ -139,17 +140,19 @@ function App() {
   return (
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <BrowserRouter>
-            <AuthProvider>
-              <WishlistProvider>
-                <CartProvider>
-                  <AppContent />
-                </CartProvider>
-              </WishlistProvider>
-            </AuthProvider>
-          </BrowserRouter>
-        </TooltipProvider>
+        <ThemeProvider defaultTheme="system" storageKey="zyra-theme">
+          <TooltipProvider>
+            <BrowserRouter>
+              <AuthProvider>
+                <WishlistProvider>
+                  <CartProvider>
+                    <AppContent />
+                  </CartProvider>
+                </WishlistProvider>
+              </AuthProvider>
+            </BrowserRouter>
+          </TooltipProvider>
+        </ThemeProvider>
       </QueryClientProvider>
     </HelmetProvider>
   );
