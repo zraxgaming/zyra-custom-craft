@@ -67,59 +67,36 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ items, subt
 
   const processZiinaPayment = async () => {
     try {
-      // Get Ziina configuration from site_config
-      const { data: configData, error: configError } = await supabase
-        .from('site_config')
-        .select('*')
-        .in('key', ['ziina_api_key']);
-
-      if (configError) throw configError;
-
-      const config = configData.reduce((acc, item) => {
-        acc[item.key] = item.value;
-        return acc;
-      }, {} as any);
-
-      if (!config.ziina_api_key) {
-        throw new Error('Ziina payment is not configured. Please contact support.');
-      }
-
-      // Create payment with real Ziina API
-      const paymentAmount = total * 3.67; // Convert to AED
-      const response = await fetch('https://api.ziina.com/v1/payments', {
+      const options = {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${config.ziina_api_key}`,
-          'Content-Type': 'application/json',
+          Authorization: 'Bearer WlLcJdWu9Y6v9/z3pb7o/ R7tARuTGnfnkUmcZQ3HoAuPPuJlT IP7ALY2vWO7DewJ"',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          amount: paymentAmount,
-          currency: 'AED',
-          merchant_id: 'shopzyra',
-          success_url: `${window.location.origin}/order-success`,
-          cancel_url: `${window.location.origin}/order-failed`,
-          customer_email: formData.email,
-          customer_name: `${formData.firstName} ${formData.lastName}`,
-          description: `Order payment for ${formData.email}`,
-          reference: `order_${Date.now()}`,
+          amount: total * 3.67, // Convert to AED
+          currency_code: 'AED',
+          message: `Order payment for ${formData.email}`,
+          success_url: 'https://shopzyra.vercel.app/order-success',
+          cancel_url: 'https://shopzyra.vercel.app/order-failed',
+          failure_url: 'https://shopzyra.vercel.app/order-failed',
+          test: true,
+          transaction_source: 'directApi',
+          expiry: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 min expiry
+          allow_tips: true
         })
-      });
+      };
 
-      if (!response.ok) {
-        throw new Error('Failed to create Ziina payment');
-      }
-
+      const response = await fetch('https://api-v2.ziina.com/api/payment_intent', options);
+      if (!response.ok) throw new Error('Failed to create Ziina payment');
       const data = await response.json();
-      
-      // Store payment data for verification
+      if (!data?.payment_url) throw new Error('No payment URL received from Ziina');
       localStorage.setItem('pending_payment', JSON.stringify({
         payment_id: data.id,
-        amount: paymentAmount,
+        amount: total * 3.67,
         order_data: formData,
         method: 'ziina'
       }));
-
-      // Redirect to Ziina payment page
       window.location.href = data.payment_url;
     } catch (error: any) {
       console.error('Ziina payment error:', error);
@@ -129,22 +106,37 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ items, subt
 
   const processPayPalPayment = async () => {
     try {
-      const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
-      
+      // Use the provided client ID
+      const paypalClientId = 'AakQlS4LnTALA8eLZu1MkcIxjhvtfcM8cR5NlQMnyysTQ2TW3k5ymWgHtMj5JSX_DnJ-DoFRBLpZtGN7';
       if (!paypalClientId) {
         throw new Error('PayPal is not configured. Please contact support.');
       }
 
-      // Create PayPal order
-      const response = await fetch('/api/paypal/create-order', {
+      // Create PayPal order using the REST API
+      const response = await fetch('https://api-m.sandbox.paypal.com/v2/checkout/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Basic ${btoa(paypalClientId + ':')}` // No secret for client-side, but required for sandbox
         },
         body: JSON.stringify({
-          amount: total.toFixed(2),
-          currency: 'USD',
-          order_data: formData
+          intent: 'CAPTURE',
+          purchase_units: [
+            {
+              amount: {
+                currency_code: 'USD',
+                value: total.toFixed(2)
+              },
+              description: `Order payment for ${formData.email}`
+            }
+          ],
+          application_context: {
+            brand_name: 'Shop Zyra',
+            landing_page: 'LOGIN',
+            user_action: 'PAY_NOW',
+            return_url: `${window.location.origin}/order-success`,
+            cancel_url: `${window.location.origin}/order-failed`
+          }
         })
       });
 
@@ -153,8 +145,9 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ items, subt
       }
 
       const data = await response.json();
-      
-      // Store payment data for verification
+      const approvalUrl = data.links?.find((l: any) => l.rel === 'approve')?.href;
+      if (!approvalUrl) throw new Error('No approval URL received from PayPal');
+
       localStorage.setItem('pending_payment', JSON.stringify({
         payment_id: data.id,
         amount: total,
@@ -162,8 +155,8 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ items, subt
         method: 'paypal'
       }));
 
-      // Redirect to PayPal
-      window.location.href = data.approval_url;
+      // Redirect to PayPal approval page
+      window.location.href = approvalUrl;
     } catch (error: any) {
       console.error('PayPal payment error:', error);
       throw error;
