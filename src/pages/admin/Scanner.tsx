@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,16 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Search, Package, Plus, Edit } from "lucide-react";
+import { Search, Package, Plus, Edit, Camera } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import CameraScanner from "@/components/barcode/CameraScanner";
 
 const Scanner = () => {
   const [scanResult, setScanResult] = useState("");
   const [productInfo, setProductInfo] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [newStock, setNewStock] = useState("");
+  const [showCamera, setShowCamera] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -24,7 +25,6 @@ const Scanner = () => {
 
     setIsLoading(true);
     try {
-      // Search by barcode first, then SKU, then name
       const { data, error } = await supabase
         .from('products')
         .select('*')
@@ -134,18 +134,36 @@ const Scanner = () => {
     }
   };
 
+  const handleCameraScan = (result: string) => {
+    setScanResult(result);
+    handleScan(result);
+  };
+
   return (
     <AdminLayout>
+      {showCamera && (
+        <CameraScanner
+          onScan={handleCameraScan}
+          onClose={() => setShowCamera(false)}
+        />
+      )}
+      
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Product Scanner</h1>
             <p className="text-muted-foreground">Search products by barcode, SKU, or name</p>
           </div>
-          <Button onClick={generateBarcode} disabled={!scanResult.trim()}>
-            <Plus className="mr-2 h-4 w-4" />
-            Register Barcode
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setShowCamera(true)}>
+              <Camera className="mr-2 h-4 w-4" />
+              Camera Scan
+            </Button>
+            <Button onClick={generateBarcode} disabled={!scanResult.trim()}>
+              <Plus className="mr-2 h-4 w-4" />
+              Register Barcode
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

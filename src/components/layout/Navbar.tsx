@@ -1,299 +1,251 @@
 
-import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { ShoppingCart, User, Menu, X, Search } from "lucide-react";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ShoppingCart, User, Menu, X, LogOut, Settings, Package } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { useCart } from "@/components/cart/CartProvider";
 import { supabase } from "@/integrations/supabase/client";
-import { ThemeToggleSimple } from "@/components/theme/ThemeToggle";
+import { useToast } from "@/hooks/use-toast";
+import CartDrawer from "@/components/cart/CartDrawer";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 const Navbar = () => {
-  const { user, isAdmin } = useAuth();
-  const { state, toggleCart } = useCart();
-  const items = state.items;
-  const location = useLocation();
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [showCart, setShowCart] = useState(false);
+  const { user, profile, signOut } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  // Safeguard for item count
-  const itemCount = Array.isArray(items) ? items.length : 0;
-  const totalItems = Array.isArray(items) ? items.reduce((total, item) => total + (item.quantity || 0), 0) : 0;
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate("/");
+      toast({
+        title: "Signed out successfully",
+        description: "You have been signed out of your account.",
+      });
+    } catch (error) {
+      console.error("Error signing out:", error);
+      toast({
+        title: "Error signing out",
+        description: "There was an error signing out. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("categories")
-          .select("name, slug")
-          .eq("is_active", true)
-          .order("name");
+  const navigation = [
+    { name: "Home", href: "/home" },
+    { name: "Shop", href: "/shop" },
+    { name: "Categories", href: "/categories" },
+    { name: "About", href: "/about" },
+    { name: "Contact", href: "/contact" },
+  ];
 
-        if (error) throw error;
-        setCategories(data || []);
-      } catch (err) {
-        console.error("Error fetching categories:", err);
-      }
-    };
-
-    fetchCategories();
-  }, []);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 10) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, []);
+  const isAdmin = profile?.role === "admin";
 
   return (
-    <header
-      className={`sticky top-0 z-50 w-full ${
-        isScrolled
-          ? "bg-white dark:bg-gray-800 backdrop-blur-md shadow-sm"
-          : "bg-gray-100 dark:bg-gray-900"
-      } transition-all duration-200`}
-    >
-      <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
-          <div className="flex">
-            <Link to="/" className="flex items-center">
-              <span className="text-2xl font-bold text-primary">Zyra</span>
-            </Link>
-          </div>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-6">
-            <Link
-              to="/"
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                location.pathname === "/"
-                  ? "text-primary"
-                  : "text-gray-800 dark:text-gray-300"
-              }`}
-            >
-              Home
-            </Link>
-            <Link
-              to="/shop"
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                location.pathname === "/shop"
-                  ? "text-primary"
-                  : "text-gray-800 dark:text-gray-300"
-              }`}
-            >
-              Shop
-            </Link>
-            <Link
-              to="/categories"
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                location.pathname === "/categories"
-                  ? "text-primary"
-                  : "text-gray-800 dark:text-gray-300"
-              }`}
-            >
-              Categories
-            </Link>
-            <Link
-              to="/about"
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                location.pathname === "/about"
-                  ? "text-primary"
-                  : "text-gray-800 dark:text-gray-300"
-              }`}
-            >
-              About
-            </Link>
-            <Link
-              to="/contact"
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                location.pathname === "/contact"
-                  ? "text-primary"
-                  : "text-gray-800 dark:text-gray-300"
-              }`}
-            >
-              Contact
-            </Link>
-          </nav>
-
-          {/* Desktop Right Actions */}
-          <div className="hidden md:flex items-center space-x-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                type="search"
-                placeholder="Search..."
-                className="w-[180px] lg:w-[260px] pl-9 rounded-full bg-gray-100 dark:bg-gray-800 border dark:border-gray-700 focus-visible:ring-primary"
-              />
+    <>
+      <nav className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex items-center">
+              <Link to="/home" className="flex-shrink-0 flex items-center">
+                <span className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                  Zyra
+                </span>
+              </Link>
             </div>
 
-            <ThemeToggleSimple />
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-8">
+              {navigation.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className="text-muted-foreground hover:text-foreground transition-colors duration-200 font-medium"
+                >
+                  {item.name}
+                </Link>
+              ))}
+            </div>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative text-gray-800 dark:text-gray-200"
-              onClick={toggleCart}
-            >
-              <ShoppingCart className="h-5 w-5" />
-              {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                  {totalItems}
-                </span>
-              )}
-            </Button>
+            {/* Desktop Actions */}
+            <div className="hidden md:flex items-center space-x-4">
+              <ThemeToggle />
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowCart(true)}
+                className="relative"
+              >
+                <ShoppingCart className="h-5 w-5" />
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                  0
+                </Badge>
+              </Button>
 
-            {user ? (
-              <Link to={isAdmin ? "/admin" : "/profile"}>
-                <Button variant="ghost" size="icon">
-                  <User className="h-5 w-5 text-gray-800 dark:text-gray-200" />
-                </Button>
-              </Link>
-            ) : (
-              <Link to="/auth">
-                <Button variant="outline" size="sm">
-                  Login
-                </Button>
-              </Link>
-            )}
-          </div>
-
-          {/* Mobile Menu */}
-          <div className="md:hidden flex items-center">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative mr-2"
-              onClick={toggleCart}
-            >
-              <ShoppingCart className="h-5 w-5 text-gray-800 dark:text-gray-200" />
-              {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                  {totalItems}
-                </span>
-              )}
-            </Button>
-
-            <ThemeToggleSimple />
-
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="ml-2">
-                  <Menu className="h-5 w-5 text-gray-800 dark:text-gray-200" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] sm:w-[400px] p-0">
-                <div className="flex flex-col h-full">
-                  <div className="p-4 border-b">
-                    <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-xl font-bold">Menu</h2>
-                      <SheetTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <X className="h-5 w-5 text-gray-800 dark:text-gray-200" />
-                        </Button>
-                      </SheetTrigger>
-                    </div>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        type="search"
-                        placeholder="Search..."
-                        className="pl-9 w-full bg-gray-100 dark:bg-gray-800 border dark:border-gray-700"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex-1 overflow-auto p-4">
-                    <nav className="flex flex-col space-y-4">
-                      <Link
-                        to="/"
-                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200"
-                      >
-                        Home
-                      </Link>
-                      <Link
-                        to="/shop"
-                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200"
-                      >
-                        Shop All
-                      </Link>
-                      <Link
-                        to="/categories"
-                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200"
-                      >
-                        Categories
-                      </Link>
-                      <div>
-                        <h3 className="font-medium mb-2 text-gray-500 dark:text-gray-400">
-                          Browse Categories
-                        </h3>
-                        <div className="flex flex-col space-y-1 ml-2">
-                          {categories?.map((category) => (
-                            <Link
-                              key={category.slug}
-                              to={`/shop?category=${category.slug}`}
-                              className="text-sm px-3 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200"
-                            >
-                              {category.name}
-                            </Link>
-                          ))}
-                        </div>
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={profile?.avatar_url} alt={profile?.display_name || "User"} />
+                        <AvatarFallback>
+                          {profile?.display_name?.charAt(0) || profile?.first_name?.charAt(0) || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <div className="flex items-center justify-start gap-2 p-2">
+                      <div className="flex flex-col space-y-1 leading-none">
+                        <p className="font-medium">
+                          {profile?.display_name || profile?.first_name || "User"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {profile?.email || user.email}
+                        </p>
                       </div>
-                      <Link
-                        to="/about"
-                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200"
-                      >
-                        About
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/profile" className="cursor-pointer">
+                        <User className="mr-2 h-4 w-4" />
+                        Profile
                       </Link>
-                      <Link
-                        to="/contact"
-                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200"
-                      >
-                        Contact
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/dashboard" className="cursor-pointer">
+                        <Settings className="mr-2 h-4 w-4" />
+                        Dashboard
                       </Link>
-                    </nav>
-                  </div>
-                  <div className="p-4 border-t">
-                    {user ? (
-                      <div className="flex flex-col space-y-2">
-                        <Link to="/profile">
-                          <Button variant="outline" className="w-full">
-                            My Account
-                          </Button>
+                    </DropdownMenuItem>
+                    {isAdmin && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin" className="cursor-pointer">
+                          <Package className="mr-2 h-4 w-4" />
+                          Admin Panel
                         </Link>
-                        {isAdmin && (
-                          <Link to="/admin">
-                            <Button variant="outline" className="w-full">
-                              Admin Dashboard
-                            </Button>
-                          </Link>
-                        )}
-                      </div>
-                    ) : (
-                      <Link to="/auth">
-                        <Button className="w-full bg-primary hover:bg-primary/90">
-                          Login / Register
-                        </Button>
-                      </Link>
+                      </DropdownMenuItem>
                     )}
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button asChild>
+                  <Link to="/auth">Sign In</Link>
+                </Button>
+              )}
+            </div>
+
+            {/* Mobile menu button */}
+            <div className="md:hidden flex items-center space-x-2">
+              <ThemeToggle />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowCart(true)}
+                className="relative"
+              >
+                <ShoppingCart className="h-5 w-5" />
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                  0
+                </Badge>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsOpen(!isOpen)}
+              >
+                {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+
+        {/* Mobile Navigation */}
+        {isOpen && (
+          <div className="md:hidden">
+            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-background border-t border-border">
+              {navigation.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className="block px-3 py-2 text-muted-foreground hover:text-foreground transition-colors duration-200"
+                  onClick={() => setIsOpen(false)}
+                >
+                  {item.name}
+                </Link>
+              ))}
+              <div className="px-3 py-2">
+                {user ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={profile?.avatar_url} alt={profile?.display_name || "User"} />
+                        <AvatarFallback>
+                          {profile?.display_name?.charAt(0) || profile?.first_name?.charAt(0) || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium">
+                        {profile?.display_name || profile?.first_name || "User"}
+                      </span>
+                    </div>
+                    <Button asChild variant="ghost" className="w-full justify-start">
+                      <Link to="/profile" onClick={() => setIsOpen(false)}>
+                        <User className="mr-2 h-4 w-4" />
+                        Profile
+                      </Link>
+                    </Button>
+                    <Button asChild variant="ghost" className="w-full justify-start">
+                      <Link to="/dashboard" onClick={() => setIsOpen(false)}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        Dashboard
+                      </Link>
+                    </Button>
+                    {isAdmin && (
+                      <Button asChild variant="ghost" className="w-full justify-start">
+                        <Link to="/admin" onClick={() => setIsOpen(false)}>
+                          <Package className="mr-2 h-4 w-4" />
+                          Admin Panel
+                        </Link>
+                      </Button>
+                    )}
+                    <Button onClick={handleSignOut} variant="ghost" className="w-full justify-start">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign out
+                    </Button>
+                  </div>
+                ) : (
+                  <Button asChild className="w-full">
+                    <Link to="/auth" onClick={() => setIsOpen(false)}>
+                      Sign In
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </nav>
+
+      <CartDrawer open={showCart} onOpenChange={setShowCart} />
+    </>
   );
 };
 

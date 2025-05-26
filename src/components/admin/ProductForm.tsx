@@ -37,7 +37,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSuccess, product }) => {
     fetchCategories();
   }, []);
 
-  // Auto-generate SKU when name changes (only for new products)
+  // Auto-generate SKU when name changes (only for new products if SKU is empty)
   useEffect(() => {
     if (!product && formData.name && !formData.sku) {
       const generatedSku = generateSKU(formData.name);
@@ -45,7 +45,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSuccess, product }) => {
     }
   }, [formData.name, product]);
 
-  // Auto-generate barcode when SKU changes (only for new products)
+  // Auto-generate barcode when SKU changes (only for new products if barcode is empty)
   useEffect(() => {
     if (!product && formData.sku && !formData.barcode) {
       const generatedBarcode = generateBarcode();
@@ -126,7 +126,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSuccess, product }) => {
         
         toast({
           title: "Product created",
-          description: "The product has been created successfully with auto-generated SKU and barcode.",
+          description: "The product has been created successfully.",
         });
       }
 
@@ -210,22 +210,22 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSuccess, product }) => {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="sku">SKU {!product && "(Auto-generated)"}</Label>
+          <Label htmlFor="sku">SKU</Label>
           <Input
             id="sku"
             value={formData.sku}
             onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
-            placeholder="Auto-generated from product name"
+            placeholder="Enter custom SKU or auto-generated"
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="barcode">Barcode {!product && "(Auto-generated)"}</Label>
+          <Label htmlFor="barcode">Barcode</Label>
           <Input
             id="barcode"
             value={formData.barcode}
             onChange={(e) => setFormData(prev => ({ ...prev, barcode: e.target.value }))}
-            placeholder="Auto-generated EAN-13 barcode"
+            placeholder="Enter custom barcode or auto-generated"
           />
         </div>
       </div>

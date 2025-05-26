@@ -29,3 +29,14 @@ export const generateBarcode = () => {
   checksum = (10 - (checksum % 10)) % 10;
   return randomDigits + checksum.toString();
 };
+
+export const generateOrderBarcode = (orderId: string) => {
+  // Generate barcode based on order ID
+  const numericId = orderId.replace(/\D/g, '').slice(-12).padStart(12, '0');
+  let checksum = 0;
+  for (let i = 0; i < 12; i++) {
+    checksum += parseInt(numericId[i]) * (i % 2 === 0 ? 1 : 3);
+  }
+  checksum = (10 - (checksum % 10)) % 10;
+  return numericId + checksum.toString();
+};
