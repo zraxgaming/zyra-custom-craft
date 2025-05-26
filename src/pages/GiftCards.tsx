@@ -7,18 +7,22 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Gift, CreditCard, Wallet, Smartphone } from "lucide-react";
+import { Gift, Smartphone, CreditCard } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useAuth } from "@/hooks/use-auth";
+import ZiinaPayment from "@/components/checkout/ZiinaPayment";
+import PayPalPayment from "@/components/checkout/PayPalPayment";
+import { useToast } from "@/hooks/use-toast";
 
 const GiftCards = () => {
   const [amount, setAmount] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
   const [message, setMessage] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("ziina");
-  const [isLoading, setIsLoading] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
   const { user } = useAuth();
+  const { toast } = useToast();
 
   const predefinedAmounts = [25, 50, 100, 250, 500];
 
@@ -26,48 +30,117 @@ const GiftCards = () => {
     return 'GC' + Math.random().toString(36).substr(2, 12).toUpperCase();
   };
 
-  const handlePurchase = async () => {
+  const handleContinueToPay = () => {
     if (!user) {
-      console.log('Login required for gift card purchase');
+      toast({
+        title: "Login required",
+        description: "Please log in to purchase gift cards",
+        variant: "destructive"
+      });
       return;
     }
 
     if (!amount || parseFloat(amount) <= 0) {
-      console.log('Invalid gift card amount');
+      toast({
+        title: "Invalid amount",
+        description: "Please enter a valid gift card amount",
+        variant: "destructive"
+      });
       return;
     }
 
     if (!recipientEmail) {
-      console.log('Recipient email required');
+      toast({
+        title: "Recipient email required",
+        description: "Please enter the recipient's email address",
+        variant: "destructive"
+      });
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const code = generateGiftCardCode();
-      const giftCardAmount = parseFloat(amount);
-      
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      console.log(`Gift card created with ${paymentMethod} payment:`, {
-        code,
-        amount: giftCardAmount,
-        recipient: recipientEmail,
-        method: paymentMethod
-      });
-
-      // Reset form
-      setAmount("");
-      setRecipientEmail("");
-      setMessage("");
-      setPaymentMethod("ziina");
-    } catch (error: any) {
-      console.error("Error creating gift card:", error);
-    } finally {
-      setIsLoading(false);
-    }
+    setShowPayment(true);
   };
+
+  const handlePaymentSuccess = (transactionId: string) => {
+    const code = generateGiftCardCode();
+    const giftCardAmount = parseFloat(amount);
+    
+    console.log(`Gift card created with ${paymentMethod} payment:`, {
+      code,
+      amount: giftCardAmount,
+      recipient: recipientEmail,
+      method: paymentMethod,
+      transactionId
+    });
+
+    toast({
+      title: "Gift Card Created!",
+      description: `Gift card code: ${code} has been sent to ${recipientEmail}`,
+    });
+
+    // Reset form
+    setAmount("");
+    setRecipientEmail("");
+    setMessage("");
+    setPaymentMethod("ziina");
+    setShowPayment(false);
+  };
+
+  const handlePaymentError = (error: string) => {
+    console.error("Gift card payment failed:", error);
+    setShowPayment(false);
+  };
+
+  if (showPayment) {
+    return (
+      <>
+        <Navbar />
+        <Container className="py-12">
+          <div className="max-w-md mx-auto">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Gift className="h-5 w-5 mr-2" />
+                  Complete Gift Card Purchase
+                </CardTitle>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowPayment(false)}
+                  className="w-fit"
+                >
+                  ← Back to Details
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4 mb-6">
+                  <div className="p-4 bg-muted/30 rounded-lg">
+                    <p><strong>Amount:</strong> ${amount}</p>
+                    <p><strong>Recipient:</strong> {recipientEmail}</p>
+                    {message && <p><strong>Message:</strong> {message}</p>}
+                  </div>
+                </div>
+                
+                {paymentMethod === 'ziina' ? (
+                  <ZiinaPayment
+                    amount={parseFloat(amount)}
+                    onSuccess={handlePaymentSuccess}
+                    onError={handlePaymentError}
+                  />
+                ) : (
+                  <PayPalPayment
+                    amount={parseFloat(amount)}
+                    onSuccess={handlePaymentSuccess}
+                    onError={handlePaymentError}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </Container>
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <>
@@ -149,13 +222,13 @@ const GiftCards = () => {
                     <RadioGroupItem value="ziina" id="ziina-gift" />
                     <Label htmlFor="ziina-gift" className="flex items-center gap-2 cursor-pointer flex-1">
                       <Smartphone className="h-4 w-4 text-blue-600" />
-                      <span>Ziina - Secure digital payment</span>
+                      <span>Ziina - Secure digital payment (Default)</span>
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                     <RadioGroupItem value="paypal" id="paypal-gift" />
                     <Label htmlFor="paypal-gift" className="flex items-center gap-2 cursor-pointer flex-1">
-                      <Wallet className="h-4 w-4 text-blue-600" />
+                      <CreditCard className="h-4 w-4 text-blue-600" />
                       <span>PayPal - Secure online payment</span>
                     </Label>
                   </div>
@@ -163,12 +236,12 @@ const GiftCards = () => {
               </div>
 
               <Button 
-                onClick={handlePurchase}
-                disabled={isLoading || !amount || !recipientEmail}
+                onClick={handleContinueToPay}
+                disabled={!amount || !recipientEmail}
                 className="w-full"
                 size="lg"
               >
-                {isLoading ? "Creating Gift Card..." : `Purchase Gift Card - $${amount || "0"}`}
+                Continue to Payment - ${amount || "0"}
               </Button>
             </CardContent>
           </Card>
@@ -178,9 +251,9 @@ const GiftCards = () => {
             <ul className="text-sm text-muted-foreground space-y-1">
               <li>• Choose an amount or enter a custom value</li>
               <li>• Enter the recipient's email address</li>
-              <li>• Select your preferred payment method</li>
+              <li>• Select your preferred payment method (Ziina or PayPal)</li>
               <li>• Add a personal message (optional)</li>
-              <li>• The gift card will be sent via email</li>
+              <li>• Complete payment and the gift card will be sent via email</li>
               <li>• Gift cards never expire and can be used for any purchase</li>
             </ul>
           </div>

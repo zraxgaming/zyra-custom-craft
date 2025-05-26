@@ -47,19 +47,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               View
             </Button>
             {product.is_customizable && (
-              <ProductCustomizer
-                productId={product.id}
-                trigger={
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="bg-white/90 hover:bg-white text-black hover:scale-105 transition-all duration-300"
-                  >
-                    <Palette className="h-4 w-4 mr-1" />
-                    Customize
-                  </Button>
-                }
-              />
+              <ProductCustomizer productId={product.id}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="bg-white/90 hover:bg-white text-black hover:scale-105 transition-all duration-300"
+                >
+                  <Palette className="h-4 w-4 mr-1" />
+                  Customize
+                </Button>
+              </ProductCustomizer>
             )}
           </div>
         </div>
@@ -158,6 +155,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             product={{
               id: product.id,
               name: product.name,
+              slug: product.slug,
               price: discountedPrice,
               images: product.images
             }}

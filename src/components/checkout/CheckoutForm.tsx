@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Smartphone, Wallet, CreditCard } from "lucide-react";
+import { Smartphone, CreditCard } from "lucide-react";
+import ZiinaPayment from "./ZiinaPayment";
+import PayPalPayment from "./PayPalPayment";
 
 interface CheckoutFormProps {
   items: any[];
@@ -27,7 +29,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
     country: 'United States',
     paymentMethod: 'ziina'
   });
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
   const { toast } = useToast();
 
   const tax = subtotal * 0.08;
@@ -41,38 +43,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
     }));
   };
 
-  const processPayment = async () => {
-    setIsProcessing(true);
-    
-    try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Generate mock order ID
-      const orderId = `order_${Date.now()}`;
-      
-      console.log(`Payment processed with ${formData.paymentMethod}:`, {
-        orderId,
-        amount: total,
-        method: formData.paymentMethod
-      });
-      
-      onPaymentSuccess(orderId);
-    } catch (error) {
-      console.error('Payment failed:', error);
-      toast({
-        title: "Payment failed",
-        description: "There was an error processing your payment. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleContinueToPayment = () => {
     if (!formData.email || !formData.firstName || !formData.lastName) {
       toast({
         title: "Missing information",
@@ -81,9 +52,66 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
       });
       return;
     }
-    
-    processPayment();
+    setShowPayment(true);
   };
+
+  const handlePaymentSuccess = (transactionId: string) => {
+    console.log(`Payment successful with ${formData.paymentMethod}:`, {
+      transactionId,
+      amount: total,
+      method: formData.paymentMethod
+    });
+    
+    // Generate order ID and redirect to success page
+    const orderId = `order_${Date.now()}`;
+    onPaymentSuccess(orderId);
+  };
+
+  const handlePaymentError = (error: string) => {
+    console.error('Payment failed:', error);
+    setShowPayment(false);
+  };
+
+  if (showPayment) {
+    return (
+      <div className="max-w-md mx-auto">
+        <Card>
+          <CardHeader>
+            <CardTitle>Complete Payment</CardTitle>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowPayment(false)}
+              className="w-fit"
+            >
+              ← Back to Details
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4 mb-6">
+              <div className="flex justify-between font-bold text-lg">
+                <span>Total:</span>
+                <span>${total.toFixed(2)}</span>
+              </div>
+            </div>
+            
+            {formData.paymentMethod === 'ziina' ? (
+              <ZiinaPayment
+                amount={total}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+              />
+            ) : (
+              <PayPalPayment
+                amount={total}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+              />
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -199,7 +227,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
                     <Smartphone className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
-                    <div className="font-medium">Ziina</div>
+                    <div className="font-medium">Ziina (Default)</div>
                     <div className="text-sm text-muted-foreground">Secure digital payment in AED</div>
                   </div>
                 </Label>
@@ -209,7 +237,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
                 <RadioGroupItem value="paypal" id="paypal" />
                 <Label htmlFor="paypal" className="flex items-center gap-3 cursor-pointer flex-1">
                   <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <Wallet className="h-5 w-5 text-blue-600" />
+                    <CreditCard className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
                     <div className="font-medium">PayPal</div>
@@ -261,19 +289,11 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
             </div>
 
             <Button 
-              onClick={handleSubmit}
-              disabled={isProcessing}
+              onClick={handleContinueToPayment}
               className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 transition-all duration-300"
               size="lg"
             >
-              {isProcessing ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Processing Payment...
-                </div>
-              ) : (
-                `Complete Order - $${total.toFixed(2)}`
-              )}
+              Continue to Payment - ${total.toFixed(2)}
             </Button>
           </CardContent>
         </Card>

@@ -87,8 +87,7 @@ const ProductEdit = () => {
               (product.images as any[]).filter(img => typeof img === 'string') : [],
             is_featured: product.is_featured || false,
             is_customizable: product.is_customizable || false,
-            stock_quantity: product.stock_quantity || 0,
-            sku: product.sku || ''
+            stock_quantity: product.stock_quantity || 0
           }}
           onSuccess={() => {
             console.log('Product updated successfully');
