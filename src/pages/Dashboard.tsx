@@ -1,347 +1,340 @@
 
-import React, { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/use-auth";
-import { Navigate } from "react-router-dom";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import React from "react";
 import { Container } from "@/components/ui/container";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import ReferralDashboard from "@/components/referrals/ReferralDashboard";
-import UserAnalytics from "@/components/analytics/UserAnalytics";
-import { User, BarChart3, Users, ShoppingBag, Heart } from "lucide-react";
+import { 
+  ShoppingBag, 
+  Heart, 
+  User, 
+  Settings, 
+  Package, 
+  CreditCard,
+  Gift,
+  TrendingUp,
+  Clock,
+  Star
+} from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { Link, useNavigate } from "react-router-dom";
+import SEOHead from "@/components/seo/SEOHead";
 
 const Dashboard = () => {
-  const { user, isLoading } = useAuth();
-  const { toast } = useToast();
-  const [profile, setProfile] = useState({
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-    display_name: "",
-  });
-  const [orders, setOrders] = useState([]);
-  const [isProfileLoading, setIsProfileLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      fetchProfile();
-      fetchOrders();
-    }
-  }, [user]);
-
-  const fetchProfile = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user?.id)
-        .single();
-
-      if (error && error.code !== "PGRST116") {
-        throw error;
-      }
-
-      if (data) {
-        setProfile({
-          first_name: data.first_name || "",
-          last_name: data.last_name || "",
-          email: data.email || user?.email || "",
-          phone: data.phone || "",
-          display_name: data.display_name || "",
-        });
-      } else {
-        setProfile(prev => ({
-          ...prev,
-          email: user?.email || "",
-        }));
-      }
-    } catch (error) {
-      console.error("Error fetching profile:", error);
-    } finally {
-      setIsProfileLoading(false);
-    }
-  };
-
-  const fetchOrders = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("orders")
-        .select(`
-          *,
-          order_items (
-            *,
-            products (name, images)
-          )
-        `)
-        .eq("user_id", user?.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setOrders(data || []);
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-    }
-  };
-
-  const handleSaveProfile = async () => {
-    if (!user) return;
-
-    setIsSaving(true);
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .upsert({
-          id: user.id,
-          ...profile,
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Profile Updated",
-        description: "Your profile has been successfully updated.",
-      });
-    } catch (error: any) {
-      console.error("Error updating profile:", error);
-      toast({
-        title: "Update Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    navigate('/auth');
+    return null;
   }
+
+  const dashboardStats = [
+    {
+      title: "Total Orders",
+      value: "12",
+      icon: ShoppingBag,
+      color: "text-blue-600",
+      bgColor: "bg-blue-100 dark:bg-blue-900/20",
+      change: "+2 this month"
+    },
+    {
+      title: "Wishlist Items",
+      value: "8",
+      icon: Heart,
+      color: "text-pink-600",
+      bgColor: "bg-pink-100 dark:bg-pink-900/20",
+      change: "+3 recently"
+    },
+    {
+      title: "Loyalty Points",
+      value: "1,250",
+      icon: Star,
+      color: "text-yellow-600",
+      bgColor: "bg-yellow-100 dark:bg-yellow-900/20",
+      change: "+50 this week"
+    },
+    {
+      title: "Total Spent",
+      value: "$2,480",
+      icon: CreditCard,
+      color: "text-green-600",
+      bgColor: "bg-green-100 dark:bg-green-900/20",
+      change: "+$320 this month"
+    }
+  ];
+
+  const recentOrders = [
+    {
+      id: "ORD-001",
+      status: "delivered",
+      total: "$89.99",
+      date: "2024-01-15",
+      items: 2
+    },
+    {
+      id: "ORD-002",
+      status: "shipped",
+      total: "$156.50",
+      date: "2024-01-12",
+      items: 3
+    },
+    {
+      id: "ORD-003",
+      status: "processing",
+      total: "$75.25",
+      date: "2024-01-10",
+      items: 1
+    }
+  ];
+
+  const quickActions = [
+    {
+      title: "Browse Products",
+      description: "Discover new items",
+      icon: ShoppingBag,
+      href: "/shop",
+      color: "bg-gradient-to-br from-blue-500 to-blue-600"
+    },
+    {
+      title: "View Wishlist",
+      description: "Check saved items",
+      icon: Heart,
+      href: "/wishlist",
+      color: "bg-gradient-to-br from-pink-500 to-pink-600"
+    },
+    {
+      title: "Gift Cards",
+      description: "Send to friends",
+      icon: Gift,
+      href: "/gift-cards",
+      color: "bg-gradient-to-br from-purple-500 to-purple-600"
+    },
+    {
+      title: "Account Settings",
+      description: "Update profile",
+      icon: Settings,
+      href: "/account/settings",
+      color: "bg-gradient-to-br from-gray-500 to-gray-600"
+    }
+  ];
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "delivered":
+        return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
+      case "shipped":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400";
+      case "processing":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
+    }
+  };
 
   return (
     <>
+      <SEOHead 
+        title="Dashboard - Zyra"
+        description="Manage your orders, wishlist, and account settings. Track your purchases and discover new products."
+        url="https://zyra.lovable.app/dashboard"
+      />
       <Navbar />
-      <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5 py-12 animate-fade-in">
-        <Container>
-          <div className="mb-8 animate-scale-in">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
-              Welcome back, {user.user_metadata?.first_name || 'User'}!
-            </h1>
-            <p className="text-muted-foreground">Manage your account, track your orders, and view your activity.</p>
+      
+      {/* Hero Section */}
+      <section className="relative py-16 bg-gradient-to-br from-primary/10 via-purple-500/10 to-pink-500/10 overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.05] pointer-events-none">
+          <div className="absolute top-20 left-20 w-96 h-96 bg-gradient-to-br from-primary to-purple-500 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-40 right-10 w-80 h-80 bg-gradient-to-br from-pink-500 to-orange-500 rounded-full blur-3xl animate-pulse"></div>
+        </div>
+        
+        <Container className="relative z-10">
+          <div className="animate-fade-in">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-3 bg-primary/10 rounded-2xl">
+                <User className="h-8 w-8 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  Welcome back!
+                </h1>
+                <p className="text-xl text-muted-foreground mt-2">
+                  {user.email}
+                </p>
+              </div>
+            </div>
           </div>
-
-          <Tabs defaultValue="profile" className="w-full animate-slide-in-right">
-            <TabsList className="grid w-full grid-cols-4 mb-8">
-              <TabsTrigger value="profile" className="flex items-center gap-2 hover:scale-105 transition-transform duration-200">
-                <User className="h-4 w-4" />
-                Profile
-              </TabsTrigger>
-              <TabsTrigger value="orders" className="flex items-center gap-2 hover:scale-105 transition-transform duration-200">
-                <ShoppingBag className="h-4 w-4" />
-                Orders
-              </TabsTrigger>
-              <TabsTrigger value="analytics" className="flex items-center gap-2 hover:scale-105 transition-transform duration-200">
-                <BarChart3 className="h-4 w-4" />
-                Analytics
-              </TabsTrigger>
-              <TabsTrigger value="referrals" className="flex items-center gap-2 hover:scale-105 transition-transform duration-200">
-                <Users className="h-4 w-4" />
-                Referrals
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="profile" className="space-y-6 animate-fade-in">
-              <Card className="hover:shadow-lg transition-shadow duration-300">
-                <CardHeader>
-                  <CardTitle>Profile Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {isProfileLoading ? (
-                    <div className="animate-pulse space-y-4">
-                      <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-                      <div className="h-10 bg-gray-200 rounded"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                      <div className="h-10 bg-gray-200 rounded"></div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2 animate-fade-in">
-                          <Label htmlFor="first_name">First Name</Label>
-                          <Input
-                            id="first_name"
-                            value={profile.first_name}
-                            onChange={(e) =>
-                              setProfile({ ...profile, first_name: e.target.value })
-                            }
-                            className="focus:scale-105 transition-transform duration-200"
-                          />
-                        </div>
-                        <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.1s' }}>
-                          <Label htmlFor="last_name">Last Name</Label>
-                          <Input
-                            id="last_name"
-                            value={profile.last_name}
-                            onChange={(e) =>
-                              setProfile({ ...profile, last_name: e.target.value })
-                            }
-                            className="focus:scale-105 transition-transform duration-200"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-                        <Label htmlFor="display_name">Display Name</Label>
-                        <Input
-                          id="display_name"
-                          value={profile.display_name}
-                          onChange={(e) =>
-                            setProfile({ ...profile, display_name: e.target.value })
-                          }
-                          className="focus:scale-105 transition-transform duration-200"
-                        />
-                      </div>
-
-                      <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.3s' }}>
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={profile.email}
-                          onChange={(e) =>
-                            setProfile({ ...profile, email: e.target.value })
-                          }
-                          disabled
-                          className="bg-muted"
-                        />
-                      </div>
-
-                      <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.4s' }}>
-                        <Label htmlFor="phone">Phone</Label>
-                        <Input
-                          id="phone"
-                          value={profile.phone}
-                          onChange={(e) =>
-                            setProfile({ ...profile, phone: e.target.value })
-                          }
-                          className="focus:scale-105 transition-transform duration-200"
-                        />
-                      </div>
-
-                      <Button
-                        onClick={handleSaveProfile}
-                        disabled={isSaving}
-                        className="w-full md:w-auto hover:scale-105 transition-transform duration-200 animate-fade-in"
-                        style={{ animationDelay: '0.5s' }}
-                      >
-                        {isSaving ? "Saving..." : "Save Changes"}
-                      </Button>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="orders" className="space-y-6 animate-fade-in">
-              <Card className="hover:shadow-lg transition-shadow duration-300">
-                <CardHeader>
-                  <CardTitle>Order History</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {orders.length === 0 ? (
-                    <div className="text-center py-8 animate-bounce-in">
-                      <ShoppingBag className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-foreground mb-2">No orders yet</h3>
-                      <p className="text-muted-foreground">Start shopping to see your orders here!</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {orders.map((order: any, index) => (
-                        <div key={order.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow duration-300 animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
-                          <div className="flex justify-between items-start mb-4">
-                            <div>
-                              <h3 className="font-semibold">
-                                Order #{order.id.slice(0, 8)}
-                              </h3>
-                              <p className="text-sm text-muted-foreground">
-                                {new Date(order.created_at).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-semibold">
-                                ${order.total_amount.toFixed(2)}
-                              </p>
-                              <span
-                                className={`inline-block px-2 py-1 rounded-full text-xs transition-all duration-300 hover:scale-110 ${
-                                  order.status === "delivered"
-                                    ? "bg-green-100 text-green-800"
-                                    : order.status === "processing"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : order.status === "shipped"
-                                    ? "bg-purple-100 text-purple-800"
-                                    : "bg-gray-100 text-gray-800"
-                                }`}
-                              >
-                                {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <Separator className="my-4" />
-                          
-                          <div className="space-y-2">
-                            {order.order_items?.map((item: any) => (
-                              <div key={item.id} className="flex items-center gap-4 hover:bg-muted/50 p-2 rounded transition-colors duration-200">
-                                {item.products?.images?.[0] && (
-                                  <img
-                                    src={item.products.images[0]}
-                                    alt={item.products.name}
-                                    className="w-12 h-12 object-cover rounded hover:scale-110 transition-transform duration-200"
-                                  />
-                                )}
-                                <div className="flex-1">
-                                  <p className="font-medium">{item.products?.name}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    Quantity: {item.quantity} × ${item.price.toFixed(2)}
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="analytics" className="space-y-6 animate-fade-in">
-              <UserAnalytics />
-            </TabsContent>
-            
-            <TabsContent value="referrals" className="space-y-6 animate-fade-in">
-              <ReferralDashboard />
-            </TabsContent>
-          </Tabs>
         </Container>
-      </div>
+      </section>
+
+      <Container className="py-12 space-y-8">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {dashboardStats.map((stat, index) => (
+            <Card 
+              key={stat.title}
+              className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 animate-scale-in"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">{stat.title}</p>
+                    <p className="text-3xl font-bold text-foreground">{stat.value}</p>
+                    <p className="text-xs text-green-600 mt-1">{stat.change}</p>
+                  </div>
+                  <div className={`p-3 rounded-2xl ${stat.bgColor} group-hover:scale-110 transition-transform`}>
+                    <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Quick Actions */}
+        <Card className="animate-scale-in" style={{ animationDelay: '400ms' }}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Quick Actions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {quickActions.map((action, index) => (
+                <Link 
+                  key={action.title}
+                  to={action.href}
+                  className="group"
+                >
+                  <div className={`${action.color} text-white p-6 rounded-2xl hover:shadow-xl transition-all duration-300 hover:scale-105 animate-fade-in`}
+                       style={{ animationDelay: `${(index + 5) * 100}ms` }}>
+                    <action.icon className="h-8 w-8 mb-3 group-hover:scale-110 transition-transform" />
+                    <h3 className="font-semibold mb-1">{action.title}</h3>
+                    <p className="text-sm opacity-90">{action.description}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Orders and Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Recent Orders */}
+          <Card className="animate-scale-in" style={{ animationDelay: '500ms' }}>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Recent Orders
+              </CardTitle>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/account/orders">View All</Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recentOrders.map((order, index) => (
+                  <div 
+                    key={order.id}
+                    className="flex items-center justify-between p-4 border border-border/50 rounded-lg hover:shadow-md transition-all duration-300 hover:border-primary/50 animate-fade-in"
+                    style={{ animationDelay: `${(index + 10) * 100}ms` }}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="p-2 bg-muted/50 rounded-lg">
+                        <Package className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{order.id}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {order.items} items • {new Date(order.date).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold">{order.total}</p>
+                      <Badge className={`text-xs ${getStatusColor(order.status)}`}>
+                        {order.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Activity Feed */}
+          <Card className="animate-scale-in" style={{ animationDelay: '600ms' }}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Recent Activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-start gap-4 animate-fade-in" style={{ animationDelay: '700ms' }}>
+                  <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                    <Package className="h-4 w-4 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Order delivered</p>
+                    <p className="text-xs text-muted-foreground">Order #ORD-001 was delivered successfully</p>
+                    <p className="text-xs text-muted-foreground">2 hours ago</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 animate-fade-in" style={{ animationDelay: '800ms' }}>
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                    <Heart className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Added to wishlist</p>
+                    <p className="text-xs text-muted-foreground">Premium Wireless Headphones</p>
+                    <p className="text-xs text-muted-foreground">1 day ago</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 animate-fade-in" style={{ animationDelay: '900ms' }}>
+                  <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                    <Star className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Earned loyalty points</p>
+                    <p className="text-xs text-muted-foreground">+50 points from recent purchase</p>
+                    <p className="text-xs text-muted-foreground">3 days ago</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Recommendations */}
+        <Card className="animate-scale-in" style={{ animationDelay: '700ms' }}>
+          <CardHeader>
+            <CardTitle>Recommended for You</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <div className="p-6 bg-muted/30 rounded-full w-fit mx-auto mb-4">
+                <TrendingUp className="h-12 w-12 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Personalized recommendations coming soon!</h3>
+              <p className="text-muted-foreground mb-6">
+                We're analyzing your preferences to suggest products you'll love.
+              </p>
+              <Button asChild>
+                <Link to="/shop">Explore Products</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </Container>
+      
       <Footer />
     </>
   );

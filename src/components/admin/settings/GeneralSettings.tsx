@@ -1,35 +1,68 @@
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { useSiteConfig } from "@/hooks/use-site-config";
-import { Settings, Mail, Bell, Globe, Key, CreditCard } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Save, Settings } from "lucide-react";
 
 const GeneralSettings = () => {
-  const { config, updateConfig, isLoading } = useSiteConfig();
+  const { config, isLoading, updateConfig } = useSiteConfig();
   const { toast } = useToast();
-  const [localConfig, setLocalConfig] = useState(config);
+  const [formData, setFormData] = useState({
+    site_name: config?.site_name || "",
+    site_description: config?.site_description || "",
+    contact_email: config?.contact_email || "",
+    support_phone: config?.support_phone || "",
+    address: config?.address || "",
+    business_hours: config?.business_hours || "",
+    newsletter_enabled: config?.newsletter_enabled || false,
+    abandoned_cart_enabled: config?.abandoned_cart_enabled || false,
+  });
 
   React.useEffect(() => {
-    setLocalConfig(config);
+    if (config) {
+      setFormData({
+        site_name: config.site_name || "",
+        site_description: config.site_description || "",
+        contact_email: config.contact_email || "",
+        support_phone: config.support_phone || "",
+        address: config.address || "",
+        business_hours: config.business_hours || "",
+        newsletter_enabled: config.newsletter_enabled || false,
+        abandoned_cart_enabled: config.abandoned_cart_enabled || false,
+      });
+    }
   }, [config]);
 
-  const handleSave = async (key: string, value: any) => {
-    await updateConfig(key, value);
-  };
-
-  const handleInputChange = (key: string, value: any) => {
-    setLocalConfig(prev => ({ ...prev, [key]: value }));
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      for (const [key, value] of Object.entries(formData)) {
+        await updateConfig(key, value);
+      }
+      
+      toast({
+        title: "Settings saved",
+        description: "Your general settings have been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save settings. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-8">
+      <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
@@ -37,217 +70,117 @@ const GeneralSettings = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Site Configuration */}
-      <Card className="hover:shadow-lg transition-shadow duration-300">
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-primary/10 rounded-lg">
+          <Settings className="h-5 w-5 text-primary" />
+        </div>
+        <h2 className="text-2xl font-bold">General Settings</h2>
+      </div>
+
+      <Card className="animate-scale-in">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5 text-primary" />
-            Site Configuration
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="site_name">Site Name</Label>
-            <Input
-              id="site_name"
-              value={localConfig.site_name || ""}
-              onChange={(e) => handleInputChange("site_name", e.target.value)}
-              placeholder="Enter your site name"
-              className="transition-all duration-200 focus:scale-105"
-            />
-            <Button 
-              onClick={() => handleSave("site_name", localConfig.site_name)}
-              size="sm"
-              className="hover:scale-105 transition-transform duration-200"
-            >
-              Save Site Name
-            </Button>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="contact_email">Contact Email</Label>
-            <Input
-              id="contact_email"
-              type="email"
-              value={localConfig.contact_email || ""}
-              onChange={(e) => handleInputChange("contact_email", e.target.value)}
-              placeholder="contact@yoursite.com"
-              className="transition-all duration-200 focus:scale-105"
-            />
-            <Button 
-              onClick={() => handleSave("contact_email", localConfig.contact_email)}
-              size="sm"
-              className="hover:scale-105 transition-transform duration-200"
-            >
-              Save Contact Email
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* API Keys Configuration */}
-      <Card className="hover:shadow-lg transition-shadow duration-300">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Key className="h-5 w-5 text-primary" />
-            API Keys Configuration
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="brevo_api_key">Brevo API Key</Label>
-            <Input
-              id="brevo_api_key"
-              type="password"
-              value={localConfig.brevo_api_key || ""}
-              onChange={(e) => handleInputChange("brevo_api_key", e.target.value)}
-              placeholder="Enter your Brevo API key"
-              className="transition-all duration-200 focus:scale-105"
-            />
-            <Button 
-              onClick={() => handleSave("brevo_api_key", localConfig.brevo_api_key)}
-              size="sm"
-              className="hover:scale-105 transition-transform duration-200"
-            >
-              Save Brevo API Key
-            </Button>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="ziina_api_key">Ziina API Key</Label>
-            <Input
-              id="ziina_api_key"
-              type="password"
-              value={localConfig.ziina_api_key || ""}
-              onChange={(e) => handleInputChange("ziina_api_key", e.target.value)}
-              placeholder="Enter your Ziina API key"
-              className="transition-all duration-200 focus:scale-105"
-            />
-            <Button 
-              onClick={() => handleSave("ziina_api_key", localConfig.ziina_api_key)}
-              size="sm"
-              className="hover:scale-105 transition-transform duration-200"
-            >
-              Save Ziina API Key
-            </Button>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="paypal_client_id">PayPal Client ID</Label>
-            <Input
-              id="paypal_client_id"
-              value={localConfig.paypal_client_id || ""}
-              onChange={(e) => handleInputChange("paypal_client_id", e.target.value)}
-              placeholder="Enter your PayPal Client ID"
-              className="transition-all duration-200 focus:scale-105"
-            />
-            <Button 
-              onClick={() => handleSave("paypal_client_id", localConfig.paypal_client_id)}
-              size="sm"
-              className="hover:scale-105 transition-transform duration-200"
-            >
-              Save PayPal Client ID
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Notification Settings */}
-      <Card className="hover:shadow-lg transition-shadow duration-300">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-primary" />
-            Notification Settings
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label>Email Notifications</Label>
-              <p className="text-sm text-muted-foreground">
-                Enable general email notifications
-              </p>
-            </div>
-            <Switch
-              checked={localConfig.notifications_enabled || false}
-              onCheckedChange={(checked) => {
-                handleInputChange("notifications_enabled", checked);
-                handleSave("notifications_enabled", checked);
-              }}
-              className="transition-all duration-200 hover:scale-110"
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label>Abandoned Cart Emails</Label>
-              <p className="text-sm text-muted-foreground">
-                Send emails to users who abandon their cart
-              </p>
-            </div>
-            <Switch
-              checked={localConfig.abandoned_cart_enabled || false}
-              onCheckedChange={(checked) => {
-                handleInputChange("abandoned_cart_enabled", checked);
-                handleSave("abandoned_cart_enabled", checked);
-              }}
-              className="transition-all duration-200 hover:scale-110"
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label>Newsletter System</Label>
-              <p className="text-sm text-muted-foreground">
-                Enable newsletter subscription and sending
-              </p>
-            </div>
-            <Switch
-              checked={localConfig.newsletter_enabled || false}
-              onCheckedChange={(checked) => {
-                handleInputChange("newsletter_enabled", checked);
-                handleSave("newsletter_enabled", checked);
-              }}
-              className="transition-all duration-200 hover:scale-110"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* API Status Check */}
-      <Card className="hover:shadow-lg transition-shadow duration-300">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5 text-primary" />
-            API Status
-          </CardTitle>
+          <CardTitle>Site Configuration</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 border rounded-lg text-center space-y-2 hover:bg-muted/50 transition-colors duration-200">
-              <Mail className="h-8 w-8 mx-auto text-primary" />
-              <p className="font-medium">Brevo API</p>
-              <p className={`text-sm ${localConfig.brevo_api_key ? 'text-green-600' : 'text-red-600'}`}>
-                {localConfig.brevo_api_key ? 'Connected' : 'Not Configured'}
-              </p>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="site_name">Site Name</Label>
+                <Input
+                  id="site_name"
+                  value={formData.site_name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, site_name: e.target.value }))}
+                  placeholder="Your Site Name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contact_email">Contact Email</Label>
+                <Input
+                  id="contact_email"
+                  type="email"
+                  value={formData.contact_email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, contact_email: e.target.value }))}
+                  placeholder="contact@yoursite.com"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="support_phone">Support Phone</Label>
+                <Input
+                  id="support_phone"
+                  value={formData.support_phone}
+                  onChange={(e) => setFormData(prev => ({ ...prev, support_phone: e.target.value }))}
+                  placeholder="+1 (555) 123-4567"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="business_hours">Business Hours</Label>
+                <Input
+                  id="business_hours"
+                  value={formData.business_hours}
+                  onChange={(e) => setFormData(prev => ({ ...prev, business_hours: e.target.value }))}
+                  placeholder="Mon-Fri: 9AM-5PM"
+                />
+              </div>
             </div>
-            
-            <div className="p-4 border rounded-lg text-center space-y-2 hover:bg-muted/50 transition-colors duration-200">
-              <CreditCard className="h-8 w-8 mx-auto text-primary" />
-              <p className="font-medium">Ziina API</p>
-              <p className={`text-sm ${localConfig.ziina_api_key ? 'text-green-600' : 'text-red-600'}`}>
-                {localConfig.ziina_api_key ? 'Connected' : 'Not Configured'}
-              </p>
+
+            <div className="space-y-2">
+              <Label htmlFor="site_description">Site Description</Label>
+              <Textarea
+                id="site_description"
+                value={formData.site_description}
+                onChange={(e) => setFormData(prev => ({ ...prev, site_description: e.target.value }))}
+                placeholder="A brief description of your site"
+                rows={3}
+              />
             </div>
-            
-            <div className="p-4 border rounded-lg text-center space-y-2 hover:bg-muted/50 transition-colors duration-200">
-              <CreditCard className="h-8 w-8 mx-auto text-primary" />
-              <p className="font-medium">PayPal</p>
-              <p className={`text-sm ${localConfig.paypal_client_id ? 'text-green-600' : 'text-red-600'}`}>
-                {localConfig.paypal_client_id ? 'Connected' : 'Not Configured'}
-              </p>
+
+            <div className="space-y-2">
+              <Label htmlFor="address">Business Address</Label>
+              <Textarea
+                id="address"
+                value={formData.address}
+                onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                placeholder="123 Business St, City, State 12345"
+                rows={2}
+              />
             </div>
-          </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Features</h3>
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="newsletter_enabled">Newsletter</Label>
+                  <p className="text-sm text-muted-foreground">Enable newsletter subscriptions</p>
+                </div>
+                <Switch
+                  id="newsletter_enabled"
+                  checked={formData.newsletter_enabled}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, newsletter_enabled: checked }))}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="abandoned_cart_enabled">Abandoned Cart Recovery</Label>
+                  <p className="text-sm text-muted-foreground">Send emails for abandoned carts</p>
+                </div>
+                <Switch
+                  id="abandoned_cart_enabled"
+                  checked={formData.abandoned_cart_enabled}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, abandoned_cart_enabled: checked }))}
+                />
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full">
+              <Save className="h-4 w-4 mr-2" />
+              Save Settings
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>

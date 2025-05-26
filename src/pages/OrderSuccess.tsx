@@ -4,10 +4,11 @@ import { useParams, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
-import { CheckCircle, Package, Download, ArrowRight } from "lucide-react";
+import { CheckCircle, Package, Download, ArrowRight, Truck, Mail, Star } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { supabase } from "@/integrations/supabase/client";
+import SEOHead from "@/components/seo/SEOHead";
 
 const OrderSuccess = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -47,147 +48,267 @@ const OrderSuccess = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <>
+        <SEOHead 
+          title="Order Confirmation - Zyra"
+          description="Your order has been confirmed. Thank you for shopping with Zyra!"
+          url={`https://zyra.lovable.app/order-success/${orderId}`}
+        />
         <Navbar />
         <Container className="py-12">
-          <div className="flex justify-center">
+          <div className="flex justify-center animate-fade-in">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           </div>
         </Container>
         <Footer />
-      </div>
+      </>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <Container className="py-12">
-        <div className="max-w-2xl mx-auto text-center animate-fade-in">
-          <div className="mb-8">
-            <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4 animate-scale-in">
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Order Confirmed!</h1>
-            <p className="text-muted-foreground">
-              Thank you for your purchase. Your order has been successfully placed.
-            </p>
-          </div>
+  const nextSteps = [
+    {
+      icon: Mail,
+      title: "Confirmation Email",
+      description: "Check your email for order details and receipt",
+      status: "completed"
+    },
+    {
+      icon: Package,
+      title: "Processing",
+      description: "We're preparing your items for shipment",
+      status: order?.status === "processing" ? "current" : "pending"
+    },
+    {
+      icon: Truck,
+      title: "Shipping",
+      description: "Your order will be shipped within 2-3 business days",
+      status: order?.status === "shipped" ? "current" : "pending"
+    },
+    {
+      icon: CheckCircle,
+      title: "Delivery",
+      description: "Enjoy your new products!",
+      status: order?.status === "delivered" ? "completed" : "pending"
+    }
+  ];
 
-          {order && (
-            <Card className="mb-8 animate-scale-in" style={{ animationDelay: '200ms' }}>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-center gap-2">
-                  <Package className="h-5 w-5" />
-                  Order #{order.id.slice(0, 8)}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="font-medium">Order Date</p>
-                    <p className="text-muted-foreground">
+  return (
+    <>
+      <SEOHead 
+        title="Order Confirmation - Zyra"
+        description="Your order has been confirmed. Thank you for shopping with Zyra!"
+        url={`https://zyra.lovable.app/order-success/${orderId}`}
+      />
+      <Navbar />
+      
+      {/* Success Hero */}
+      <section className="relative py-16 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-900/10 dark:via-emerald-900/10 dark:to-teal-900/10 overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.05] pointer-events-none">
+          <div className="absolute top-20 left-20 w-96 h-96 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-40 right-10 w-80 h-80 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-full blur-3xl animate-pulse"></div>
+        </div>
+        
+        <Container className="relative z-10">
+          <div className="max-w-2xl mx-auto text-center animate-fade-in">
+            <div className="mb-8">
+              <div className="mx-auto w-20 h-20 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-6 animate-scale-in">
+                <CheckCircle className="h-10 w-10 text-green-600 animate-pulse" />
+              </div>
+              <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                Order Confirmed!
+              </h1>
+              <p className="text-xl text-muted-foreground animate-slide-in-right">
+                Thank you for your purchase. Your order has been successfully placed and is being processed.
+              </p>
+            </div>
+          </div>
+        </Container>
+      </section>
+
+      <Container className="py-12 space-y-8">
+        {order && (
+          <>
+            {/* Order Details */}
+            <Card className="animate-scale-in">
+              <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Package className="h-6 w-6 text-green-600" />
+                    <span>Order #{order.id.slice(0, 8)}</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-muted-foreground">Order Date</p>
+                    <p className="font-semibold">
                       {new Date(order.created_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <div>
-                    <p className="font-medium">Total Amount</p>
-                    <p className="text-muted-foreground">${order.total_amount.toFixed(2)}</p>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
+                    <h3 className="font-semibold mb-2">Payment Information</h3>
+                    <p className="text-muted-foreground">Total Amount: <span className="font-semibold text-foreground">${order.total_amount}</span></p>
+                    <p className="text-muted-foreground">Payment Method: <span className="font-semibold text-foreground">{order.payment_method || 'Credit Card'}</span></p>
+                    <p className="text-muted-foreground">Status: <span className="font-semibold text-green-600">{order.payment_status}</span></p>
                   </div>
-                  <div>
-                    <p className="font-medium">Payment Status</p>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      order.payment_status === 'paid' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {order.payment_status?.charAt(0).toUpperCase() + order.payment_status?.slice(1)}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="font-medium">Delivery Type</p>
-                    <p className="text-muted-foreground">
-                      {order.delivery_type?.charAt(0).toUpperCase() + order.delivery_type?.slice(1)}
-                    </p>
+                  
+                  {order.shipping_address && (
+                    <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
+                      <h3 className="font-semibold mb-2">Shipping Address</h3>
+                      <div className="text-muted-foreground space-y-1">
+                        <p>{order.shipping_address.name}</p>
+                        <p>{order.shipping_address.street}</p>
+                        <p>{order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.zipCode}</p>
+                        <p>{order.shipping_address.country}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="animate-fade-in" style={{ animationDelay: '300ms' }}>
+                    <h3 className="font-semibold mb-2">Delivery Information</h3>
+                    <p className="text-muted-foreground">Method: <span className="font-semibold text-foreground">{order.delivery_type || 'Standard'}</span></p>
+                    <p className="text-muted-foreground">Estimated: <span className="font-semibold text-foreground">3-5 business days</span></p>
+                    {order.tracking_number && (
+                      <p className="text-muted-foreground">Tracking: <span className="font-semibold text-foreground">{order.tracking_number}</span></p>
+                    )}
                   </div>
                 </div>
+              </CardContent>
+            </Card>
 
-                {order.order_items && order.order_items.length > 0 && (
-                  <div className="border-t pt-4">
-                    <h4 className="font-medium mb-3">Order Items</h4>
-                    <div className="space-y-2">
-                      {order.order_items.map((item: any) => (
-                        <div key={item.id} className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-3">
-                            {item.products?.images?.[0] && (
-                              <img
-                                src={item.products.images[0]}
-                                alt={item.products.name}
-                                className="w-10 h-10 object-cover rounded"
-                              />
-                            )}
-                            <div>
-                              <p className="font-medium">{item.products?.name}</p>
-                              <p className="text-muted-foreground">Qty: {item.quantity}</p>
+            {/* Order Items */}
+            {order.order_items && order.order_items.length > 0 && (
+              <Card className="animate-scale-in" style={{ animationDelay: '400ms' }}>
+                <CardHeader>
+                  <CardTitle>Order Items</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {order.order_items.map((item: any, index: number) => (
+                      <div 
+                        key={item.id}
+                        className="flex items-center gap-4 p-4 border border-border/50 rounded-lg animate-fade-in"
+                        style={{ animationDelay: `${(index + 5) * 100}ms` }}
+                      >
+                        <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden">
+                          {item.products?.images && Array.isArray(item.products.images) && item.products.images.length > 0 ? (
+                            <img
+                              src={item.products.images[0]}
+                              alt={item.products?.name || 'Product'}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-muted flex items-center justify-center">
+                              <Package className="h-6 w-6 text-muted-foreground" />
                             </div>
-                          </div>
-                          <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
+                          )}
                         </div>
-                      ))}
-                    </div>
+                        
+                        <div className="flex-1">
+                          <h4 className="font-semibold">{item.products?.name || 'Product'}</h4>
+                          <p className="text-muted-foreground">Quantity: {item.quantity}</p>
+                          {item.customization && Object.keys(item.customization).length > 0 && (
+                            <p className="text-sm text-primary">Customized</p>
+                          )}
+                        </div>
+                        
+                        <div className="text-right">
+                          <p className="font-semibold">${(item.price * item.quantity).toFixed(2)}</p>
+                          <p className="text-sm text-muted-foreground">${item.price} each</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
+            )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <Card className="animate-scale-in" style={{ animationDelay: '300ms' }}>
-              <CardContent className="p-6 text-center">
-                <Package className="h-8 w-8 text-primary mx-auto mb-3" />
-                <h3 className="font-medium mb-2">Order Processing</h3>
-                <p className="text-sm text-muted-foreground">
-                  Your order is being prepared for shipment
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="animate-scale-in" style={{ animationDelay: '400ms' }}>
-              <CardContent className="p-6 text-center">
-                <Download className="h-8 w-8 text-primary mx-auto mb-3" />
-                <h3 className="font-medium mb-2">Track Your Order</h3>
-                <p className="text-sm text-muted-foreground">
-                  You'll receive tracking information via email
-                </p>
-              </CardContent>
-            </Card>
-
+            {/* Order Progress */}
             <Card className="animate-scale-in" style={{ animationDelay: '500ms' }}>
-              <CardContent className="p-6 text-center">
-                <CheckCircle className="h-8 w-8 text-primary mx-auto mb-3" />
-                <h3 className="font-medium mb-2">Order Updates</h3>
-                <p className="text-sm text-muted-foreground">
-                  We'll keep you informed every step of the way
-                </p>
+              <CardHeader>
+                <CardTitle>Order Progress</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {nextSteps.map((step, index) => (
+                    <div 
+                      key={step.title}
+                      className={`flex items-center gap-4 animate-fade-in ${
+                        step.status === 'completed' ? 'opacity-100' : 
+                        step.status === 'current' ? 'opacity-100' : 'opacity-50'
+                      }`}
+                      style={{ animationDelay: `${(index + 8) * 100}ms` }}
+                    >
+                      <div className={`p-3 rounded-full ${
+                        step.status === 'completed' ? 'bg-green-100 dark:bg-green-900/20' :
+                        step.status === 'current' ? 'bg-blue-100 dark:bg-blue-900/20' :
+                        'bg-muted'
+                      }`}>
+                        <step.icon className={`h-5 w-5 ${
+                          step.status === 'completed' ? 'text-green-600' :
+                          step.status === 'current' ? 'text-blue-600' :
+                          'text-muted-foreground'
+                        }`} />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold">{step.title}</h4>
+                        <p className="text-muted-foreground text-sm">{step.description}</p>
+                      </div>
+                      {step.status === 'completed' && (
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                      )}
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
-          </div>
+          </>
+        )}
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in" style={{ animationDelay: '600ms' }}>
-            <Button asChild>
-              <Link to="/dashboard">
-                View Order History
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Link>
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in" style={{ animationDelay: '600ms' }}>
+          <Button asChild className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 transition-all duration-300 hover:scale-105">
+            <Link to="/shop">
+              Continue Shopping
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Link>
+          </Button>
+          
+          <Button variant="outline" asChild className="hover:bg-primary hover:text-primary-foreground transition-all duration-300 hover:scale-105">
+            <Link to="/dashboard">
+              View Dashboard
+            </Link>
+          </Button>
+          
+          {order && (
+            <Button variant="outline" className="hover:bg-secondary transition-all duration-300 hover:scale-105">
+              <Download className="h-4 w-4 mr-2" />
+              Download Receipt
             </Button>
-            <Button variant="outline" asChild>
-              <Link to="/shop">Continue Shopping</Link>
-            </Button>
-          </div>
+          )}
         </div>
+
+        {/* Review Prompt */}
+        <Card className="bg-gradient-to-r from-primary/10 to-purple-500/10 border-primary/20 animate-scale-in" style={{ animationDelay: '700ms' }}>
+          <CardContent className="p-6 text-center">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <Star className="h-6 w-6 text-yellow-500" />
+              <h3 className="text-xl font-semibold">Love your purchase?</h3>
+            </div>
+            <p className="text-muted-foreground mb-6">
+              Share your experience and help other customers by leaving a review.
+            </p>
+            <Button variant="outline" className="hover:bg-primary hover:text-primary-foreground transition-all duration-300 hover:scale-105">
+              <Star className="h-4 w-4 mr-2" />
+              Leave a Review
+            </Button>
+          </CardContent>
+        </Card>
       </Container>
+      
       <Footer />
-    </div>
+    </>
   );
 };
 

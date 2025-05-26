@@ -1,8 +1,8 @@
 
-const CACHE_NAME = 'zyra-v2.0';
-const STATIC_CACHE = 'zyra-static-v2.0';
-const DYNAMIC_CACHE = 'zyra-dynamic-v2.0';
-const IMAGE_CACHE = 'zyra-images-v2.0';
+const CACHE_NAME = 'zyra-v3.0';
+const STATIC_CACHE = 'zyra-static-v3.0';
+const DYNAMIC_CACHE = 'zyra-dynamic-v3.0';
+const IMAGE_CACHE = 'zyra-images-v3.0';
 
 const STATIC_ASSETS = [
   '/',
@@ -16,12 +16,12 @@ const STATIC_ASSETS = [
 const API_ENDPOINTS = [
   '/api/',
   'https://api.stripe.com',
-  'https://api.supabase.co'
+  'https://vzqlzntwvgdsfcmaawsk.supabase.co'
 ];
 
 // Install Service Worker
 self.addEventListener('install', function(event) {
-  console.log('[SW] Installing Service Worker');
+  console.log('[SW] Installing Service Worker v3.0');
   event.waitUntil(
     caches.open(STATIC_CACHE)
       .then(function(cache) {
@@ -36,7 +36,7 @@ self.addEventListener('install', function(event) {
 
 // Activate Service Worker
 self.addEventListener('activate', function(event) {
-  console.log('[SW] Activating Service Worker');
+  console.log('[SW] Activating Service Worker v3.0');
   event.waitUntil(
     caches.keys().then(function(cacheNames) {
       return Promise.all(
@@ -91,7 +91,6 @@ self.addEventListener('fetch', function(event) {
 function networkFirstStrategy(request) {
   return fetch(request)
     .then(function(response) {
-      // Only cache successful responses
       if (response.status === 200) {
         const responseClone = response.clone();
         caches.open(DYNAMIC_CACHE).then(function(cache) {
@@ -128,53 +127,49 @@ function cacheFirstStrategy(request, cacheName) {
     });
 }
 
-// Background Sync
-self.addEventListener('sync', function(event) {
-  console.log('[SW] Background sync:', event.tag);
-  
-  if (event.tag === 'cart-sync') {
-    event.waitUntil(syncCart());
-  }
-  
-  if (event.tag === 'analytics-sync') {
-    event.waitUntil(syncAnalytics());
-  }
-});
-
 // Push Notifications
 self.addEventListener('push', function(event) {
   console.log('[SW] Push message received:', event);
   
-  const options = {
-    body: 'New products available! Check them out now.',
+  let notificationData = {
+    title: 'Zyra Notification',
+    body: 'You have a new update!',
     icon: '/icon-192.png',
     badge: '/icon-192.png',
     tag: 'zyra-notification',
     requireInteraction: true,
-    actions: [
-      {
-        action: 'view',
-        title: 'View Products',
-        icon: '/icon-192.png'
-      },
-      {
-        action: 'dismiss',
-        title: 'Dismiss'
-      }
-    ],
-    data: {
-      url: '/shop'
-    }
+    data: { url: '/' }
   };
   
   if (event.data) {
-    const data = event.data.json();
-    options.body = data.body || options.body;
-    options.data = data.data || options.data;
+    try {
+      const data = event.data.json();
+      notificationData = { ...notificationData, ...data };
+    } catch (e) {
+      console.error('Error parsing push data:', e);
+    }
   }
   
   event.waitUntil(
-    self.registration.showNotification('Zyra', options)
+    self.registration.showNotification(notificationData.title, {
+      body: notificationData.body,
+      icon: notificationData.icon,
+      badge: notificationData.badge,
+      tag: notificationData.tag,
+      requireInteraction: notificationData.requireInteraction,
+      data: notificationData.data,
+      actions: [
+        {
+          action: 'view',
+          title: 'View',
+          icon: '/icon-192.png'
+        },
+        {
+          action: 'dismiss',
+          title: 'Dismiss'
+        }
+      ]
+    })
   );
 });
 
@@ -186,14 +181,31 @@ self.addEventListener('notificationclick', function(event) {
   
   if (event.action === 'view') {
     event.waitUntil(
-      clients.openWindow(event.notification.data.url || '/shop')
+      clients.openWindow(event.notification.data?.url || '/')
     );
   } else if (event.action === 'dismiss') {
     return;
   } else {
     event.waitUntil(
-      clients.openWindow('/')
+      clients.openWindow(event.notification.data?.url || '/')
     );
+  }
+});
+
+// Background Sync
+self.addEventListener('sync', function(event) {
+  console.log('[SW] Background sync:', event.tag);
+  
+  if (event.tag === 'cart-sync') {
+    event.waitUntil(syncCart());
+  }
+  
+  if (event.tag === 'analytics-sync') {
+    event.waitUntil(syncAnalytics());
+  }
+  
+  if (event.tag === 'order-sync') {
+    event.waitUntil(syncOrders());
   }
 });
 
@@ -221,8 +233,8 @@ self.addEventListener('message', function(event) {
 // Helper functions
 async function syncCart() {
   try {
-    // Implement cart synchronization logic
     console.log('[SW] Syncing cart data');
+    // Implement cart synchronization logic
   } catch (error) {
     console.error('[SW] Cart sync failed:', error);
   }
@@ -230,10 +242,19 @@ async function syncCart() {
 
 async function syncAnalytics() {
   try {
-    // Implement analytics synchronization logic
     console.log('[SW] Syncing analytics data');
+    // Implement analytics synchronization logic
   } catch (error) {
     console.error('[SW] Analytics sync failed:', error);
+  }
+}
+
+async function syncOrders() {
+  try {
+    console.log('[SW] Syncing order data');
+    // Implement order synchronization logic
+  } catch (error) {
+    console.error('[SW] Order sync failed:', error);
   }
 }
 
@@ -246,9 +267,20 @@ self.addEventListener('periodicsync', function(event) {
 
 async function syncContent() {
   try {
-    // Sync latest content when device comes online
     console.log('[SW] Syncing content');
+    // Sync latest content when device comes online
   } catch (error) {
     console.error('[SW] Content sync failed:', error);
   }
 }
+
+// Handle app shortcuts
+self.addEventListener('notificationclick', function(event) {
+  if (event.action === 'shop') {
+    event.waitUntil(clients.openWindow('/shop'));
+  } else if (event.action === 'cart') {
+    event.waitUntil(clients.openWindow('/cart'));
+  } else if (event.action === 'account') {
+    event.waitUntil(clients.openWindow('/dashboard'));
+  }
+});
