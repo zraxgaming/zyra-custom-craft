@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useCart } from '@/components/cart/CartProvider';
 import { useAuth } from '@/hooks/use-auth';
@@ -48,9 +47,9 @@ const EmailNotificationService: React.FC<EmailNotificationServiceProps> = ({
             <div style="margin: 30px 0;">
               ${items.map(item => `
                 <div style="border-bottom: 1px solid #eee; padding: 15px 0;">
-                  <strong>${item.product?.name || 'Product'}</strong><br>
+                  <strong>${item.name || 'Product'}</strong><br>
                   <span style="color: #666;">Quantity: ${item.quantity}</span><br>
-                  <span style="color: #8B5CF6; font-weight: bold;">$${((item.product?.price || 0) * item.quantity).toFixed(2)}</span>
+                  <span style="color: #8B5CF6; font-weight: bold;">$${(item.price * item.quantity).toFixed(2)}</span>
                 </div>
               `).join('')}
             </div>

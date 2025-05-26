@@ -5,6 +5,7 @@ import Footer from "@/components/layout/Footer";
 import { Container } from "@/components/ui/container";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Filter, Grid, List, Heart, Star, Sparkles } from "lucide-react";
@@ -12,6 +13,7 @@ import SEOHead from "@/components/seo/SEOHead";
 import { useProducts } from "@/hooks/use-products";
 import { useCategories } from "@/hooks/use-categories";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
+import { Link } from "react-router-dom";
 
 const Shop = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -24,7 +26,7 @@ const Shop = () => {
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
+                         (product.description || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
@@ -36,7 +38,7 @@ const Shop = () => {
       case "price-high":
         return b.price - a.price;
       case "rating":
-        return b.rating - a.rating;
+        return (b.rating || 0) - (a.rating || 0);
       case "newest":
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       default:
@@ -69,8 +71,8 @@ const Shop = () => {
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-purple-500/10 relative overflow-hidden">
         {/* Animated Background */}
         <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.05] pointer-events-none">
-          <div className="absolute top-20 left-20 w-96 h-96 bg-gradient-to-br from-primary to-purple-500 rounded-full blur-3xl animate-float"></div>
-          <div className="absolute bottom-40 right-10 w-80 h-80 bg-gradient-to-br from-pink-500 to-orange-500 rounded-full blur-3xl animate-float-reverse"></div>
+          <div className="absolute top-20 left-20 w-96 h-96 bg-gradient-to-br from-primary to-purple-500 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-40 right-10 w-80 h-80 bg-gradient-to-br from-pink-500 to-orange-500 rounded-full blur-3xl animate-pulse"></div>
         </div>
         
         {/* Hero Section */}
@@ -150,80 +152,119 @@ const Shop = () => {
           </div>
 
           {/* Products Grid */}
-          <div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
+          <div className={`grid gap-6 animate-fade-in ${
+            viewMode === "grid" 
+              ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" 
+              : "grid-cols-1"
+          }`}>
             {sortedProducts.map((product, index) => (
               <Card 
-                key={product.id} 
-                className="group hover:shadow-2xl hover:scale-[1.02] transition-all duration-500 animate-fade-in bg-card/60 backdrop-blur-sm border-border/50 overflow-hidden hover-lift-lg"
+                key={product.id}
+                className={`group bg-card/60 backdrop-blur-sm border-border/50 overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-105 animate-scale-in ${
+                  viewMode === "list" ? "flex flex-row" : ""
+                }`}
                 style={{ animationDelay: `${index * 100}ms` }}
               >
-                <div className="relative overflow-hidden">
-                  <img
-                    src={Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : "/placeholder.svg"}
-                    alt={product.name}
-                    className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                  <div className="absolute top-3 right-3">
-                    <Button size="icon" variant="outline" className="h-8 w-8 bg-background/80 backdrop-blur-sm hover:bg-background hover:scale-110 transition-transform duration-200">
-                      <Heart className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="absolute top-3 left-3 flex flex-col gap-2">
-                    <Badge className="bg-primary/90 text-primary-foreground">
-                      {product.category}
-                    </Badge>
-                    {product.is_new && (
-                      <Badge className="bg-green-500 text-white">
-                        New
-                      </Badge>
-                    )}
-                    {product.discount_percentage > 0 && (
-                      <Badge className="bg-red-500 text-white">
-                        {product.discount_percentage}% OFF
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-1 mb-2">
-                    {[...Array(5)].map((_, i) => (
-                      <Star 
-                        key={i}
-                        className={`h-4 w-4 ${
-                          i < Math.floor(product.rating) 
-                            ? "fill-yellow-400 text-yellow-400" 
-                            : "text-muted-foreground"
-                        }`} 
+                <div className={`relative overflow-hidden ${viewMode === "list" ? "w-48" : "aspect-square"}`}>
+                  <Link to={`/product/${product.slug}`}>
+                    {product.images && Array.isArray(product.images) && product.images.length > 0 ? (
+                      <img
+                        src={product.images[0] as string}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       />
-                    ))}
-                    <span className="text-sm font-medium ml-1">{product.rating}</span>
-                    <span className="text-sm text-muted-foreground">({product.review_count})</span>
-                  </div>
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center">
+                        <Sparkles className="h-12 w-12 text-primary/50" />
+                      </div>
+                    )}
+                  </Link>
                   
-                  <h3 className="text-lg font-semibold mb-2 group-hover:text-primary transition-colors duration-300">
-                    {product.name}
-                  </h3>
+                  {product.discount_percentage > 0 && (
+                    <Badge className="absolute top-2 left-2 bg-red-500 hover:bg-red-600 animate-bounce">
+                      -{product.discount_percentage}%
+                    </Badge>
+                  )}
                   
-                  <p className="text-muted-foreground text-sm mb-4">
-                    {product.description}
-                  </p>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold text-primary">
-                        ${product.discount_percentage > 0 
-                          ? (product.price * (1 - product.discount_percentage / 100)).toFixed(2)
-                          : product.price.toFixed(2)
-                        }
+                  {product.is_new && (
+                    <Badge className="absolute top-2 right-2 bg-green-500 hover:bg-green-600 animate-pulse">
+                      New
+                    </Badge>
+                  )}
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:scale-110"
+                  >
+                    <Heart className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <CardContent className={`p-4 flex-1 ${viewMode === "list" ? "flex flex-col justify-between" : ""}`}>
+                  <div className="space-y-2">
+                    <Link to={`/product/${product.slug}`}>
+                      <h3 className="font-semibold text-lg hover:text-primary transition-colors duration-200 line-clamp-2">
+                        {product.name}
+                      </h3>
+                    </Link>
+                    
+                    {product.category && (
+                      <Badge variant="outline" className="text-xs">
+                        {product.category}
+                      </Badge>
+                    )}
+
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {product.description}
+                    </p>
+
+                    <div className="flex items-center gap-1">
+                      <div className="flex">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-3 w-3 ${
+                              i < Math.floor(product.rating || 0)
+                                ? "text-yellow-400 fill-current"
+                                : "text-gray-300"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        ({product.review_count || 0})
                       </span>
-                      {product.discount_percentage > 0 && (
-                        <span className="text-sm text-muted-foreground line-through">
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl font-bold text-foreground">
                           ${product.price.toFixed(2)}
                         </span>
-                      )}
+                        {product.discount_percentage > 0 && (
+                          <span className="text-sm text-muted-foreground line-through">
+                            ${(product.price / (1 - product.discount_percentage / 100)).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <AddToCartButton product={product} />
+
+                    <AddToCartButton
+                      product={{
+                        id: product.id,
+                        name: product.name,
+                        price: product.price,
+                        images: product.images as string[],
+                        slug: product.slug,
+                        in_stock: product.in_stock,
+                        stock_status: product.stock_status
+                      }}
+                      size="sm"
+                      className="w-full"
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -235,8 +276,17 @@ const Shop = () => {
               <div className="p-8 bg-muted/30 rounded-full w-fit mx-auto mb-6">
                 <Search className="h-16 w-16 text-muted-foreground" />
               </div>
-              <h3 className="text-2xl font-semibold mb-4">No products found</h3>
-              <p className="text-muted-foreground">Try adjusting your search or filters to find what you're looking for.</p>
+              <h3 className="text-2xl font-semibold mb-2">No products found</h3>
+              <p className="text-muted-foreground mb-6">
+                Try adjusting your search or filter criteria
+              </p>
+              <Button onClick={() => {
+                setSearchTerm("");
+                setCategoryFilter("all");
+                setSortBy("featured");
+              }}>
+                Clear Filters
+              </Button>
             </div>
           )}
         </Container>
