@@ -1,50 +1,49 @@
 
-import React from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import { useProducts } from "@/hooks/use-products";
-import { useCategories } from "@/hooks/use-categories";
 import Hero from "@/components/home/Hero";
-import FeaturedProducts from "@/components/home/FeaturedProducts";
 import Categories from "@/components/home/Categories";
+import FeaturedProducts from "@/components/home/FeaturedProducts";
 import Newsletter from "@/components/home/Newsletter";
+import Footer from "@/components/layout/Footer";
+import SEOHead from "@/components/seo/SEOHead";
+import { Container } from "@/components/ui/container";
 
 const Index = () => {
-  const { data: products = [], isLoading: productsLoading } = useProducts();
-  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
-  
-  // Show featured, new, or discounted products, fallback to first 8 products
-  const featuredProducts = products.filter(p => 
-    p.featured || p.is_featured || p.is_new || (p.discount_percentage && p.discount_percentage > 0)
-  ).slice(0, 8);
-  
-  // If no featured products, show first 8 products
-  const displayProducts = featuredProducts.length > 0 ? featuredProducts : products.slice(0, 8);
+  const { data: featuredProducts, isLoading } = useQuery({
+    queryKey: ['featured-products'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_featured', true)
+        .eq('status', 'published')
+        .limit(8);
+      
+      if (error) {
+        console.error('Error fetching featured products:', error);
+        return [];
+      }
+      
+      return data || [];
+    },
+  });
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <main>
-        <Hero />
-        
-        {!productsLoading && displayProducts.length > 0 && (
-          <section className="py-16 bg-muted/30">
-            <FeaturedProducts products={displayProducts} />
-          </section>
-        )}
-        
-        {!categoriesLoading && categories.length > 0 && (
-          <section className="py-16">
-            <Categories />
-          </section>
-        )}
-        
-        <section className="py-16 bg-muted/30">
+    <>
+      <SEOHead />
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <Container>
+          <Hero />
+          <Categories />
+          <FeaturedProducts products={featuredProducts || []} isLoading={isLoading} />
           <Newsletter />
-        </section>
-      </main>
-      <Footer />
-    </div>
+        </Container>
+        <Footer />
+      </div>
+    </>
   );
 };
 
