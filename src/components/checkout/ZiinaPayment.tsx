@@ -8,20 +8,19 @@ import { Loader2 } from "lucide-react";
 
 const ZiinaPayment: React.FC = () => {
   const { toast } = useToast();
-  const { total } = useCart();
+  const { totalPrice } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleZiinaPayment = async () => {
     setIsProcessing(true);
     
     try {
-      // Call the Ziina payment edge function
       const { data, error } = await supabase.functions.invoke('ziina-payment', {
         body: {
-          amount: total,
+          amount: totalPrice,
           success_url: `${window.location.origin}/order-success`,
           cancel_url: `${window.location.origin}/checkout`,
-          test: true // Set to false for production
+          test: true
         }
       });
 
@@ -30,7 +29,6 @@ const ZiinaPayment: React.FC = () => {
       }
 
       if (data?.url) {
-        // Redirect to Ziina checkout
         window.location.href = data.url;
       } else {
         throw new Error('No payment URL received');
@@ -71,7 +69,7 @@ const ZiinaPayment: React.FC = () => {
             Processing...
           </>
         ) : (
-          `Pay AED ${total.toFixed(2)} with Ziina`
+          `Pay AED ${totalPrice.toFixed(2)} with Ziina`
         )}
       </Button>
       

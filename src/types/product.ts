@@ -2,73 +2,35 @@
 export interface Product {
   id: string;
   name: string;
-  slug: string;
-  description: string;
+  description?: string;
   short_description?: string;
   price: number;
-  cost_price?: number;
-  discount_percentage: number;
-  rating: number;
-  review_count: number;
-  images: string[];
-  category: string;
+  category?: string;
   category_id?: string;
-  featured: boolean;
-  is_featured?: boolean;
-  is_new: boolean;
-  in_stock: boolean;
+  sku?: string;
+  barcode?: string;
   stock_quantity?: number;
   stock_status?: string;
   status?: string;
-  sku?: string;
-  barcode?: string;
+  in_stock?: boolean;
+  is_featured?: boolean;
+  is_customizable?: boolean;
+  is_digital?: boolean;
+  is_new?: boolean;
+  featured?: boolean;
+  slug?: string;
+  images?: string[];
+  meta_title?: string;
+  meta_description?: string;
   weight?: number;
   dimensions_length?: number;
   dimensions_width?: number;
   dimensions_height?: number;
-  is_customizable?: boolean;
-  is_digital?: boolean;
+  cost_price?: number;
+  discount_percentage?: number;
   manage_stock?: boolean;
-  meta_title?: string;
-  meta_description?: string;
+  rating?: number;
+  review_count?: number;
   created_at?: string;
   updated_at?: string;
-  categories?: {
-    name: string;
-    slug: string;
-  };
-  customization_options?: CustomizationOptions[];
-}
-
-export interface CustomizationOptions {
-  id?: string;
-  allowText: boolean;
-  allowImage: boolean;
-  maxTextLength: number;
-  maxImageCount: number;
-  allowResizeRotate: boolean;
-}
-
-export interface CartItem {
-  productId: string;
-  quantity: number;
-  customization: {
-    text?: string;
-    image?: string;
-    position?: {
-      x: number;
-      y: number;
-    };
-    scale?: number;
-    rotation?: number;
-  };
-}
-
-export interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  image_url?: string;
-  icon?: string;
 }

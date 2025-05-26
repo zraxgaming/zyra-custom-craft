@@ -10,86 +10,66 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
             padding: 0;
-            min-height: 100vh;
             display: flex;
-            align-items: center;
             justify-content: center;
+            align-items: center;
+            min-height: 100vh;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            text-align: center;
         }
         .container {
-            text-align: center;
+            max-width: 400px;
             padding: 2rem;
-            max-width: 500px;
-        }
-        .icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         }
         h1 {
-            font-size: 2rem;
+            font-size: 2.5rem;
             margin-bottom: 1rem;
+            background: linear-gradient(45deg, #fff, #f0f0f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
         p {
             font-size: 1.1rem;
             margin-bottom: 2rem;
             opacity: 0.9;
         }
-        .retry-btn {
-            background: rgba(255,255,255,0.2);
-            border: 2px solid rgba(255,255,255,0.3);
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
             color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem;
-            cursor: pointer;
             font-size: 1rem;
-            transition: all 0.3s ease;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
         }
-        .retry-btn:hover {
-            background: rgba(255,255,255,0.3);
-            transform: translateY(-2px);
-        }
-        .features {
-            margin-top: 2rem;
-            text-align: left;
-        }
-        .feature {
-            margin: 0.5rem 0;
-            opacity: 0.8;
+        button:hover {
+            transform: scale(1.05);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="icon">📱</div>
+        <div class="icon">📡</div>
         <h1>You're Offline</h1>
-        <p>It looks like you've lost your internet connection. Don't worry, Zyra works offline too!</p>
-        
-        <button class="retry-btn" onclick="window.location.reload()">
-            Try Again
-        </button>
-        
-        <div class="features">
-            <h3>What you can still do:</h3>
-            <div class="feature">🛒 View your cart</div>
-            <div class="feature">❤️ Browse your wishlist</div>
-            <div class="feature">📋 View cached products</div>
-            <div class="feature">⚙️ Access app settings</div>
-        </div>
+        <p>Don't worry! You can still browse some content that's been saved on your device.</p>
+        <button onclick="window.location.reload()">Try Again</button>
     </div>
-    
-    <script>
-        // Auto-retry when connection is restored
-        window.addEventListener('online', function() {
-            window.location.reload();
-        });
-        
-        // Check connection periodically
-        setInterval(function() {
-            if (navigator.onLine) {
-                window.location.reload();
-            }
-        }, 5000);
-    </script>
 </body>
 </html>

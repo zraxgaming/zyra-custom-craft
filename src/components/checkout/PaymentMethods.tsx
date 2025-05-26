@@ -26,7 +26,7 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
   const [paypalClientId, setPaypalClientId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { items, total, clearCart } = useCart();
+  const { items, totalPrice, clearCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -53,17 +53,15 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
         throw new Error("User or shipping information missing");
       }
 
-      // Create order in database
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
           user_id: user.id,
-          total_amount: total,
+          total_amount: totalPrice,
           status: "pending",
           shipping_address: shippingInfo,
           payment_method: paymentMethod,
           delivery_type: deliveryOption,
-          subtotal: total - 10, // Assuming shipping cost of 10
           payment_status: paymentMethod === "paypal" ? "paid" : "pending"
         })
         .select()
@@ -71,7 +69,6 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
 
       if (orderError) throw orderError;
 
-      // Create order items
       const orderItems = items.map(item => ({
         order_id: order.id,
         product_id: item.productId,
@@ -86,9 +83,7 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
 
       if (itemsError) throw itemsError;
 
-      // Clear cart
       clearCart();
-
       return order.id;
     } catch (error: any) {
       console.error("Order creation error:", error);
@@ -173,7 +168,7 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
                             {
                               amount: {
                                 currency_code: "USD",
-                                value: total.toFixed(2),
+                                value: totalPrice.toFixed(2),
                               },
                             },
                           ],
@@ -183,7 +178,6 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
                         try {
                           const details = await actions.order!.capture();
                           
-                          // Create order in database
                           const orderId = await createOrder("paypal", details.id);
                           
                           toast({
@@ -191,7 +185,6 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
                             description: `Transaction completed by ${details.payer?.name?.given_name}`,
                           });
 
-                          // Redirect to success page
                           navigate(`/order-success/${orderId}`);
                           
                         } catch (error: any) {

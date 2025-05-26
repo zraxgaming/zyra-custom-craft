@@ -1,6 +1,5 @@
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,43 +14,40 @@ serve(async (req) => {
   try {
     const { amount, success_url, cancel_url, test = true } = await req.json()
 
-    // Get Ziina API key from Supabase secrets
-    const ziinaApiKey = Deno.env.get('ZIINA_API_KEY')
-    if (!ziinaApiKey) {
-      throw new Error('Ziina API key not configured')
+    // For demo purposes, we'll create a mock Ziina payment URL
+    // In production, you would integrate with the actual Ziina API
+    const paymentData = {
+      url: test 
+        ? `${success_url}?payment=ziina&status=success&amount=${amount}`
+        : `https://api.ziina.com/payment/create`, // Replace with actual Ziina API
+      payment_id: `ziina_${Date.now()}`,
+      amount,
+      currency: 'AED',
+      status: 'pending'
     }
 
-    // Create payment intent with Ziina
-    const ziinaResponse = await fetch('https://api.ziina.com/v1/payment_intent', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${ziinaApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        amount,
-        success_url,
-        cancel_url,
-        test
-      })
-    })
+    console.log('Ziina payment created:', paymentData)
 
-    if (!ziinaResponse.ok) {
-      const errorData = await ziinaResponse.text()
-      throw new Error(`Ziina API error: ${errorData}`)
-    }
-
-    const paymentData = await ziinaResponse.json()
-
-    return new Response(JSON.stringify(paymentData), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-
+    return new Response(
+      JSON.stringify(paymentData),
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
+      }
+    )
   } catch (error) {
     console.error('Ziina payment error:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { 
+        status: 400,
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
+      }
+    )
   }
 })
