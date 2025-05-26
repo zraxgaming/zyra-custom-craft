@@ -8,6 +8,8 @@ interface SEOHeadProps {
   keywords?: string;
   url?: string;
   image?: string;
+  noIndex?: boolean;
+  structuredData?: object;
 }
 
 const SEOHead: React.FC<SEOHeadProps> = ({ 
@@ -15,13 +17,16 @@ const SEOHead: React.FC<SEOHeadProps> = ({
   description = "Create beautiful custom products with Zyra. Premium quality, fast delivery.",
   keywords = "custom products, personalization, premium quality",
   url = "https://zyra.lovable.app",
-  image = "/placeholder.svg"
+  image = "/placeholder.svg",
+  noIndex = false,
+  structuredData
 }) => {
   return (
     <Helmet>
       <title>{title}</title>
       <meta name="description" content={description} />
       <meta name="keywords" content={keywords} />
+      {noIndex && <meta name="robots" content="noindex, nofollow" />}
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:url" content={url} />
@@ -32,6 +37,11 @@ const SEOHead: React.FC<SEOHeadProps> = ({
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={image} />
       <link rel="canonical" href={url} />
+      {structuredData && (
+        <script type="application/ld+json">
+          {JSON.stringify(structuredData)}
+        </script>
+      )}
     </Helmet>
   );
 };

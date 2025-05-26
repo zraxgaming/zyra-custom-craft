@@ -1,279 +1,243 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/use-auth';
-import { useToast } from '@/hooks/use-toast';
-import { CartItem, CartState } from '@/types/cart';
 
-interface CartContextType {
-  state: CartState;
+import React, { createContext, useContext, useReducer, useEffect, ReactNode } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+interface CartItem {
+  id: string;
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  customization?: Record<string, any>;
+  image?: string;
+}
+
+interface CartState {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, 'id'>) => Promise<void>;
-  addToCart: (productId: string, quantity?: number, customization?: any) => Promise<void>;
-  removeItem: (itemId: string) => Promise<void>;
-  removeFromCart: (itemId: string) => Promise<void>;
-  updateQuantity: (itemId: string, quantity: number) => Promise<void>;
-  clearCart: () => Promise<void>;
-  toggleCart: () => void;
+  isOpen: boolean;
   totalItems: number;
   totalPrice: number;
-  subtotal: number;
-  isLoading: boolean;
+}
+
+type CartAction =
+  | { type: "ADD_ITEM"; payload: CartItem }
+  | { type: "REMOVE_ITEM"; payload: string }
+  | { type: "UPDATE_QUANTITY"; payload: { id: string; quantity: number } }
+  | { type: "CLEAR_CART" }
+  | { type: "SET_ITEMS"; payload: CartItem[] }
+  | { type: "TOGGLE_CART" }
+  | { type: "OPEN_CART" }
+  | { type: "CLOSE_CART" };
+
+const initialState: CartState = {
+  items: [],
+  isOpen: false,
+  totalItems: 0,
+  totalPrice: 0,
+};
+
+function cartReducer(state: CartState, action: CartAction): CartState {
+  let newItems: CartItem[];
+  
+  switch (action.type) {
+    case "ADD_ITEM":
+      const existingItem = state.items.find(item => 
+        item.productId === action.payload.productId &&
+        JSON.stringify(item.customization) === JSON.stringify(action.payload.customization)
+      );
+      
+      if (existingItem) {
+        newItems = state.items.map(item =>
+          item.id === existingItem.id
+            ? { ...item, quantity: item.quantity + action.payload.quantity }
+            : item
+        );
+      } else {
+        newItems = [...state.items, { ...action.payload, id: `${action.payload.productId}-${Date.now()}` }];
+      }
+      break;
+
+    case "REMOVE_ITEM":
+      newItems = state.items.filter(item => item.id !== action.payload);
+      break;
+
+    case "UPDATE_QUANTITY":
+      newItems = state.items.map(item =>
+        item.id === action.payload.id
+          ? { ...item, quantity: Math.max(0, action.payload.quantity) }
+          : item
+      ).filter(item => item.quantity > 0);
+      break;
+
+    case "CLEAR_CART":
+      newItems = [];
+      break;
+
+    case "SET_ITEMS":
+      newItems = action.payload;
+      break;
+
+    case "TOGGLE_CART":
+      return { ...state, isOpen: !state.isOpen };
+
+    case "OPEN_CART":
+      return { ...state, isOpen: true };
+
+    case "CLOSE_CART":
+      return { ...state, isOpen: false };
+
+    default:
+      return state;
+  }
+
+  const totalItems = newItems.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = newItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+  return {
+    ...state,
+    items: newItems,
+    totalItems,
+    totalPrice,
+  };
+}
+
+interface CartContextType extends CartState {
+  addToCart: (productId: string, quantity: number, customization?: Record<string, any>) => Promise<void>;
+  addItem: (item: Omit<CartItem, 'id'>) => Promise<void>;
+  removeFromCart: (itemId: string) => void;
+  updateQuantity: (itemId: string, quantity: number) => void;
+  clearCart: () => void;
+  toggleCart: () => void;
+  openCart: () => void;
+  closeCart: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, setState] = useState<CartState>({
-    items: [],
-    isOpen: false
-  });
-  const [isLoading, setIsLoading] = useState(true);
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error("useCart must be used within a CartProvider");
+  }
+  return context;
+};
+
+interface CartProviderProps {
+  children: ReactNode;
+}
+
+export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
+  const [state, dispatch] = useReducer(cartReducer, initialState);
   const { user } = useAuth();
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (user) {
-      fetchCartItems();
-    } else {
-      setState(prev => ({ ...prev, items: [] }));
-      setIsLoading(false);
-    }
-  }, [user]);
-
-  const fetchCartItems = async () => {
-    if (!user) return;
-    
+  const addToCart = async (productId: string, quantity: number, customization?: Record<string, any>) => {
     try {
-      const { data, error } = await supabase
-        .from('cart_items')
-        .select(`
-          id,
-          product_id,
-          quantity,
-          customization,
-          products!cart_items_product_id_fkey (
-            id,
-            name,
-            price,
-            images,
-            slug
-          )
-        `)
-        .eq('user_id', user.id);
+      // Fetch product details
+      const { data: product, error } = await supabase
+        .from('products')
+        .select('name, price, images')
+        .eq('id', productId)
+        .single();
 
       if (error) throw error;
 
-      const cartItems: CartItem[] = data?.map(item => ({
-        id: item.id,
-        productId: item.product_id,
-        name: item.products?.name || 'Unknown Product',
-        price: item.products?.price || 0,
-        quantity: item.quantity,
-        customization: item.customization,
-        image: Array.isArray(item.products?.images) && item.products.images.length > 0 
-          ? String(item.products.images[0]) 
-          : undefined,
-        product: item.products ? {
-          id: item.products.id,
-          name: item.products.name,
-          price: item.products.price,
-          images: Array.isArray(item.products.images) 
-            ? item.products.images.map(img => String(img))
-            : [],
-          slug: item.products.slug || ''
-        } : undefined
-      })) || [];
+      if (!product) {
+        throw new Error('Product not found');
+      }
 
-      setState(prev => ({ ...prev, items: cartItems }));
-    } catch (error: any) {
-      console.error('Error fetching cart items:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      const cartItem: CartItem = {
+        id: `${productId}-${Date.now()}`,
+        productId,
+        name: product.name,
+        price: product.price,
+        quantity,
+        customization,
+        image: Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : undefined,
+      };
 
-  const addItem = async (itemData: Omit<CartItem, 'id'>) => {
-    if (!user) {
+      dispatch({ type: "ADD_ITEM", payload: cartItem });
+      dispatch({ type: "OPEN_CART" });
+
       toast({
-        title: "Please sign in",
-        description: "You need to be signed in to add items to cart.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('cart_items')
-        .insert({
-          user_id: user.id,
-          product_id: itemData.productId,
-          quantity: itemData.quantity,
-          customization: itemData.customization
-        });
-
-      if (error) throw error;
-
-      await fetchCartItems();
-      
-      toast({
-        title: "Added to cart",
-        description: "Item has been added to your cart.",
+        title: "Added to cart!",
+        description: `${product.name} has been added to your cart.`,
       });
     } catch (error: any) {
+      console.error('Error adding to cart:', error);
       toast({
         title: "Error",
-        description: "Failed to add item to cart.",
+        description: error.message || "Failed to add item to cart",
         variant: "destructive",
       });
     }
   };
 
-  const addToCart = async (productId: string, quantity = 1, customization?: any) => {
-    if (!user) {
-      toast({
-        title: "Please sign in",
-        description: "You need to be signed in to add items to cart.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const addItem = async (item: Omit<CartItem, 'id'>) => {
     try {
-      const { error } = await supabase
-        .from('cart_items')
-        .insert({
-          user_id: user.id,
-          product_id: productId,
-          quantity,
-          customization
-        });
+      const cartItem: CartItem = {
+        ...item,
+        id: `${item.productId}-${Date.now()}`,
+      };
 
-      if (error) throw error;
+      dispatch({ type: "ADD_ITEM", payload: cartItem });
+      dispatch({ type: "OPEN_CART" });
 
-      await fetchCartItems();
-      
       toast({
-        title: "Added to cart",
-        description: "Item has been added to your cart.",
+        title: "Added to cart!",
+        description: `${item.name} has been added to your cart.`,
       });
     } catch (error: any) {
+      console.error('Error adding item to cart:', error);
       toast({
         title: "Error",
-        description: "Failed to add item to cart.",
+        description: "Failed to add item to cart",
         variant: "destructive",
       });
     }
   };
 
-  const removeItem = async (itemId: string) => {
-    try {
-      const { error } = await supabase
-        .from('cart_items')
-        .delete()
-        .eq('id', itemId);
-
-      if (error) throw error;
-
-      setState(prev => ({
-        ...prev,
-        items: prev.items.filter(item => item.id !== itemId)
-      }));
-      
-      toast({
-        title: "Removed from cart",
-        description: "Item has been removed from your cart.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to remove item from cart.",
-        variant: "destructive",
-      });
-    }
+  const removeFromCart = (itemId: string) => {
+    dispatch({ type: "REMOVE_ITEM", payload: itemId });
   };
 
-  const removeFromCart = removeItem;
-
-  const updateQuantity = async (itemId: string, quantity: number) => {
-    if (quantity <= 0) {
-      await removeItem(itemId);
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('cart_items')
-        .update({ quantity })
-        .eq('id', itemId);
-
-      if (error) throw error;
-
-      setState(prev => ({
-        ...prev,
-        items: prev.items.map(item => 
-          item.id === itemId ? { ...item, quantity } : item
-        )
-      }));
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to update quantity.",
-        variant: "destructive",
-      });
-    }
+  const updateQuantity = (itemId: string, quantity: number) => {
+    dispatch({ type: "UPDATE_QUANTITY", payload: { id: itemId, quantity } });
   };
 
-  const clearCart = async () => {
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from('cart_items')
-        .delete()
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      setState(prev => ({ ...prev, items: [] }));
-    } catch (error: any) {
-      console.error('Error clearing cart:', error);
-    }
+  const clearCart = () => {
+    dispatch({ type: "CLEAR_CART" });
   };
 
   const toggleCart = () => {
-    setState(prev => ({ ...prev, isOpen: !prev.isOpen }));
+    dispatch({ type: "TOGGLE_CART" });
   };
 
-  const totalItems = state.items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = state.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const subtotal = totalPrice;
+  const openCart = () => {
+    dispatch({ type: "OPEN_CART" });
+  };
+
+  const closeCart = () => {
+    dispatch({ type: "CLOSE_CART" });
+  };
 
   return (
-    <CartContext.Provider value={{
-      state,
-      items: state.items,
-      addItem,
-      addToCart,
-      removeItem,
-      removeFromCart,
-      updateQuantity,
-      clearCart,
-      toggleCart,
-      totalItems,
-      totalPrice,
-      subtotal,
-      isLoading
-    }}>
+    <CartContext.Provider
+      value={{
+        ...state,
+        addToCart,
+        addItem,
+        removeFromCart,
+        updateQuantity,
+        clearCart,
+        toggleCart,
+        openCart,
+        closeCart,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );
-};
-
-export const useCart = () => {
-  const context = useContext(CartContext);
-  if (context === undefined) {
-    throw new Error('useCart must be used within a CartProvider');
-  }
-  return context;
 };
