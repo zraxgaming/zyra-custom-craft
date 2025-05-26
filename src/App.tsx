@@ -23,45 +23,48 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AdminOrderDetails from "./pages/admin/AdminOrderDetails";
 import ZiinaIntegration from "./components/admin/ZiinaIntegration";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <CartProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/home" element={<Index />} />
-              <Route path="/shop" element={<Shop />} />
-              <Route path="/product/:slug" element={<ProductDetails />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/order-success/:orderId" element={<OrderSuccess />} />
-              <Route path="/gift-cards" element={<GiftCards />} />
+  <ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <CartProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/home" element={<Index />} />
+                <Route path="/shop" element={<Shop />} />
+                <Route path="/product/:slug" element={<ProductDetails />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/order-success/:orderId" element={<OrderSuccess />} />
+                <Route path="/gift-cards" element={<GiftCards />} />
 
-              {/* Admin Routes */}
-              <Route path="/admin/orders" element={<Orders />} />
-              <Route path="/admin/orders/:id" element={<AdminOrderDetails />} />
-              <Route path="/admin/products" element={<Products />} />
-              <Route path="/admin/products/create" element={<ProductCreate />} />
-              <Route path="/admin/products/edit/:id" element={<ProductEdit />} />
-              <Route path="/admin/barcode-scanner" element={<BarcodeScanner />} />
-              <Route path="/admin/ziina-integration" element={<ZiinaIntegration />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </CartProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+                {/* Admin Routes */}
+                <Route path="/admin/orders" element={<Orders />} />
+                <Route path="/admin/orders/:id" element={<AdminOrderDetails />} />
+                <Route path="/admin/products" element={<Products />} />
+                <Route path="/admin/products/create" element={<ProductCreate />} />
+                <Route path="/admin/products/edit/:id" element={<ProductEdit />} />
+                <Route path="/admin/barcode-scanner" element={<BarcodeScanner />} />
+                <Route path="/admin/ziina-integration" element={<ZiinaIntegration />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </CartProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;
