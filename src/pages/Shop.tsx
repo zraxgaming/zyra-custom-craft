@@ -9,8 +9,9 @@ import ProductFilters from "@/components/shop/ProductFilters";
 import SearchAndSort from "@/components/shop/SearchAndSort";
 import { useProducts } from "@/hooks/use-products";
 import { useProductFilters } from "@/hooks/useProductFilters";
-import { Sparkles, Package } from "lucide-react";
+import { Sparkles, Package, AlertCircle } from "lucide-react";
 import SEOHead from "@/components/seo/SEOHead";
+import { Button } from "@/components/ui/button";
 
 const Shop = () => {
   const [searchParams] = useSearchParams();
@@ -31,22 +32,25 @@ const Shop = () => {
     featured: product.featured || false
   }));
 
+  const filterResults = useProductFilters(transformedProducts);
+  
+  // Provide fallback values if hook returns undefined
   const {
     filteredProducts = [],
     searchTerm = '',
-    setSearchTerm,
+    setSearchTerm = () => {},
     sortOption = 'featured',
-    setSortOption,
+    setSortOption = () => {},
     selectedCategories = [],
-    toggleCategory,
+    toggleCategory = () => {},
     priceRange = [0, 1000],
-    setPriceRange,
+    setPriceRange = () => {},
     maxPrice = 1000,
     showInStockOnly = false,
-    setShowInStockOnly,
-    resetFilters,
+    setShowInStockOnly = () => {},
+    resetFilters = () => {},
     categories = [],
-  } = useProductFilters(transformedProducts) || {};
+  } = filterResults || {};
 
   // Transform filtered products back to full Product type for display
   const fullFilteredProducts = filteredProducts.map(filteredProduct => {
@@ -91,9 +95,24 @@ const Shop = () => {
         <Navbar />
         <Container className="py-12">
           <div className="text-center animate-fade-in">
-            <Package className="mx-auto h-16 w-16 text-muted-foreground mb-4 animate-bounce" />
-            <h1 className="text-2xl font-bold mb-4 text-foreground">Error Loading Products</h1>
-            <p className="text-muted-foreground">{error?.message || 'Unknown error occurred'}</p>
+            <div className="relative mb-8">
+              <div className="absolute -inset-4 bg-gradient-to-r from-red-500/20 via-orange-500/20 to-yellow-500/20 rounded-full blur-xl animate-pulse"></div>
+              <div className="relative bg-gradient-to-br from-red-500/10 to-orange-500/10 p-6 rounded-3xl border border-red-500/20 backdrop-blur-sm">
+                <AlertCircle className="mx-auto h-16 w-16 text-red-500 animate-bounce" />
+              </div>
+            </div>
+            <h1 className="text-4xl font-bold mb-6 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 bg-clip-text text-transparent animate-scale-in">
+              Oops! Something went wrong
+            </h1>
+            <p className="text-muted-foreground text-lg mb-8 animate-slide-in-right">
+              {error?.message || 'We encountered an issue loading our products. Please try again later.'}
+            </p>
+            <Button 
+              onClick={() => window.location.reload()} 
+              className="bg-gradient-to-r from-primary to-purple-600 hover:scale-105 transition-all duration-300 animate-bounce-in"
+            >
+              Try Again
+            </Button>
           </div>
         </Container>
         <Footer />
@@ -122,8 +141,15 @@ const Shop = () => {
         url="https://zyra.lovable.app/shop"
       />
       <Navbar />
-      <div className="relative min-h-screen bg-background">
-        {/* Premium Hexagonal Pattern Background */}
+      <div className="relative min-h-screen bg-gradient-to-br from-background via-primary/5 to-purple-500/10">
+        {/* Enhanced Animated Background */}
+        <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.05] pointer-events-none overflow-hidden">
+          <div className="absolute top-10 left-10 w-72 h-72 bg-gradient-to-br from-primary to-purple-500 rounded-full blur-3xl animate-float"></div>
+          <div className="absolute top-40 right-20 w-96 h-96 bg-gradient-to-br from-pink-500 to-orange-500 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
+          <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-gradient-to-br from-blue-500 to-teal-500 rounded-full blur-3xl animate-float" style={{ animationDelay: '4s' }}></div>
+        </div>
+
+        {/* Premium Hexagonal Pattern */}
         <div className="absolute inset-0 opacity-[0.015] dark:opacity-[0.025] pointer-events-none">
           <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -149,36 +175,39 @@ const Shop = () => {
             <div className="mb-8 animate-fade-in">
               <div className="flex items-center gap-4 mb-6">
                 <div className="relative">
-                  <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 via-purple-500/20 to-pink-500/20 rounded-full blur-xl animate-pulse"></div>
-                  <div className="relative bg-gradient-to-br from-primary/10 to-purple-500/10 p-3 rounded-2xl border border-primary/20 backdrop-blur-sm">
-                    <Sparkles className="h-8 w-8 text-primary animate-pulse" />
+                  <div className="absolute -inset-3 bg-gradient-to-r from-primary/30 via-purple-500/30 to-pink-500/30 rounded-full blur-xl animate-pulse"></div>
+                  <div className="relative bg-gradient-to-br from-primary/20 to-purple-500/20 p-4 rounded-3xl border border-primary/30 backdrop-blur-sm hover:scale-110 transition-transform duration-300">
+                    <Sparkles className="h-10 w-10 text-primary animate-pulse" />
                   </div>
                 </div>
                 <div>
-                  <h1 className="text-5xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent animate-scale-in">
+                  <h1 className="text-6xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent animate-scale-in">
                     Premium Shop
                   </h1>
-                  <p className="text-muted-foreground text-lg mt-2 animate-slide-in-right flex items-center gap-2">
-                    <span className="inline-block w-2 h-2 bg-gradient-to-r from-primary to-purple-600 rounded-full animate-pulse"></span>
+                  <p className="text-muted-foreground text-xl mt-3 animate-slide-in-right flex items-center gap-3">
+                    <span className="inline-block w-3 h-3 bg-gradient-to-r from-primary to-purple-600 rounded-full animate-pulse"></span>
                     <span>Discover our collection of premium customizable products</span>
+                    <span className="inline-block w-2 h-2 bg-gradient-to-r from-pink-500 to-orange-500 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></span>
                   </p>
                 </div>
               </div>
             </div>
 
             <div className="animate-slide-in-right mb-8" style={{ animationDelay: '0.1s' }}>
-              <SearchAndSort
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                sortBy={sortOption}
-                onSortChange={setSortOption}
-              />
+              <div className="bg-card/40 backdrop-blur-sm border border-border/50 rounded-2xl p-4 hover:shadow-xl transition-all duration-300">
+                <SearchAndSort
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  sortBy={sortOption}
+                  onSortChange={setSortOption}
+                />
+              </div>
             </div>
 
             <div className="flex flex-col lg:flex-row gap-8">
               <aside className="w-full lg:w-72 flex-shrink-0 animate-slide-in-left" style={{ animationDelay: '0.2s' }}>
                 <div className="sticky top-4">
-                  <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-lg">
+                  <div className="bg-card/60 backdrop-blur-sm border border-border/50 rounded-3xl p-6 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.02]">
                     <ProductFilters
                       categories={categoryOptions}
                       selectedCategories={selectedCategories}
@@ -195,23 +224,25 @@ const Shop = () => {
               </aside>
 
               <main className="flex-1 animate-fade-in" style={{ animationDelay: '0.3s' }}>
-                <div className="mb-8 flex items-center justify-between bg-card/30 backdrop-blur-sm border border-border/50 rounded-2xl p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-br from-primary/10 to-purple-500/10 rounded-lg">
-                      <Package className="h-5 w-5 text-primary" />
+                <div className="mb-8 flex items-center justify-between bg-card/40 backdrop-blur-sm border border-border/50 rounded-3xl p-6 hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-gradient-to-br from-primary/20 to-purple-500/20 rounded-2xl hover:scale-110 transition-transform duration-300">
+                      <Package className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-foreground">
+                      <p className="text-lg font-semibold text-foreground">
                         Showing {fullFilteredProducts.length} products
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-sm text-muted-foreground flex items-center gap-2">
+                        <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                         Premium quality guaranteed
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 bg-gradient-to-r from-primary via-purple-600 to-pink-600 rounded-full w-16 animate-pulse"></div>
-                    <div className="h-2 bg-gradient-to-r from-pink-600 via-purple-600 to-primary rounded-full w-8 animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+                  <div className="flex items-center gap-3">
+                    <div className="h-3 bg-gradient-to-r from-primary via-purple-600 to-pink-600 rounded-full w-20 animate-pulse"></div>
+                    <div className="h-3 bg-gradient-to-r from-pink-600 via-purple-600 to-primary rounded-full w-12 animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+                    <div className="h-3 bg-gradient-to-r from-blue-500 via-teal-500 to-green-500 rounded-full w-8 animate-pulse" style={{ animationDelay: '1s' }}></div>
                   </div>
                 </div>
                 
