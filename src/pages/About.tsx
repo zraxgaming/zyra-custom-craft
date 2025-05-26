@@ -1,192 +1,162 @@
 
 import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Container } from "@/components/ui/container";
+import { Users, Award, Target, Heart, Sparkles, Star } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { Container } from "@/components/ui/container";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Star, Users, Award, Heart, Sparkles, Target, Eye } from "lucide-react";
 import SEOHead from "@/components/seo/SEOHead";
-import { useNavigate } from "react-router-dom";
 
 const About = () => {
-  const navigate = useNavigate();
-
   const values = [
     {
-      icon: <Heart className="h-8 w-8" />,
-      title: "Customer First",
-      description: "We put our customers at the center of everything we do, ensuring exceptional service and satisfaction."
+      icon: Target,
+      title: "Quality First",
+      description: "We're committed to delivering premium products that exceed expectations."
     },
     {
-      icon: <Award className="h-8 w-8" />,
-      title: "Quality Excellence",
-      description: "We maintain the highest standards in product quality and craftsmanship for every custom item."
+      icon: Heart,
+      title: "Customer Care",
+      description: "Your satisfaction is our priority. We're here to help every step of the way."
     },
     {
-      icon: <Users className="h-8 w-8" />,
-      title: "Community Focus",
-      description: "We believe in building strong relationships with our customers and supporting our community."
-    },
-    {
-      icon: <Sparkles className="h-8 w-8" />,
+      icon: Sparkles,
       title: "Innovation",
-      description: "We continuously innovate to bring you the latest in customization technology and design."
+      description: "Constantly evolving to bring you the latest in customization technology."
+    },
+    {
+      icon: Award,
+      title: "Excellence",
+      description: "Striving for perfection in every product and every customer interaction."
     }
-  ];
-
-  const stats = [
-    { number: "50K+", label: "Happy Customers" },
-    { number: "100K+", label: "Products Created" },
-    { number: "99%", label: "Satisfaction Rate" },
-    { number: "24/7", label: "Customer Support" }
   ];
 
   return (
     <>
       <SEOHead 
         title="About Us - Zyra"
-        description="Learn about Zyra's mission to provide premium custom products with exceptional quality and service. Discover our story and values."
+        description="Learn about Zyra's mission to provide premium customizable products with exceptional quality and service."
         url="https://zyra.lovable.app/about"
       />
-      <Navbar />
-      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-purple-500/10 relative overflow-hidden">
-        {/* Animated Background */}
-        <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.05] pointer-events-none">
-          <div className="absolute top-20 left-20 w-96 h-96 bg-gradient-to-br from-primary to-purple-500 rounded-full blur-3xl animate-float"></div>
-          <div className="absolute bottom-40 right-10 w-80 h-80 bg-gradient-to-br from-pink-500 to-orange-500 rounded-full blur-3xl animate-float-reverse"></div>
-        </div>
-
-        {/* Hero Section */}
-        <section className="relative py-20 overflow-hidden">
-          <Container className="relative z-10">
+      <div className="min-h-screen bg-background floating-dots-bg particle-field-bg">
+        <Navbar />
+        
+        <section className="py-20 bg-gradient-to-br from-primary/5 via-purple-500/5 to-background">
+          <Container>
             <div className="text-center mb-16 animate-fade-in">
-              <Badge className="mb-6 bg-gradient-to-r from-primary to-purple-600 hover:scale-110 transition-transform duration-300 text-lg px-6 py-3" variant="outline">
-                <Sparkles className="h-5 w-5 mr-3" />
-                Our Story
-              </Badge>
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent animate-scale-in">
+              <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
                 About Zyra
               </h1>
-              <p className="text-xl text-muted-foreground max-w-3xl mx-auto animate-slide-in-right">
-                We're passionate about helping you create unique, personalized products that tell your story and express your individuality.
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                We're passionate about bringing your creative visions to life through premium customizable products and exceptional service.
               </p>
             </div>
           </Container>
         </section>
 
-        {/* Mission & Vision */}
-        <Container className="py-16 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-20">
-            <Card className="bg-card/60 backdrop-blur-sm border-border/50 animate-scale-in">
-              <CardContent className="p-8">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="p-3 bg-primary/10 rounded-full">
-                    <Target className="h-8 w-8 text-primary" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-foreground">Our Mission</h3>
-                </div>
-                <p className="text-muted-foreground leading-relaxed">
-                  To empower individuals and businesses to create exceptional custom products that reflect their unique identity. 
-                  We believe everyone deserves access to high-quality, personalized items that make them feel special and express their creativity.
+        <Container className="py-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 mb-20">
+            <div className="animate-slide-in-left">
+              <h2 className="text-3xl font-bold mb-6">Our Story</h2>
+              <div className="space-y-4 text-muted-foreground">
+                <p>
+                  Founded with a vision to democratize custom manufacturing, Zyra started as a small team 
+                  of designers and technologists who believed that everyone deserves access to high-quality, 
+                  personalized products.
                 </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/60 backdrop-blur-sm border-border/50 animate-scale-in" style={{ animationDelay: '200ms' }}>
-              <CardContent className="p-8">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="p-3 bg-purple-500/10 rounded-full">
-                    <Eye className="h-8 w-8 text-purple-500" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-foreground">Our Vision</h3>
-                </div>
-                <p className="text-muted-foreground leading-relaxed">
-                  To become the world's leading platform for custom product creation, where imagination meets reality. 
-                  We envision a world where everyone can easily bring their creative ideas to life with premium quality and exceptional service.
+                <p>
+                  Today, we've grown into a leading platform that combines cutting-edge technology with 
+                  artisanal craftsmanship, enabling customers worldwide to create products that truly 
+                  reflect their personality and style.
                 </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Stats Section */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-20">
-            {stats.map((stat, index) => (
-              <Card 
-                key={index}
-                className="bg-card/60 backdrop-blur-sm border-border/50 text-center animate-scale-in hover:scale-105 transition-transform duration-300"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <CardContent className="p-6">
-                  <div className="text-3xl md:text-4xl font-bold text-primary mb-2">{stat.number}</div>
-                  <div className="text-muted-foreground">{stat.label}</div>
+                <p>
+                  Our commitment to quality, innovation, and customer satisfaction has made us the 
+                  trusted choice for individuals and businesses looking for premium customization solutions.
+                </p>
+              </div>
+            </div>
+            
+            <div className="animate-slide-in-right">
+              <Card className="h-full hover:shadow-xl transition-all duration-300">
+                <CardContent className="p-8">
+                  <div className="flex items-center mb-6">
+                    <Users className="h-8 w-8 text-primary mr-3" />
+                    <h3 className="text-2xl font-bold">Our Mission</h3>
+                  </div>
+                  <p className="text-muted-foreground mb-6">
+                    To empower creativity and self-expression through accessible, high-quality customization 
+                    technology that transforms ideas into reality.
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center p-4 bg-primary/5 rounded-lg">
+                      <div className="text-2xl font-bold text-primary">10K+</div>
+                      <div className="text-sm text-muted-foreground">Happy Customers</div>
+                    </div>
+                    <div className="text-center p-4 bg-primary/5 rounded-lg">
+                      <div className="text-2xl font-bold text-primary">50K+</div>
+                      <div className="text-sm text-muted-foreground">Products Created</div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-            ))}
+            </div>
           </div>
 
-          {/* Values Section */}
           <div className="mb-20">
             <div className="text-center mb-12 animate-fade-in">
-              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Our Values</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                These core values guide everything we do and shape how we serve our customers every day.
-              </p>
+              <h2 className="text-3xl font-bold mb-4">Our Values</h2>
+              <p className="text-muted-foreground">The principles that guide everything we do</p>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {values.map((value, index) => (
                 <Card 
-                  key={index}
-                  className="bg-card/60 backdrop-blur-sm border-border/50 animate-scale-in hover:shadow-lg transition-all duration-300"
-                  style={{ animationDelay: `${index * 150}ms` }}
+                  key={value.title} 
+                  className="text-center hover:shadow-xl transition-all duration-300 hover:-translate-y-2 animate-scale-in"
+                  style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <CardContent className="p-8">
-                    <div className="flex items-start gap-4">
-                      <div className="p-3 bg-primary/10 rounded-full text-primary">
-                        {value.icon}
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-semibold text-foreground mb-2">{value.title}</h3>
-                        <p className="text-muted-foreground leading-relaxed">{value.description}</p>
-                      </div>
+                  <CardContent className="p-6">
+                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <value.icon className="h-8 w-8 text-primary" />
                     </div>
+                    <h3 className="text-xl font-bold mb-3">{value.title}</h3>
+                    <p className="text-muted-foreground text-sm">{value.description}</p>
                   </CardContent>
                 </Card>
               ))}
             </div>
           </div>
 
-          {/* Call to Action */}
-          <Card className="bg-gradient-to-r from-primary/10 to-purple-500/10 border-primary/20 animate-fade-in">
+          <Card className="bg-gradient-to-r from-primary/5 via-purple-500/5 to-pink-500/5 animate-fade-in">
             <CardContent className="p-12 text-center">
-              <h2 className="text-3xl font-bold text-foreground mb-4">Ready to Create Something Amazing?</h2>
-              <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-                Join thousands of satisfied customers who have brought their ideas to life with our premium custom products.
+              <div className="flex justify-center mb-6">
+                <Star className="h-12 w-12 text-primary animate-pulse" />
+              </div>
+              <h2 className="text-3xl font-bold mb-4">Join Our Journey</h2>
+              <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
+                Whether you're an individual looking to create something special or a business seeking 
+                custom solutions, we're here to help bring your vision to life.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button 
-                  onClick={() => navigate("/shop")}
-                  size="lg"
-                  className="bg-primary hover:bg-primary/90 transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                <a 
+                  href="/shop" 
+                  className="inline-flex items-center justify-center px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
                 >
-                  Start Shopping
-                </Button>
-                <Button 
-                  onClick={() => navigate("/contact")}
-                  variant="outline" 
-                  size="lg"
-                  className="border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300 hover:scale-105"
+                  Start Creating
+                </a>
+                <a 
+                  href="/contact" 
+                  className="inline-flex items-center justify-center px-6 py-3 border border-border rounded-lg hover:bg-muted transition-colors"
                 >
-                  Contact Us
-                </Button>
+                  Get in Touch
+                </a>
               </div>
             </CardContent>
           </Card>
         </Container>
+        
+        <Footer />
       </div>
-      <Footer />
     </>
   );
 };
