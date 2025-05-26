@@ -1,3 +1,4 @@
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
@@ -11,7 +12,14 @@ if (!rootElement) {
   throw new Error("Root element not found. Make sure you have an element with id 'root' in your HTML file.");
 }
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 createRoot(rootElement).render(
   <StrictMode>

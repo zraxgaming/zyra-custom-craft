@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 
 const Wishlist = () => {
-  const { wishlistItems, removeFromWishlist, isLoading } = useWishlist();
+  const { items: wishlistItems, removeFromWishlist, isLoading } = useWishlist();
   const { toast } = useToast();
 
   const handleRemoveFromWishlist = async (productId: string) => {
