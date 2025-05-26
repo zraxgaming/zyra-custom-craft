@@ -33,6 +33,7 @@ const ProductEdit = () => {
 
   useEffect(() => {
     if (error) {
+      console.error('Error loading product:', error);
       toast({
         title: "Error",
         description: "Failed to load product",
@@ -89,12 +90,13 @@ const ProductEdit = () => {
             slug: product.slug,
             description: product.description,
             price: product.price,
-            images: product.images || [],
+            images: Array.isArray(product.images) ? product.images : [],
             is_featured: product.is_featured || false,
             is_customizable: product.is_customizable || false,
             stock_quantity: product.stock_quantity || 0
           }}
           onSuccess={() => {
+            console.log('Product updated successfully');
             toast({
               title: "Success",
               description: "Product updated successfully",

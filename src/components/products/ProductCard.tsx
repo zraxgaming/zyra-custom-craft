@@ -7,21 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Star, Eye, Palette, Package } from "lucide-react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import ProductCustomizer from "./ProductCustomizer";
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  images: string[];
-  rating?: number;
-  review_count?: number;
-  is_new?: boolean;
-  is_customizable?: boolean;
-  discount_percentage?: number;
-  in_stock: boolean;
-  stock_quantity?: number;
-  slug: string;
-}
+import { Product, CustomizationOptions } from "@/types/product";
 
 interface ProductCardProps {
   product: Product;
@@ -37,6 +23,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const discountedPrice = product.discount_percentage 
     ? product.price * (1 - product.discount_percentage / 100)
     : product.price;
+
+  const customizationOptions: CustomizationOptions = {
+    id: '1',
+    allowText: true,
+    allowImage: true,
+    maxTextLength: 50,
+    maxImageCount: 1,
+    allowResizeRotate: true
+  };
 
   return (
     <Card className="group relative overflow-hidden bg-gradient-to-br from-card/80 to-card border-border/50 hover:border-primary/30 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2">
@@ -63,14 +58,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             {product.is_customizable && (
               <ProductCustomizer
                 product={product}
-                customizationOptions={[{
-                  id: '1',
-                  allowText: true,
-                  allowImage: true,
-                  maxTextLength: 50,
-                  maxImageCount: 1,
-                  allowResizeRotate: true
-                }]}
+                customizationOptions={customizationOptions}
                 trigger={
                   <Button
                     variant="secondary"
@@ -172,10 +160,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         {/* Add to Cart */}
         <div className="pt-2">
           <AddToCartButton
-            productId={product.id}
-            productName={product.name}
-            productPrice={discountedPrice}
-            productImage={product.images[0]}
+            product={{
+              id: product.id,
+              name: product.name,
+              price: discountedPrice,
+              image: product.images[0]
+            }}
             inStock={product.in_stock}
             disabled={!product.in_stock}
             className={`w-full transition-all duration-300 ${

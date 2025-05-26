@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Gift, CreditCard } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Gift, CreditCard, Wallet, Smartphone } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +18,7 @@ const GiftCards = () => {
   const [amount, setAmount] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("ziina");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -29,6 +31,7 @@ const GiftCards = () => {
 
   const handlePurchase = async () => {
     if (!user) {
+      console.log('Login required for gift card purchase');
       toast({
         title: "Login required",
         description: "Please login to purchase gift cards",
@@ -38,6 +41,7 @@ const GiftCards = () => {
     }
 
     if (!amount || parseFloat(amount) <= 0) {
+      console.log('Invalid gift card amount');
       toast({
         title: "Invalid amount",
         description: "Please enter a valid gift card amount",
@@ -47,6 +51,7 @@ const GiftCards = () => {
     }
 
     if (!recipientEmail) {
+      console.log('Recipient email required');
       toast({
         title: "Recipient email required",
         description: "Please enter the recipient's email address",
@@ -65,6 +70,7 @@ const GiftCards = () => {
         VALUES ('${code}', ${giftCardAmount}, ${giftCardAmount}, '${user.id}', '${recipientEmail}', '${message}')
       `);
 
+      console.log(`Gift card created with ${paymentMethod} payment:`, code);
       toast({
         title: "Gift card created!",
         description: `Gift card ${code} has been created and will be sent to ${recipientEmail}`,
@@ -74,6 +80,7 @@ const GiftCards = () => {
       setAmount("");
       setRecipientEmail("");
       setMessage("");
+      setPaymentMethod("ziina");
     } catch (error: any) {
       console.error("Error creating gift card:", error);
       toast({
@@ -155,6 +162,30 @@ const GiftCards = () => {
                 />
               </div>
 
+              <div>
+                <Label>Payment Method</Label>
+                <RadioGroup
+                  value={paymentMethod}
+                  onValueChange={setPaymentMethod}
+                  className="mt-2"
+                >
+                  <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                    <RadioGroupItem value="ziina" id="ziina-gift" />
+                    <Label htmlFor="ziina-gift" className="flex items-center gap-2 cursor-pointer flex-1">
+                      <Smartphone className="h-4 w-4 text-blue-600" />
+                      <span>Ziina - Secure digital payment</span>
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                    <RadioGroupItem value="paypal" id="paypal-gift" />
+                    <Label htmlFor="paypal-gift" className="flex items-center gap-2 cursor-pointer flex-1">
+                      <Wallet className="h-4 w-4 text-blue-600" />
+                      <span>PayPal - Secure online payment</span>
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
               <Button 
                 onClick={handlePurchase}
                 disabled={isLoading || !amount || !recipientEmail}
@@ -171,6 +202,7 @@ const GiftCards = () => {
             <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
               <li>• Choose an amount or enter a custom value</li>
               <li>• Enter the recipient's email address</li>
+              <li>• Select your preferred payment method</li>
               <li>• Add a personal message (optional)</li>
               <li>• The gift card will be sent via email</li>
               <li>• Gift cards never expire and can be used for any purchase</li>

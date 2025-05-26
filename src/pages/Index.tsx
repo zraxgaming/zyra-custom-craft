@@ -9,6 +9,7 @@ import Newsletter from "@/components/home/Newsletter";
 import Footer from "@/components/layout/Footer";
 import SEOHead from "@/components/seo/SEOHead";
 import { Container } from "@/components/ui/container";
+import { Product } from "@/types/product";
 
 const Index = () => {
   const { data: featuredProducts, isLoading } = useQuery({
@@ -26,7 +27,27 @@ const Index = () => {
         return [];
       }
       
-      return data || [];
+      // Transform the data to match Product interface
+      const transformedProducts: Product[] = (data || []).map(product => ({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        description: product.description,
+        price: product.price,
+        images: Array.isArray(product.images) ? product.images : [],
+        rating: product.rating,
+        review_count: product.review_count,
+        is_new: product.is_new,
+        is_customizable: product.is_customizable,
+        discount_percentage: product.discount_percentage,
+        in_stock: product.in_stock,
+        stock_quantity: product.stock_quantity,
+        category: product.category,
+        is_featured: product.is_featured,
+        status: product.status
+      }));
+      
+      return transformedProducts;
     },
   });
 

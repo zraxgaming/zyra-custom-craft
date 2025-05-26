@@ -30,7 +30,7 @@ const Checkout = () => {
     state: '',
     zipCode: '',
     country: 'United States',
-    paymentMethod: 'credit_card',
+    paymentMethod: 'ziina',
     deliveryType: 'standard'
   });
 
@@ -156,6 +156,7 @@ const Checkout = () => {
 
       // Clear cart and redirect
       clearCart();
+      console.log('Order placed successfully:', order.id);
       toast({
         title: "Order placed successfully!",
         description: "Thank you for your purchase. You will receive a confirmation email shortly.",
@@ -310,8 +311,8 @@ const Checkout = () => {
                         onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value }))}
                       >
                         <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="credit_card" id="credit_card" />
-                          <Label htmlFor="credit_card">Credit Card</Label>
+                          <RadioGroupItem value="ziina" id="ziina" />
+                          <Label htmlFor="ziina">Ziina</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="paypal" id="paypal" />

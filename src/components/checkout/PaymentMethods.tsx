@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Wallet, DollarSign } from "lucide-react";
+import { Wallet, Smartphone } from "lucide-react";
 
 interface PaymentMethodsProps {
   total: number;
@@ -19,13 +19,14 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
   onPaymentMethodSelect,
   onPaymentComplete
 }) => {
-  const [selectedMethod, setSelectedMethod] = useState<string>("cash");
+  const [selectedMethod, setSelectedMethod] = useState<string>("ziina");
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
   const handlePayment = async () => {
     if (!selectedMethod) {
+      console.log('Payment method required');
       toast({
         title: "Payment method required",
         description: "Please select a payment method",
@@ -40,6 +41,7 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
       // Simulate payment processing
       await new Promise(resolve => setTimeout(resolve, 2000));
       
+      console.log(`Payment successful with ${selectedMethod}:`, total);
       toast({
         title: "Payment successful!",
         description: `Payment of $${total.toFixed(2)} processed successfully`,
@@ -47,6 +49,7 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
       
       onPaymentComplete();
     } catch (error) {
+      console.error('Payment failed:', error);
       toast({
         title: "Payment failed",
         description: "There was an error processing your payment",
@@ -75,6 +78,22 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
           className="space-y-4"
         >
           <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative flex items-center space-x-3 p-4 border-2 border-border rounded-lg hover:border-blue-500/50 transition-all duration-300 cursor-pointer">
+              <RadioGroupItem value="ziina" id="ziina" className="text-blue-600" />
+              <Label htmlFor="ziina" className="flex items-center gap-3 cursor-pointer flex-1">
+                <div className="p-2 bg-gradient-to-r from-blue-500/10 to-purple-600/10 rounded-lg">
+                  <Smartphone className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <div className="font-medium">Ziina</div>
+                  <div className="text-sm text-muted-foreground">Secure digital payment in AED</div>
+                </div>
+              </Label>
+            </div>
+          </div>
+
+          <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             <div className="relative flex items-center space-x-3 p-4 border-2 border-border rounded-lg hover:border-primary/50 transition-all duration-300 cursor-pointer">
               <RadioGroupItem value="paypal" id="paypal" className="text-primary" />
@@ -85,22 +104,6 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
                 <div>
                   <div className="font-medium">PayPal</div>
                   <div className="text-sm text-muted-foreground">Secure online payment</div>
-                </div>
-              </Label>
-            </div>
-          </div>
-
-          <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div className="relative flex items-center space-x-3 p-4 border-2 border-border rounded-lg hover:border-green-500/50 transition-all duration-300 cursor-pointer">
-              <RadioGroupItem value="cash" id="cash" className="text-green-600" />
-              <Label htmlFor="cash" className="flex items-center gap-3 cursor-pointer flex-1">
-                <div className="p-2 bg-green-500/10 rounded-lg">
-                  <DollarSign className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <div className="font-medium">Cash on Delivery</div>
-                  <div className="text-sm text-muted-foreground">Pay when you receive your order</div>
                 </div>
               </Label>
             </div>
