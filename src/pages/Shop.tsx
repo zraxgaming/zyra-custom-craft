@@ -45,7 +45,7 @@ const Shop = () => {
                            });
     const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
     const matchesStock = !inStock || product.in_stock;
-    const matchesFeatured = !featured || product.featured || product.is_featured;
+    const matchesFeatured = !featured || product.featured;
     const matchesCustomizable = !customizable || product.is_customizable;
     
     return matchesSearch && matchesCategory && matchesPrice && matchesStock && matchesFeatured && matchesCustomizable;
@@ -60,7 +60,7 @@ const Shop = () => {
       case "rating":
         return (b.rating || 0) - (a.rating || 0);
       case "newest":
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       case "name":
         return a.name.localeCompare(b.name);
       default:
@@ -107,7 +107,6 @@ const Shop = () => {
         {/* Search and Filters */}
         <Container className="py-8 relative z-10">
           <div className="flex flex-col lg:flex-row gap-6 mb-8 animate-fade-in">
-            {/* Search */}
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -120,7 +119,6 @@ const Shop = () => {
               </div>
             </div>
 
-            {/* Sort */}
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-full lg:w-48 hover:scale-105 transition-transform duration-200">
                 <SelectValue placeholder="Sort by" />
@@ -135,7 +133,6 @@ const Shop = () => {
               </SelectContent>
             </Select>
 
-            {/* View Mode Toggle */}
             <div className="flex gap-2">
               <Button
                 variant={viewMode === "grid" ? "default" : "outline"}
@@ -155,7 +152,6 @@ const Shop = () => {
               </Button>
             </div>
 
-            {/* Filters Toggle */}
             <Button
               variant="outline"
               onClick={() => setShowFilters(!showFilters)}
@@ -167,7 +163,6 @@ const Shop = () => {
           </div>
 
           <div className="flex gap-8">
-            {/* Sidebar Filters */}
             <div className={`${showFilters ? 'block' : 'hidden'} lg:block w-full lg:w-64 animate-slide-in-left`}>
               <ProductFilters 
                 categories={categories}
@@ -184,7 +179,6 @@ const Shop = () => {
               />
             </div>
 
-            {/* Products Grid */}
             <div className="flex-1 animate-fade-in">
               <ProductGrid products={sortedProducts} isLoading={isLoading} />
             </div>

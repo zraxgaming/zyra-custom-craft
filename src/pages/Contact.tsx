@@ -4,15 +4,15 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Container } from "@/components/ui/container";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Phone, MapPin, Clock, Send, Sparkles, MessageCircle } from "lucide-react";
-import SEOHead from "@/components/seo/SEOHead";
 import { supabase } from "@/integrations/supabase/client";
+import { Mail, Phone, MapPin, Clock, Send, MessageCircle, Sparkles } from "lucide-react";
+import SEOHead from "@/components/seo/SEOHead";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -31,26 +31,27 @@ const Contact = () => {
     try {
       const { error } = await supabase
         .from('contact_submissions')
-        .insert({
+        .insert([{
           name: formData.name,
           email: formData.email,
           subject: formData.subject,
           message: formData.message,
           status: 'open'
-        });
+        }]);
 
       if (error) throw error;
 
       toast({
-        title: "Message sent!",
-        description: "We'll get back to you as soon as possible.",
+        title: "Message sent successfully!",
+        description: "We'll get back to you within 24 hours.",
       });
 
       setFormData({ name: "", email: "", subject: "", message: "" });
     } catch (error: any) {
+      console.error("Error submitting contact form:", error);
       toast({
         title: "Error sending message",
-        description: error.message,
+        description: error.message || "Please try again later.",
         variant: "destructive",
       });
     } finally {
@@ -60,32 +61,36 @@ const Contact = () => {
 
   const contactInfo = [
     {
-      icon: Mail,
+      icon: <Mail className="h-6 w-6" />,
       title: "Email Us",
       content: "support@zyra.com",
-      subtitle: "We typically respond within 24 hours",
-      color: "from-blue-500 to-cyan-500"
+      description: "Send us an email anytime",
+      color: "text-blue-600",
+      bgColor: "bg-blue-100"
     },
     {
-      icon: Phone,
+      icon: <Phone className="h-6 w-6" />,
       title: "Call Us",
-      content: "+1 (555) 123-4567",
-      subtitle: "Monday - Friday, 9AM - 6PM EST",
-      color: "from-green-500 to-teal-500"
+      content: "+971 4 123 4567",
+      description: "Mon-Fri from 9am to 6pm",
+      color: "text-green-600",
+      bgColor: "bg-green-100"
     },
     {
-      icon: MapPin,
+      icon: <MapPin className="h-6 w-6" />,
       title: "Visit Us",
-      content: "123 Premium Street\nSuite 100\nNew York, NY 10001",
-      subtitle: "",
-      color: "from-purple-500 to-pink-500"
+      content: "Dubai, UAE",
+      description: "DIFC, Building 3, Floor 15",
+      color: "text-purple-600",
+      bgColor: "bg-purple-100"
     },
     {
-      icon: Clock,
+      icon: <Clock className="h-6 w-6" />,
       title: "Business Hours",
-      content: "Monday - Friday: 9:00 AM - 6:00 PM\nSaturday: 10:00 AM - 4:00 PM\nSunday: Closed",
-      subtitle: "",
-      color: "from-orange-500 to-red-500"
+      content: "9:00 AM - 6:00 PM",
+      description: "Monday to Friday",
+      color: "text-orange-600",
+      bgColor: "bg-orange-100"
     }
   ];
 
@@ -93,10 +98,11 @@ const Contact = () => {
     <>
       <SEOHead 
         title="Contact Us - Zyra"
-        description="Get in touch with our team. We're here to help with any questions about our products or services."
+        description="Get in touch with our team. We're here to help with your custom product needs and answer any questions you may have."
         url="https://zyra.lovable.app/contact"
       />
       <Navbar />
+      
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-purple-500/10 relative overflow-hidden">
         {/* Animated Background */}
         <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.05] pointer-events-none">
@@ -104,156 +110,182 @@ const Contact = () => {
           <div className="absolute bottom-40 right-10 w-80 h-80 bg-gradient-to-br from-pink-500 to-orange-500 rounded-full blur-3xl animate-float-reverse"></div>
         </div>
 
-        <Container className="py-12 relative z-10">
-          <div className="max-w-6xl mx-auto">
-            {/* Header */}
+        {/* Hero Section */}
+        <section className="relative py-20 overflow-hidden">
+          <Container className="relative z-10">
             <div className="text-center mb-16 animate-fade-in">
-              <div className="relative mb-8">
-                <Badge className="mb-6 bg-gradient-to-r from-primary to-purple-600 hover:scale-110 transition-transform duration-300 text-lg px-6 py-3" variant="outline">
-                  <MessageCircle className="h-5 w-5 mr-3" />
-                  Get in Touch
-                </Badge>
-              </div>
+              <Badge className="mb-6 bg-gradient-to-r from-primary to-purple-600 hover:scale-110 transition-transform duration-300 text-lg px-6 py-3" variant="outline">
+                <MessageCircle className="h-5 w-5 mr-3" />
+                Get In Touch
+              </Badge>
               <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent animate-scale-in">
                 Contact Us
               </h1>
-              <p className="text-xl text-muted-foreground animate-slide-in-right">
-                We'd love to hear from you. Send us a message and we'll respond as soon as possible.
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto animate-slide-in-right">
+                Have questions about our products or need help with customization? We're here to help you create something amazing.
               </p>
             </div>
+          </Container>
+        </section>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-              {/* Contact Form */}
-              <Card className="hover:shadow-2xl transition-all duration-500 animate-slide-in-left bg-card/60 backdrop-blur-sm border-border/50">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 bg-gradient-to-br from-primary/20 to-purple-500/20 rounded-2xl">
-                      <Send className="h-6 w-6 text-primary" />
-                    </div>
-                    <CardTitle className="text-2xl">Send us a message</CardTitle>
+        <Container className="py-12 relative z-10">
+          {/* Contact Info Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+            {contactInfo.map((info, index) => (
+              <Card 
+                key={index}
+                className="hover:shadow-2xl transition-all duration-500 animate-scale-in bg-card/60 backdrop-blur-sm border-border/50 hover:scale-105 group"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <CardContent className="p-6 text-center">
+                  <div className={`p-4 rounded-2xl ${info.bgColor} ${info.color} mx-auto mb-4 w-fit group-hover:rotate-12 transition-transform duration-300`}>
+                    {info.icon}
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name" className="text-sm font-medium">Name</Label>
-                        <Input
-                          id="name"
-                          value={formData.name}
-                          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                          required
-                          className="hover:scale-105 transition-transform duration-200"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                          required
-                          className="hover:scale-105 transition-transform duration-200"
-                        />
-                      </div>
-                    </div>
-                    
+                  <h3 className="font-semibold text-lg mb-2 text-foreground">{info.title}</h3>
+                  <p className="text-primary font-medium mb-1">{info.content}</p>
+                  <p className="text-sm text-muted-foreground">{info.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {/* Contact Form */}
+            <Card className="bg-card/60 backdrop-blur-sm border-border/50 animate-slide-in-left">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3 text-2xl">
+                  <div className="p-3 bg-primary/10 rounded-full">
+                    <Send className="h-6 w-6 text-primary" />
+                  </div>
+                  Send us a message
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="subject" className="text-sm font-medium">Subject</Label>
+                      <Label htmlFor="name">Name *</Label>
                       <Input
-                        id="subject"
-                        value={formData.subject}
-                        onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         required
-                        className="hover:scale-105 transition-transform duration-200"
+                        className="bg-background/50 border-border/50 focus:border-primary transition-colors"
+                        placeholder="Your full name"
                       />
                     </div>
-                    
                     <div className="space-y-2">
-                      <Label htmlFor="message" className="text-sm font-medium">Message</Label>
-                      <Textarea
-                        id="message"
-                        rows={6}
-                        value={formData.message}
-                        onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
+                      <Label htmlFor="email">Email *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         required
-                        className="hover:scale-105 transition-transform duration-200"
+                        className="bg-background/50 border-border/50 focus:border-primary transition-colors"
+                        placeholder="your@email.com"
                       />
                     </div>
-                    
-                    <Button 
-                      type="submit" 
-                      className="w-full bg-gradient-to-r from-primary to-purple-600 hover:scale-105 transition-all duration-300 hover:shadow-lg" 
-                      disabled={isSubmitting}
-                    >
-                      <Send className="h-4 w-4 mr-2" />
-                      {isSubmitting ? "Sending..." : "Send Message"}
-                    </Button>
-                  </form>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="subject">Subject *</Label>
+                    <Input
+                      id="subject"
+                      value={formData.subject}
+                      onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                      required
+                      className="bg-background/50 border-border/50 focus:border-primary transition-colors"
+                      placeholder="How can we help you?"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="message">Message *</Label>
+                    <Textarea
+                      id="message"
+                      value={formData.message}
+                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                      required
+                      rows={6}
+                      className="bg-background/50 border-border/50 focus:border-primary transition-colors"
+                      placeholder="Tell us more about your inquiry..."
+                    />
+                  </div>
+                  
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 transition-all duration-300 hover:scale-105 hover:shadow-lg group"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      "Sending..."
+                    ) : (
+                      <>
+                        Send Message
+                        <Send className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Additional Info */}
+            <div className="space-y-8 animate-slide-in-right">
+              <Card className="bg-gradient-to-br from-primary/10 to-purple-500/10 border-primary/20">
+                <CardContent className="p-8">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-3 bg-primary/20 rounded-full">
+                      <Sparkles className="h-6 w-6 text-primary" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-foreground">Why Choose Zyra?</h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
+                      <p className="text-muted-foreground">24/7 customer support</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
+                      <p className="text-muted-foreground">Premium quality guarantee</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
+                      <p className="text-muted-foreground">Fast worldwide shipping</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
+                      <p className="text-muted-foreground">Custom design expertise</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
-              {/* Contact Information */}
-              <div className="space-y-6 animate-slide-in-right">
-                {contactInfo.map((info, index) => (
-                  <Card 
-                    key={index}
-                    className="hover:shadow-2xl hover:scale-105 transition-all duration-500 bg-card/60 backdrop-blur-sm border-border/50 overflow-hidden"
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    <CardContent className="p-6 relative">
-                      <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${info.color} opacity-10 rounded-full blur-2xl`}></div>
-                      <div className="flex items-start gap-4 relative">
-                        <div className={`p-3 rounded-2xl bg-gradient-to-br ${info.color} bg-opacity-20 hover:rotate-12 transition-transform duration-300`}>
-                          <info.icon className="h-6 w-6 text-primary" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold mb-2 text-foreground">{info.title}</h3>
-                          <p className="text-muted-foreground whitespace-pre-line mb-1">{info.content}</p>
-                          {info.subtitle && (
-                            <p className="text-sm text-muted-foreground">{info.subtitle}</p>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-
-            {/* CTA Section */}
-            <Card className="mt-16 bg-gradient-to-br from-primary/10 via-purple-500/10 to-pink-500/10 border-primary/30 hover:shadow-2xl transition-all duration-500 animate-bounce-in backdrop-blur-sm">
-              <CardContent className="p-12 text-center relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-purple-500/5 animate-pulse"></div>
-                <div className="relative">
-                  <h3 className="text-3xl font-bold mb-6 bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                    Need Immediate Help?
-                  </h3>
-                  <p className="text-muted-foreground mb-8 text-xl max-w-2xl mx-auto">
-                    Our customer support team is here to assist you with any questions or concerns.
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-6 justify-center">
-                    <Button 
-                      className="inline-flex items-center justify-center px-10 py-4 bg-gradient-to-r from-primary to-purple-600 text-primary-foreground rounded-2xl font-semibold text-lg hover:scale-105 hover:shadow-2xl transition-all duration-300"
-                    >
-                      <Phone className="h-5 w-5 mr-2" />
-                      Call Now
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      className="inline-flex items-center justify-center px-10 py-4 border-2 border-primary/30 text-foreground rounded-2xl font-semibold text-lg hover:scale-105 hover:shadow-2xl hover:bg-primary/10 transition-all duration-300"
-                    >
-                      <Mail className="h-5 w-5 mr-2" />
-                      Email Us
-                    </Button>
+              <Card className="bg-card/60 backdrop-blur-sm border-border/50">
+                <CardContent className="p-8">
+                  <h3 className="text-xl font-bold mb-4 text-foreground">Frequently Asked Questions</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-medium text-foreground mb-1">How long does customization take?</h4>
+                      <p className="text-sm text-muted-foreground">Most custom orders are completed within 3-5 business days.</p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-foreground mb-1">Do you ship internationally?</h4>
+                      <p className="text-sm text-muted-foreground">Yes, we ship worldwide with tracking included.</p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-foreground mb-1">Can I modify my order after placing it?</h4>
+                      <p className="text-sm text-muted-foreground">Contact us within 24 hours and we'll help you make changes.</p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </Container>
       </div>
+      
       <Footer />
     </>
   );
