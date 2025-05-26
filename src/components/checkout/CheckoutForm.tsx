@@ -8,8 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Smartphone, CreditCard } from "lucide-react";
-import ZiinaPayment from "./ZiinaPayment";
-import PayPalPayment from "./PayPalPayment";
+import PaymentProcessor from "./PaymentProcessor";
 
 interface CheckoutFormProps {
   items: any[];
@@ -56,10 +55,11 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
   };
 
   const handlePaymentSuccess = (transactionId: string) => {
-    console.log(`Payment successful with ${formData.paymentMethod}:`, {
+    console.log(`Payment successful:`, {
       transactionId,
       amount: total,
-      method: formData.paymentMethod
+      method: formData.paymentMethod,
+      orderData: formData
     });
     
     // Generate order ID and redirect to success page
@@ -69,46 +69,59 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
 
   const handlePaymentError = (error: string) => {
     console.error('Payment failed:', error);
+    toast({
+      title: "Payment Failed",
+      description: error,
+      variant: "destructive"
+    });
     setShowPayment(false);
   };
 
   if (showPayment) {
     return (
       <div className="max-w-md mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle>Complete Payment</CardTitle>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowPayment(false)}
-              className="w-fit"
-            >
-              ← Back to Details
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4 mb-6">
-              <div className="flex justify-between font-bold text-lg">
-                <span>Total:</span>
-                <span>${total.toFixed(2)}</span>
+        <div className="mb-6">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowPayment(false)}
+            className="mb-4"
+          >
+            ← Back to Details
+          </Button>
+          
+          <Card className="mb-4">
+            <CardContent className="p-4">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span>${subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Shipping:</span>
+                  <span>${shipping.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Tax:</span>
+                  <span>${tax.toFixed(2)}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between font-bold text-lg">
+                  <span>Total:</span>
+                  <span>${total.toFixed(2)}</span>
+                </div>
               </div>
-            </div>
-            
-            {formData.paymentMethod === 'ziina' ? (
-              <ZiinaPayment
-                amount={total}
-                onSuccess={handlePaymentSuccess}
-                onError={handlePaymentError}
-              />
-            ) : (
-              <PayPalPayment
-                amount={total}
-                onSuccess={handlePaymentSuccess}
-                onError={handlePaymentError}
-              />
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <PaymentProcessor
+          amount={total}
+          currency="USD"
+          orderData={formData}
+          onSuccess={handlePaymentSuccess}
+          onError={handlePaymentError}
+          paymentMethod={formData.paymentMethod as 'ziina' | 'paypal'}
+        />
       </div>
     );
   }
@@ -116,11 +129,11 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
   return (
     <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
       <div className="space-y-6">
-        <Card>
-          <CardHeader>
+        <Card className="border-border/50 shadow-lg">
+          <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5">
             <CardTitle>Contact Information</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 p-6">
             <div>
               <Label htmlFor="email">Email *</Label>
               <Input
@@ -130,16 +143,17 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
                 value={formData.email}
                 onChange={handleInputChange}
                 required
+                className="bg-background/50"
               />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="border-border/50 shadow-lg">
+          <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5">
             <CardTitle>Shipping Address</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 p-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="firstName">First Name *</Label>
@@ -149,6 +163,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
                   value={formData.firstName}
                   onChange={handleInputChange}
                   required
+                  className="bg-background/50"
                 />
               </div>
               <div>
@@ -159,6 +174,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
                   value={formData.lastName}
                   onChange={handleInputChange}
                   required
+                  className="bg-background/50"
                 />
               </div>
             </div>
@@ -171,6 +187,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
                 value={formData.address}
                 onChange={handleInputChange}
                 required
+                className="bg-background/50"
               />
             </div>
             
@@ -183,6 +200,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
                   value={formData.city}
                   onChange={handleInputChange}
                   required
+                  className="bg-background/50"
                 />
               </div>
               <div>
@@ -193,6 +211,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
                   value={formData.state}
                   onChange={handleInputChange}
                   required
+                  className="bg-background/50"
                 />
               </div>
             </div>
@@ -205,16 +224,17 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
                 value={formData.zipCode}
                 onChange={handleInputChange}
                 required
+                className="bg-background/50"
               />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="border-border/50 shadow-lg">
+          <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5">
             <CardTitle>Payment Method</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <RadioGroup
               value={formData.paymentMethod}
               onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value }))}
@@ -223,7 +243,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
               <div className="flex items-center space-x-3 p-4 border-2 border-border rounded-lg hover:border-blue-500/50 transition-all duration-300 cursor-pointer">
                 <RadioGroupItem value="ziina" id="ziina" />
                 <Label htmlFor="ziina" className="flex items-center gap-3 cursor-pointer flex-1">
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
+                  <div className="p-2 bg-gradient-to-r from-blue-500/10 to-purple-600/10 rounded-lg">
                     <Smartphone className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
@@ -251,16 +271,23 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
       </div>
 
       <div className="space-y-6">
-        <Card>
-          <CardHeader>
+        <Card className="border-border/50 shadow-lg sticky top-4">
+          <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5">
             <CardTitle>Order Summary</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 p-6">
             {items.map((item) => (
-              <div key={item.id} className="flex justify-between">
-                <div>
-                  <p className="font-medium">{item.name}</p>
-                  <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+              <div key={item.id} className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={item.image || '/placeholder-product.jpg'}
+                    alt={item.name}
+                    className="w-12 h-12 object-cover rounded"
+                  />
+                  <div>
+                    <p className="font-medium">{item.name}</p>
+                    <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+                  </div>
                 </div>
                 <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
               </div>
@@ -290,7 +317,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentS
 
             <Button 
               onClick={handleContinueToPayment}
-              className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 transition-all duration-300"
+              className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 transition-all duration-300 hover:scale-105"
               size="lg"
             >
               Continue to Payment - ${total.toFixed(2)}

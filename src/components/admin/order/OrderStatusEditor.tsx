@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Package, Truck, CheckCircle, XCircle } from "lucide-react";
+import { ChevronDown, Package, Truck, CheckCircle, XCircle, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -27,7 +27,7 @@ const OrderStatusEditor: React.FC<OrderStatusEditorProps> = ({
   const { toast } = useToast();
 
   const statusOptions = [
-    { value: 'pending', label: 'Pending', icon: Package, color: 'bg-yellow-500' },
+    { value: 'pending', label: 'Pending', icon: Clock, color: 'bg-yellow-500' },
     { value: 'processing', label: 'Processing', icon: Package, color: 'bg-blue-500' },
     { value: 'shipped', label: 'Shipped', icon: Truck, color: 'bg-purple-500' },
     { value: 'delivered', label: 'Delivered', icon: CheckCircle, color: 'bg-green-500' },
@@ -76,7 +76,7 @@ const OrderStatusEditor: React.FC<OrderStatusEditorProps> = ({
         <Button
           variant="outline"
           disabled={isUpdating}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 hover:scale-105 transition-transform"
         >
           <Badge className={`${currentStatusOption?.color || 'bg-gray-500'} text-white`}>
             <StatusIcon className="h-3 w-3 mr-1" />
@@ -92,7 +92,7 @@ const OrderStatusEditor: React.FC<OrderStatusEditorProps> = ({
             <DropdownMenuItem
               key={option.value}
               onClick={() => updateOrderStatus(option.value)}
-              className="flex items-center gap-2 cursor-pointer"
+              className="flex items-center gap-2 cursor-pointer hover:bg-muted transition-colors"
             >
               <Icon className="h-4 w-4" />
               {option.label}

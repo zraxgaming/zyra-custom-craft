@@ -26,7 +26,7 @@ const GoogleSignIn: React.FC = () => {
       console.error('Google sign-in error:', error);
       toast({
         title: "Sign-in Failed",
-        description: error.message || "Failed to sign in with Google",
+        description: error.message || "Failed to sign in with Google. Please check your Google OAuth configuration in Supabase.",
         variant: "destructive",
       });
     } finally {

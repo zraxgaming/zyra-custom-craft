@@ -1,140 +1,94 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Check } from "lucide-react";
+import { ShoppingCart, Plus, Minus } from "lucide-react";
 import { useCart } from "./CartProvider";
-import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  images: string[];
-  slug: string;
-  in_stock?: boolean;
-  stock_status?: string;
-  stock_quantity?: number;
-}
-
 interface AddToCartButtonProps {
-  product: Product;
-  quantity?: number;
-  customization?: any;
+  product: {
+    id: string;
+    name: string;
+    slug: string;
+    price: number;
+    images: string[];
+  };
+  disabled?: boolean;
   className?: string;
-  size?: "sm" | "default" | "lg";
 }
 
-export const AddToCartButton: React.FC<AddToCartButtonProps> = ({
-  product,
-  quantity = 1,
-  customization = {},
-  className = "",
-  size = "default",
+const AddToCartButton: React.FC<AddToCartButtonProps> = ({ 
+  product, 
+  disabled = false,
+  className = ""
 }) => {
-  const { addItem } = useCart();
-  const { user } = useAuth();
+  const { addToCart, items } = useCart();
   const { toast } = useToast();
-  const [isAdding, setIsAdding] = useState(false);
-  const [justAdded, setJustAdded] = useState(false);
+  const [quantity, setQuantity] = useState(1);
 
-  const handleAddToCart = async () => {
-    if (!user) {
-      toast({
-        title: "Please sign in",
-        description: "You need to be signed in to add items to your cart.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const existingItem = items.find(item => item.id === product.id);
 
-    if (!product || !product.id) {
-      toast({
-        title: "Error",
-        description: "Product information is missing.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Check stock before adding
-    if (!product.in_stock || product.stock_status === 'out_of_stock' || (product.stock_quantity && product.stock_quantity < quantity)) {
-      toast({
-        title: "Out of Stock",
-        description: "This item is currently out of stock.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsAdding(true);
+  const handleAddToCart = () => {
+    if (disabled) return;
     
-    try {
-      await addItem({
-        productId: product.id,
-        name: product.name,
-        price: product.price,
-        quantity,
-        customization,
-        image: Array.isArray(product.images) && product.images.length > 0 
-          ? product.images[0] 
-          : undefined,
-      });
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.images[0] || '/placeholder-product.jpg',
+      quantity: quantity
+    });
 
-      setJustAdded(true);
-      setTimeout(() => setJustAdded(false), 2000);
-    } catch (error) {
-      console.error("Error adding to cart:", error);
-      toast({
-        title: "Error",
-        description: "Failed to add item to cart. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsAdding(false);
-    }
+    toast({
+      title: "Added to cart",
+      description: `${quantity} ${product.name} added to your cart`,
+    });
+
+    setQuantity(1);
   };
 
-  const isOutOfStock = !product.in_stock || product.stock_status === 'out_of_stock' || (product.stock_quantity !== undefined && product.stock_quantity <= 0);
+  if (existingItem) {
+    return (
+      <div className={`flex items-center gap-2 ${className}`}>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setQuantity(Math.max(1, quantity - 1))}
+          className="h-8 w-8"
+        >
+          <Minus className="h-4 w-4" />
+        </Button>
+        <span className="w-8 text-center font-medium">{quantity}</span>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setQuantity(quantity + 1)}
+          className="h-8 w-8"
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
+        <Button
+          onClick={handleAddToCart}
+          disabled={disabled}
+          className="flex-1"
+        >
+          <ShoppingCart className="h-4 w-4 mr-2" />
+          Add More
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <Button
       onClick={handleAddToCart}
-      disabled={isAdding || isOutOfStock || !user}
-      size={size}
-      className={`
-        relative transition-all duration-300 ease-in-out transform
-        hover:scale-105 hover:shadow-lg active:scale-95
-        ${justAdded 
-          ? 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800' 
-          : 'bg-primary hover:bg-primary/90'
-        }
-        ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}
-        ${!user ? 'opacity-75' : ''}
-        ${className}
-      `}
+      disabled={disabled}
+      className={`w-full ${className}`}
     >
-      <div className="flex items-center gap-2">
-        {isAdding ? (
-          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-        ) : justAdded ? (
-          <Check className="w-4 h-4 animate-bounce" />
-        ) : (
-          <ShoppingCart className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
-        )}
-        <span className="transition-all duration-200">
-          {isAdding 
-            ? "Adding..." 
-            : justAdded 
-              ? "Added!" 
-              : isOutOfStock 
-                ? "Out of Stock" 
-                : !user
-                  ? "Sign In to Add"
-                  : "Add to Cart"
-          }
-        </span>
-      </div>
+      <ShoppingCart className="h-4 w-4 mr-2" />
+      Add to Cart
     </Button>
   );
 };
+
+export default AddToCartButton;
