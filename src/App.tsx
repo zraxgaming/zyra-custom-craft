@@ -1,100 +1,149 @@
-
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { HelmetProvider } from "react-helmet-async";
+import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/components/cart/CartProvider";
-import { ThemeProvider } from "next-themes";
-
-// Pages
-import Index from "./pages/Index";
-import Home from "./pages/Home";
-import Shop from "./pages/Shop";
-import ProductDetail from "./pages/ProductDetail";
-import Checkout from "./pages/Checkout";
-import Dashboard from "./pages/Dashboard";
-import Wishlist from "./pages/Wishlist";
-import Contact from "./pages/Contact";
-import AuthPage from "./components/auth/AuthPage";
-import OrderSuccess from "./pages/OrderSuccess";
-import OrderFailed from "./pages/OrderFailed";
-
-// Admin Pages
-import AdminRoute from "./components/admin/AdminRoute";
-import AdminDashboard from "./components/admin/AdminDashboard";
-import AdminOrders from "./pages/admin/Orders";
-import AdminOrderDetails from "./pages/admin/AdminOrderDetails";
-import AdminCategories from "./pages/admin/Categories";
-import AdminInventory from "./pages/admin/Inventory";
-import AdminReviews from "./pages/admin/Reviews";
-import ProductManager from "./components/admin/ProductManager";
-import ZiinaIntegration from "./components/admin/ZiinaIntegration";
-import ProductNew from "./pages/admin/ProductNew";
-import ProductEdit from "./pages/admin/ProductEdit";
-import AdminBarcodes from "./pages/admin/Barcodes";
-import AdminNewsletter from "./pages/admin/Newsletter";
-import AdminSettings from "./pages/admin/Settings";
-
-import NotFound from "./components/NotFound";
-import "./App.css";
+import { ThemeProvider } from "@/hooks/use-theme";
+import MaintenanceBanner from "@/components/layout/MaintenanceBanner";
+import Auth from "@/pages/Auth";
+import Shop from "@/pages/Shop";
+import ProductDetails from "@/pages/ProductDetails";
+import Cart from "@/pages/Cart";
+import Checkout from "@/pages/Checkout";
+import OrderSuccess from "@/pages/OrderSuccess";
+import Dashboard from "@/pages/Dashboard";
+import Profile from "@/pages/Profile";
+import AdminLayout from "@/components/admin/AdminLayout";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminProducts from "@/pages/admin/AdminProducts";
+import AdminOrders from "@/pages/admin/AdminOrders";
+import AdminUsers from "@/pages/admin/AdminUsers";
+import AdminScanner from "@/pages/admin/Scanner";
+import AdminBarcodes from "@/pages/admin/Barcodes";
+import AdminGiftCards from "@/pages/admin/GiftCards";
+import AdminSettings from "@/pages/admin/Settings";
+import AdminZiina from "@/pages/admin/Ziina";
+import AuthPage from "@/components/auth/AuthPage";
+import AuthCallback from "@/pages/auth/callback";
+import AdminBarcodeScanner from "@/pages/admin/BarcodeScanner";
 
 const queryClient = new QueryClient();
 
 function App() {
   return (
-    <HelmetProvider>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider attribute="class" defaultTheme="light">
-          <TooltipProvider>
-            <AuthProvider>
-              <CartProvider>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
-                  <Routes>
-                    {/* Public Routes */}
-                    <Route path="/" element={<Index />} />
-                    <Route path="/home" element={<Home />} />
-                    <Route path="/shop" element={<Shop />} />
-                    <Route path="/product/:slug" element={<ProductDetail />} />
-                    <Route path="/checkout" element={<Checkout />} />
-                    <Route path="/contact" element={<Contact />} />
-                    <Route path="/auth" element={<AuthPage><div /></AuthPage>} />
-                    <Route path="/order-success/:orderId?" element={<OrderSuccess />} />
-                    <Route path="/order-failed" element={<OrderFailed />} />
-                    
-                    {/* Protected Routes */}
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/wishlist" element={<Wishlist />} />
-                    
-                    {/* Admin Routes */}
-                    <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-                    <Route path="/admin/products" element={<AdminRoute><ProductManager /></AdminRoute>} />
-                    <Route path="/admin/products/new" element={<AdminRoute><ProductNew /></AdminRoute>} />
-                    <Route path="/admin/products/:id/edit" element={<AdminRoute><ProductEdit /></AdminRoute>} />
-                    <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
-                    <Route path="/admin/inventory" element={<AdminRoute><AdminInventory /></AdminRoute>} />
-                    <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
-                    <Route path="/admin/orders/:id" element={<AdminRoute><AdminOrderDetails /></AdminRoute>} />
-                    <Route path="/admin/reviews" element={<AdminRoute><AdminReviews /></AdminRoute>} />
-                    <Route path="/admin/barcodes" element={<AdminRoute><AdminBarcodes /></AdminRoute>} />
-                    <Route path="/admin/newsletter" element={<AdminRoute><AdminNewsletter /></AdminRoute>} />
-                    <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
-                    <Route path="/admin/ziina" element={<AdminRoute><ZiinaIntegration /></AdminRoute>} />
-                    
-                    {/* 404 Route */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </BrowserRouter>
-              </CartProvider>
-            </AuthProvider>
-          </TooltipProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </HelmetProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider defaultTheme="system" storageKey="zyra-theme">
+        <AuthProvider>
+          <CartProvider>
+            <Router>
+              <MaintenanceBanner />
+              <Routes>
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
+                
+                <Route path="/" element={<Shop />} />
+                <Route path="/shop" element={<Shop />} />
+                <Route path="/product/:productId" element={<ProductDetails />} />
+                <Route path="/cart" element={<Cart />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/order-success/:orderId" element={<OrderSuccess />} />
+
+                <Route path="/dashboard" element={
+                  <AuthPage>
+                    <Dashboard />
+                  </AuthPage>
+                } />
+                <Route path="/profile" element={
+                  <AuthPage>
+                    <Profile />
+                  </AuthPage>
+                } />
+
+                {/* Admin Routes */}
+                <Route path="/admin" element={
+                  <AuthPage requireAuth={true}>
+                    <AdminLayout>
+                      <AdminDashboard />
+                    </AdminLayout>
+                  </AuthPage>
+                } />
+                <Route path="/admin/dashboard" element={
+                  <AuthPage requireAuth={true}>
+                    <AdminLayout>
+                      <AdminDashboard />
+                    </AdminLayout>
+                  </AuthPage>
+                } />
+                <Route path="/admin/products" element={
+                  <AuthPage requireAuth={true}>
+                    <AdminLayout>
+                      <AdminProducts />
+                    </AdminLayout>
+                  </AuthPage>
+                } />
+                <Route path="/admin/orders" element={
+                  <AuthPage requireAuth={true}>
+                    <AdminLayout>
+                      <AdminOrders />
+                    </AdminLayout>
+                  </AuthPage>
+                } />
+                <Route path="/admin/users" element={
+                  <AuthPage requireAuth={true}>
+                    <AdminLayout>
+                      <AdminUsers />
+                    </AdminLayout>
+                  </AuthPage>
+                } />
+                <Route path="/admin/scanner" element={
+                  <AuthPage requireAuth={true}>
+                    <AdminLayout>
+                      <AdminScanner />
+                    </AdminLayout>
+                  </AuthPage>
+                } />
+                <Route path="/admin/barcode-scanner" element={
+                  <AuthPage requireAuth={true}>
+                    <AdminLayout>
+                      <AdminBarcodeScanner />
+                    </AdminLayout>
+                  </AuthPage>
+                } />
+                <Route path="/admin/barcodes" element={
+                  <AuthPage requireAuth={true}>
+                    <AdminLayout>
+                      <AdminBarcodes />
+                    </AdminLayout>
+                  </AuthPage>
+                } />
+                <Route path="/admin/gift-cards" element={
+                  <AuthPage requireAuth={true}>
+                    <AdminLayout>
+                      <AdminGiftCards />
+                    </AdminLayout>
+                  </AuthPage>
+                } />
+                <Route path="/admin/settings" element={
+                  <AuthPage requireAuth={true}>
+                    <AdminLayout>
+                      <AdminSettings />
+                    </AdminLayout>
+                  </AuthPage>
+                } />
+                 <Route path="/admin/ziina" element={
+                  <AuthPage requireAuth={true}>
+                    <AdminLayout>
+                      <AdminZiina />
+                    </AdminLayout>
+                  </AuthPage>
+                } />
+              </Routes>
+              <Toaster />
+            </Router>
+          </CartProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
 

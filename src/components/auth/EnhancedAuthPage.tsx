@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, UserPlus, LogIn } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import GoogleSignIn from "./GoogleSignIn";
+import { useNavigate } from "react-router-dom";
 
 const EnhancedAuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -22,6 +23,7 @@ const EnhancedAuthPage = () => {
     lastName: ''
   });
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -36,19 +38,22 @@ const EnhancedAuthPage = () => {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email: formData.email,
           password: formData.password,
         });
 
         if (error) throw error;
 
-        toast({
-          title: "Welcome back!",
-          description: "You have been successfully logged in.",
-        });
+        if (data.user) {
+          toast({
+            title: "Welcome back!",
+            description: "You have been successfully logged in.",
+          });
+          navigate('/dashboard');
+        }
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
           options: {
@@ -61,15 +66,18 @@ const EnhancedAuthPage = () => {
 
         if (error) throw error;
 
-        toast({
-          title: "Account created!",
-          description: "Please check your email to verify your account.",
-        });
+        if (data.user) {
+          toast({
+            title: "Account created!",
+            description: "Please check your email to verify your account.",
+          });
+        }
       }
     } catch (error: any) {
+      console.error('Auth error:', error);
       toast({
         title: isLogin ? "Login failed" : "Sign up failed",
-        description: error.message,
+        description: error.message || "An error occurred during authentication",
         variant: "destructive",
       });
     } finally {
@@ -78,11 +86,18 @@ const EnhancedAuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900 flex items-center justify-center p-4">
       <Container>
         <div className="max-w-md mx-auto">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold">
+            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mb-4">
+              {isLogin ? (
+                <LogIn className="h-8 w-8 text-white" />
+              ) : (
+                <UserPlus className="h-8 w-8 text-white" />
+              )}
+            </div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
               {isLogin ? 'Welcome Back' : 'Create Account'}
             </h1>
             <p className="text-muted-foreground mt-2">
@@ -93,7 +108,7 @@ const EnhancedAuthPage = () => {
             </p>
           </div>
 
-          <Card>
+          <Card className="shadow-xl border-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
             <CardHeader>
               <CardTitle className="text-center">
                 {isLogin ? 'Sign In' : 'Sign Up'}
@@ -186,7 +201,7 @@ const EnhancedAuthPage = () => {
 
                 <Button 
                   type="submit" 
-                  className="w-full" 
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700" 
                   disabled={isLoading}
                 >
                   {isLoading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Create Account')}

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, CreditCard } from "lucide-react";
 
 interface PayPalPaymentProps {
   amount: number;
@@ -34,6 +34,7 @@ const PayPalPayment: React.FC<PayPalPaymentProps> = ({
         return;
       }
 
+      // Use client ID from .env.local
       const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
       if (!clientId) {
         onError('PayPal client ID not configured');
@@ -41,7 +42,7 @@ const PayPalPayment: React.FC<PayPalPaymentProps> = ({
       }
 
       const script = document.createElement('script');
-      script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD`;
+      script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD&intent=capture`;
       script.onload = () => initPayPal();
       script.onerror = () => {
         setIsLoading(false);
@@ -51,8 +52,8 @@ const PayPalPayment: React.FC<PayPalPaymentProps> = ({
     };
 
     const initPayPal = () => {
-      if (!window.paypal) {
-        onError('PayPal SDK not loaded');
+      if (!window.paypal || !paypalRef.current) {
+        onError('PayPal SDK not loaded properly');
         return;
       }
 
@@ -61,22 +62,28 @@ const PayPalPayment: React.FC<PayPalPaymentProps> = ({
           return actions.order.create({
             purchase_units: [{
               amount: {
-                value: amount.toFixed(2)
+                value: amount.toFixed(2),
+                currency_code: 'USD'
               },
-              description: `Order for ${orderData.email}`
-            }]
+              description: `Order for ${orderData.email || 'Customer'}`
+            }],
+            intent: 'CAPTURE'
           });
         },
         onApprove: async (data: any, actions: any) => {
           setIsProcessing(true);
           try {
             const details = await actions.order.capture();
+            console.log('PayPal payment captured:', details);
+            
             toast({
               title: "Payment Successful",
               description: `PayPal payment of $${amount.toFixed(2)} completed`,
             });
+            
             onSuccess(details.id);
           } catch (error: any) {
+            console.error('PayPal capture error:', error);
             onError('Payment capture failed');
           } finally {
             setIsProcessing(false);
@@ -97,7 +104,8 @@ const PayPalPayment: React.FC<PayPalPaymentProps> = ({
           layout: 'vertical',
           color: 'blue',
           shape: 'rect',
-          label: 'paypal'
+          label: 'paypal',
+          height: 45
         }
       }).render(paypalRef.current);
       
@@ -109,27 +117,28 @@ const PayPalPayment: React.FC<PayPalPaymentProps> = ({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-6 w-6 animate-spin mr-2" />
-        <span>Loading PayPal...</span>
+      <div className="flex items-center justify-center p-8 bg-blue-50 dark:bg-blue-950 rounded-lg">
+        <Loader2 className="h-6 w-6 animate-spin mr-2 text-blue-600" />
+        <span className="text-blue-700 dark:text-blue-300">Loading PayPal...</span>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="text-center p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
-        <p className="text-sm text-blue-700 dark:text-blue-300">
-          Amount: ${amount.toFixed(2)} USD
+      <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-lg border border-blue-200 dark:border-blue-800">
+        <CreditCard className="h-6 w-6 mx-auto mb-2 text-blue-600" />
+        <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
+          Secure Payment: ${amount.toFixed(2)} USD
         </p>
       </div>
       
-      <div ref={paypalRef}></div>
+      <div ref={paypalRef} className="min-h-[50px]"></div>
       
       {isProcessing && (
-        <div className="text-center p-4">
-          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">Processing payment...</p>
+        <div className="text-center p-4 bg-green-50 dark:bg-green-950 rounded-lg">
+          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-green-600" />
+          <p className="text-sm text-green-700 dark:text-green-300">Processing your payment...</p>
         </div>
       )}
     </div>

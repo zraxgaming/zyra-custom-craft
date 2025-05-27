@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Smartphone, Loader2 } from "lucide-react";
+import { Smartphone, Loader2, CreditCard } from "lucide-react";
 
 interface ZiinaPaymentProps {
   amount: number;
@@ -22,7 +22,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [ziinaConfig, setZiinaConfig] = useState<any>(null);
+  const [ziinaApiKey, setZiinaApiKey] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -33,19 +33,15 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
     try {
       const { data, error } = await supabase
         .from('site_config')
-        .select('*')
-        .in('key', ['ziina_api_key', 'ziina_merchant_id', 'ziina_base_url']);
+        .select('value')
+        .eq('key', 'ziina_api_key')
+        .single();
 
       if (error) throw error;
-
-      const config = data.reduce((acc, item) => {
-        acc[item.key] = item.value;
-        return acc;
-      }, {} as any);
-
-      setZiinaConfig(config);
+      setZiinaApiKey(data?.value);
     } catch (error) {
       console.error('Error fetching Ziina config:', error);
+      onError('Ziina payment not configured');
     }
   };
 
@@ -59,7 +55,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       return;
     }
 
-    if (!ziinaConfig?.ziina_api_key) {
+    if (!ziinaApiKey) {
       onError('Ziina API not configured');
       return;
     }
@@ -67,46 +63,62 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
     setIsProcessing(true);
     
     try {
-      const aedAmount = amount * 3.67;
+      const aedAmount = amount * 3.67; // USD to AED conversion
       
-      const response = await fetch(`${ziinaConfig.ziina_base_url || 'https://api.ziina.com'}/v1/payment_intents`, {
+      // Create payment intent with Ziina API
+      const paymentPayload = {
+        amount: Math.round(aedAmount * 100), // Amount in fils (AED cents)
+        currency: 'AED',
+        customer: {
+          phone: phoneNumber,
+          email: orderData.email,
+          name: `${orderData.firstName} ${orderData.lastName}`
+        },
+        description: `Order payment for ${orderData.email}`,
+        success_url: `${window.location.origin}/order-success`,
+        cancel_url: `${window.location.origin}/checkout`,
+        metadata: {
+          order_id: `order_${Date.now()}`,
+          customer_id: orderData.user_id
+        }
+      };
+
+      console.log('Creating Ziina payment with payload:', paymentPayload);
+
+      const response = await fetch('https://api.ziina.com/v1/payment_intents', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${ziinaConfig.ziina_api_key}`,
+          'Authorization': `Bearer ${ziinaApiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          amount: Math.round(aedAmount * 100),
-          currency: 'AED',
-          customer: {
-            phone: phoneNumber,
-            email: orderData.email,
-            name: `${orderData.firstName} ${orderData.lastName}`
-          },
-          description: `Order payment for ${orderData.email}`,
-          success_url: `${window.location.origin}/order-success`,
-          cancel_url: `${window.location.origin}/checkout`
-        })
+        body: JSON.stringify(paymentPayload)
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create Ziina payment');
+        const errorData = await response.text();
+        console.error('Ziina API error response:', errorData);
+        throw new Error(`Ziina API error: ${response.status}`);
       }
 
       const paymentData = await response.json();
+      console.log('Ziina payment created:', paymentData);
       
-      if (paymentData.url) {
-        window.location.href = paymentData.url;
-      } else {
+      if (paymentData.checkout_url || paymentData.payment_url) {
+        // Redirect to Ziina checkout
+        window.location.href = paymentData.checkout_url || paymentData.payment_url;
+      } else if (paymentData.status === 'succeeded') {
+        // Payment completed immediately
         toast({
           title: "Payment Successful",
           description: `Ziina payment of AED ${aedAmount.toFixed(2)} completed`,
         });
-        onSuccess(`ziina_${Date.now()}`);
+        onSuccess(paymentData.id || `ziina_${Date.now()}`);
+      } else {
+        throw new Error('Invalid payment response from Ziina');
       }
     } catch (error: any) {
       console.error('Ziina payment error:', error);
-      onError(error.message || 'Ziina payment failed');
+      onError(error.message || 'Ziina payment failed. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -116,8 +128,9 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="text-center p-4 bg-purple-50 dark:bg-purple-950 rounded-lg">
-        <p className="text-sm text-purple-700 dark:text-purple-300">
+      <div className="text-center p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 rounded-lg border border-purple-200 dark:border-purple-800">
+        <CreditCard className="h-6 w-6 mx-auto mb-2 text-purple-600" />
+        <p className="text-sm font-medium text-purple-700 dark:text-purple-300">
           Amount: AED {aedAmount.toFixed(2)} (≈ ${amount.toFixed(2)} USD)
         </p>
       </div>
@@ -136,8 +149,8 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       
       <Button
         onClick={handleZiinaPayment}
-        disabled={isProcessing || !phoneNumber}
-        className="w-full bg-purple-600 hover:bg-purple-700"
+        disabled={isProcessing || !phoneNumber || !ziinaApiKey}
+        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
         size="lg"
       >
         {isProcessing ? (
