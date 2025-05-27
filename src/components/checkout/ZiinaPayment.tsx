@@ -67,7 +67,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, orderData, onSucces
       const successUrl = `${baseUrl}/order-success`;
       const cancelUrl = `${baseUrl}/order-failed`;
       
-      // Create payment intent via Ziina API
+      // Create payment intent via Ziina API using their documentation
       const response = await fetch('https://api.ziina.com/v1/payment_intents', {
         method: 'POST',
         headers: {
@@ -116,7 +116,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, orderData, onSucces
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center border rounded-xl p-6 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 hover:shadow-lg transition-all duration-500 hover-3d-lift border-purple-200">
+      <div className="flex items-center border rounded-xl p-6 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 hover:shadow-lg transition-all duration-500 hover-3d-lift border-purple-200 dark:from-blue-950 dark:via-purple-950 dark:to-pink-950 dark:border-purple-800">
         <div className="flex items-center flex-1">
           <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl mr-4 flex items-center justify-center text-white font-bold animate-float-gentle shadow-lg">
             <Smartphone className="h-7 w-7" />
@@ -169,7 +169,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, orderData, onSucces
       </Button>
       
       <div className="text-xs text-center space-y-3 animate-fade-in">
-        <div className="flex items-center justify-center gap-3 text-muted-foreground bg-gradient-to-r from-purple-50 to-blue-50 p-4 rounded-xl border border-purple-100">
+        <div className="flex items-center justify-center gap-3 text-muted-foreground bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950 dark:to-blue-950 p-4 rounded-xl border border-purple-100 dark:border-purple-800">
           <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
           <span className="font-medium">🔒 Secure payment processing via Ziina Payment Gateway</span>
         </div>

@@ -15,11 +15,10 @@ interface Review {
   comment: string;
   verified_purchase: boolean;
   created_at: string;
-  products?: {
-    name: string;
-    images: string[];
-  };
+  product_id: string;
   user_id: string;
+  product_name?: string;
+  product_image?: string;
 }
 
 const AdminReviews = () => {
@@ -33,19 +32,31 @@ const AdminReviews = () => {
 
   const fetchReviews = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: reviewsData, error: reviewsError } = await supabase
         .from('reviews')
-        .select(`
-          *,
-          products (
-            name,
-            images
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setReviews(data || []);
+      if (reviewsError) throw reviewsError;
+
+      // Fetch product details for each review
+      const reviewsWithProducts = await Promise.all(
+        (reviewsData || []).map(async (review) => {
+          const { data: productData } = await supabase
+            .from('products')
+            .select('name, images')
+            .eq('id', review.product_id)
+            .single();
+
+          return {
+            ...review,
+            product_name: productData?.name || 'Unknown Product',
+            product_image: productData?.images?.[0] || null
+          };
+        })
+      );
+
+      setReviews(reviewsWithProducts);
     } catch (error) {
       console.error('Error fetching reviews:', error);
       toast({
@@ -171,21 +182,19 @@ const AdminReviews = () => {
                         <p className="text-muted-foreground">{review.comment}</p>
                       )}
 
-                      {review.products && (
-                        <div className="flex items-center space-x-3 pt-2 border-t">
-                          {review.products.images && review.products.images.length > 0 && (
-                            <img
-                              src={review.products.images[0] as string}
-                              alt={review.products.name}
-                              className="w-12 h-12 object-cover rounded"
-                            />
-                          )}
-                          <div>
-                            <p className="font-medium">{review.products.name}</p>
-                            <p className="text-sm text-muted-foreground">Product Review</p>
-                          </div>
+                      <div className="flex items-center space-x-3 pt-2 border-t">
+                        {review.product_image && (
+                          <img
+                            src={review.product_image}
+                            alt={review.product_name}
+                            className="w-12 h-12 object-cover rounded"
+                          />
+                        )}
+                        <div>
+                          <p className="font-medium">{review.product_name}</p>
+                          <p className="text-sm text-muted-foreground">Product Review</p>
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
