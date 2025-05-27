@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, EyeOff, Mail, Lock, User, Sparkles } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import GoogleSignIn from "./GoogleSignIn";
 
@@ -78,14 +78,11 @@ const EnhancedAuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background floating-dots-bg mesh-gradient-bg flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Container>
         <div className="max-w-md mx-auto">
-          <div className="text-center mb-8 animate-fade-in">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary/20 via-purple-500/20 to-pink-500/20 rounded-full mb-4 animate-pulse">
-              <Sparkles className="h-8 w-8 text-primary" />
-            </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold">
               {isLogin ? 'Welcome Back' : 'Create Account'}
             </h1>
             <p className="text-muted-foreground mt-2">
@@ -96,7 +93,7 @@ const EnhancedAuthPage = () => {
             </p>
           </div>
 
-          <Card className="animate-scale-in hover:shadow-2xl transition-all duration-300">
+          <Card>
             <CardHeader>
               <CardTitle className="text-center">
                 {isLogin ? 'Sign In' : 'Sign Up'}
@@ -116,7 +113,7 @@ const EnhancedAuthPage = () => {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 {!isLogin && (
-                  <div className="grid grid-cols-2 gap-4 animate-slide-in-up">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="firstName">First Name</Label>
                       <div className="relative">
@@ -148,7 +145,7 @@ const EnhancedAuthPage = () => {
                   </div>
                 )}
 
-                <div className="animate-slide-in-up" style={{animationDelay: '0.1s'}}>
+                <div>
                   <Label htmlFor="email">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -164,7 +161,7 @@ const EnhancedAuthPage = () => {
                   </div>
                 </div>
 
-                <div className="animate-slide-in-up" style={{animationDelay: '0.2s'}}>
+                <div>
                   <Label htmlFor="password">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -189,15 +186,14 @@ const EnhancedAuthPage = () => {
 
                 <Button 
                   type="submit" 
-                  className="w-full animate-slide-in-up hover:scale-105 transition-transform" 
-                  style={{animationDelay: '0.3s'}}
+                  className="w-full" 
                   disabled={isLoading}
                 >
                   {isLoading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Create Account')}
                 </Button>
               </form>
 
-              <div className="text-center animate-fade-in" style={{animationDelay: '0.4s'}}>
+              <div className="text-center">
                 <button
                   type="button"
                   onClick={() => setIsLogin(!isLogin)}

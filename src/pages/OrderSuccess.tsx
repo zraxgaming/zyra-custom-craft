@@ -75,7 +75,6 @@ const OrderSuccess = () => {
       <div className="min-h-screen bg-background py-12">
         <Container>
           <div className="max-w-4xl mx-auto">
-            {/* Success Header */}
             <div className="text-center mb-8">
               <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-4">
                 <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
@@ -88,7 +87,6 @@ const OrderSuccess = () => {
               </p>
             </div>
 
-            {/* Order Details */}
             {order && (
               <div className="space-y-6">
                 <Card>
@@ -206,7 +204,6 @@ const OrderSuccess = () => {
               </div>
             )}
 
-            {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
               <Button
                 onClick={() => navigate('/dashboard')}

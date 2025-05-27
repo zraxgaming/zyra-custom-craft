@@ -34,8 +34,14 @@ const PayPalPayment: React.FC<PayPalPaymentProps> = ({
         return;
       }
 
+      const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+      if (!clientId) {
+        onError('PayPal client ID not configured');
+        return;
+      }
+
       const script = document.createElement('script');
-      script.src = 'https://www.paypal.com/sdk/js?client-id=AeHaUBIcr2JHbGrEjhw8QNjQi7h7dJwGmLVL9NH-VcEWPJA1x9Zqzq1p8QmGqR3dJL2K0FiHnXz_lQaR&currency=USD';
+      script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD`;
       script.onload = () => initPayPal();
       script.onerror = () => {
         setIsLoading(false);

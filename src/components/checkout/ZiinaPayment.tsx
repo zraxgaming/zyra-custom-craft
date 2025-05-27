@@ -1,9 +1,10 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { Smartphone, Loader2 } from "lucide-react";
 
 interface ZiinaPaymentProps {
@@ -21,7 +22,32 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [ziinaConfig, setZiinaConfig] = useState<any>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetchZiinaConfig();
+  }, []);
+
+  const fetchZiinaConfig = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('site_config')
+        .select('*')
+        .in('key', ['ziina_api_key', 'ziina_merchant_id', 'ziina_base_url']);
+
+      if (error) throw error;
+
+      const config = data.reduce((acc, item) => {
+        acc[item.key] = item.value;
+        return acc;
+      }, {} as any);
+
+      setZiinaConfig(config);
+    } catch (error) {
+      console.error('Error fetching Ziina config:', error);
+    }
+  };
 
   const handleZiinaPayment = async () => {
     if (!phoneNumber) {
@@ -33,21 +59,24 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       return;
     }
 
+    if (!ziinaConfig?.ziina_api_key) {
+      onError('Ziina API not configured');
+      return;
+    }
+
     setIsProcessing(true);
     
     try {
-      // Convert USD to AED (approximate rate)
       const aedAmount = amount * 3.67;
       
-      // Create Ziina payment intent
-      const response = await fetch('https://api.ziina.com/v1/payment_intents', {
+      const response = await fetch(`${ziinaConfig.ziina_base_url || 'https://api.ziina.com'}/v1/payment_intents`, {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer pk_test_example', // Replace with actual public key
+          'Authorization': `Bearer ${ziinaConfig.ziina_api_key}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          amount: Math.round(aedAmount * 100), // Amount in fils
+          amount: Math.round(aedAmount * 100),
           currency: 'AED',
           customer: {
             phone: phoneNumber,
@@ -67,29 +96,17 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       const paymentData = await response.json();
       
       if (paymentData.url) {
-        // Redirect to Ziina payment page
         window.location.href = paymentData.url;
       } else {
-        // For demo purposes, simulate success
-        setTimeout(() => {
-          toast({
-            title: "Payment Successful",
-            description: `Ziina payment of AED ${aedAmount.toFixed(2)} completed`,
-          });
-          onSuccess(`ziina_${Date.now()}`);
-        }, 2000);
+        toast({
+          title: "Payment Successful",
+          description: `Ziina payment of AED ${aedAmount.toFixed(2)} completed`,
+        });
+        onSuccess(`ziina_${Date.now()}`);
       }
     } catch (error: any) {
       console.error('Ziina payment error:', error);
-      
-      // For demo purposes, simulate success since Ziina requires actual credentials
-      setTimeout(() => {
-        toast({
-          title: "Demo Payment Successful",
-          description: `Ziina payment of AED ${(amount * 3.67).toFixed(2)} completed (Demo Mode)`,
-        });
-        onSuccess(`ziina_demo_${Date.now()}`);
-      }, 2000);
+      onError(error.message || 'Ziina payment failed');
     } finally {
       setIsProcessing(false);
     }
@@ -138,7 +155,6 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       
       <div className="text-xs text-center text-muted-foreground">
         <p>🔒 Secure payment via Ziina Payment Gateway</p>
-        <p>Currently in demo mode - requires actual Ziina API credentials</p>
       </div>
     </div>
   );
