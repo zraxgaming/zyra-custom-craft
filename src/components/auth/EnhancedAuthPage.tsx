@@ -90,7 +90,7 @@ const EnhancedAuthPage = () => {
       <Container>
         <div className="max-w-md mx-auto">
           <div className="text-center mb-8">
-            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mb-4">
+            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mb-4 shadow-xl">
               {isLogin ? (
                 <LogIn className="h-8 w-8 text-white" />
               ) : (
@@ -108,13 +108,13 @@ const EnhancedAuthPage = () => {
             </p>
           </div>
 
-          <Card className="shadow-xl border-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-center">
+          <Card className="shadow-2xl border-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm">
+            <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50 rounded-t-lg">
+              <CardTitle className="text-center text-foreground">
                 {isLogin ? 'Sign In' : 'Sign Up'}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="p-6 space-y-6">
               <GoogleSignIn />
               
               <div className="relative">
@@ -130,7 +130,7 @@ const EnhancedAuthPage = () => {
                 {!isLogin && (
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="firstName">First Name</Label>
+                      <Label htmlFor="firstName" className="text-foreground">First Name</Label>
                       <div className="relative">
                         <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -138,13 +138,13 @@ const EnhancedAuthPage = () => {
                           name="firstName"
                           value={formData.firstName}
                           onChange={handleInputChange}
-                          className="pl-10"
+                          className="pl-10 bg-background/50 border-border/50 focus:border-primary transition-colors"
                           required={!isLogin}
                         />
                       </div>
                     </div>
                     <div>
-                      <Label htmlFor="lastName">Last Name</Label>
+                      <Label htmlFor="lastName" className="text-foreground">Last Name</Label>
                       <div className="relative">
                         <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -152,7 +152,7 @@ const EnhancedAuthPage = () => {
                           name="lastName"
                           value={formData.lastName}
                           onChange={handleInputChange}
-                          className="pl-10"
+                          className="pl-10 bg-background/50 border-border/50 focus:border-primary transition-colors"
                           required={!isLogin}
                         />
                       </div>
@@ -161,7 +161,7 @@ const EnhancedAuthPage = () => {
                 )}
 
                 <div>
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-foreground">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -170,14 +170,14 @@ const EnhancedAuthPage = () => {
                       type="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      className="pl-10"
+                      className="pl-10 bg-background/50 border-border/50 focus:border-primary transition-colors"
                       required
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-foreground">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -186,7 +186,7 @@ const EnhancedAuthPage = () => {
                       type={showPassword ? "text" : "password"}
                       value={formData.password}
                       onChange={handleInputChange}
-                      className="pl-10 pr-10"
+                      className="pl-10 pr-10 bg-background/50 border-border/50 focus:border-primary transition-colors"
                       required
                     />
                     <button
@@ -201,7 +201,7 @@ const EnhancedAuthPage = () => {
 
                 <Button 
                   type="submit" 
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700" 
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all duration-300" 
                   disabled={isLoading}
                 >
                   {isLoading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Create Account')}

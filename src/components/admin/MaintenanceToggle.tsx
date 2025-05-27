@@ -22,30 +22,23 @@ const MaintenanceToggle = () => {
 
   const fetchMaintenanceStatus = async () => {
     try {
-      // Use raw SQL query since maintenance_mode table might not be in types yet
       const { data, error } = await supabase
-        .rpc('get_maintenance_status');
+        .from('maintenance_mode')
+        .select('*')
+        .single();
 
-      if (error) {
-        // Fallback to direct query if RPC doesn't exist
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('maintenance_mode' as any)
-          .select('*')
-          .single();
-        
-        if (fallbackError) throw fallbackError;
-        
-        if (fallbackData) {
-          setIsActive(fallbackData.is_active);
-          setMessage(fallbackData.message || '');
-        }
-      } else if (data && data.length > 0) {
-        setIsActive(data[0].is_active);
-        setMessage(data[0].message || '');
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching maintenance status:', error);
+        // Set defaults if table doesn't exist yet
+        setIsActive(false);
+        setMessage('We are currently performing maintenance. Some features may be temporarily unavailable.');
+      } else if (data) {
+        setIsActive(data.is_active || false);
+        setMessage(data.message || 'We are currently performing maintenance. Some features may be temporarily unavailable.');
       }
     } catch (error) {
       console.error('Error fetching maintenance status:', error);
-      // Set defaults if table doesn't exist yet
+      // Set defaults if there's an error
       setIsActive(false);
       setMessage('We are currently performing maintenance. Some features may be temporarily unavailable.');
     } finally {
@@ -56,11 +49,10 @@ const MaintenanceToggle = () => {
   const updateMaintenanceStatus = async () => {
     setSaving(true);
     try {
-      // Try to update existing record or insert new one
       const { error } = await supabase
-        .from('maintenance_mode' as any)
+        .from('maintenance_mode')
         .upsert({
-          id: '00000000-0000-0000-0000-000000000001', // Fixed UUID
+          id: '00000000-0000-0000-0000-000000000001',
           is_active: isActive,
           message: message || 'We are currently performing maintenance. Some features may be temporarily unavailable.',
           updated_at: new Date().toISOString()
@@ -87,7 +79,7 @@ const MaintenanceToggle = () => {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="bg-card/80 backdrop-blur-sm border-border/50">
         <CardContent className="p-6 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
         </CardContent>
@@ -96,16 +88,18 @@ const MaintenanceToggle = () => {
   }
 
   return (
-    <Card className="animate-scale-in">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <AlertTriangle className="h-5 w-5" />
+    <Card className="animate-scale-in bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
+      <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50 rounded-t-lg">
+        <CardTitle className="flex items-center gap-2 text-foreground">
+          <AlertTriangle className="h-5 w-5 text-orange-500" />
           Maintenance Mode
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="maintenance-toggle">Enable Maintenance Mode</Label>
+      <CardContent className="p-6 space-y-6">
+        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+          <Label htmlFor="maintenance-toggle" className="text-foreground font-medium">
+            Enable Maintenance Mode
+          </Label>
           <Switch
             id="maintenance-toggle"
             checked={isActive}
@@ -113,21 +107,23 @@ const MaintenanceToggle = () => {
           />
         </div>
 
-        <div>
-          <Label htmlFor="maintenance-message">Maintenance Message</Label>
+        <div className="space-y-2">
+          <Label htmlFor="maintenance-message" className="text-foreground font-medium">
+            Maintenance Message
+          </Label>
           <Input
             id="maintenance-message"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Enter maintenance message..."
-            className="mt-1"
+            className="bg-background/50 border-border/50 focus:border-primary transition-colors"
           />
         </div>
 
         <Button
           onClick={updateMaintenanceStatus}
           disabled={saving}
-          className="w-full"
+          className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all duration-300"
         >
           {saving ? (
             <>

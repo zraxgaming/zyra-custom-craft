@@ -40,15 +40,11 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       if (error && error.code !== 'PGRST116') throw error;
       
       if (data?.value) {
-        // Handle both string and JSON values
-        const apiKey = typeof data.value === 'string' ? data.value : 
-                      typeof data.value === 'object' && data.value !== null ? 
-                      (data.value as any).toString() : null;
-        setZiinaApiKey(apiKey);
+        setZiinaApiKey(data.value as string);
       }
     } catch (error) {
       console.error('Error fetching Ziina config:', error);
-      onError('Ziina payment not configured');
+      onError('Ziina payment not configured. Please contact support.');
     }
   };
 
@@ -63,7 +59,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
     }
 
     if (!ziinaApiKey) {
-      onError('Ziina API not configured');
+      onError('Ziina API not configured. Please contact support.');
       return;
     }
 
@@ -72,9 +68,14 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
     try {
       const aedAmount = amount * 3.67; // USD to AED conversion
       
-      // Use Supabase Edge Function for Ziina payment
-      const { data, error } = await supabase.functions.invoke('ziina-payment', {
-        body: {
+      // Direct API call to Ziina without edge functions
+      const response = await fetch('https://api.ziina.com/v1/payments', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ziinaApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           amount: Math.round(aedAmount * 100), // Amount in fils
           currency: 'AED',
           customer_phone: phoneNumber,
@@ -83,21 +84,25 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
           description: `Order payment for ${orderData.email}`,
           success_url: `${window.location.origin}/order-success`,
           cancel_url: `${window.location.origin}/checkout`,
-          order_data: orderData
-        }
+          reference: `order_${Date.now()}`,
+        })
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error(`Ziina API error: ${response.status}`);
+      }
 
-      if (data?.payment_url || data?.checkout_url) {
+      const ziinaData = await response.json();
+
+      if (ziinaData.payment_url || ziinaData.checkout_url) {
         // Redirect to Ziina checkout
-        window.location.href = data.payment_url || data.checkout_url;
-      } else if (data?.status === 'succeeded') {
+        window.location.href = ziinaData.payment_url || ziinaData.checkout_url;
+      } else if (ziinaData.status === 'succeeded') {
         toast({
           title: "Payment Successful",
           description: `Ziina payment of AED ${aedAmount.toFixed(2)} completed`,
         });
-        onSuccess(data.id || `ziina_${Date.now()}`);
+        onSuccess(ziinaData.id || `ziina_${Date.now()}`);
       } else {
         throw new Error('Invalid payment response from Ziina');
       }
@@ -113,29 +118,29 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="text-center p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 rounded-lg border border-purple-200 dark:border-purple-800">
-        <CreditCard className="h-6 w-6 mx-auto mb-2 text-purple-600" />
+      <div className="text-center p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-lg border border-purple-200 dark:border-purple-800/50">
+        <CreditCard className="h-6 w-6 mx-auto mb-2 text-purple-600 dark:text-purple-400" />
         <p className="text-sm font-medium text-purple-700 dark:text-purple-300">
           Amount: AED {aedAmount.toFixed(2)} (≈ ${amount.toFixed(2)} USD)
         </p>
       </div>
       
       <div>
-        <Label htmlFor="phone">UAE Phone Number *</Label>
+        <Label htmlFor="phone" className="text-foreground">UAE Phone Number *</Label>
         <Input
           id="phone"
           type="tel"
           placeholder="+971 50 123 4567"
           value={phoneNumber}
           onChange={(e) => setPhoneNumber(e.target.value)}
-          className="mt-1"
+          className="mt-1 bg-background/50 border-border/50 focus:border-primary transition-colors"
         />
       </div>
       
       <Button
         onClick={handleZiinaPayment}
         disabled={isProcessing || !phoneNumber || !ziinaApiKey}
-        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all duration-300"
         size="lg"
       >
         {isProcessing ? (
