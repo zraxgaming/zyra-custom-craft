@@ -6,7 +6,7 @@ import { useCart } from "@/components/cart/CartProvider";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Container } from "@/components/ui/container";
-import EnhancedCheckoutForm from "@/components/checkout/EnhancedCheckoutForm";
+import SimpleCheckoutForm from "@/components/checkout/SimpleCheckoutForm";
 
 const Checkout = () => {
   const { user } = useAuth();
@@ -35,18 +35,20 @@ const Checkout = () => {
   }
 
   return (
-    <>
+    <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="min-h-screen bg-background py-12 floating-dots-bg mesh-gradient-bg">
+      <div className="py-12 animate-fade-in">
         <Container>
-          <div className="text-center mb-8 animate-fade-in">
-            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary via-purple-500 to-primary bg-clip-text text-transparent">
+          <div className="text-center mb-8 animate-slide-in-up">
+            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary via-purple-500 to-primary bg-clip-text text-transparent animate-text-shimmer">
               Checkout
             </h1>
-            <p className="text-muted-foreground text-lg">Review your order and complete your purchase</p>
+            <p className="text-muted-foreground text-lg animate-fade-in" style={{animationDelay: '200ms'}}>
+              Review your order and complete your purchase
+            </p>
           </div>
           
-          <EnhancedCheckoutForm 
+          <SimpleCheckoutForm 
             items={items}
             subtotal={subtotal}
             onPaymentSuccess={handlePaymentSuccess}
@@ -54,7 +56,7 @@ const Checkout = () => {
         </Container>
       </div>
       <Footer />
-    </>
+    </div>
   );
 };
 

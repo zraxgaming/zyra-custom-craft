@@ -66,28 +66,29 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
     setIsProcessing(true);
     
     try {
-      const aedAmount = amount * 3.67; // USD to AED conversion
+      const aedAmount = Math.round(amount * 3.67 * 100); // Convert to fils
       
-      // Direct API call to Ziina without edge functions
-      const response = await fetch('https://api.ziina.com/v1/payments', {
+      const options = {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${ziinaApiKey}`,
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          amount: Math.round(aedAmount * 100), // Amount in fils
-          currency: 'AED',
-          customer_phone: phoneNumber,
-          customer_email: orderData.email,
-          customer_name: `${orderData.firstName} ${orderData.lastName}`,
-          description: `Order payment for ${orderData.email}`,
+          amount: aedAmount,
+          currency_code: "AED",
+          message: `Order payment for ${orderData.email}`,
           success_url: `${window.location.origin}/order-success`,
           cancel_url: `${window.location.origin}/checkout`,
-          reference: `order_${Date.now()}`,
+          failure_url: `${window.location.origin}/checkout`,
+          test: false,
+          transaction_source: "directApi",
+          allow_tips: false
         })
-      });
+      };
 
+      const response = await fetch('https://api-v2.ziina.com/api/payment_intent', options);
+      
       if (!response.ok) {
         throw new Error(`Ziina API error: ${response.status}`);
       }
@@ -95,14 +96,15 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       const ziinaData = await response.json();
 
       if (ziinaData.payment_url || ziinaData.checkout_url) {
+        // Store payment info for verification
+        localStorage.setItem('pending_ziina_payment', JSON.stringify({
+          payment_intent_id: ziinaData.id,
+          amount: amount,
+          order_data: orderData
+        }));
+        
         // Redirect to Ziina checkout
         window.location.href = ziinaData.payment_url || ziinaData.checkout_url;
-      } else if (ziinaData.status === 'succeeded') {
-        toast({
-          title: "Payment Successful",
-          description: `Ziina payment of AED ${aedAmount.toFixed(2)} completed`,
-        });
-        onSuccess(ziinaData.id || `ziina_${Date.now()}`);
       } else {
         throw new Error('Invalid payment response from Ziina');
       }
@@ -117,46 +119,46 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
   const aedAmount = amount * 3.67;
 
   return (
-    <div className="space-y-4">
-      <div className="text-center p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-lg border border-purple-200 dark:border-purple-800/50">
-        <CreditCard className="h-6 w-6 mx-auto mb-2 text-purple-600 dark:text-purple-400" />
-        <p className="text-sm font-medium text-purple-700 dark:text-purple-300">
+    <div className="space-y-6 animate-fade-in">
+      <div className="text-center p-6 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-xl border border-purple-200 dark:border-purple-800/50 animate-scale-in">
+        <CreditCard className="h-8 w-8 mx-auto mb-3 text-purple-600 dark:text-purple-400 animate-float" />
+        <p className="text-lg font-semibold text-purple-700 dark:text-purple-300">
           Amount: AED {aedAmount.toFixed(2)} (≈ ${amount.toFixed(2)} USD)
         </p>
       </div>
       
-      <div>
-        <Label htmlFor="phone" className="text-foreground">UAE Phone Number *</Label>
+      <div className="animate-slide-in-up">
+        <Label htmlFor="phone" className="text-base font-medium text-foreground">UAE Phone Number *</Label>
         <Input
           id="phone"
           type="tel"
           placeholder="+971 50 123 4567"
           value={phoneNumber}
           onChange={(e) => setPhoneNumber(e.target.value)}
-          className="mt-1 bg-background/50 border-border/50 focus:border-primary transition-colors"
+          className="mt-2 bg-background/50 border-border/50 focus:border-primary transition-all duration-300 hover:border-primary/50"
         />
       </div>
       
       <Button
         onClick={handleZiinaPayment}
         disabled={isProcessing || !phoneNumber || !ziinaApiKey}
-        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all duration-300"
+        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all duration-300 py-6 text-lg font-semibold animate-pulse-gentle"
         size="lg"
       >
         {isProcessing ? (
-          <>
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-5 w-5 animate-spin" />
             Processing Ziina Payment...
-          </>
+          </div>
         ) : (
-          <>
-            <Smartphone className="h-4 w-4 mr-2" />
+          <div className="flex items-center gap-3">
+            <Smartphone className="h-5 w-5" />
             Pay AED {aedAmount.toFixed(2)} with Ziina
-          </>
+          </div>
         )}
       </Button>
       
-      <div className="text-xs text-center text-muted-foreground">
+      <div className="text-xs text-center text-muted-foreground animate-fade-in">
         <p>🔒 Secure payment via Ziina Payment Gateway</p>
       </div>
     </div>
