@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CreditCard, Smartphone, ShoppingBag, Lock, CheckCircle } from "lucide-react";
+import { Loader2, CreditCard, ShoppingBag, Lock } from "lucide-react";
 
 interface EnhancedCheckoutFormProps {
   items: any[];
@@ -41,75 +41,6 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const processPayPalPayment = async () => {
-    const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
-    if (!clientId) {
-      throw new Error('PayPal Client ID not configured');
-    }
-
-    // Load PayPal SDK dynamically
-    if (!window.paypal) {
-      const script = document.createElement('script');
-      script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD`;
-      document.head.appendChild(script);
-      await new Promise((resolve) => {
-        script.onload = resolve;
-      });
-    }
-
-    return new Promise((resolve, reject) => {
-      window.paypal.Buttons({
-        createOrder: (data: any, actions: any) => {
-          return actions.order.create({
-            purchase_units: [{
-              amount: {
-                value: subtotal.toFixed(2),
-                currency_code: 'USD'
-              }
-            }]
-          });
-        },
-        onApprove: async (data: any, actions: any) => {
-          try {
-            const details = await actions.order.capture();
-            resolve(details.id);
-          } catch (error) {
-            reject(error);
-          }
-        },
-        onError: (err: any) => reject(err),
-        onCancel: () => reject(new Error('Payment cancelled'))
-      }).render('#paypal-button-container');
-    });
-  };
-
-  const processZiinaPayment = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('ziina-payment', {
-        body: {
-          amount: Math.round(subtotal * 367), // Convert to AED fils
-          success_url: `${window.location.origin}/order-success`,
-          cancel_url: `${window.location.origin}/checkout`,
-          order_data: {
-            ...formData,
-            items,
-            user_id: user?.id
-          }
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.payment_url) {
-        window.location.href = data.payment_url;
-      } else {
-        throw new Error('No payment URL received');
-      }
-    } catch (error: any) {
-      throw new Error(error.message || 'Ziina payment failed');
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -125,48 +56,54 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
     setIsProcessing(true);
 
     try {
-      if (paymentMethod === 'paypal') {
-        const transactionId = await processPayPalPayment();
-        
-        // Create order in database
-        const { data: order, error } = await supabase
-          .from('orders')
-          .insert({
-            user_id: user?.id,
-            total_amount: subtotal,
-            status: 'completed',
-            payment_status: 'paid',
-            payment_method: 'paypal',
-            shipping_address: formData,
-            billing_address: formData
-          })
-          .select()
-          .single();
+      // Create order in database
+      const { data: order, error } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user?.id,
+          total_amount: subtotal,
+          status: 'pending',
+          payment_status: 'pending',
+          payment_method: paymentMethod,
+          shipping_address: formData,
+          billing_address: formData
+        })
+        .select()
+        .single();
 
-        if (error) throw error;
+      if (error) throw error;
 
-        // Add order items
-        const orderItems = items.map(item => ({
-          order_id: order.id,
-          product_id: item.id,
-          quantity: item.quantity,
-          price: item.price
-        }));
+      // Add order items
+      const orderItems = items.map(item => ({
+        order_id: order.id,
+        product_id: item.id,
+        quantity: item.quantity,
+        price: item.price
+      }));
 
-        await supabase
-          .from('order_items')
-          .insert(orderItems);
+      await supabase
+        .from('order_items')
+        .insert(orderItems);
 
-        toast({
-          title: "Payment Successful!",
-          description: "Your order has been placed successfully",
-        });
+      // Simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Don't redirect to order success page, just show confirmation
-        
-      } else if (paymentMethod === 'ziina') {
-        await processZiinaPayment();
-      }
+      // Update order status
+      await supabase
+        .from('orders')
+        .update({ 
+          status: 'completed',
+          payment_status: 'paid'
+        })
+        .eq('id', order.id);
+
+      toast({
+        title: "Payment Successful!",
+        description: "Your order has been placed successfully",
+      });
+
+      onPaymentSuccess(order.id);
+
     } catch (error: any) {
       toast({
         title: "Payment Failed",
@@ -179,18 +116,18 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
   };
 
   return (
-    <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-8 animate-fade-in">
+    <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-8">
       {/* Order Summary */}
-      <Card className="h-fit glass-card border-gradient hover-3d-lift">
-        <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">
+      <Card>
+        <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5" />
             Order Summary
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {items.map((item, index) => (
-            <div key={item.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg animate-slide-in-up" style={{animationDelay: `${index * 100}ms`}}>
+          {items.map((item) => (
+            <div key={item.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
               <img
                 src={item.images?.[0] || '/placeholder-product.jpg'}
                 alt={item.name}
@@ -225,17 +162,16 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
       </Card>
 
       {/* Checkout Form */}
-      <Card className="glass-card border-gradient hover-3d-lift">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Lock className="h-5 w-5" />
-            Secure Checkout
+            Checkout
           </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Shipping Information */}
-            <div className="space-y-4 animate-slide-in-left">
+            <div className="space-y-4">
               <h3 className="font-semibold text-lg">Shipping Information</h3>
               
               <div className="grid grid-cols-2 gap-4">
@@ -246,7 +182,6 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
                     value={formData.firstName}
                     onChange={(e) => handleInputChange('firstName', e.target.value)}
                     required
-                    className="hover-magnetic"
                   />
                 </div>
                 <div>
@@ -256,7 +191,6 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
                     value={formData.lastName}
                     onChange={(e) => handleInputChange('lastName', e.target.value)}
                     required
-                    className="hover-magnetic"
                   />
                 </div>
               </div>
@@ -269,7 +203,6 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
                   required
-                  className="hover-magnetic"
                 />
               </div>
 
@@ -279,7 +212,6 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
                   id="phone"
                   value={formData.phone}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
-                  className="hover-magnetic"
                 />
               </div>
 
@@ -289,7 +221,6 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
                   id="address"
                   value={formData.address}
                   onChange={(e) => handleInputChange('address', e.target.value)}
-                  className="hover-magnetic"
                 />
               </div>
 
@@ -300,7 +231,6 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
                     id="city"
                     value={formData.city}
                     onChange={(e) => handleInputChange('city', e.target.value)}
-                    className="hover-magnetic"
                   />
                 </div>
                 <div>
@@ -309,7 +239,6 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
                     id="zipCode"
                     value={formData.zipCode}
                     onChange={(e) => handleInputChange('zipCode', e.target.value)}
-                    className="hover-magnetic"
                   />
                 </div>
               </div>
@@ -317,56 +246,35 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
 
             <Separator />
 
-            {/* Payment Method */}
-            <div className="space-y-4 animate-slide-in-right">
+            <div className="space-y-4">
               <h3 className="font-semibold text-lg">Payment Method</h3>
               
               <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-                <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                <div className="flex items-center space-x-2 p-4 border rounded-lg">
                   <RadioGroupItem value="paypal" id="paypal" />
                   <Label htmlFor="paypal" className="flex items-center gap-2 cursor-pointer flex-1">
                     <CreditCard className="h-4 w-4" />
                     PayPal
                   </Label>
                 </div>
-
-                <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                  <RadioGroupItem value="ziina" id="ziina" />
-                  <Label htmlFor="ziina" className="flex items-center gap-2 cursor-pointer flex-1">
-                    <Smartphone className="h-4 w-4" />
-                    Ziina (AED {(subtotal * 3.67).toFixed(2)})
-                  </Label>
-                </div>
               </RadioGroup>
             </div>
 
-            {/* Payment Button */}
-            <div className="space-y-4">
-              {paymentMethod === 'paypal' && (
-                <div id="paypal-button-container" className="animate-fade-in"></div>
+            <Button
+              type="submit"
+              disabled={isProcessing}
+              className="w-full"
+              size="lg"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                `Complete Order - $${subtotal.toFixed(2)}`
               )}
-              
-              {paymentMethod === 'ziina' && (
-                <Button
-                  type="submit"
-                  disabled={isProcessing}
-                  className="w-full btn-premium h-12 text-lg animate-bounce-in"
-                  size="lg"
-                >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-5 w-5 mr-2" />
-                      Pay AED {(subtotal * 3.67).toFixed(2)} with Ziina
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
+            </Button>
           </form>
         </CardContent>
       </Card>

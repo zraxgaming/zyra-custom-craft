@@ -14,7 +14,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const { isAdmin, isLoading, user } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect if not admin
   React.useEffect(() => {
     if (!isLoading && !isAdmin) {
       navigate("/");
@@ -22,7 +21,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   }, [isAdmin, isLoading, navigate]);
 
   const handleLogout = async () => {
-    // Add logout logic here
     navigate("/");
   };
 
@@ -42,12 +40,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     <div className="min-h-screen bg-background flex">
       <AdminSidebar />
       <div className="flex-1 flex flex-col">
-        {/* Admin Header */}
-        <header className="bg-card/50 border-b border-border/50 px-6 py-4 backdrop-blur-sm">
+        <header className="bg-card border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 <span className="text-sm text-muted-foreground">Admin Dashboard</span>
               </div>
             </div>
@@ -60,7 +57,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                 onClick={handleLogout} 
                 variant="outline" 
                 size="sm"
-                className="border-border hover:bg-muted"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
@@ -69,8 +65,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           </div>
         </header>
         
-        {/* Main Content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto p-6">
           {children}
         </main>
       </div>
