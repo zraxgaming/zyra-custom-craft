@@ -1,98 +1,188 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  DollarSign, 
-  ShoppingCart, 
+  Package, 
   Users, 
-  Package,
-  TrendingUp,
-  Activity,
+  ShoppingCart, 
+  DollarSign, 
+  TrendingUp, 
+  Eye,
   Star,
-  AlertCircle
+  Gift,
+  Mail,
+  BarChart3,
+  Calendar,
+  Clock,
+  ChevronRight,
+  AlertCircle,
+  CheckCircle,
+  XCircle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 
 interface DashboardStats {
-  totalRevenue: number;
+  totalProducts: number;
   totalOrders: number;
   totalUsers: number;
-  totalProducts: number;
-  recentOrders: any[];
-  topProducts: any[];
-  monthlyRevenue: number[];
+  totalRevenue: number;
+  monthlyRevenue: number;
+  weeklyOrders: number;
+  pendingOrders: number;
+  completedOrders: number;
+  totalViews: number;
+  giftCardsSold: number;
+  newsletterSubscribers: number;
+  averageOrderValue: number;
+}
+
+interface RecentOrder {
+  id: string;
+  total_amount: number;
+  status: string;
+  created_at: string;
+  user_email?: string;
+  payment_status: string;
 }
 
 const AdminDashboard = () => {
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ["admin-dashboard-stats"],
-    queryFn: async (): Promise<DashboardStats> => {
-      // Fetch total revenue
-      const { data: orders } = await supabase
-        .from('orders')
-        .select('total_amount, created_at, status, payment_status');
-
-      // Fetch total users
-      const { data: users } = await supabase
-        .from('profiles')
-        .select('id');
-
-      // Fetch total products
-      const { data: products } = await supabase
-        .from('products')
-        .select('id, name, price, images');
-
-      // Fetch recent orders with profile data
-      const { data: recentOrders } = await supabase
-        .from('orders')
-        .select(`
-          id,
-          total_amount,
-          status,
-          created_at,
-          profiles:user_id (first_name, last_name, email)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      const totalRevenue = orders?.filter(o => o.payment_status === 'paid')
-        .reduce((sum, order) => sum + Number(order.total_amount), 0) || 0;
-
-      const totalOrders = orders?.length || 0;
-      const totalUsers = users?.length || 0;
-      const totalProducts = products?.length || 0;
-
-      // Calculate monthly revenue for the last 6 months
-      const now = new Date();
-      const monthlyRevenue = [];
-      for (let i = 5; i >= 0; i--) {
-        const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-        
-        const monthRevenue = orders?.filter(o => {
-          const orderDate = new Date(o.created_at);
-          return orderDate >= monthStart && orderDate <= monthEnd && o.payment_status === 'paid';
-        }).reduce((sum, order) => sum + Number(order.total_amount), 0) || 0;
-        
-        monthlyRevenue.push(monthRevenue);
-      }
-
-      return {
-        totalRevenue,
-        totalOrders,
-        totalUsers,
-        totalProducts,
-        recentOrders: recentOrders || [],
-        topProducts: products?.slice(0, 5) || [],
-        monthlyRevenue
-      };
-    },
+  const [stats, setStats] = useState<DashboardStats>({
+    totalProducts: 0,
+    totalOrders: 0,
+    totalUsers: 0,
+    totalRevenue: 0,
+    monthlyRevenue: 0,
+    weeklyOrders: 0,
+    pendingOrders: 0,
+    completedOrders: 0,
+    totalViews: 0,
+    giftCardsSold: 0,
+    newsletterSubscribers: 0,
+    averageOrderValue: 0
   });
+  
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  if (isLoading) {
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      // Fetch all dashboard data in parallel
+      const [
+        productsResult,
+        ordersResult,
+        usersResult,
+        viewsResult,
+        giftCardsResult,
+        newsletterResult,
+        recentOrdersResult
+      ] = await Promise.all([
+        supabase.from('products').select('id').eq('status', 'published'),
+        supabase.from('orders').select('total_amount, status, created_at'),
+        supabase.from('profiles').select('id'),
+        supabase.from('page_views').select('id'),
+        supabase.from('gift_cards').select('initial_amount'),
+        supabase.from('newsletter_subscriptions').select('id').eq('is_active', true),
+        supabase.from('orders')
+          .select(`
+            id,
+            total_amount,
+            status,
+            payment_status,
+            created_at,
+            profiles!orders_user_id_fkey (
+              email
+            )
+          `)
+          .order('created_at', { ascending: false })
+          .limit(5)
+      ]);
+
+      // Calculate stats
+      const products = productsResult.data || [];
+      const orders = ordersResult.data || [];
+      const users = usersResult.data || [];
+      const views = viewsResult.data || [];
+      const giftCards = giftCardsResult.data || [];
+      const subscribers = newsletterResult.data || [];
+
+      const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total_amount), 0);
+      const now = new Date();
+      const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      const monthlyOrders = orders.filter(order => new Date(order.created_at) > oneMonthAgo);
+      const weeklyOrders = orders.filter(order => new Date(order.created_at) > oneWeekAgo);
+      const monthlyRevenue = monthlyOrders.reduce((sum, order) => sum + Number(order.total_amount), 0);
+
+      const pendingOrders = orders.filter(order => order.status === 'pending').length;
+      const completedOrders = orders.filter(order => order.status === 'completed').length;
+
+      const giftCardRevenue = giftCards.reduce((sum, card) => sum + Number(card.initial_amount), 0);
+
+      const newStats: DashboardStats = {
+        totalProducts: products.length,
+        totalOrders: orders.length,
+        totalUsers: users.length,
+        totalRevenue,
+        monthlyRevenue,
+        weeklyOrders: weeklyOrders.length,
+        pendingOrders,
+        completedOrders,
+        totalViews: views.length,
+        giftCardsSold: giftCards.length,
+        newsletterSubscribers: subscribers.length,
+        averageOrderValue: orders.length > 0 ? totalRevenue / orders.length : 0
+      };
+
+      setStats(newStats);
+      setRecentOrders(recentOrdersResult.data || []);
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'pending':
+        return <Clock className="h-4 w-4 text-yellow-500" />;
+      case 'cancelled':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      default:
+        return <AlertCircle className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
+
+  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
@@ -101,188 +191,257 @@ const AdminDashboard = () => {
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="animate-slide-in-up">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-          Dashboard
-        </h1>
-        <p className="text-muted-foreground mt-2">Welcome back! Here's what's happening with your store.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-purple-800 bg-clip-text text-transparent">
+            Admin Dashboard
+          </h1>
+          <p className="text-muted-foreground text-lg mt-2">
+            Welcome back! Here's what's happening with your store.
+          </p>
+        </div>
+        <Button onClick={fetchDashboardData} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+          <TrendingUp className="h-4 w-4 mr-2" />
+          Refresh Data
+        </Button>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-950/20 dark:to-emerald-950/30 border-green-200 dark:border-green-800/50 animate-scale-in hover-lift">
+        <Card className="hover-3d-lift animate-scale-in border-gradient">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-700 dark:text-green-300">
-              Total Revenue
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400 animate-float" />
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-800 dark:text-green-200">
-              ${stats?.totalRevenue.toFixed(2) || '0.00'}
-            </div>
-            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-              <TrendingUp className="h-3 w-3 inline mr-1" />
-              +12.5% from last month
+            <div className="text-2xl font-bold text-green-600">{formatCurrency(stats.totalRevenue)}</div>
+            <p className="text-xs text-muted-foreground">
+              {formatCurrency(stats.monthlyRevenue)} this month
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-blue-50 to-sky-100 dark:from-blue-950/20 dark:to-sky-950/30 border-blue-200 dark:border-blue-800/50 animate-scale-in hover-lift" style={{animationDelay: '100ms'}}>
+        <Card className="hover-3d-lift animate-scale-in border-gradient" style={{animationDelay: '100ms'}}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-300">
-              Total Orders
-            </CardTitle>
-            <ShoppingCart className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-float" />
+            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-800 dark:text-blue-200">
-              {stats?.totalOrders || 0}
-            </div>
-            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-              <TrendingUp className="h-3 w-3 inline mr-1" />
-              +8.2% from last month
+            <div className="text-2xl font-bold text-blue-600">{stats.totalOrders}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.weeklyOrders} this week
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-violet-100 dark:from-purple-950/20 dark:to-violet-950/30 border-purple-200 dark:border-purple-800/50 animate-scale-in hover-lift" style={{animationDelay: '200ms'}}>
+        <Card className="hover-3d-lift animate-scale-in border-gradient" style={{animationDelay: '200ms'}}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-purple-700 dark:text-purple-300">
-              Total Users
-            </CardTitle>
-            <Users className="h-4 w-4 text-purple-600 dark:text-purple-400 animate-float" />
+            <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+            <Package className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-800 dark:text-purple-200">
-              {stats?.totalUsers || 0}
-            </div>
-            <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
-              <TrendingUp className="h-3 w-3 inline mr-1" />
-              +15.3% from last month
+            <div className="text-2xl font-bold text-purple-600">{stats.totalProducts}</div>
+            <p className="text-xs text-muted-foreground">
+              Active products
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-50 to-amber-100 dark:from-orange-950/20 dark:to-amber-950/30 border-orange-200 dark:border-orange-800/50 animate-scale-in hover-lift" style={{animationDelay: '300ms'}}>
+        <Card className="hover-3d-lift animate-scale-in border-gradient" style={{animationDelay: '300ms'}}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-orange-700 dark:text-orange-300">
-              Total Products
-            </CardTitle>
-            <Package className="h-4 w-4 text-orange-600 dark:text-orange-400 animate-float" />
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-indigo-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-800 dark:text-orange-200">
-              {stats?.totalProducts || 0}
-            </div>
-            <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-              <TrendingUp className="h-3 w-3 inline mr-1" />
-              +5.1% from last month
+            <div className="text-2xl font-bold text-indigo-600">{stats.totalUsers}</div>
+            <p className="text-xs text-muted-foreground">
+              Registered users
             </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Secondary Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="hover-3d-lift animate-slide-in-up">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Page Views</CardTitle>
+            <Eye className="h-4 w-4 text-cyan-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-cyan-600">{stats.totalViews.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Total page views</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-3d-lift animate-slide-in-up" style={{animationDelay: '100ms'}}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Gift Cards Sold</CardTitle>
+            <Gift className="h-4 w-4 text-pink-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-pink-600">{stats.giftCardsSold}</div>
+            <p className="text-xs text-muted-foreground">Total gift cards</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-3d-lift animate-slide-in-up" style={{animationDelay: '200ms'}}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Newsletter Subscribers</CardTitle>
+            <Mail className="h-4 w-4 text-orange-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{stats.newsletterSubscribers}</div>
+            <p className="text-xs text-muted-foreground">Active subscribers</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-3d-lift animate-slide-in-up" style={{animationDelay: '300ms'}}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Order Value</CardTitle>
+            <BarChart3 className="h-4 w-4 text-emerald-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-600">{formatCurrency(stats.averageOrderValue)}</div>
+            <p className="text-xs text-muted-foreground">Per order</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Recent Orders */}
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50 animate-slide-in-left">
-          <CardHeader>
+        <Card className="animate-slide-in-left card-premium">
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-primary animate-float" />
+              <ShoppingCart className="h-5 w-5" />
               Recent Orders
             </CardTitle>
+            <Link to="/admin/orders">
+              <Button variant="ghost" size="sm">
+                View All <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </Link>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {stats?.recentOrders.map((order, index) => (
-                <div key={order.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg animate-slide-in-up" style={{animationDelay: `${index * 100}ms`}}>
-                  <div>
-                    <p className="font-medium">
-                      {order.profiles?.first_name} {order.profiles?.last_name}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {order.profiles?.email}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(order.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-lg">${Number(order.total_amount).toFixed(2)}</p>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      order.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' :
-                      order.status === 'processing' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' :
-                      'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400'
-                    }`}>
-                      {order.status}
-                    </span>
-                  </div>
+              {recentOrders.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No recent orders</p>
                 </div>
-              ))}
+              ) : (
+                recentOrders.map((order, index) => (
+                  <div
+                    key={order.id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:shadow-md transition-all duration-300 animate-fade-in hover-magnetic"
+                    style={{animationDelay: `${index * 100}ms`}}
+                  >
+                    <div className="flex items-center space-x-4">
+                      {getStatusIcon(order.status)}
+                      <div>
+                        <p className="font-medium">#{order.id.slice(-8)}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(order.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">{formatCurrency(Number(order.total_amount))}</p>
+                      <Badge variant={order.status === 'completed' ? 'default' : 'secondary'}>
+                        {order.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Top Products */}
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50 animate-slide-in-right">
+        {/* Order Status Summary */}
+        <Card className="animate-slide-in-right card-premium">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Star className="h-5 w-5 text-primary animate-float" />
-              Top Products
+              <BarChart3 className="h-5 w-5" />
+              Order Status Overview
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {stats?.topProducts.map((product, index) => (
-                <div key={product.id} className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg animate-slide-in-up" style={{animationDelay: `${index * 100}ms`}}>
-                  <img
-                    src={Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : '/placeholder.svg'}
-                    alt={product.name}
-                    className="w-12 h-12 object-cover rounded-lg hover:scale-110 transition-transform duration-300"
-                  />
-                  <div className="flex-1">
-                    <p className="font-medium">{product.name}</p>
-                    <p className="text-sm text-muted-foreground">${Number(product.price).toFixed(2)}</p>
-                  </div>
-                  <div className="text-right">
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                      <span className="text-sm">4.5</span>
-                    </div>
-                  </div>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-4 bg-yellow-500 rounded-full animate-pulse"></div>
+                  <span>Pending Orders</span>
                 </div>
-              ))}
+                <span className="font-bold text-yellow-600">{stats.pendingOrders}</span>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                  <span>Completed Orders</span>
+                </div>
+                <span className="font-bold text-green-600">{stats.completedOrders}</span>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
+                  <span>Total Orders</span>
+                </div>
+                <span className="font-bold text-blue-600">{stats.totalOrders}</span>
+              </div>
+
+              <div className="pt-4 border-t">
+                <div className="text-center">
+                  <p className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    {stats.totalOrders > 0 ? Math.round((stats.completedOrders / stats.totalOrders) * 100) : 0}%
+                  </p>
+                  <p className="text-sm text-muted-foreground">Completion Rate</p>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Quick Actions */}
-      <Card className="bg-card/80 backdrop-blur-sm border-border/50 animate-slide-in-up">
+      <Card className="animate-bounce-in card-premium">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-primary animate-float" />
+            <Star className="h-5 w-5" />
             Quick Actions
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button className="p-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-300 hover:scale-105">
-              <Package className="h-6 w-6 mx-auto mb-2" />
-              <span className="text-sm font-medium">Add Product</span>
-            </button>
-            <button className="p-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all duration-300 hover:scale-105">
-              <ShoppingCart className="h-6 w-6 mx-auto mb-2" />
-              <span className="text-sm font-medium">View Orders</span>
-            </button>
-            <button className="p-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all duration-300 hover:scale-105">
-              <Users className="h-6 w-6 mx-auto mb-2" />
-              <span className="text-sm font-medium">Manage Users</span>
-            </button>
-            <button className="p-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 transition-all duration-300 hover:scale-105">
-              <Activity className="h-6 w-6 mx-auto mb-2" />
-              <span className="text-sm font-medium">Analytics</span>
-            </button>
+            <Link to="/admin/products">
+              <Button variant="outline" className="w-full h-16 flex flex-col gap-2 hover-3d-lift">
+                <Package className="h-6 w-6" />
+                <span className="text-sm">Manage Products</span>
+              </Button>
+            </Link>
+            
+            <Link to="/admin/orders">
+              <Button variant="outline" className="w-full h-16 flex flex-col gap-2 hover-3d-lift">
+                <ShoppingCart className="h-6 w-6" />
+                <span className="text-sm">View Orders</span>
+              </Button>
+            </Link>
+            
+            <Link to="/admin/users">
+              <Button variant="outline" className="w-full h-16 flex flex-col gap-2 hover-3d-lift">
+                <Users className="h-6 w-6" />
+                <span className="text-sm">Manage Users</span>
+              </Button>
+            </Link>
+            
+            <Link to="/admin/analytics">
+              <Button variant="outline" className="w-full h-16 flex flex-col gap-2 hover-3d-lift">
+                <BarChart3 className="h-6 w-6" />
+                <span className="text-sm">View Analytics</span>
+              </Button>
+            </Link>
           </div>
         </CardContent>
       </Card>

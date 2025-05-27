@@ -34,6 +34,17 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       return;
     }
 
+    // Validate UAE phone number format
+    const uaePhoneRegex = /^(\+971|00971|971|0)?[1-9][0-9]{8}$/;
+    if (!uaePhoneRegex.test(phoneNumber.replace(/\s/g, ''))) {
+      toast({
+        title: "Invalid Phone Number",
+        description: "Please enter a valid UAE phone number",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsProcessing(true);
     
     try {
@@ -57,6 +68,10 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
         throw new Error(response.error.message || 'Payment failed');
       }
 
+      if (response.data?.error) {
+        throw new Error(response.data.error || 'Payment failed');
+      }
+
       if (response.data?.payment_url) {
         // Store payment info for verification
         localStorage.setItem('pending_ziina_payment', JSON.stringify({
@@ -65,13 +80,16 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
           order_data: orderData
         }));
         
-        // Open Ziina checkout in new tab
-        window.open(response.data.payment_url, '_blank');
-        
         toast({
-          title: "Payment Window Opened",
-          description: "Complete your payment in the new tab, then return here.",
+          title: "Redirecting to Ziina",
+          description: "You will be redirected to complete your payment securely.",
         });
+
+        // Redirect to real Ziina payment page
+        setTimeout(() => {
+          window.location.href = response.data.payment_url;
+        }, 1500);
+        
       } else {
         throw new Error('No payment URL received from Ziina');
       }
@@ -120,9 +138,10 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
           onChange={(e) => setPhoneNumber(e.target.value)}
           className="h-14 text-lg bg-white/90 dark:bg-gray-800/90 border-2 border-purple-200 dark:border-purple-700 focus:border-purple-500 dark:focus:border-purple-400 transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 rounded-xl shadow-lg focus:shadow-xl"
         />
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          Required for payment verification and order updates
-        </p>
+        <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
+          <p>• Required for payment verification and order updates</p>
+          <p>• Supported formats: +971501234567, 0501234567, 971501234567</p>
+        </div>
       </div>
       
       {/* Payment Button */}
@@ -135,7 +154,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
         {isProcessing ? (
           <div className="flex items-center gap-4">
             <Loader2 className="h-7 w-7 animate-spin" />
-            <span>Processing Payment...</span>
+            <span>Redirecting to Ziina...</span>
           </div>
         ) : (
           <div className="flex items-center gap-4">
@@ -178,7 +197,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
           <span className="font-medium">Real Ziina Payment Integration</span>
         </div>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          💡 <strong>Payment will open in a new tab.</strong> Complete your payment and return here to continue.
+          💡 <strong>You will be redirected to Ziina's secure payment page.</strong> Complete your payment and you'll be redirected back automatically.
         </p>
         <p className="text-xs text-gray-500 dark:text-gray-500">
           Powered by Ziina Payment Gateway - Licensed by Central Bank of UAE

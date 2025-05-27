@@ -9,18 +9,25 @@ interface ThemeProviderProps {
   storageKey?: string;
 }
 
-interface ThemeContextType {
+interface ThemeProviderState {
   theme: Theme;
   setTheme: (theme: Theme) => void;
   actualTheme: "dark" | "light";
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const initialState: ThemeProviderState = {
+  theme: "system",
+  setTheme: () => null,
+  actualTheme: "light",
+};
+
+const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
 export function ThemeProvider({
   children,
   defaultTheme = "system",
-  storageKey = "zyra-theme",
+  storageKey = "vite-ui-theme",
+  ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
@@ -35,9 +42,11 @@ export function ThemeProvider({
     let resolvedTheme: "dark" | "light";
 
     if (theme === "system") {
-      resolvedTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
+        .matches
         ? "dark"
         : "light";
+      resolvedTheme = systemTheme;
     } else {
       resolvedTheme = theme;
     }
@@ -56,14 +65,14 @@ export function ThemeProvider({
   };
 
   return (
-    <ThemeContext.Provider value={value}>
+    <ThemeProviderContext.Provider {...props} value={value}>
       {children}
-    </ThemeContext.Provider>
+    </ThemeProviderContext.Provider>
   );
 }
 
 export const useTheme = () => {
-  const context = useContext(ThemeContext);
+  const context = useContext(ThemeProviderContext);
 
   if (context === undefined)
     throw new Error("useTheme must be used within a ThemeProvider");

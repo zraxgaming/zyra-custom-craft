@@ -43,9 +43,9 @@ import AdminNewsletter from "./pages/admin/Newsletter";
 import AdminBarcodes from "./pages/admin/Barcodes";
 import AdminAnalytics from "./pages/admin/Analytics";
 import AdminGiftCards from "./pages/admin/GiftCards";
+import AdminTraffic from "./pages/admin/Traffic";
 import ProductEdit from "./pages/admin/ProductEdit";
 import Scanner from "./pages/admin/Scanner";
-import AdminTraffic from "./pages/admin/Traffic";
 
 const queryClient = new QueryClient();
 
@@ -53,7 +53,7 @@ const App = () => (
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <ThemeProvider defaultTheme="system" enableSystem>
+        <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
           <AuthProvider>
             <CartProvider>
               <WishlistProvider>

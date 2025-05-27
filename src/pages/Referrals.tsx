@@ -1,92 +1,154 @@
 
 import React, { useState, useEffect } from "react";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import { Container } from "@/components/ui/container";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/contexts/AuthContext";
+import { Copy, Share2, Users, Gift, Trophy, Star, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Gift, Share2, DollarSign, Trophy, Star } from "lucide-react";
-
-interface Referral {
-  id: string;
-  referral_code: string;
-  referred_id: string | null;
-  status: string;
-  reward_earned: boolean;
-  created_at: string;
-  updated_at: string;
-}
+import { useAuth } from "@/contexts/AuthContext";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import { Container } from "@/components/ui/container";
+import SEOHead from "@/components/seo/SEOHead";
 
 const Referrals = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [referrals, setReferrals] = useState<Referral[]>([]);
-  const [userReferralCode, setUserReferralCode] = useState<string>("");
+  
+  const [referralCode, setReferralCode] = useState("");
+  const [referrals, setReferrals] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    totalReferrals: 0,
+    completedReferrals: 0,
+    totalEarnings: 0,
+    pendingEarnings: 0
+  });
   const [loading, setLoading] = useState(true);
-  const [totalEarnings, setTotalEarnings] = useState(0);
 
   useEffect(() => {
     if (user) {
-      fetchReferralData();
+      initializeReferrals();
     }
   }, [user]);
 
-  const fetchReferralData = async () => {
+  const generateReferralCode = () => {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+      result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return result;
+  };
+
+  const initializeReferrals = async () => {
+    if (!user) return;
+
+    setLoading(true);
     try {
-      // Get user's referral code
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user?.id)
-        .single();
-
-      // Generate referral code if doesn't exist
-      let referralCode = profileData?.username || user?.id?.slice(0, 8) || 'USER';
-      setUserReferralCode(referralCode);
-
-      // Get user's referrals
-      const { data: referralData, error } = await supabase
+      // Check if user already has a referral code
+      const { data: existingReferrals, error: fetchError } = await supabase
         .from('referrals')
-        .select('*')
-        .eq('referrer_id', user?.id)
-        .order('created_at', { ascending: false });
+        .select('referral_code')
+        .eq('referrer_id', user.id)
+        .limit(1);
 
-      if (error) throw error;
-      setReferrals(referralData || []);
+      if (fetchError) throw fetchError;
 
-      // Calculate total earnings (assuming $10 per successful referral)
-      const earnings = (referralData || []).filter(r => r.reward_earned).length * 10;
-      setTotalEarnings(earnings);
+      let userReferralCode = "";
+      
+      if (existingReferrals && existingReferrals.length > 0) {
+        userReferralCode = existingReferrals[0].referral_code;
+      } else {
+        // Generate new referral code
+        userReferralCode = generateReferralCode();
+        
+        // Create initial referral record
+        const { error: insertError } = await supabase
+          .from('referrals')
+          .insert({
+            referrer_id: user.id,
+            referral_code: userReferralCode,
+            status: 'active'
+          });
+
+        if (insertError) throw insertError;
+      }
+
+      setReferralCode(userReferralCode);
+      await fetchReferralData(userReferralCode);
+      
     } catch (error) {
-      console.error('Error fetching referral data:', error);
+      console.error('Error initializing referrals:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load referral data",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchReferralData = async (code: string) => {
+    try {
+      // Fetch all referrals for this user
+      const { data: referralData, error: referralError } = await supabase
+        .from('referrals')
+        .select(`
+          *,
+          referred_profiles:profiles!referrals_referred_id_fkey (
+            email,
+            display_name,
+            first_name,
+            last_name
+          )
+        `)
+        .eq('referral_code', code)
+        .neq('referred_id', null)
+        .order('created_at', { ascending: false });
+
+      if (referralError) throw referralError;
+
+      const referralList = referralData || [];
+      setReferrals(referralList);
+
+      // Calculate stats
+      const completed = referralList.filter(r => r.status === 'completed').length;
+      const earnings = completed * 10; // $10 per successful referral
+      const pending = referralList.filter(r => r.status === 'pending').length * 10;
+
+      setStats({
+        totalReferrals: referralList.length,
+        completedReferrals: completed,
+        totalEarnings: earnings,
+        pendingEarnings: pending
+      });
+
+    } catch (error) {
+      console.error('Error fetching referral data:', error);
+    }
+  };
+
   const copyReferralLink = () => {
-    const referralLink = `${window.location.origin}?ref=${userReferralCode}`;
+    const referralLink = `${window.location.origin}?ref=${referralCode}`;
     navigator.clipboard.writeText(referralLink);
     toast({
-      title: "Link Copied!",
-      description: "Your referral link has been copied to clipboard",
+      title: "Copied!",
+      description: "Referral link copied to clipboard",
     });
   };
 
-  const shareReferralLink = async () => {
-    const referralLink = `${window.location.origin}?ref=${userReferralCode}`;
+  const shareReferral = async () => {
+    const referralLink = `${window.location.origin}?ref=${referralCode}`;
     
     if (navigator.share) {
       try {
         await navigator.share({
           title: 'Join Zyra Store',
-          text: 'Check out this amazing store and get exclusive deals!',
-          url: referralLink
+          text: 'Check out this amazing store! Use my referral link to get started.',
+          url: referralLink,
         });
       } catch (error) {
         copyReferralLink();
@@ -98,191 +160,281 @@ const Referrals = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20">
+      <>
         <Navbar />
-        <div className="py-20">
-          <Container>
-            <div className="text-center">
-              <h1 className="text-4xl font-bold mb-4">Sign In Required</h1>
-              <p className="text-muted-foreground mb-8">Please sign in to access the referral program</p>
-              <Button onClick={() => window.location.href = '/auth'}>Sign In</Button>
-            </div>
-          </Container>
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <Card className="w-full max-w-md">
+            <CardContent className="p-6 text-center">
+              <Users className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+              <h1 className="text-2xl font-bold mb-4">Please Sign In</h1>
+              <p className="text-muted-foreground">You need to be signed in to access the referral program.</p>
+            </CardContent>
+          </Card>
         </div>
         <Footer />
-      </div>
+      </>
     );
   }
 
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  const referralLink = `${window.location.origin}?ref=${referralCode}`;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20">
-      <Navbar />
-      
-      <div className="py-12">
-        <Container>
-          {/* Header */}
-          <div className="text-center mb-16 animate-fade-in">
-            <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-purple-600 via-purple-700 to-pink-600 rounded-full mb-8 animate-bounce shadow-2xl">
-              <Users className="h-12 w-12 text-white animate-pulse" />
+    <>
+      <SEOHead 
+        title="Referral Program - Zyra Store"
+        description="Earn rewards by referring friends to Zyra Store. Get $10 for every successful referral!"
+      />
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20">
+        <Navbar />
+        
+        <div className="py-12">
+          <Container>
+            {/* Header */}
+            <div className="text-center mb-16 animate-fade-in">
+              <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-purple-600 via-pink-600 to-purple-800 rounded-full mb-8 animate-bounce-in shadow-2xl">
+                <Users className="h-12 w-12 text-white animate-pulse" />
+              </div>
+              <h1 className="text-6xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-purple-800 bg-clip-text text-transparent mb-6 animate-text-shimmer">
+                Referral Program
+              </h1>
+              <p className="text-xl text-gray-600 dark:text-gray-300 animate-slide-in-up max-w-2xl mx-auto" style={{animationDelay: '200ms'}}>
+                Earn $10 for every friend you refer who makes their first purchase. Share the love and get rewarded!
+              </p>
+              <div className="flex items-center justify-center gap-4 mt-6 animate-fade-in" style={{animationDelay: '400ms'}}>
+                <Badge className="bg-green-100 text-green-800 border-green-200">
+                  <DollarSign className="h-3 w-3 mr-1" />
+                  $10 Per Referral
+                </Badge>
+                <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                  <Star className="h-3 w-3 mr-1" />
+                  Unlimited Earnings
+                </Badge>
+                <Badge className="bg-purple-100 text-purple-800 border-purple-200">
+                  <Trophy className="h-3 w-3 mr-1" />
+                  Instant Rewards
+                </Badge>
+              </div>
             </div>
-            <h1 className="text-6xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-purple-800 bg-clip-text text-transparent mb-6">
-              Referral Program
-            </h1>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Earn rewards by inviting friends to join our amazing store!
-            </p>
-          </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-green-200 dark:border-green-800 shadow-xl animate-slide-in-left">
-              <CardContent className="p-6 text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                  <DollarSign className="h-8 w-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold text-green-700 dark:text-green-400 mb-2">${totalEarnings}</h3>
-                <p className="text-green-600 dark:text-green-500">Total Earnings</p>
-              </CardContent>
-            </Card>
+            <div className="grid lg:grid-cols-3 gap-8">
+              {/* Stats Cards */}
+              <div className="lg:col-span-1 space-y-6">
+                <Card className="animate-slide-in-left card-premium border-gradient">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Trophy className="h-5 w-5 text-yellow-600" />
+                      Your Stats
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="text-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl">
+                      <p className="text-3xl font-bold text-green-600">${stats.totalEarnings}</p>
+                      <p className="text-sm text-muted-foreground">Total Earnings</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                        <p className="text-2xl font-bold text-blue-600">{stats.totalReferrals}</p>
+                        <p className="text-xs text-muted-foreground">Total Referrals</p>
+                      </div>
+                      <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                        <p className="text-2xl font-bold text-purple-600">{stats.completedReferrals}</p>
+                        <p className="text-xs text-muted-foreground">Completed</p>
+                      </div>
+                    </div>
 
-            <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 border-blue-200 dark:border-blue-800 shadow-xl animate-scale-in">
-              <CardContent className="p-6 text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                  <Users className="h-8 w-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold text-blue-700 dark:text-blue-400 mb-2">{referrals.length}</h3>
-                <p className="text-blue-600 dark:text-blue-500">Total Referrals</p>
-              </CardContent>
-            </Card>
+                    {stats.pendingEarnings > 0 && (
+                      <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                        <p className="text-lg font-bold text-yellow-600">${stats.pendingEarnings}</p>
+                        <p className="text-xs text-muted-foreground">Pending Earnings</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-            <Card className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 border-purple-200 dark:border-purple-800 shadow-xl animate-slide-in-right">
-              <CardContent className="p-6 text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                  <Trophy className="h-8 w-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold text-purple-700 dark:text-purple-400 mb-2">
-                  {referrals.filter(r => r.reward_earned).length}
-                </h3>
-                <p className="text-purple-600 dark:text-purple-500">Successful Referrals</p>
-              </CardContent>
-            </Card>
-          </div>
+                <Card className="animate-slide-in-left card-premium border-gradient" style={{animationDelay: '200ms'}}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Gift className="h-5 w-5 text-pink-600" />
+                      How It Works
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center text-purple-600 font-bold text-xs">1</div>
+                        <p>Share your unique referral link with friends</p>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center text-purple-600 font-bold text-xs">2</div>
+                        <p>They sign up and make their first purchase</p>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center text-purple-600 font-bold text-xs">3</div>
+                        <p>You earn $10 for each successful referral!</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-7xl mx-auto">
-            {/* Share Your Code */}
-            <Card className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 border-purple-200 dark:border-purple-800 shadow-2xl animate-slide-in-left">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-2xl text-purple-700 dark:text-purple-300">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <Share2 className="h-5 w-5 text-white" />
-                  </div>
-                  Share Your Referral Code
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="text-center p-6 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 rounded-xl border border-purple-200 dark:border-purple-700">
-                  <p className="text-sm text-muted-foreground mb-2">Your Referral Code</p>
-                  <p className="text-3xl font-bold text-purple-700 dark:text-purple-300 font-mono tracking-wider">
-                    {userReferralCode}
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  <Button 
-                    onClick={copyReferralLink}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 rounded-xl transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
-                  >
-                    <Share2 className="h-5 w-5 mr-2" />
-                    Copy Referral Link
-                  </Button>
-
-                  <Button 
-                    onClick={shareReferralLink}
-                    variant="outline"
-                    className="w-full border-purple-200 hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/30"
-                  >
-                    <Users className="h-5 w-5 mr-2" />
-                    Share with Friends
-                  </Button>
-                </div>
-
-                <div className="bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/30 dark:to-orange-950/30 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Star className="h-5 w-5 text-yellow-600" />
-                    <h4 className="font-semibold text-yellow-800 dark:text-yellow-400">How it works</h4>
-                  </div>
-                  <ul className="text-sm text-yellow-700 dark:text-yellow-500 space-y-1">
-                    <li>• Share your referral code with friends</li>
-                    <li>• They sign up and make their first purchase</li>
-                    <li>• You earn $10 for each successful referral</li>
-                    <li>• Your friend gets 10% off their first order</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Referral History */}
-            <Card className="bg-gradient-to-br from-white to-pink-50 dark:from-gray-900 dark:to-pink-950 border-pink-200 dark:border-pink-800 shadow-2xl animate-slide-in-right">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-2xl text-pink-700 dark:text-pink-300">
-                  <div className="w-10 h-10 bg-gradient-to-br from-pink-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <Gift className="h-5 w-5 text-white" />
-                  </div>
-                  Referral History
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600 mx-auto"></div>
-                  </div>
-                ) : referrals.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Users className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                    <p className="text-muted-foreground">No referrals yet</p>
-                    <p className="text-sm text-muted-foreground mt-2">Start sharing your code to earn rewards!</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {referrals.map((referral, index) => (
-                      <div
-                        key={referral.id}
-                        className="p-4 bg-gradient-to-r from-pink-100 to-purple-100 dark:from-pink-900/30 dark:to-purple-900/30 rounded-lg border border-pink-200 dark:border-pink-700 animate-slide-in-up"
-                        style={{animationDelay: `${index * 100}ms`}}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <p className="font-medium">Referral #{referral.id.slice(-8)}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(referral.created_at).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div className="flex flex-col items-end gap-2">
-                            <Badge 
-                              variant={referral.status === 'completed' ? 'default' : 'secondary'}
-                              className="capitalize"
-                            >
-                              {referral.status}
-                            </Badge>
-                            {referral.reward_earned && (
-                              <Badge className="bg-green-100 text-green-800 hover:bg-green-200">
-                                +$10 Earned
-                              </Badge>
-                            )}
-                          </div>
+              {/* Main Content */}
+              <div className="lg:col-span-2 space-y-8">
+                {/* Share Section */}
+                <Card className="animate-slide-in-right card-premium border-gradient">
+                  <CardHeader>
+                    <CardTitle className="text-2xl flex items-center gap-2">
+                      <Share2 className="h-6 w-6 text-purple-600" />
+                      Share Your Referral Link
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Your Referral Code</label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={referralCode}
+                            readOnly
+                            className="font-mono text-lg font-bold text-center bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20"
+                          />
+                          <Button
+                            onClick={copyReferralLink}
+                            variant="outline"
+                            size="icon"
+                            className="hover-3d-lift"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </Container>
+
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Your Referral Link</label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={referralLink}
+                            readOnly
+                            className="bg-muted"
+                          />
+                          <Button
+                            onClick={copyReferralLink}
+                            variant="outline"
+                            className="hover-3d-lift"
+                          >
+                            <Copy className="h-4 w-4 mr-2" />
+                            Copy
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                      <Button
+                        onClick={shareReferral}
+                        className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 hover-3d-lift"
+                      >
+                        <Share2 className="h-4 w-4 mr-2" />
+                        Share Link
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          const subject = "Join Zyra Store - Amazing Products Await!";
+                          const body = `Hi there!\n\nI wanted to share this amazing store with you - Zyra Store has incredible products and great deals.\n\nUse my referral link to get started: ${referralLink}\n\nHope you find something you love!\n\nBest regards`;
+                          window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+                        }}
+                        className="hover-3d-lift"
+                      >
+                        Email Invite
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Referral History */}
+                <Card className="animate-slide-in-up card-premium border-gradient">
+                  <CardHeader>
+                    <CardTitle className="text-2xl flex items-center gap-2">
+                      <Users className="h-6 w-6 text-blue-600" />
+                      Your Referrals
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {referrals.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Users className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                        <h3 className="text-lg font-medium mb-2">No Referrals Yet</h3>
+                        <p className="text-muted-foreground mb-4">
+                          Start sharing your referral link to earn rewards!
+                        </p>
+                        <Button onClick={shareReferral} className="btn-premium">
+                          <Share2 className="h-4 w-4 mr-2" />
+                          Share Now
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {referrals.map((referral, index) => (
+                          <div
+                            key={referral.id}
+                            className="flex items-center justify-between p-4 border rounded-xl hover:shadow-lg transition-all duration-300 animate-fade-in hover-3d-lift"
+                            style={{animationDelay: `${index * 100}ms`}}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold">
+                                {(referral.referred_profiles?.first_name || referral.referred_profiles?.display_name || referral.referred_profiles?.email || 'U')[0].toUpperCase()}
+                              </div>
+                              <div>
+                                <p className="font-medium">
+                                  {referral.referred_profiles?.first_name && referral.referred_profiles?.last_name
+                                    ? `${referral.referred_profiles.first_name} ${referral.referred_profiles.last_name}`
+                                    : referral.referred_profiles?.display_name || referral.referred_profiles?.email || 'Unknown User'
+                                  }
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  Joined {new Date(referral.created_at).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <Badge
+                                variant={referral.status === 'completed' ? 'default' : referral.status === 'pending' ? 'secondary' : 'destructive'}
+                                className="mb-1"
+                              >
+                                {referral.status}
+                              </Badge>
+                              <p className="text-sm font-medium">
+                                {referral.status === 'completed' ? '+$10' : referral.status === 'pending' ? 'Pending' : '$0'}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </Container>
+        </div>
+        
+        <Footer />
       </div>
-      
-      <Footer />
-    </div>
+    </>
   );
 };
 
