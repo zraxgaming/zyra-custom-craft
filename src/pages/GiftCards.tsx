@@ -14,10 +14,25 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Gift, CreditCard, Star, Sparkles, Heart, Calendar } from "lucide-react";
 
+interface GiftCard {
+  id: string;
+  code: string;
+  amount: number;
+  initial_amount: number;
+  currency: string;
+  created_by: string | null;
+  recipient_email: string | null;
+  message: string | null;
+  is_active: boolean;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 const GiftCards = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [ownedCards, setOwnedCards] = useState<any[]>([]);
+  const [ownedCards, setOwnedCards] = useState<GiftCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [formData, setFormData] = useState({
@@ -47,7 +62,7 @@ const GiftCards = () => {
       const { data, error } = await supabase
         .from('gift_cards')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('created_by', user?.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -89,12 +104,11 @@ const GiftCards = () => {
         .insert({
           code,
           amount: formData.amount,
-          user_id: user.id,
+          initial_amount: formData.amount,
+          created_by: user.id,
           recipient_email: formData.recipientEmail,
-          recipient_name: formData.recipientName,
-          sender_name: formData.senderName,
           message: formData.message,
-          status: 'active'
+          is_active: true
         })
         .select()
         .single();
@@ -148,20 +162,20 @@ const GiftCards = () => {
         <Container>
           {/* Header */}
           <div className="text-center mb-16 animate-fade-in">
-            <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-purple-600 via-purple-700 to-pink-600 rounded-full mb-8 animate-bounce-in shadow-2xl">
+            <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-purple-600 via-purple-700 to-pink-600 rounded-full mb-8 animate-bounce shadow-2xl">
               <Gift className="h-12 w-12 text-white animate-pulse" />
             </div>
-            <h1 className="text-6xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-purple-800 bg-clip-text text-transparent mb-6 animate-text-shimmer">
+            <h1 className="text-6xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-purple-800 bg-clip-text text-transparent mb-6">
               Gift Cards
             </h1>
-            <p className="text-xl text-gray-600 dark:text-gray-300 animate-slide-in-up max-w-2xl mx-auto" style={{animationDelay: '200ms'}}>
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
               Give the perfect gift with our digital gift cards. Perfect for any occasion!
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-7xl mx-auto">
             {/* Purchase Gift Card */}
-            <Card className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 border-purple-200 dark:border-purple-800 shadow-2xl animate-slide-in-left">
+            <Card className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 border-purple-200 dark:border-purple-800 shadow-2xl">
               <CardHeader>
                 <CardTitle className="flex items-center gap-3 text-2xl text-purple-700 dark:text-purple-300">
                   <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -284,7 +298,7 @@ const GiftCards = () => {
             {/* Gift Card Templates & My Cards */}
             <div className="space-y-8">
               {/* Templates */}
-              <Card className="bg-gradient-to-br from-white to-pink-50 dark:from-gray-900 dark:to-pink-950 border-pink-200 dark:border-pink-800 shadow-2xl animate-slide-in-right">
+              <Card className="bg-gradient-to-br from-white to-pink-50 dark:from-gray-900 dark:to-pink-950 border-pink-200 dark:border-pink-800 shadow-2xl">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-3 text-2xl text-pink-700 dark:text-pink-300">
                     <div className="w-10 h-10 bg-gradient-to-br from-pink-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -311,7 +325,7 @@ const GiftCards = () => {
 
               {/* My Gift Cards */}
               {user && (
-                <Card className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 border-purple-200 dark:border-purple-800 shadow-2xl animate-fade-in" style={{animationDelay: '300ms'}}>
+                <Card className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 border-purple-200 dark:border-purple-800 shadow-2xl">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-3 text-2xl text-purple-700 dark:text-purple-300">
                       <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -335,7 +349,7 @@ const GiftCards = () => {
                         {ownedCards.map((card, index) => (
                           <div
                             key={card.id}
-                            className="p-4 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-lg border border-purple-200 dark:border-purple-700 animate-slide-in-up"
+                            className="p-4 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-lg border border-purple-200 dark:border-purple-700"
                             style={{animationDelay: `${index * 100}ms`}}
                           >
                             <div className="flex justify-between items-start mb-2">
@@ -346,15 +360,15 @@ const GiftCards = () => {
                                 </p>
                               </div>
                               <Badge 
-                                variant={card.status === 'active' ? 'default' : 'secondary'}
+                                variant={card.is_active ? 'default' : 'secondary'}
                                 className="capitalize"
                               >
-                                {card.status}
+                                {card.is_active ? 'Active' : 'Inactive'}
                               </Badge>
                             </div>
                             
                             <div className="text-sm text-muted-foreground">
-                              <p>To: {card.recipient_name}</p>
+                              <p>To: {card.recipient_email}</p>
                               <div className="flex items-center gap-1 mt-1">
                                 <Calendar className="h-3 w-3" />
                                 <span>{new Date(card.created_at).toLocaleDateString()}</span>

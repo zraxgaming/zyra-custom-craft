@@ -34,19 +34,27 @@ serve(async (req) => {
       return acc
     }, {} as any)
 
-    const ziinaApiKey = config.ziina_api_key
+    const ziinaApiKey = config.ziina_api_key || 'test_key_placeholder'
     const ziinaMerchantId = config.ziina_merchant_id
     const ziinaBaseUrl = config.ziina_base_url || 'https://api-v2.ziina.com'
 
-    if (!ziinaApiKey) {
-      throw new Error('Ziina API key not configured')
-    }
+    console.log('Using Ziina configuration:', {
+      baseUrl: ziinaBaseUrl,
+      hasApiKey: !!ziinaApiKey,
+      hasMerchantId: !!ziinaMerchantId
+    })
 
     const { amount, success_url, cancel_url, order_data } = await req.json()
 
+    // Convert USD to AED and then to fils (1 AED = 100 fils)
+    const aedAmount = amount * 3.67
+    const filsAmount = Math.round(aedAmount * 100)
+
+    console.log(`Converting $${amount} USD to ${aedAmount} AED to ${filsAmount} fils`)
+
     // Create payment with real Ziina API
     const paymentPayload = {
-      amount: amount, // Amount should already be in fils
+      amount: filsAmount,
       currency_code: 'AED',
       message: `Order payment for ${order_data?.email || 'customer'}`,
       success_url: success_url,
@@ -55,6 +63,7 @@ serve(async (req) => {
       test: false,
       transaction_source: 'directApi',
       allow_tips: false,
+      customer_phone: order_data?.phone || null
     }
 
     console.log('Creating Ziina payment with payload:', paymentPayload)
@@ -73,6 +82,7 @@ serve(async (req) => {
     console.log('Ziina response text:', responseText)
 
     if (!ziinaResponse.ok) {
+      console.error(`Ziina API error: ${ziinaResponse.status} - ${responseText}`)
       throw new Error(`Ziina API error: ${ziinaResponse.status} - ${responseText}`)
     }
 
@@ -80,6 +90,7 @@ serve(async (req) => {
     try {
       ziinaData = JSON.parse(responseText)
     } catch (parseError) {
+      console.error('Failed to parse Ziina response:', parseError)
       throw new Error('Invalid JSON response from Ziina API')
     }
 

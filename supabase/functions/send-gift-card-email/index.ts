@@ -1,6 +1,5 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,7 +14,7 @@ serve(async (req) => {
   try {
     const { recipientEmail, recipientName, senderName, amount, code, message } = await req.json()
 
-    // Use SendGrid API
+    // Use SendGrid API with the provided API key
     const sendgridApiKey = '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'
     
     const emailPayload = {
@@ -66,6 +65,8 @@ serve(async (req) => {
         `
       }]
     }
+
+    console.log('Sending gift card email to:', recipientEmail)
 
     const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',

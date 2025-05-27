@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Smartphone, Loader2, CreditCard, Shield, Zap, CheckCircle, AlertCircle } from "lucide-react";
+import { Smartphone, Loader2, CreditCard, Shield, Zap, CheckCircle } from "lucide-react";
 
 interface ZiinaPaymentProps {
   amount: number;
@@ -22,31 +22,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [ziinaApiKey, setZiinaApiKey] = useState<string | null>(null);
   const { toast } = useToast();
-
-  useEffect(() => {
-    fetchZiinaConfig();
-  }, []);
-
-  const fetchZiinaConfig = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('site_config')
-        .select('value')
-        .eq('key', 'ziina_api_key')
-        .single();
-
-      if (error && error.code !== 'PGRST116') throw error;
-      
-      if (data?.value) {
-        setZiinaApiKey(data.value as string);
-      }
-    } catch (error) {
-      console.error('Error fetching Ziina config:', error);
-      onError('Ziina payment not configured. Please contact support.');
-    }
-  };
 
   const handleZiinaPayment = async () => {
     if (!phoneNumber) {
@@ -58,72 +34,39 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       return;
     }
 
-    if (!ziinaApiKey) {
-      onError('Ziina API not configured. Please contact support.');
-      return;
-    }
-
     setIsProcessing(true);
     
     try {
-      // Convert USD to AED and then to fils (1 AED = 100 fils)
-      const aedAmount = amount * 3.67;
-      const filsAmount = Math.round(aedAmount * 100); // Convert to fils
+      console.log('Starting Ziina payment process...');
       
-      console.log(`Converting $${amount} USD to ${aedAmount} AED to ${filsAmount} fils`);
-      
-      const paymentPayload = {
-        amount: filsAmount, // Amount in fils
-        currency_code: "AED",
-        message: `Order payment for ${orderData.email || 'customer'}`,
-        success_url: `${window.location.origin}/order-success`,
-        cancel_url: `${window.location.origin}/checkout`,
-        failure_url: `${window.location.origin}/order-failed`,
-        test: false,
-        transaction_source: "directApi",
-        allow_tips: false,
-        customer_phone: phoneNumber
-      };
-
-      console.log('Sending Ziina payment request:', paymentPayload);
-
-      const response = await fetch('https://api-v2.ziina.com/api/payment_intent', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${ziinaApiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(paymentPayload)
+      const response = await supabase.functions.invoke('ziina-payment', {
+        body: {
+          amount: amount,
+          success_url: `${window.location.origin}/order-success`,
+          cancel_url: `${window.location.origin}/checkout`,
+          order_data: {
+            ...orderData,
+            phone: phoneNumber
+          }
+        }
       });
 
-      const responseText = await response.text();
-      console.log('Ziina response status:', response.status);
-      console.log('Ziina response text:', responseText);
-      
-      if (!response.ok) {
-        throw new Error(`Ziina API error: ${response.status} - ${responseText}`);
+      console.log('Ziina payment response:', response);
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Payment failed');
       }
 
-      let ziinaData;
-      try {
-        ziinaData = JSON.parse(responseText);
-      } catch (parseError) {
-        throw new Error('Invalid JSON response from Ziina API');
-      }
-
-      console.log('Parsed Ziina data:', ziinaData);
-
-      if (ziinaData.payment_url || ziinaData.checkout_url) {
+      if (response.data?.payment_url) {
         // Store payment info for verification
         localStorage.setItem('pending_ziina_payment', JSON.stringify({
-          payment_intent_id: ziinaData.id,
+          payment_id: response.data.payment_id,
           amount: amount,
           order_data: orderData
         }));
         
         // Open Ziina checkout in new tab
-        const paymentUrl = ziinaData.payment_url || ziinaData.checkout_url;
-        window.open(paymentUrl, '_blank');
+        window.open(response.data.payment_url, '_blank');
         
         toast({
           title: "Payment Window Opened",
@@ -149,7 +92,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
         <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-purple-600 via-purple-700 to-pink-600 rounded-full mb-6 animate-float shadow-xl">
           <CreditCard className="h-10 w-10 text-white" />
         </div>
-        <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-3 animate-text-shimmer">Secure Payment via Ziina</h3>
+        <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">Secure Payment via Ziina</h3>
         <p className="text-2xl font-bold text-purple-700 dark:text-purple-300 mb-2">
           AED {aedAmount} 
         </p>
@@ -185,7 +128,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       {/* Payment Button */}
       <Button
         onClick={handleZiinaPayment}
-        disabled={isProcessing || !phoneNumber || !ziinaApiKey}
+        disabled={isProcessing || !phoneNumber}
         className="w-full h-16 bg-gradient-to-r from-purple-600 via-purple-700 to-pink-600 hover:from-purple-700 hover:via-purple-800 hover:to-pink-700 text-white font-bold text-xl rounded-xl shadow-2xl hover:shadow-purple-500/25 transition-all duration-500 transform hover:scale-[1.02] active:scale-[0.98] animate-bounce-in disabled:opacity-50 disabled:cursor-not-allowed"
         size="lg"
       >
@@ -232,7 +175,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       <div className="text-center space-y-3 animate-fade-in p-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-center gap-2 text-green-600 dark:text-green-400">
           <CheckCircle className="h-5 w-5" />
-          <span className="font-medium">Amount correctly formatted for Ziina (fils)</span>
+          <span className="font-medium">Real Ziina Payment Integration</span>
         </div>
         <p className="text-sm text-gray-600 dark:text-gray-400">
           💡 <strong>Payment will open in a new tab.</strong> Complete your payment and return here to continue.

@@ -20,6 +20,7 @@ import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Account from "./pages/Account";
+import Dashboard from "./pages/Dashboard";
 import Categories from "./pages/Categories";
 import Wishlist from "./pages/Wishlist";
 import Contact from "./pages/Contact";
@@ -29,6 +30,7 @@ import Privacy from "./pages/Privacy";
 import OrderSuccess from "./pages/OrderSuccess";
 import OrderFailed from "./pages/OrderFailed";
 import GiftCards from "./pages/GiftCards";
+import Referrals from "./pages/Referrals";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -43,6 +45,7 @@ import AdminAnalytics from "./pages/admin/Analytics";
 import AdminGiftCards from "./pages/admin/GiftCards";
 import ProductEdit from "./pages/admin/ProductEdit";
 import Scanner from "./pages/admin/Scanner";
+import AdminTraffic from "./pages/admin/Traffic";
 
 const queryClient = new QueryClient();
 
@@ -50,7 +53,7 @@ const App = () => (
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ThemeProvider defaultTheme="system" enableSystem>
           <AuthProvider>
             <CartProvider>
               <WishlistProvider>
@@ -70,6 +73,7 @@ const App = () => (
                     <Route path="/cart" element={<Cart />} />
                     <Route path="/checkout" element={<Checkout />} />
                     <Route path="/account" element={<Account />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/categories" element={<Categories />} />
                     <Route path="/wishlist" element={<Wishlist />} />
                     <Route path="/contact" element={<Contact />} />
@@ -77,6 +81,7 @@ const App = () => (
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/privacy" element={<Privacy />} />
                     <Route path="/gift-cards" element={<GiftCards />} />
+                    <Route path="/referrals" element={<Referrals />} />
                     <Route path="/order-success/:orderId?" element={<OrderSuccess />} />
                     <Route path="/order-failed" element={<OrderFailed />} />
 
@@ -92,6 +97,7 @@ const App = () => (
                     <Route path="/admin/scanner" element={<AdminRoute><Scanner /></AdminRoute>} />
                     <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
                     <Route path="/admin/gift-cards" element={<AdminRoute><AdminGiftCards /></AdminRoute>} />
+                    <Route path="/admin/traffic" element={<AdminRoute><AdminTraffic /></AdminRoute>} />
                     <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
                   </Routes>
                 </TooltipProvider>
