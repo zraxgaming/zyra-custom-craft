@@ -1,16 +1,16 @@
 
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
 import ProductForm from "@/components/admin/ProductForm";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Edit, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, Edit } from "lucide-react";
 
 const ProductEdit = () => {
-  const navigate = useNavigate();
   const { id } = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -32,11 +32,10 @@ const ProductEdit = () => {
       if (error) throw error;
       setProduct(data);
     } catch (error: any) {
-      console.error('Error fetching product:', error);
       toast({
         title: "Error",
-        description: "Failed to load product",
-        variant: "destructive",
+        description: "Failed to fetch product details",
+        variant: "destructive"
       });
       navigate('/admin/products');
     } finally {
@@ -51,8 +50,8 @@ const ProductEdit = () => {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <Loader2 className="h-8 w-8 animate-spin" />
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       </AdminLayout>
     );

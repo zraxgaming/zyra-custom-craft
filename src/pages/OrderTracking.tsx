@@ -1,290 +1,316 @@
 
 import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Container } from "@/components/ui/container";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Package, Search, Truck, CheckCircle, Clock, MapPin } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { Search, Package, Truck, CheckCircle, Clock } from "lucide-react";
-
-interface Order {
-  id: string;
-  status: string;
-  total_amount: number;
-  created_at: string;
-  tracking_number: string | null;
-  shipping_address: any;
-  order_items: any[];
-}
+import { Container } from "@/components/ui/container";
+import SEOHead from "@/components/seo/SEOHead";
 
 const OrderTracking = () => {
-  const [trackingNumber, setTrackingNumber] = useState("");
-  const [order, setOrder] = useState<Order | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  const [orderNumber, setOrderNumber] = useState("");
+  const [order, setOrder] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSearch = async () => {
-    if (!trackingNumber.trim()) {
+  const handleTrackOrder = async () => {
+    if (!orderNumber.trim()) {
       toast({
-        title: "Please enter a tracking number",
+        title: "Order Number Required",
+        description: "Please enter an order number to track",
         variant: "destructive"
       });
       return;
     }
 
-    setIsLoading(true);
-    setHasSearched(true);
-    
+    setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("orders")
+      const { data: orderData, error } = await supabase
+        .from('orders')
         .select(`
           *,
           order_items (
-            id,
-            quantity,
-            price,
-            products!order_items_product_id_fkey (
-              id,
+            *,
+            products (
               name,
               images
             )
           )
         `)
-        .eq("tracking_number", trackingNumber.trim())
+        .eq('id', orderNumber)
         .single();
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          setOrder(null);
-          toast({
-            title: "Order not found",
-            description: "Please check your tracking number and try again.",
-            variant: "destructive"
-          });
-        } else {
-          throw error;
-        }
-      } else {
-        setOrder(data);
+      if (error || !orderData) {
+        toast({
+          title: "Order Not Found",
+          description: "Please check your order number and try again",
+          variant: "destructive"
+        });
+        setOrder(null);
+        return;
       }
-    } catch (error: any) {
-      console.error("Error tracking order:", error);
+
+      setOrder(orderData);
+    } catch (error) {
+      console.error('Error tracking order:', error);
       toast({
         title: "Error",
         description: "Failed to track order. Please try again.",
         variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="h-5 w-5 text-yellow-500" />;
-      case 'processing':
-        return <Package className="h-5 w-5 text-blue-500" />;
-      case 'shipped':
-        return <Truck className="h-5 w-5 text-purple-500" />;
-      case 'delivered':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      default:
-        return <Clock className="h-5 w-5 text-gray-500" />;
+      setLoading(false);
     }
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
-      case 'processing':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return 'bg-green-100 text-green-800';
       case 'shipped':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300';
-      case 'delivered':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
+        return 'bg-blue-100 text-blue-800';
+      case 'processing':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'pending':
+        return 'bg-gray-100 text-gray-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return <CheckCircle className="h-5 w-5 text-green-600" />;
+      case 'shipped':
+        return <Truck className="h-5 w-5 text-blue-600" />;
+      case 'processing':
+        return <Package className="h-5 w-5 text-yellow-600" />;
+      case 'pending':
+        return <Clock className="h-5 w-5 text-gray-600" />;
+      default:
+        return <Package className="h-5 w-5" />;
     }
   };
 
   return (
     <>
+      <SEOHead 
+        title="Track Your Order - Zyra"
+        description="Track your order status and delivery information"
+      />
       <Navbar />
-      <Container className="py-12">
-        <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">Track Your Order</h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Enter your tracking number to see the current status of your order
-            </p>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background py-12">
+        <Container>
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-12 animate-fade-in">
+              <Package className="h-16 w-16 text-primary mx-auto mb-6 animate-bounce" />
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent mb-4">
+                Track Your Order
+              </h1>
+              <p className="text-xl text-muted-foreground">
+                Enter your order number to see real-time tracking information
+              </p>
+            </div>
 
-          <Card className="mb-8 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                <Search className="h-5 w-5" />
-                Order Tracking
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-4">
-                <Input
-                  placeholder="Enter your tracking number..."
-                  value={trackingNumber}
-                  onChange={(e) => setTrackingNumber(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                  className="text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800"
-                />
-                <Button 
-                  onClick={handleSearch}
-                  disabled={isLoading}
-                  className="bg-zyra-purple hover:bg-zyra-dark-purple text-white"
-                >
-                  {isLoading ? "Searching..." : "Track"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {hasSearched && !order && !isLoading && (
-            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-              <CardContent className="p-8 text-center">
-                <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">Order Not Found</h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  We couldn't find an order with that tracking number. Please check the number and try again.
-                </p>
+            {/* Search Form */}
+            <Card className="mb-8 animate-slide-in-up card-premium">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Search className="h-5 w-5" />
+                  Order Lookup
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <Label htmlFor="order-number" className="sr-only">Order Number</Label>
+                    <Input
+                      id="order-number"
+                      placeholder="Enter your order number (e.g., ORD-123456)"
+                      value={orderNumber}
+                      onChange={(e) => setOrderNumber(e.target.value)}
+                      className="text-lg py-6"
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleTrackOrder}
+                    disabled={loading}
+                    className="btn-premium px-8 py-6"
+                  >
+                    {loading ? (
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                    ) : (
+                      <>
+                        <Search className="h-5 w-5 mr-2" />
+                        Track Order
+                      </>
+                    )}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
-          )}
 
-          {order && (
-            <div className="space-y-6">
-              <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between text-gray-900 dark:text-gray-100">
-                    <span>Order #{order.id.slice(0, 8)}</span>
-                    <Badge className={getStatusColor(order.status)}>
-                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <h4 className="font-medium text-gray-900 dark:text-gray-100">Order Date</h4>
-                      <p className="text-gray-600 dark:text-gray-400">
-                        {order.created_at ? new Date(order.created_at).toLocaleDateString() : 'Unknown'}
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900 dark:text-gray-100">Total Amount</h4>
-                      <p className="text-gray-600 dark:text-gray-400">
-                        ${order.total_amount.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {order.tracking_number && (
-                    <div>
-                      <h4 className="font-medium text-gray-900 dark:text-gray-100">Tracking Number</h4>
-                      <p className="text-gray-600 dark:text-gray-400 font-mono">
-                        {order.tracking_number}
-                      </p>
-                    </div>
-                  )}
-
-                  {order.shipping_address && (
-                    <div>
-                      <h4 className="font-medium text-gray-900 dark:text-gray-100">Shipping Address</h4>
-                      <div className="text-gray-600 dark:text-gray-400">
-                        <p>{order.shipping_address.street}</p>
-                        <p>
-                          {order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.zipCode}
+            {/* Order Information */}
+            {order && (
+              <div className="space-y-8 animate-fade-in">
+                {/* Order Status */}
+                <Card className="card-premium">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        {getStatusIcon(order.status)}
+                        Order #{order.id.slice(-8)}
+                      </span>
+                      <Badge className={getStatusColor(order.status)}>
+                        {order.status.toUpperCase()}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                      <div className="text-center p-4 bg-muted/30 rounded-lg">
+                        <p className="text-sm text-muted-foreground">Order Date</p>
+                        <p className="font-semibold">
+                          {new Date(order.created_at).toLocaleDateString()}
                         </p>
-                        <p>{order.shipping_address.country}</p>
+                      </div>
+                      <div className="text-center p-4 bg-muted/30 rounded-lg">
+                        <p className="text-sm text-muted-foreground">Total Amount</p>
+                        <p className="font-semibold">${order.total_amount.toFixed(2)}</p>
+                      </div>
+                      <div className="text-center p-4 bg-muted/30 rounded-lg">
+                        <p className="text-sm text-muted-foreground">Payment Status</p>
+                        <p className="font-semibold">{order.payment_status}</p>
+                      </div>
+                      <div className="text-center p-4 bg-muted/30 rounded-lg">
+                        <p className="text-sm text-muted-foreground">Tracking Number</p>
+                        <p className="font-semibold">{order.tracking_number || 'TBD'}</p>
                       </div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
 
-              <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-                <CardHeader>
-                  <CardTitle className="text-gray-900 dark:text-gray-100">Order Status</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {['pending', 'processing', 'shipped', 'delivered'].map((status, index) => {
-                      const isActive = ['pending', 'processing', 'shipped', 'delivered'].indexOf(order.status) >= index;
-                      const isCurrent = order.status === status;
-                      
-                      return (
-                        <div key={status} className="flex items-center gap-4">
-                          <div className={`p-2 rounded-full ${isActive ? 'bg-zyra-purple' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                            {getStatusIcon(status)}
-                          </div>
-                          <div className="flex-1">
-                            <h4 className={`font-medium ${isCurrent ? 'text-zyra-purple' : 'text-gray-900 dark:text-gray-100'}`}>
-                              {status.charAt(0).toUpperCase() + status.slice(1)}
-                            </h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              {status === 'pending' && 'Your order has been received and is being prepared'}
-                              {status === 'processing' && 'Your order is being processed and prepared for shipment'}
-                              {status === 'shipped' && 'Your order has been shipped and is on its way'}
-                              {status === 'delivered' && 'Your order has been delivered'}
-                            </p>
-                          </div>
-                          {isCurrent && (
-                            <Badge variant="outline" className="text-zyra-purple border-zyra-purple">
-                              Current
-                            </Badge>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
+                {/* Shipping Address */}
+                {order.shipping_address && (
+                  <Card className="card-premium">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <MapPin className="h-5 w-5" />
+                        Shipping Address
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="bg-muted/30 p-4 rounded-lg">
+                        <p className="font-semibold">{order.shipping_address.firstName} {order.shipping_address.lastName}</p>
+                        <p>{order.shipping_address.address}</p>
+                        <p>{order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.zipCode}</p>
+                        <p>{order.shipping_address.country}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
-              {order.order_items && order.order_items.length > 0 && (
-                <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                {/* Order Items */}
+                <Card className="card-premium">
                   <CardHeader>
-                    <CardTitle className="text-gray-900 dark:text-gray-100">Order Items</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <Package className="h-5 w-5" />
+                      Order Items
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
                       {order.order_items.map((item: any) => (
-                        <div key={item.id} className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-4 last:border-b-0">
-                          <div>
-                            <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                              {item.products?.name || `Item #${item.id.slice(0, 8)}`}
-                            </h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              Quantity: {item.quantity}
-                            </p>
+                        <div key={item.id} className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
+                          <img
+                            src={item.products.images[0] || '/placeholder-product.jpg'}
+                            alt={item.products.name}
+                            className="w-16 h-16 object-cover rounded-lg"
+                          />
+                          <div className="flex-1">
+                            <h4 className="font-semibold">{item.products.name}</h4>
+                            <p className="text-sm text-muted-foreground">Quantity: {item.quantity}</p>
+                            {item.customization && (
+                              <div className="text-xs text-blue-600 mt-1">
+                                Customized
+                              </div>
+                            )}
                           </div>
-                          <p className="font-medium text-gray-900 dark:text-gray-100">
-                            ${(item.price * item.quantity).toFixed(2)}
-                          </p>
+                          <p className="font-semibold">${(item.price * item.quantity).toFixed(2)}</p>
                         </div>
                       ))}
                     </div>
                   </CardContent>
                 </Card>
-              )}
-            </div>
-          )}
-        </div>
-      </Container>
+
+                {/* Tracking Timeline */}
+                <Card className="card-premium">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Truck className="h-5 w-5" />
+                      Tracking Timeline
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                        <CheckCircle className="h-6 w-6 text-green-600" />
+                        <div>
+                          <p className="font-semibold">Order Placed</p>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(order.created_at).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {order.status !== 'pending' && (
+                        <div className="flex items-center gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                          <Package className="h-6 w-6 text-blue-600" />
+                          <div>
+                            <p className="font-semibold">Order Confirmed</p>
+                            <p className="text-sm text-muted-foreground">Your order is being processed</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {(order.status === 'shipped' || order.status === 'completed') && (
+                        <div className="flex items-center gap-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                          <Truck className="h-6 w-6 text-yellow-600" />
+                          <div>
+                            <p className="font-semibold">Order Shipped</p>
+                            <p className="text-sm text-muted-foreground">
+                              Tracking: {order.tracking_number || 'TBD'}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {order.status === 'completed' && (
+                        <div className="flex items-center gap-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                          <CheckCircle className="h-6 w-6 text-green-600" />
+                          <div>
+                            <p className="font-semibold">Order Delivered</p>
+                            <p className="text-sm text-muted-foreground">Your order has been delivered</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
+        </Container>
+      </div>
       <Footer />
     </>
   );
