@@ -21,7 +21,6 @@ const MaintenanceBanner = () => {
       const { data, error } = await supabase
         .from('maintenance_mode')
         .select('is_active, message')
-        .eq('id', '00000000-0000-0000-0000-000000000001')
         .single();
 
       if (error && error.code !== 'PGRST116') {
@@ -49,16 +48,16 @@ const MaintenanceBanner = () => {
   if (!isVisible) return null;
 
   return (
-    <div className="relative overflow-hidden bg-gradient-to-r from-orange-500 via-red-500 to-orange-600 text-white animate-slide-down z-50">
-      <div className="absolute inset-0 bg-black/10 backdrop-blur-sm animate-pulse"></div>
-      <div className="relative flex items-center justify-between px-4 py-3 animate-fade-in">
+    <div className="relative overflow-hidden bg-gradient-to-r from-orange-500 via-red-500 to-orange-600 text-white z-50 transform transition-all duration-500">
+      <div className="absolute inset-0 bg-black/10 backdrop-blur-sm"></div>
+      <div className="relative flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3 flex-1">
-          <AlertTriangle className="h-5 w-5 animate-bounce" />
-          <p className="text-sm font-medium animate-slide-in-left">{message}</p>
+          <AlertTriangle className="h-5 w-5 animate-pulse" />
+          <p className="text-sm font-medium">{message}</p>
         </div>
         <button
           onClick={handleDismiss}
-          className="p-1 hover:bg-white/20 rounded-full transition-all duration-300 hover:scale-110 animate-scale-in"
+          className="p-1 hover:bg-white/20 rounded-full transition-all duration-300 hover:scale-110"
           aria-label="Dismiss maintenance notice"
         >
           <X className="h-4 w-4" />
