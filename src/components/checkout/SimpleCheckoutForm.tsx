@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CreditCard, Smartphone, Shield, Loader2 } from "lucide-react";
+import PayPalPayment from "./PayPalPayment";
 
 interface SimpleCheckoutFormProps {
   items: any[];
@@ -37,6 +37,11 @@ const SimpleCheckoutForm: React.FC<SimpleCheckoutFormProps> = ({
     country: "UAE"
   });
 
+  // Always keep email in sync with user.email
+  React.useEffect(() => {
+    setFormData(prev => ({ ...prev, email: user?.email || "" }));
+  }, [user?.email]);
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -52,7 +57,6 @@ const SimpleCheckoutForm: React.FC<SimpleCheckoutFormProps> = ({
     }
 
     setIsProcessing(true);
-    
     try {
       // Create order
       const { data: order, error: orderError } = await supabase
@@ -68,9 +72,7 @@ const SimpleCheckoutForm: React.FC<SimpleCheckoutFormProps> = ({
         })
         .select()
         .single();
-
       if (orderError) throw orderError;
-
       // Add order items
       const orderItems = items.map(item => ({
         order_id: order.id,
@@ -78,9 +80,7 @@ const SimpleCheckoutForm: React.FC<SimpleCheckoutFormProps> = ({
         quantity: item.quantity,
         price: item.price
       }));
-
       await supabase.from('order_items').insert(orderItems);
-
       if (paymentMethod === 'ziina') {
         // Process real Ziina payment
         const orderData = {
@@ -90,28 +90,27 @@ const SimpleCheckoutForm: React.FC<SimpleCheckoutFormProps> = ({
           items,
           subtotal
         };
-
         const { data, error } = await supabase.functions.invoke('ziina-payment', {
           body: {
-            amount: Math.round(subtotal * 367), // Convert USD to AED fils
+            amount: Math.round(subtotal * 367),
             success_url: `${window.location.origin}/order-success/${order.id}`,
             cancel_url: `${window.location.origin}/checkout`,
             order_data: orderData
           }
         });
-
         if (error) throw error;
-
         if (data?.payment_url) {
-          // Store order ID for success page
           localStorage.setItem('pending_order_id', order.id);
           window.location.href = data.payment_url;
         } else {
           throw new Error('No payment URL received');
         }
+      } else if (paymentMethod === 'paypal') {
+        // PayPal handled in UI, just update order status on success
+        setShowPayPal(true);
+        setCurrentOrderId(order.id);
       }
     } catch (error: any) {
-      console.error('Payment error:', error);
       toast({
         title: "Payment Failed",
         description: error.message || "Unable to process payment",
@@ -120,6 +119,28 @@ const SimpleCheckoutForm: React.FC<SimpleCheckoutFormProps> = ({
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // State for PayPal modal
+  const [showPayPal, setShowPayPal] = useState(false);
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
+  const handlePayPalSuccess = async (transactionId: string) => {
+    if (!currentOrderId) return;
+    await supabase.from('orders').update({
+      status: 'processing',
+      payment_status: 'paid',
+      tracking_number: transactionId
+    }).eq('id', currentOrderId);
+    setShowPayPal(false);
+    onPaymentSuccess(currentOrderId);
+  };
+  const handlePayPalError = (error: string) => {
+    toast({
+      title: "PayPal Payment Failed",
+      description: error,
+      variant: "destructive"
+    });
+    setShowPayPal(false);
   };
 
   return (
@@ -160,10 +181,10 @@ const SimpleCheckoutForm: React.FC<SimpleCheckoutFormProps> = ({
             <Input
               id="email"
               type="email"
-              value={formData.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
-              required
-              className="border-purple-200 focus:border-purple-500"
+              value={user?.email || ""}
+              disabled
+              readOnly
+              className="border-purple-200 focus:border-purple-500 bg-gray-100 cursor-not-allowed"
             />
           </div>
 
@@ -233,20 +254,49 @@ const SimpleCheckoutForm: React.FC<SimpleCheckoutFormProps> = ({
                 <span className="text-purple-700 dark:text-purple-300">Ziina Payment (AED)</span>
               </Label>
             </div>
+            <div className="flex items-center space-x-2 p-4 border-2 border-blue-200 dark:border-blue-800 rounded-lg bg-blue-50 dark:bg-blue-950 hover:shadow-md transition-all duration-300">
+              <RadioGroupItem value="paypal" id="paypal" />
+              <Label htmlFor="paypal" className="flex items-center gap-2 cursor-pointer flex-1">
+                <CreditCard className="h-4 w-4 text-blue-600" />
+                <span className="text-blue-700 dark:text-blue-300">PayPal (USD)</span>
+              </Label>
+            </div>
           </RadioGroup>
-
-          <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-            <p className="text-sm text-blue-700 dark:text-blue-300">
-              💰 Amount: {(subtotal * 3.67).toFixed(2)} AED (${subtotal.toFixed(2)} USD)
-            </p>
-            <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
-              🔒 Secure payment via Ziina Payment Gateway
-            </p>
-          </div>
-
+          {paymentMethod === 'ziina' && (
+            <div>
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => handleInputChange('phone', e.target.value)}
+                placeholder="+971 50 123 4567"
+                className="border-purple-200 focus:border-purple-500"
+              />
+            </div>
+          )}
+          {paymentMethod === 'ziina' && (
+            <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                💰 Amount: {(subtotal * 3.67).toFixed(2)} AED (${subtotal.toFixed(2)} USD)
+              </p>
+              <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                🔒 Secure payment via Ziina Payment Gateway
+              </p>
+            </div>
+          )}
+          {paymentMethod === 'paypal' && (
+            <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                💰 Amount: ${subtotal.toFixed(2)} USD
+              </p>
+              <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                🔒 Secure payment via PayPal
+              </p>
+            </div>
+          )}
           <Button 
             onClick={processPayment} 
-            disabled={isProcessing}
+            disabled={isProcessing || (paymentMethod === 'ziina' && !formData.phone)}
             className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 rounded-xl transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
             size="lg"
           >
@@ -258,10 +308,32 @@ const SimpleCheckoutForm: React.FC<SimpleCheckoutFormProps> = ({
             ) : (
               <>
                 <CreditCard className="h-4 w-4 mr-2" />
-                Pay {(subtotal * 3.67).toFixed(2)} AED with Ziina
+                {paymentMethod === 'ziina'
+                  ? `Pay ${(subtotal * 3.67).toFixed(2)} AED with Ziina`
+                  : `Pay $${subtotal.toFixed(2)} with PayPal`}
               </>
             )}
           </Button>
+          {showPayPal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+              <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-4 max-w-lg w-full relative flex flex-col items-center">
+                <button
+                  className="absolute top-2 right-2 text-gray-500 hover:text-red-500 text-2xl font-bold"
+                  onClick={() => setShowPayPal(false)}
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+                <h2 className="text-xl font-bold mb-4 text-center">Complete Your PayPal Payment</h2>
+                <PayPalPayment
+                  amount={subtotal}
+                  orderData={formData}
+                  onSuccess={handlePayPalSuccess}
+                  onError={handlePayPalError}
+                />
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

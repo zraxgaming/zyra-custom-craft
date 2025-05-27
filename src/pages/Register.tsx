@@ -68,7 +68,7 @@ const Register = () => {
       <SEOHead 
         title="Create Account - Zyra"
         description="Join Zyra today and start customizing amazing products. Create your account to unlock personalized shopping experience."
-        url="https://zyra.lovable.app/register"
+        url="https://shopzyra.vercel.app/auth"
       />
       <Navbar />
       <div className="min-h-screen bg-background flex items-center justify-center py-12">

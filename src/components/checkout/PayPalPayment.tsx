@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, CreditCard } from "lucide-react";
@@ -8,6 +7,7 @@ interface PayPalPaymentProps {
   onSuccess: (transactionId: string) => void;
   onError: (error: string) => void;
   orderData: any;
+  clientId: string; // Add clientId prop
 }
 
 declare global {
@@ -20,7 +20,8 @@ const PayPalPayment: React.FC<PayPalPaymentProps> = ({
   amount, 
   onSuccess, 
   onError, 
-  orderData 
+  orderData,
+  clientId // Use clientId from props
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -33,14 +34,10 @@ const PayPalPayment: React.FC<PayPalPaymentProps> = ({
         initPayPal();
         return;
       }
-
-      // Use client ID from .env.local - this should be set by user
-      const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
       if (!clientId) {
-        onError('PayPal client ID not configured in .env.local');
+        onError('PayPal client ID not provided');
         return;
       }
-
       const script = document.createElement('script');
       script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD&intent=capture`;
       script.onload = () => initPayPal();
@@ -113,7 +110,7 @@ const PayPalPayment: React.FC<PayPalPaymentProps> = ({
     };
 
     loadPayPal();
-  }, [amount, orderData, onSuccess, onError, toast]);
+  }, [amount, orderData, onSuccess, onError, toast, clientId]);
 
   if (isLoading) {
     return (

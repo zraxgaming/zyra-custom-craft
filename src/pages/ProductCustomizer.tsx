@@ -51,7 +51,7 @@ const ProductCustomizer = () => {
       <SEOHead 
         title="Customize Your Product - Zyra"
         description="Personalize your product with custom text, colors, and images using our advanced customization tools."
-        url={`https://zyra.lovable.app/customize/${productId}`}
+        url={`https://shopzyra.vercel.app/customize/${productId}`}
       />
       <Navbar />
       <div className="min-h-screen bg-background">

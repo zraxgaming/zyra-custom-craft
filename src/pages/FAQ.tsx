@@ -128,7 +128,7 @@ const FAQ = () => {
         title="FAQ - Frequently Asked Questions | Zyra"
         description="Find answers to common questions about Zyra's custom products, shipping, returns, and more. Get help with your order today."
         keywords="faq, help, support, questions, shipping, returns, customization"
-        url="https://zyra.lovable.app/faq"
+        url="https://shopzyra.vercel.app/faq"
       />
       <div className="min-h-screen bg-background">
         <Navbar />

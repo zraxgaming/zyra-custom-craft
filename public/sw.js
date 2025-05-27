@@ -1,4 +1,3 @@
-
 const CACHE_NAME = 'zyra-v1';
 const urlsToCache = [
   '/',
@@ -11,23 +10,38 @@ const urlsToCache = [
   '/icon-512.png'
 ];
 
+// Add new pages to cache
+const additionalUrlsToCache = [
+  '/404',
+  '/Success',
+  '/Offline',
+  '/order-success',
+  '/order-failed',
+  '/offline.html'
+];
+
 // Install event
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        return cache.addAll(urlsToCache);
+        return cache.addAll([...urlsToCache, ...additionalUrlsToCache]);
       })
   );
+  self.skipWaiting();
 });
 
-// Fetch event
+// Enhanced fetch event for offline fallback
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request);
+        return response || fetch(event.request).catch(() => {
+          // Serve offline fallback for navigation requests
+          if (event.request.mode === 'navigate') {
+            return caches.match('/offline.html');
+          }
+        });
       })
   );
 });
@@ -81,6 +95,13 @@ self.addEventListener('notificationclick', (event) => {
     event.waitUntil(
       clients.openWindow('/')
     );
+  }
+});
+
+// Listen for skipWaiting message
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.action === 'skipWaiting') {
+    self.skipWaiting();
   }
 });
 

@@ -31,7 +31,7 @@ const Categories = () => {
       <SEOHead 
         title="Categories - Zyra"
         description="Explore all product categories at Zyra. Find the perfect customizable products for your needs."
-        url="https://zyra.lovable.app/categories"
+        url="https://shopzyra.vercel.app/categories"
       />
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20">
         <Navbar />

@@ -75,7 +75,7 @@ const Shop = () => {
       <SEOHead 
         title="Shop - Zyra"
         description="Discover our premium collection of customizable products. Shop the latest designs and create something unique."
-        url="https://zyra.lovable.app/shop"
+        url="https://shopzyra.vercel.app/shop"
       />
       <Navbar />
       

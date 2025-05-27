@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,7 @@ const OrderFailed = () => {
       <SEOHead 
         title="Payment Failed - Zyra"
         description="Your payment could not be processed. Please try again or contact our support team for assistance."
-        url="https://zyra.lovable.app/order-failed"
+        url="https://shopzyra.vercel.app/order-failed"
       />
       <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-red-900/20">
         <Navbar />
@@ -156,5 +155,16 @@ const OrderFailed = () => {
     </>
   );
 };
+
+// Fallback minimal error UI (in case main UI fails)
+export function OrderFailedFallback() {
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#fff0f0' }}>
+      <h1 style={{ color: '#d32f2f', fontSize: '2rem', marginBottom: '1rem' }}>Order Failed</h1>
+      <p style={{ color: '#555', fontSize: '1.2rem' }}>Sorry, your payment or order could not be completed.</p>
+      <a href="/checkout" style={{ marginTop: '2rem', color: '#fff', background: '#d32f2f', padding: '0.75rem 2rem', borderRadius: '8px', textDecoration: 'none', fontWeight: 'bold' }}>Try Again</a>
+    </div>
+  );
+}
 
 export default OrderFailed;

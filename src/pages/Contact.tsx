@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { sendEmailDirect } from '@/utils/sendgrid';
 import { MapPin, Phone, Mail, Clock, Send, MessageSquare, Heart } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -25,35 +25,32 @@ const Contact = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.name || !formData.email || !formData.message) {
+      toast({
+        title: 'All fields required',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase
-        .from('contact_submissions')
-        .insert([
-          {
-            name: formData.name,
-            email: formData.email,
-            subject: formData.subject,
-            message: formData.message,
-            status: 'open'
-          }
-        ]);
-
-      if (error) throw error;
-
-      toast({
-        title: "Message Sent Successfully! 🎉",
-        description: "Thank you for reaching out. We'll get back to you within 24 hours.",
+      await sendEmailDirect({
+        to: 'zainabusal113@gmail.com',
+        subject: `Contact Form: ${formData.subject || 'No Subject'}`,
+        html: `<p><strong>Name:</strong> ${formData.name}</p><p><strong>Email:</strong> ${formData.email}</p><p><strong>Message:</strong><br>${formData.message}</p>`
       });
-
-      setFormData({ name: "", email: "", subject: "", message: "" });
-    } catch (error) {
-      console.error('Contact form error:', error);
       toast({
-        title: "Failed to Send Message",
-        description: "Please try again or contact us directly via email.",
-        variant: "destructive",
+        title: 'Message sent!',
+        description: 'Your message has been sent. We will get back to you soon.',
+      });
+      setFormData({ name: '', email: '', subject: '', message: '' });
+    } catch (error: any) {
+      toast({
+        title: 'Failed to send',
+        description: error.message || 'Could not send your message.',
+        variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
@@ -77,7 +74,7 @@ const Contact = () => {
     {
       icon: Phone,
       title: "Call Us",
-      content: ["+971 4 123 4567", "+971 50 123 4567", "Available 24/7"],
+      content: ["+971 55 759 7200", "Available 24/7"],
       color: "from-pink-600 to-pink-700"
     },
     {
@@ -99,7 +96,7 @@ const Contact = () => {
       <SEOHead 
         title="Contact Us - Zyra"
         description="Get in touch with Zyra's customer support team. We're here to help with your orders, customizations, and any questions you may have."
-        url="https://zyra.lovable.app/contact"
+        url="https://shopzyra.vercel.app/contact"
       />
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20">
         <Navbar />

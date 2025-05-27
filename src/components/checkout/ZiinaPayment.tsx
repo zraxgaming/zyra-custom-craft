@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +22,8 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [ziinaConfig, setZiinaConfig] = useState<any>(null);
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -82,8 +83,6 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
     setIsProcessing(true);
     
     try {
-      console.log('Starting Ziina payment process...');
-      
       // Convert USD to AED and then to fils (1 AED = 100 fils)
       const aedAmount = amount * 3.67;
       const filsAmount = Math.round(aedAmount * 100);
@@ -100,8 +99,6 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
         allow_tips: false,
         customer_phone: phoneNumber
       };
-
-      console.log('Creating Ziina payment with payload:', paymentPayload);
 
       // Call Ziina API directly
       const ziinaBaseUrl = ziinaConfig.ziina_base_url || 'https://api-v2.ziina.com';
@@ -121,10 +118,10 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       }
 
       const ziinaData = await response.json();
-      console.log('Ziina payment created successfully:', ziinaData);
-
-      if (ziinaData.payment_url || ziinaData.checkout_url) {
-        // Store payment info for verification
+      // Use redirect_url, payment_url, or checkout_url for redirection
+      const url = ziinaData.redirect_url || ziinaData.payment_url || ziinaData.checkout_url;
+      if (url) {
+        // Store payment info for verification (no sensitive data)
         localStorage.setItem('pending_ziina_payment', JSON.stringify({
           payment_id: ziinaData.id || ziinaData.payment_intent_id,
           amount: amount,
@@ -135,12 +132,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
           title: "Redirecting to Ziina",
           description: "You will be redirected to complete your payment securely.",
         });
-
-        // Redirect to Ziina payment page
-        setTimeout(() => {
-          window.location.href = ziinaData.payment_url || ziinaData.checkout_url;
-        }, 1500);
-        
+        setPaymentUrl(url); // Open modal with iframe
       } else {
         throw new Error('No payment URL received from Ziina');
       }
@@ -166,6 +158,41 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       setIsProcessing(false);
     }
   };
+
+  // Listen for payment completion via postMessage or polling
+  useEffect(() => {
+    if (!paymentUrl) return;
+    // Handler for postMessage from payment page
+    const handleMessage = async (event: MessageEvent) => {
+      // Only accept messages from the payment domain
+      if (typeof paymentUrl === 'string' && event.origin && paymentUrl.startsWith(event.origin)) {
+        if (event.data && event.data.status === 'success' && orderData?.id) {
+          await supabase.from('orders').update({ status: 'processing', payment_status: 'paid' }).eq('id', orderData.id);
+          setPaymentUrl(null);
+          onSuccess(orderData.id);
+          window.location.href = `/order-success?id=${orderData.id}`;
+        }
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [paymentUrl, orderData, onSuccess]);
+
+  // Optionally, poll the order status if postMessage is not supported
+  useEffect(() => {
+    let interval: any;
+    if (paymentUrl && orderData?.id) {
+      interval = setInterval(async () => {
+        const { data } = await supabase.from('orders').select('payment_status').eq('id', orderData.id).single();
+        if (data?.payment_status === 'paid') {
+          setPaymentUrl(null);
+          onSuccess(orderData.id);
+          window.location.href = `/order-success?id=${orderData.id}`;
+        }
+      }, 3000);
+    }
+    return () => clearInterval(interval);
+  }, [paymentUrl, orderData, onSuccess]);
 
   const aedAmount = (amount * 3.67).toFixed(2);
 
@@ -240,6 +267,31 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
         )}
       </Button>
       
+      {/* Modal for Ziina payment */}
+      {paymentUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-4 max-w-2xl w-full relative flex flex-col items-center">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-red-500 text-2xl font-bold"
+              onClick={() => setPaymentUrl(null)}
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <h2 className="text-xl font-bold mb-4 text-center">Complete Your Payment</h2>
+            <iframe
+              src={paymentUrl}
+              title="Ziina Payment"
+              className="w-full h-[600px] rounded-lg border"
+              allow="payment"
+              onLoad={() => setIframeLoaded(true)}
+            />
+            {!iframeLoaded && <div className="text-center text-gray-500 mt-2">Loading payment page...</div>}
+            <p className="mt-2 text-sm text-gray-500 text-center">After completing payment, you will be redirected automatically.</p>
+          </div>
+        </div>
+      )}
+      
       {/* Security Features */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
         <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800 hover:shadow-lg transition-all duration-300">
@@ -297,3 +349,5 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 };
 
 export default ZiinaPayment;
+
+// NOTE: Do not log or expose API keys or sensitive config in frontend logs or UI.

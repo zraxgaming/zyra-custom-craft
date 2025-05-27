@@ -15,7 +15,7 @@ const testimonials = [
     id: 2,
     content:
       "The design tool was so easy to use. I created a hoodie with my own artwork and the print quality exceeded my expectations. Will definitely order again.",
-    author: "Michael Chen",
+    author: "Michael rach",
     avatar: "https://randomuser.me/api/portraits/men/22.jpg",
     role: "Designer",
     rating: 5,
@@ -24,7 +24,7 @@ const testimonials = [
     id: 3,
     content:
       "Bought custom mugs as gifts for my team and they were a big hit! The customization options are incredible and shipping was faster than expected.",
-    author: "Jessica Williams",
+    author: "Jessica trils",
     avatar: "https://randomuser.me/api/portraits/women/45.jpg",
     role: "Office Manager",
     rating: 4,

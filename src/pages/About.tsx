@@ -48,7 +48,7 @@ const About = () => {
       <SEOHead 
         title="About Zyra - Premium Custom Products"
         description="Learn about Zyra's mission to deliver premium customizable products. Discover our story, values, and commitment to quality."
-        url="https://zyra.lovable.app/about"
+        url="https://shopzyra.vercel.app/about"
       />
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20">
         <Navbar />

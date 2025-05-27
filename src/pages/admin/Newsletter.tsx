@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Mail, Send, Users, Plus } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
+import { sendEmailDirect } from '@/utils/sendgrid';
 
 interface Newsletter {
   id: string;
@@ -122,10 +122,16 @@ const AdminNewsletter = () => {
 
   const handleSend = async (newsletterId: string) => {
     if (!confirm('Are you sure you want to send this newsletter to all subscribers?')) return;
-
     try {
       const newsletter = newsletters.find(n => n.id === newsletterId);
       if (!newsletter) return;
+
+      // Notify admin
+      await sendEmailDirect({
+        to: 'zainabusal113@gmail.com',
+        subject: `Newsletter Sent: ${newsletter.subject}`,
+        html: `<p>The following newsletter was sent to all subscribers:</p><p><strong>Subject:</strong> ${newsletter.subject}</p><div>${newsletter.html_content || newsletter.content}</div>`
+      });
 
       const { error } = await supabase.functions.invoke('send-newsletter', {
         body: {

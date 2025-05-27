@@ -3,7 +3,7 @@
   "name": "Zyra - Premium E-commerce",
   "short_name": "Zyra",
   "description": "Premium e-commerce platform for customizable products with personalized shopping experience",
-  "start_url": "/",
+  "start_url": "/home",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#8B5CF6",

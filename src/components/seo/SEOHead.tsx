@@ -16,7 +16,7 @@ const SEOHead: React.FC<SEOHeadProps> = ({
   title = "Zyra - Premium Custom Products",
   description = "Create beautiful custom products with Zyra. Premium quality, fast delivery.",
   keywords = "custom products, personalization, premium quality",
-  url = "https://zyra.lovable.app",
+  url = "https://shopzyra.vercel.app",
   image = "/placeholder.svg",
   noIndex = false,
   structuredData

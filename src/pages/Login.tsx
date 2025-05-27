@@ -49,7 +49,7 @@ const Login = () => {
       <SEOHead 
         title="Login - Zyra"
         description="Sign in to your Zyra account to access your orders, wishlist, and account settings."
-        url="https://zyra.lovable.app/login"
+        url="https://shopzyra.vercel.app/auth"
       />
       <Navbar />
       <div className="min-h-screen bg-background flex items-center justify-center">

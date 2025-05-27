@@ -55,7 +55,7 @@ const Terms = () => {
       <SEOHead 
         title="Terms of Service - Zyra"
         description="Read Zyra's Terms of Service. Understand your rights and responsibilities when using our premium customization platform."
-        url="https://zyra.lovable.app/terms"
+        url="https://shopzyra.vercel.app/terms"
       />
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20">
         <Navbar />
@@ -93,7 +93,7 @@ const Terms = () => {
             <CardContent className="p-8">
               <div className="prose prose-lg max-w-none text-gray-600 dark:text-gray-300">
                 <p className="text-lg leading-relaxed mb-6">
-                  Welcome to Zyra! These Terms of Service ("Terms", "Terms of Service") govern your use of our website located at zyra.lovable.app (the "Service") operated by Zyra ("us", "we", or "our").
+                  Welcome to Zyra! These Terms of Service ("Terms", "Terms of Service") govern your use of our website located at shopzyra.vercel.app (the "Service") operated by Zyra ("us", "we", or "our").
                 </p>
                 <p className="text-lg leading-relaxed">
                   Our Privacy Policy also governs your use of the Service and explains how we collect, safeguard and disclose information that results from your use of our web pages.

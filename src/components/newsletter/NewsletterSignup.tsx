@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Mail } from "lucide-react";
+import { sendEmailDirect } from '@/utils/sendgrid';
 
 const NewsletterSignup = () => {
   const [email, setEmail] = useState("");
@@ -26,6 +26,12 @@ const NewsletterSignup = () => {
 
     setIsLoading(true);
     try {
+      // Notify admin of new subscriber
+      await sendEmailDirect({
+        to: 'zainabusal113@gmail.com',
+        subject: 'New Newsletter Subscription',
+        html: `<p>New subscriber: <strong>${email}</strong>${name ? `<br>Name: ${name}` : ''}</p>`
+      });
       const { error } = await supabase
         .from("newsletter_subscriptions")
         .insert({

@@ -71,7 +71,7 @@ const TermsOfService = () => {
       <SEOHead 
         title="Terms of Service - Zyra"
         description="Review Zyra's terms of service, including account terms, ordering policies, and user responsibilities."
-        url="https://zyra.lovable.app/terms-of-service"
+        url="https://shopzyra.vercel.app/terms"
       />
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20">
         <Navbar />
