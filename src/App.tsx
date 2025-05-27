@@ -17,8 +17,10 @@ import ProductDetails from "@/pages/ProductDetails";
 import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
 import OrderSuccess from "@/pages/OrderSuccess";
+import OrderFailed from "@/pages/OrderFailed";
 import Dashboard from "@/pages/Dashboard";
 import Profile from "@/pages/Profile";
+import Wishlist from "@/pages/Wishlist";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";
@@ -65,6 +67,8 @@ function App() {
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/order-success/:orderId" element={<OrderSuccess />} />
+                <Route path="/order-failed" element={<OrderFailed />} />
+                <Route path="/wishlist" element={<Wishlist />} />
 
                 {/* Protected User Pages */}
                 <Route path="/dashboard" element={
