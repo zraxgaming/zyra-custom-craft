@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,92 +6,36 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { useSiteConfig, useUpdateSiteConfig } from '@/hooks/use-site-config';
 import { AlertTriangle, Save, Loader2 } from 'lucide-react';
 
 const MaintenanceToggle = () => {
+  const { data: siteConfig, isLoading } = useSiteConfig();
+  const updateSiteConfig = useUpdateSiteConfig();
   const [isActive, setIsActive] = useState(false);
   const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchMaintenanceStatus();
-  }, []);
-
-  const fetchMaintenanceStatus = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('maintenance_mode')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching maintenance status:', error);
-        setIsActive(false);
-        setMessage('We are currently performing maintenance. Some features may be temporarily unavailable.');
-      } else if (data) {
-        setIsActive(data.is_active || false);
-        setMessage(data.message || 'We are currently performing maintenance. Some features may be temporarily unavailable.');
-      } else {
-        setIsActive(false);
-        setMessage('We are currently performing maintenance. Some features may be temporarily unavailable.');
-      }
-    } catch (error) {
-      console.error('Error fetching maintenance status:', error);
-      setIsActive(false);
-      setMessage('We are currently performing maintenance. Some features may be temporarily unavailable.');
-    } finally {
-      setLoading(false);
+    if (siteConfig) {
+      setIsActive(siteConfig.maintenance_mode === "true");
+      setMessage(siteConfig.maintenance_message || 'We are currently performing maintenance. Some features may be temporarily unavailable.');
     }
-  };
+  }, [siteConfig]);
 
   const updateMaintenanceStatus = async () => {
     setSaving(true);
     try {
-      // Check if any records exist
-      const { data: existingData } = await supabase
-        .from('maintenance_mode')
-        .select('id')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      let result;
-      if (existingData) {
-        // Update existing record
-        result = await supabase
-          .from('maintenance_mode')
-          .update({
-            is_active: isActive,
-            message: message || 'We are currently performing maintenance. Some features may be temporarily unavailable.',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingData.id);
-      } else {
-        // Insert new record
-        result = await supabase
-          .from('maintenance_mode')
-          .insert({
-            is_active: isActive,
-            message: message || 'We are currently performing maintenance. Some features may be temporarily unavailable.',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-      }
-
-      if (result.error) throw result.error;
+      await updateSiteConfig.mutateAsync({
+        maintenance_mode: isActive.toString(),
+        maintenance_message: message || 'We are currently performing maintenance. Some features may be temporarily unavailable.'
+      });
 
       toast({
         title: "Maintenance Status Updated",
         description: `Maintenance mode is now ${isActive ? 'enabled' : 'disabled'}`,
       });
-
-      // Refresh the data to ensure UI is in sync
-      await fetchMaintenanceStatus();
     } catch (error: any) {
       console.error('Error updating maintenance status:', error);
       toast({
@@ -103,7 +48,7 @@ const MaintenanceToggle = () => {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Card className="bg-card/80 backdrop-blur-sm border-border/50">
         <CardContent className="p-6 text-center">
