@@ -20,8 +20,7 @@ const Dashboard = () => {
     first_name: "",
     last_name: "",
     phone: "",
-    display_name: "",
-    address: ""
+    display_name: ""
   });
   const [loading, setLoading] = useState(false);
 
@@ -48,8 +47,7 @@ const Dashboard = () => {
           first_name: data.first_name || "",
           last_name: data.last_name || "",
           phone: data.phone || "",
-          display_name: data.display_name || "",
-          address: data.address || ""
+          display_name: data.display_name || ""
         });
       }
     } catch (error) {
@@ -219,19 +217,6 @@ const Dashboard = () => {
                   type="tel"
                   value={profile.phone}
                   onChange={(e) => setProfile(prev => ({ ...prev, phone: e.target.value }))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="address" className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  Address
-                </Label>
-                <Textarea
-                  id="address"
-                  value={profile.address}
-                  onChange={(e) => setProfile(prev => ({ ...prev, address: e.target.value }))}
-                  placeholder="Enter your full address..."
                 />
               </div>
 
