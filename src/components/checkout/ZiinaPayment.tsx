@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Smartphone, Loader2, CreditCard, Shield, Zap, CheckCircle } from "lucide-react";
+import { Smartphone, Loader2, CreditCard, Shield, Zap, CheckCircle, AlertCircle } from "lucide-react";
 
 interface ZiinaPaymentProps {
   amount: number;
@@ -22,7 +22,32 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [ziinaConfig, setZiinaConfig] = useState<any>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetchZiinaConfig();
+  }, []);
+
+  const fetchZiinaConfig = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('site_config')
+        .select('*')
+        .in('key', ['ziina_api_key', 'ziina_merchant_id', 'ziina_base_url']);
+
+      if (error) throw error;
+
+      const config = data?.reduce((acc, item) => {
+        acc[item.key] = item.value;
+        return acc;
+      }, {} as any);
+
+      setZiinaConfig(config);
+    } catch (error) {
+      console.error('Error fetching Ziina config:', error);
+    }
+  };
 
   const handleZiinaPayment = async () => {
     if (!phoneNumber) {
@@ -45,37 +70,63 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       return;
     }
 
+    if (!ziinaConfig?.ziina_api_key) {
+      toast({
+        title: "Configuration Error",
+        description: "Ziina payment gateway is not properly configured. Please contact support.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsProcessing(true);
     
     try {
       console.log('Starting Ziina payment process...');
       
-      const response = await supabase.functions.invoke('ziina-payment', {
-        body: {
-          amount: amount,
-          success_url: `${window.location.origin}/order-success`,
-          cancel_url: `${window.location.origin}/checkout`,
-          order_data: {
-            ...orderData,
-            phone: phoneNumber
-          }
-        }
+      // Convert USD to AED and then to fils (1 AED = 100 fils)
+      const aedAmount = amount * 3.67;
+      const filsAmount = Math.round(aedAmount * 100);
+
+      const paymentPayload = {
+        amount: filsAmount,
+        currency_code: 'AED',
+        message: `Order payment for ${orderData?.email || 'customer'}`,
+        success_url: `${window.location.origin}/order-success`,
+        cancel_url: `${window.location.origin}/checkout`,
+        failure_url: `${window.location.origin}/order-failed`,
+        test: false,
+        transaction_source: 'directApi',
+        allow_tips: false,
+        customer_phone: phoneNumber
+      };
+
+      console.log('Creating Ziina payment with payload:', paymentPayload);
+
+      // Call Ziina API directly
+      const ziinaBaseUrl = ziinaConfig.ziina_base_url || 'https://api-v2.ziina.com';
+      const response = await fetch(`${ziinaBaseUrl}/api/payment_intent`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ziinaConfig.ziina_api_key}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(paymentPayload)
       });
 
-      console.log('Ziina payment response:', response);
-
-      if (response.error) {
-        throw new Error(response.error.message || 'Payment failed');
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Ziina API error: ${response.status} - ${errorText}`);
+        throw new Error(`Payment gateway error: ${response.status}`);
       }
 
-      if (response.data?.error) {
-        throw new Error(response.data.error || 'Payment failed');
-      }
+      const ziinaData = await response.json();
+      console.log('Ziina payment created successfully:', ziinaData);
 
-      if (response.data?.payment_url) {
+      if (ziinaData.payment_url || ziinaData.checkout_url) {
         // Store payment info for verification
         localStorage.setItem('pending_ziina_payment', JSON.stringify({
-          payment_id: response.data.payment_id,
+          payment_id: ziinaData.id || ziinaData.payment_intent_id,
           amount: amount,
           order_data: orderData
         }));
@@ -85,9 +136,9 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
           description: "You will be redirected to complete your payment securely.",
         });
 
-        // Redirect to real Ziina payment page
+        // Redirect to Ziina payment page
         setTimeout(() => {
-          window.location.href = response.data.payment_url;
+          window.location.href = ziinaData.payment_url || ziinaData.checkout_url;
         }, 1500);
         
       } else {
@@ -95,7 +146,22 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       }
     } catch (error: any) {
       console.error('Ziina payment error:', error);
-      onError(error.message || 'Ziina payment failed. Please try again.');
+      let errorMessage = 'Ziina payment failed. Please try again.';
+      
+      if (error.message.includes('404')) {
+        errorMessage = 'Ziina API endpoint not found. Please check configuration.';
+      } else if (error.message.includes('401')) {
+        errorMessage = 'Invalid Ziina API credentials. Please contact support.';
+      } else if (error.message.includes('400')) {
+        errorMessage = 'Invalid payment data. Please check your information.';
+      }
+      
+      toast({
+        title: "Payment Failed",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      onError(errorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -118,9 +184,18 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
           (≈ ${amount.toFixed(2)} USD)
         </p>
         <div className="flex items-center justify-center gap-3 text-sm text-gray-600 dark:text-gray-400">
-          <Shield className="h-5 w-5 text-green-600" />
-          <span>Bank-grade security powered by Ziina</span>
-          <Zap className="h-5 w-5 text-yellow-600 animate-pulse" />
+          {ziinaConfig?.ziina_api_key ? (
+            <>
+              <Shield className="h-5 w-5 text-green-600" />
+              <span>Bank-grade security powered by Ziina</span>
+              <Zap className="h-5 w-5 text-yellow-600 animate-pulse" />
+            </>
+          ) : (
+            <>
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              <span>Payment gateway configuration required</span>
+            </>
+          )}
         </div>
       </div>
       
@@ -147,7 +222,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       {/* Payment Button */}
       <Button
         onClick={handleZiinaPayment}
-        disabled={isProcessing || !phoneNumber}
+        disabled={isProcessing || !phoneNumber || !ziinaConfig?.ziina_api_key}
         className="w-full h-16 bg-gradient-to-r from-purple-600 via-purple-700 to-pink-600 hover:from-purple-700 hover:via-purple-800 hover:to-pink-700 text-white font-bold text-xl rounded-xl shadow-2xl hover:shadow-purple-500/25 transition-all duration-500 transform hover:scale-[1.02] active:scale-[0.98] animate-bounce-in disabled:opacity-50 disabled:cursor-not-allowed"
         size="lg"
       >
@@ -192,13 +267,27 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       
       {/* Additional Info */}
       <div className="text-center space-y-3 animate-fade-in p-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-center gap-2 text-green-600 dark:text-green-400">
-          <CheckCircle className="h-5 w-5" />
-          <span className="font-medium">Real Ziina Payment Integration</span>
-        </div>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          💡 <strong>You will be redirected to Ziina's secure payment page.</strong> Complete your payment and you'll be redirected back automatically.
-        </p>
+        {ziinaConfig?.ziina_api_key ? (
+          <>
+            <div className="flex items-center justify-center gap-2 text-green-600 dark:text-green-400">
+              <CheckCircle className="h-5 w-5" />
+              <span className="font-medium">Real Ziina Payment Integration</span>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              💡 <strong>You will be redirected to Ziina's secure payment page.</strong> Complete your payment and you'll be redirected back automatically.
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center justify-center gap-2 text-red-600 dark:text-red-400">
+              <AlertCircle className="h-5 w-5" />
+              <span className="font-medium">Payment Gateway Not Configured</span>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Please contact the administrator to configure Ziina payment settings.
+            </p>
+          </>
+        )}
         <p className="text-xs text-gray-500 dark:text-gray-500">
           Powered by Ziina Payment Gateway - Licensed by Central Bank of UAE
         </p>

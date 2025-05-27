@@ -14,6 +14,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Container } from "@/components/ui/container";
 import SEOHead from "@/components/seo/SEOHead";
+import ZiinaPayment from "@/components/checkout/ZiinaPayment";
 
 const GiftCards = () => {
   const { user } = useAuth();
@@ -27,6 +28,7 @@ const GiftCards = () => {
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [ownedGiftCards, setOwnedGiftCards] = useState<any[]>([]);
+  const [showPayment, setShowPayment] = useState(false);
 
   const predefinedAmounts = [25, 50, 100, 150, 200];
 
@@ -64,7 +66,7 @@ const GiftCards = () => {
     return result;
   };
 
-  const handlePurchase = async () => {
+  const handleProceedToPayment = () => {
     if (!user) {
       toast({
         title: "Sign In Required",
@@ -93,18 +95,21 @@ const GiftCards = () => {
       return;
     }
 
-    setIsProcessing(true);
+    setShowPayment(true);
+  };
 
+  const handlePaymentSuccess = async (transactionId: string) => {
     try {
-      // Create gift card record
+      const amount = customAmount ? parseFloat(customAmount) : selectedAmount;
       const giftCardCode = generateGiftCardCode();
+      
       const { data: giftCard, error: giftCardError } = await supabase
         .from('gift_cards')
         .insert({
           code: giftCardCode,
           amount: amount,
           initial_amount: amount,
-          created_by: user.id,
+          created_by: user!.id,
           recipient_email: recipientEmail,
           message: message || null
         })
@@ -113,53 +118,86 @@ const GiftCards = () => {
 
       if (giftCardError) throw giftCardError;
 
-      // Process payment with Ziina
-      const { data: paymentData, error: paymentError } = await supabase.functions.invoke('ziina-payment', {
-        body: {
-          amount: amount,
-          success_url: `${window.location.origin}/gift-cards?success=true&gift_card_id=${giftCard.id}`,
-          cancel_url: `${window.location.origin}/gift-cards`,
-          order_data: {
-            type: 'gift_card',
-            gift_card_id: giftCard.id,
-            recipient_email: recipientEmail,
-            recipient_name: recipientName,
-            sender_name: senderName,
-            message: message
-          }
-        }
+      toast({
+        title: "Gift Card Created!",
+        description: "Your gift card has been created and will be sent via email.",
       });
 
-      if (paymentError) throw paymentError;
-      if (paymentData?.error) throw new Error(paymentData.error);
-
-      if (paymentData?.payment_url) {
-        // Store payment info for verification
-        localStorage.setItem('pending_gift_card_payment', JSON.stringify({
-          payment_id: paymentData.payment_id,
-          gift_card_id: giftCard.id,
-          amount: amount
-        }));
-        
-        // Redirect to Ziina payment
-        window.location.href = paymentData.payment_url;
-      } else {
-        throw new Error('No payment URL received');
-      }
-
+      // Reset form
+      setSelectedAmount(50);
+      setCustomAmount("");
+      setRecipientEmail("");
+      setRecipientName("");
+      setSenderName("");
+      setMessage("");
+      setShowPayment(false);
+      
+      // Refresh owned gift cards
+      fetchOwnedGiftCards();
     } catch (error: any) {
-      console.error('Gift card purchase error:', error);
+      console.error('Gift card creation error:', error);
       toast({
-        title: "Purchase Failed",
-        description: error.message || "Failed to process gift card purchase",
+        title: "Creation Failed",
+        description: error.message || "Failed to create gift card",
         variant: "destructive"
       });
-    } finally {
-      setIsProcessing(false);
     }
   };
 
+  const handlePaymentError = (error: string) => {
+    toast({
+      title: "Payment Failed",
+      description: error,
+      variant: "destructive"
+    });
+    setShowPayment(false);
+  };
+
   const finalAmount = customAmount ? parseFloat(customAmount) || 0 : selectedAmount;
+
+  if (showPayment) {
+    return (
+      <>
+        <SEOHead 
+          title="Gift Card Payment - Zyra Store"
+          description="Complete your gift card purchase with secure Ziina payment"
+        />
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20">
+          <Navbar />
+          
+          <div className="py-12">
+            <Container>
+              <div className="max-w-2xl mx-auto">
+                <Button
+                  onClick={() => setShowPayment(false)}
+                  variant="outline"
+                  className="mb-6"
+                >
+                  ← Back to Gift Card Details
+                </Button>
+                
+                <ZiinaPayment
+                  amount={finalAmount}
+                  orderData={{
+                    type: 'gift_card',
+                    recipient_email: recipientEmail,
+                    recipient_name: recipientName,
+                    sender_name: senderName,
+                    message: message,
+                    email: user?.email
+                  }}
+                  onSuccess={handlePaymentSuccess}
+                  onError={handlePaymentError}
+                />
+              </div>
+            </Container>
+          </div>
+          
+          <Footer />
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -318,21 +356,14 @@ const GiftCards = () => {
 
                   {/* Purchase Button */}
                   <Button
-                    onClick={handlePurchase}
+                    onClick={handleProceedToPayment}
                     disabled={isProcessing || finalAmount < 5 || !recipientEmail || !recipientName || !senderName}
                     className="w-full h-14 text-lg font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-purple-800 hover:from-purple-700 hover:via-pink-700 hover:to-purple-900 shadow-2xl hover:shadow-purple-500/25 transition-all duration-500 transform hover:scale-[1.02] active:scale-[0.98] animate-bounce-in"
                   >
-                    {isProcessing ? (
-                      <div className="flex items-center gap-3">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
-                        Processing...
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <Gift className="h-5 w-5" />
-                        Purchase for ${finalAmount.toFixed(2)}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-3">
+                      <Gift className="h-5 w-5" />
+                      Proceed to Payment - ${finalAmount.toFixed(2)}
+                    </div>
                   </Button>
                 </CardContent>
               </Card>

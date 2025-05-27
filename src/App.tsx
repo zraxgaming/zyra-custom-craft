@@ -13,7 +13,7 @@ import AdminRoute from "@/components/admin/AdminRoute";
 import MaintenanceBanner from "@/components/layout/MaintenanceBanner";
 
 // Page imports
-import Index from "./pages/Index";
+import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
@@ -46,6 +46,7 @@ import AdminGiftCards from "./pages/admin/GiftCards";
 import AdminTraffic from "./pages/admin/Traffic";
 import ProductEdit from "./pages/admin/ProductEdit";
 import Scanner from "./pages/admin/Scanner";
+import AdminZiina from "./pages/admin/AdminZiina";
 
 const queryClient = new QueryClient();
 
@@ -66,7 +67,7 @@ const App = () => (
                     <Route path="/" element={<Navigate to="/home" replace />} />
                     
                     {/* Main pages */}
-                    <Route path="/home" element={<Index />} />
+                    <Route path="/home" element={<Home />} />
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/shop" element={<Shop />} />
                     <Route path="/product/:slug" element={<ProductDetail />} />
@@ -98,6 +99,7 @@ const App = () => (
                     <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
                     <Route path="/admin/gift-cards" element={<AdminRoute><AdminGiftCards /></AdminRoute>} />
                     <Route path="/admin/traffic" element={<AdminRoute><AdminTraffic /></AdminRoute>} />
+                    <Route path="/admin/ziina" element={<AdminRoute><AdminZiina /></AdminRoute>} />
                     <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
                   </Routes>
                 </TooltipProvider>
