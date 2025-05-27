@@ -1,164 +1,158 @@
 
-import React, { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { XCircle, ArrowLeft, RefreshCw, AlertTriangle, HelpCircle, CreditCard, Phone } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Container } from "@/components/ui/container";
+import { AlertCircle, RefreshCw, ShoppingCart, Home, Mail, Phone } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { Container } from "@/components/ui/container";
+import SEOHead from "@/components/seo/SEOHead";
 
 const OrderFailed = () => {
   const navigate = useNavigate();
 
-  useEffect(() => {
-    localStorage.removeItem('pending_payment');
-  }, []);
-
   return (
     <>
-      <Navbar />
-      <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 dark:from-red-950/20 dark:via-orange-950/20 dark:to-yellow-950/20 py-12">
-        <Container>
-          <div className="max-w-4xl mx-auto">
-            {/* Error Header */}
-            <Card className="text-center animate-scale-in mb-8 border-red-200 dark:border-red-800 shadow-2xl">
+      <SEOHead 
+        title="Payment Failed - Zyra"
+        description="Your payment could not be processed. Please try again or contact our support team for assistance."
+        url="https://zyra.lovable.app/order-failed"
+      />
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-red-900/20">
+        <Navbar />
+        
+        <Container className="py-20">
+          <div className="max-w-2xl mx-auto text-center">
+            {/* Error Icon */}
+            <div className="mb-8 animate-bounce-in">
+              <div className="inline-flex items-center justify-center w-32 h-32 bg-gradient-to-br from-red-500 to-orange-500 rounded-full shadow-2xl animate-pulse">
+                <AlertCircle className="h-16 w-16 text-white animate-wiggle" />
+              </div>
+            </div>
+
+            {/* Error Message */}
+            <Card className="mb-8 animate-scale-in border-red-200/50 dark:border-red-800/50 shadow-2xl bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm">
               <CardHeader className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950/50 dark:to-orange-950/50">
-                <div className="mx-auto w-24 h-24 bg-gradient-to-br from-red-100 to-red-200 dark:from-red-900 dark:to-red-800 rounded-full flex items-center justify-center mb-6 animate-bounce-in">
-                  <XCircle className="h-12 w-12 text-red-600 dark:text-red-400" />
-                </div>
-                <CardTitle className="text-4xl text-red-600 dark:text-red-400 mb-4">
+                <CardTitle className="text-4xl font-bold text-red-600 dark:text-red-400 mb-2">
                   Payment Failed
                 </CardTitle>
-                <p className="text-xl text-gray-600 dark:text-gray-300">
-                  Unfortunately, we couldn't process your payment. Don't worry, we can help you fix this!
+                <p className="text-xl text-gray-600 dark:text-gray-400">
+                  We couldn't process your payment at this time
                 </p>
               </CardHeader>
-            </Card>
-
-            {/* Error Details */}
-            <Card className="animate-slide-in-left mb-8">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
-                  <AlertTriangle className="h-6 w-6" />
-                  What Went Wrong?
-                </CardTitle>
-              </CardHeader>
               <CardContent className="p-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-4">
-                    <h4 className="font-semibold text-red-700 dark:text-red-400 mb-4">Common Issues:</h4>
-                    <div className="space-y-3">
-                      {[
-                        "Insufficient funds in your account",
-                        "Expired or invalid card details", 
-                        "Bank security restrictions",
-                        "Network connection issues",
-                        "Payment gateway timeout"
-                      ].map((issue, index) => (
-                        <div key={index} className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
-                          <div className="w-2 h-2 bg-red-400 rounded-full"></div>
-                          <span className="text-sm text-red-600 dark:text-red-400">{issue}</span>
-                        </div>
-                      ))}
-                    </div>
+                <div className="space-y-6">
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold text-red-800 dark:text-red-300 mb-3">
+                      What happened?
+                    </h3>
+                    <ul className="text-red-700 dark:text-red-400 space-y-2 text-left">
+                      <li className="flex items-start gap-2">
+                        <span className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></span>
+                        <span>Payment was declined by your bank or card issuer</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></span>
+                        <span>Insufficient funds or credit limit reached</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></span>
+                        <span>Technical issue with the payment processor</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></span>
+                        <span>Incorrect payment information entered</span>
+                      </li>
+                    </ul>
                   </div>
-                  
-                  <div className="space-y-4">
-                    <h4 className="font-semibold text-green-700 dark:text-green-400 mb-4">Quick Solutions:</h4>
-                    <div className="space-y-3">
-                      {[
-                        "Check your card details and expiry date",
-                        "Try a different payment method",
-                        "Contact your bank to authorize the payment",
-                        "Refresh and try again",
-                        "Use a different browser or device"
-                      ].map((solution, index) => (
-                        <div key={index} className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                          <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                          <span className="text-sm text-green-600 dark:text-green-400">{solution}</span>
-                        </div>
-                      ))}
-                    </div>
+
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-300 mb-3">
+                      What can you do?
+                    </h3>
+                    <ul className="text-blue-700 dark:text-blue-400 space-y-2 text-left">
+                      <li className="flex items-start gap-2">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></span>
+                        <span>Try a different payment method or card</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></span>
+                        <span>Check your card details and billing address</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></span>
+                        <span>Contact your bank to authorize the transaction</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></span>
+                        <span>Contact our support team for assistance</span>
+                      </li>
+                    </ul>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-              <Button
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+              <Button 
                 onClick={() => navigate('/checkout')}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                size="lg"
+                className="h-14 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold text-lg rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 animate-slide-in-left"
               >
-                <RefreshCw className="h-5 w-5 mr-2" />
-                Try Payment Again
+                <RefreshCw className="h-6 w-6 mr-3" />
+                Try Again
               </Button>
-              <Button
+              <Button 
                 variant="outline"
-                onClick={() => navigate('/shop')}
-                className="border-purple-300 text-purple-600 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:hover:bg-purple-950/20"
-                size="lg"
+                onClick={() => navigate('/cart')}
+                className="h-14 border-2 border-purple-300 hover:border-purple-500 text-purple-600 hover:text-purple-700 font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 animate-slide-in-right"
               >
-                <ArrowLeft className="h-5 w-5 mr-2" />
-                Continue Shopping
+                <ShoppingCart className="h-6 w-6 mr-3" />
+                View Cart
               </Button>
             </div>
 
             {/* Support Section */}
-            <Card className="animate-slide-in-up">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
-                  <HelpCircle className="h-6 w-6" />
-                  Still Need Help?
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-8">
-                <div className="text-center space-y-6">
-                  <p className="text-gray-600 dark:text-gray-300 text-lg">
-                    Our support team is ready to assist you with payment issues
-                  </p>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="p-6 bg-white dark:bg-gray-800 rounded-xl border shadow-lg">
-                      <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <HelpCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <h4 className="font-semibold text-blue-600 dark:text-blue-400 mb-2">Email Support</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">support@shopzyra.com</p>
-                      <p className="text-xs text-gray-500">Response within 24 hours</p>
-                    </div>
-                    
-                    <div className="p-6 bg-white dark:bg-gray-800 rounded-xl border shadow-lg">
-                      <div className="w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Phone className="h-6 w-6 text-green-600 dark:text-green-400" />
-                      </div>
-                      <h4 className="font-semibold text-green-600 dark:text-green-400 mb-2">Live Chat</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Available 9 AM - 6 PM</p>
-                      <p className="text-xs text-gray-500">Monday to Friday</p>
-                    </div>
-                  </div>
-
-                  <div className="p-6 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                      <p className="text-sm text-yellow-800 dark:text-yellow-400 font-medium">
-                        Good News: Your cart items are saved!
-                      </p>
-                      <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                    </div>
-                    <p className="text-sm text-yellow-700 dark:text-yellow-500">
-                      You can return anytime to complete your purchase with a different payment method.
-                    </p>
-                  </div>
+            <Card className="animate-fade-in border-gray-200/50 dark:border-gray-700/50 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+              <CardContent className="p-6">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                  Need Help?
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                  Our support team is here to help you complete your purchase
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Link to="/contact">
+                    <Button variant="outline" className="w-full sm:w-auto">
+                      <Mail className="h-4 w-4 mr-2" />
+                      Contact Support
+                    </Button>
+                  </Link>
+                  <a href="tel:+971412345678">
+                    <Button variant="outline" className="w-full sm:w-auto">
+                      <Phone className="h-4 w-4 mr-2" />
+                      Call Us
+                    </Button>
+                  </a>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Continue Shopping */}
+            <div className="mt-8 animate-fade-in" style={{animationDelay: '0.5s'}}>
+              <Link to="/shop">
+                <Button variant="ghost" className="text-gray-600 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400">
+                  <Home className="h-4 w-4 mr-2" />
+                  Continue Shopping
+                </Button>
+              </Link>
+            </div>
           </div>
         </Container>
+        
+        <Footer />
       </div>
-      <Footer />
     </>
   );
 };

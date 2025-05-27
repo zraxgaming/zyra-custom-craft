@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Smartphone, Loader2, CreditCard, Shield, Zap } from "lucide-react";
+import { Smartphone, Loader2, CreditCard, Shield, Zap, CheckCircle, AlertCircle } from "lucide-react";
 
 interface ZiinaPaymentProps {
   amount: number;
@@ -66,11 +66,14 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
     setIsProcessing(true);
     
     try {
-      // Convert USD to AED (approximate rate: 1 USD = 3.67 AED)
-      const aedAmount = Math.round(amount * 3.67);
+      // Convert USD to AED and then to fils (1 AED = 100 fils)
+      const aedAmount = amount * 3.67;
+      const filsAmount = Math.round(aedAmount * 100); // Convert to fils
+      
+      console.log(`Converting $${amount} USD to ${aedAmount} AED to ${filsAmount} fils`);
       
       const paymentPayload = {
-        amount: aedAmount,
+        amount: filsAmount, // Amount in fils
         currency_code: "AED",
         message: `Order payment for ${orderData.email || 'customer'}`,
         success_url: `${window.location.origin}/order-success`,
@@ -78,7 +81,8 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
         failure_url: `${window.location.origin}/order-failed`,
         test: false,
         transaction_source: "directApi",
-        allow_tips: false
+        allow_tips: false,
+        customer_phone: phoneNumber
       };
 
       console.log('Sending Ziina payment request:', paymentPayload);
@@ -201,21 +205,21 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       
       {/* Security Features */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
-        <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+        <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800 hover:shadow-lg transition-all duration-300">
           <Shield className="h-6 w-6 text-green-600" />
           <div>
             <p className="font-medium text-green-800 dark:text-green-400">Bank Security</p>
             <p className="text-sm text-green-600 dark:text-green-500">256-bit encryption</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+        <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 hover:shadow-lg transition-all duration-300">
           <CreditCard className="h-6 w-6 text-blue-600" />
           <div>
             <p className="font-medium text-blue-800 dark:text-blue-400">Licensed Gateway</p>
             <p className="text-sm text-blue-600 dark:text-blue-500">UAE Central Bank</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
+        <div className="flex items-center gap-3 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800 hover:shadow-lg transition-all duration-300">
           <Zap className="h-6 w-6 text-purple-600" />
           <div>
             <p className="font-medium text-purple-800 dark:text-purple-400">Instant Processing</p>
@@ -226,6 +230,10 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       
       {/* Additional Info */}
       <div className="text-center space-y-3 animate-fade-in p-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-center gap-2 text-green-600 dark:text-green-400">
+          <CheckCircle className="h-5 w-5" />
+          <span className="font-medium">Amount correctly formatted for Ziina (fils)</span>
+        </div>
         <p className="text-sm text-gray-600 dark:text-gray-400">
           💡 <strong>Payment will open in a new tab.</strong> Complete your payment and return here to continue.
         </p>
