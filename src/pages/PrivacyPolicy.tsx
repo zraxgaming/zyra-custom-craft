@@ -3,83 +3,65 @@ import React from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Container } from "@/components/ui/container";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, Eye, Lock, UserCheck, Database, Globe } from "lucide-react";
 import SEOHead from "@/components/seo/SEOHead";
 
 const PrivacyPolicy = () => {
   const sections = [
     {
-      icon: <Database className="h-6 w-6" />,
+      icon: Eye,
       title: "Information We Collect",
       content: [
-        "Personal information you provide when creating an account (name, email, address)",
-        "Payment information (processed securely through our payment partners)",
-        "Custom design files and text you upload for product customization",
-        "Order history and communication preferences",
-        "Website usage data and analytics (cookies, IP address, browser type)",
-        "Customer service interactions and support tickets"
+        "Personal information you provide when creating an account or making purchases",
+        "Payment information processed securely through our payment partners",
+        "Usage data and analytics to improve our services",
+        "Communication preferences and customer support interactions",
+        "Device information and browser data for security purposes"
       ]
     },
     {
-      icon: <Eye className="h-6 w-6" />,
+      icon: Database,
       title: "How We Use Your Information",
       content: [
-        "Process and fulfill your orders and customization requests",
-        "Provide customer support and respond to your inquiries",
-        "Send order confirmations, shipping updates, and account notifications",
-        "Improve our products, services, and website functionality",
-        "Personalize your shopping experience and product recommendations",
-        "Prevent fraud and maintain security of our platform",
-        "Comply with legal obligations and enforce our terms of service"
+        "Process your orders and deliver customized products",
+        "Provide customer support and respond to inquiries",
+        "Send important updates about your orders and account",
+        "Improve our products and services based on usage patterns",
+        "Ensure security and prevent fraudulent activities"
       ]
     },
     {
-      icon: <UserCheck className="h-6 w-6" />,
+      icon: Lock,
+      title: "Data Protection",
+      content: [
+        "All data is encrypted in transit and at rest",
+        "Regular security audits and penetration testing",
+        "Access controls and authentication for all systems",
+        "Compliance with GDPR, CCPA, and other privacy regulations",
+        "Secure deletion of data when no longer needed"
+      ]
+    },
+    {
+      icon: Globe,
       title: "Information Sharing",
       content: [
-        "We do not sell, rent, or share your personal information with third parties for marketing purposes",
-        "Trusted service providers who help us operate our business (payment processors, shipping companies)",
-        "Legal authorities when required by law or to protect our rights",
-        "Business partners only with your explicit consent",
-        "Anonymous, aggregated data for analytics and improvement purposes"
+        "We never sell your personal information to third parties",
+        "Trusted service providers may process data on our behalf",
+        "Legal requirements may necessitate disclosure to authorities",
+        "Business transfers would include appropriate data protection",
+        "You can opt out of marketing communications at any time"
       ]
     },
     {
-      icon: <Lock className="h-6 w-6" />,
-      title: "Data Security",
-      content: [
-        "All data is encrypted in transit and at rest using industry-standard protocols",
-        "Secure payment processing through PCI-compliant payment providers",
-        "Regular security audits and vulnerability assessments",
-        "Access controls and authentication for our team members",
-        "Automatic security updates and monitoring systems",
-        "Secure backup and disaster recovery procedures"
-      ]
-    },
-    {
-      icon: <Globe className="h-6 w-6" />,
+      icon: UserCheck,
       title: "Your Rights",
       content: [
-        "Access and download your personal data at any time",
-        "Correct or update your account information",
-        "Delete your account and associated data (subject to legal retention requirements)",
-        "Opt out of marketing communications while keeping your account active",
-        "Port your data to another service provider",
-        "File complaints with data protection authorities in your jurisdiction"
-      ]
-    },
-    {
-      icon: <Shield className="h-6 w-6" />,
-      title: "Cookies & Tracking",
-      content: [
-        "Essential cookies for website functionality and security",
-        "Analytics cookies to understand how you use our website",
-        "Preference cookies to remember your settings and choices",
-        "Marketing cookies for personalized advertising (with your consent)",
-        "You can control cookie preferences in your browser settings",
-        "Some features may not work properly if cookies are disabled"
+        "Access and download your personal data",
+        "Correct or update inaccurate information",
+        "Delete your account and associated data",
+        "Opt out of marketing and promotional communications",
+        "File complaints with relevant data protection authorities"
       ]
     }
   ];
@@ -88,93 +70,68 @@ const PrivacyPolicy = () => {
     <>
       <SEOHead 
         title="Privacy Policy - Zyra"
-        description="Learn how Zyra protects your privacy and handles your personal data. Our comprehensive privacy policy explains our data practices."
-        keywords="privacy policy, data protection, personal information, cookies, GDPR"
-        url="https://zyra.lovable.app/privacy"
+        description="Learn how Zyra protects your privacy and handles your personal information. Transparent, secure, and compliant data practices."
+        url="https://zyra.lovable.app/privacy-policy"
       />
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20">
         <Navbar />
         
         {/* Hero Section */}
-        <section className="relative py-20 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-purple-500/5 to-pink-500/5"></div>
-          <Container className="relative z-10">
-            <div className="text-center max-w-3xl mx-auto animate-fade-in">
-              <div className="flex items-center justify-center gap-4 mb-6">
-                <div className="relative">
-                  <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 via-purple-500/20 to-pink-500/20 rounded-full blur-xl animate-pulse"></div>
-                  <div className="relative bg-gradient-to-br from-primary/10 to-purple-500/10 p-4 rounded-2xl border border-primary/20 backdrop-blur-sm">
-                    <Shield className="h-10 w-10 text-primary animate-pulse" />
-                  </div>
-                </div>
+        <section className="py-20">
+          <Container>
+            <div className="text-center mb-16 animate-fade-in">
+              <div className="w-20 h-20 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce-in">
+                <Shield className="h-10 w-10 text-white" />
               </div>
-              <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent mb-6 animate-scale-in">
+              <h1 className="text-6xl font-bold mb-6 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-800 bg-clip-text text-transparent animate-text-shimmer">
                 Privacy Policy
               </h1>
-              <p className="text-xl text-muted-foreground leading-relaxed animate-slide-in-right">
-                Your privacy is important to us. This policy explains how we collect, use, and protect 
-                your personal information when you use Zyra's services.
+              <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto animate-slide-in-up" style={{animationDelay: '0.2s'}}>
+                Your privacy is our priority. This policy explains how we collect, use, and protect your personal information.
               </p>
-              <div className="mt-6 p-4 bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  <strong>Last updated:</strong> January 2024 | <strong>Effective:</strong> All users worldwide
-                </p>
+              <div className="mt-6 text-sm text-gray-500 dark:text-gray-400 animate-fade-in" style={{animationDelay: '0.4s'}}>
+                Last updated: {new Date().toLocaleDateString()}
               </div>
             </div>
           </Container>
         </section>
 
-        {/* Overview Section */}
-        <section className="py-16 bg-muted/30">
+        {/* Introduction */}
+        <section className="py-12">
           <Container>
-            <div className="max-w-4xl mx-auto">
-              <Card className="bg-card/50 backdrop-blur-sm border border-border/50 animate-fade-in">
-                <CardContent className="p-8">
-                  <h2 className="text-3xl font-bold mb-6 text-foreground">Privacy Overview</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <h3 className="text-xl font-semibold text-foreground">Our Commitment</h3>
-                      <p className="text-muted-foreground">
-                        We are committed to protecting your privacy and maintaining the security of your personal information. 
-                        We only collect information necessary to provide our services and improve your experience.
-                      </p>
-                    </div>
-                    <div className="space-y-4">
-                      <h3 className="text-xl font-semibold text-foreground">Your Control</h3>
-                      <p className="text-muted-foreground">
-                        You have full control over your personal data. You can access, update, or delete your information 
-                        at any time through your account settings or by contacting our support team.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <Card className="mb-12 animate-scale-in border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl">
+              <CardContent className="p-8">
+                <p className="text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
+                  At Zyra, we are committed to protecting your privacy and maintaining the security of your personal information. 
+                  This Privacy Policy describes how we collect, use, disclose, and safeguard your information when you visit our 
+                  website, use our services, or make purchases from us. Please read this policy carefully to understand our 
+                  practices regarding your personal data.
+                </p>
+              </CardContent>
+            </Card>
           </Container>
         </section>
 
-        {/* Detailed Sections */}
-        <section className="py-16">
+        {/* Policy Sections */}
+        <section className="py-12">
           <Container>
-            <div className="max-w-4xl mx-auto space-y-8">
+            <div className="space-y-8">
               {sections.map((section, index) => (
-                <Card 
-                  key={index} 
-                  className="bg-card/50 backdrop-blur-sm border border-border/50 hover:shadow-lg transition-all duration-300 animate-slide-in-right"
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <CardContent className="p-8">
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/10 to-purple-500/10 text-primary">
-                        {section.icon}
+                <Card key={index} className="animate-slide-in-up border-0 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-xl hover:shadow-2xl transition-all duration-500" style={{animationDelay: `${index * 0.1}s`}}>
+                  <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50">
+                    <CardTitle className="flex items-center gap-4 text-2xl text-gray-900 dark:text-white">
+                      <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <section.icon className="h-6 w-6 text-white" />
                       </div>
-                      <h2 className="text-2xl font-bold text-foreground">{section.title}</h2>
-                    </div>
-                    <ul className="space-y-3">
+                      {section.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-8">
+                    <ul className="space-y-4">
                       {section.content.map((item, itemIndex) => (
-                        <li key={itemIndex} className="flex items-start gap-3">
-                          <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-                          <p className="text-muted-foreground">{item}</p>
+                        <li key={itemIndex} className="flex items-start gap-3 text-gray-700 dark:text-gray-300">
+                          <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <span className="leading-relaxed">{item}</span>
                         </li>
                       ))}
                     </ul>
@@ -186,45 +143,34 @@ const PrivacyPolicy = () => {
         </section>
 
         {/* Contact Section */}
-        <section className="py-16 bg-muted/30">
+        <section className="py-20 bg-gradient-to-r from-purple-600 to-pink-600 text-white">
           <Container>
-            <div className="max-w-4xl mx-auto">
-              <Card className="bg-card/50 backdrop-blur-sm border border-border/50 animate-fade-in">
-                <CardContent className="p-8 text-center">
-                  <h2 className="text-3xl font-bold mb-4 text-foreground">Questions About Privacy?</h2>
-                  <p className="text-lg text-muted-foreground mb-6">
-                    If you have any questions about this privacy policy or how we handle your data, 
-                    please don't hesitate to contact us.
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="text-center">
-                      <div className="w-12 h-12 bg-gradient-to-br from-primary/10 to-purple-500/10 rounded-2xl mx-auto mb-3 flex items-center justify-center">
-                        <Shield className="h-6 w-6 text-primary" />
-                      </div>
-                      <h3 className="font-semibold text-foreground mb-1">Data Protection Officer</h3>
-                      <p className="text-sm text-muted-foreground">privacy@zyra.com</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="w-12 h-12 bg-gradient-to-br from-primary/10 to-purple-500/10 rounded-2xl mx-auto mb-3 flex items-center justify-center">
-                        <Lock className="h-6 w-6 text-primary" />
-                      </div>
-                      <h3 className="font-semibold text-foreground mb-1">Security Team</h3>
-                      <p className="text-sm text-muted-foreground">security@zyra.com</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="w-12 h-12 bg-gradient-to-br from-primary/10 to-purple-500/10 rounded-2xl mx-auto mb-3 flex items-center justify-center">
-                        <UserCheck className="h-6 w-6 text-primary" />
-                      </div>
-                      <h3 className="font-semibold text-foreground mb-1">General Support</h3>
-                      <p className="text-sm text-muted-foreground">support@zyra.com</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="text-center max-w-4xl mx-auto animate-fade-in">
+              <h2 className="text-4xl font-bold mb-6">
+                Questions About Privacy?
+              </h2>
+              <p className="text-xl opacity-90 mb-8">
+                If you have any questions about this Privacy Policy or our data practices, 
+                please don't hesitate to contact us.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <a 
+                  href="/contact" 
+                  className="inline-flex items-center justify-center px-8 py-4 bg-white text-purple-600 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg"
+                >
+                  Contact Our Privacy Team
+                </a>
+                <a 
+                  href="mailto:privacy@zyra.com" 
+                  className="inline-flex items-center justify-center px-8 py-4 bg-white/20 backdrop-blur-sm text-white rounded-xl font-semibold hover:bg-white/30 transition-all duration-300 transform hover:scale-105"
+                >
+                  privacy@zyra.com
+                </a>
+              </div>
             </div>
           </Container>
         </section>
-
+        
         <Footer />
       </div>
     </>

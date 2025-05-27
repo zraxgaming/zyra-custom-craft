@@ -10,6 +10,9 @@ import MaintenanceBanner from "@/components/layout/MaintenanceBanner";
 // Pages
 import Home from "@/pages/Home";
 import About from "@/pages/About";
+import Contact from "@/pages/Contact";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsOfService from "@/pages/TermsOfService";
 import GiftCards from "@/pages/GiftCards";
 import Auth from "@/pages/Auth";
 import Shop from "@/pages/Shop";
@@ -21,6 +24,8 @@ import OrderFailed from "@/pages/OrderFailed";
 import Dashboard from "@/pages/Dashboard";
 import Profile from "@/pages/Profile";
 import Wishlist from "@/pages/Wishlist";
+import Categories from "@/pages/Categories";
+import NotFound from "@/pages/NotFound";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";
@@ -52,12 +57,14 @@ function App() {
             <Router>
               <MaintenanceBanner />
               <Routes>
-                {/* Redirect root to home */}
+                {/* Public Pages */}
                 <Route path="/" element={<Home />} />
                 <Route path="/home" element={<Home />} />
-                
-                {/* Public Pages */}
                 <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/terms-of-service" element={<TermsOfService />} />
+                <Route path="/categories" element={<Categories />} />
                 <Route path="/gift-cards" element={<GiftCards />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/auth/callback" element={<AuthCallback />} />
@@ -153,6 +160,9 @@ function App() {
                     <AdminZiina />
                   </AuthPage>
                 } />
+
+                {/* 404 Page */}
+                <Route path="*" element={<NotFound />} />
               </Routes>
               <Toaster />
             </Router>

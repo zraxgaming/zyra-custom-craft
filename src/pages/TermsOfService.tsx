@@ -3,83 +3,65 @@ import React from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Container } from "@/components/ui/container";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { FileText, Scale, Users, Shield, CreditCard, Package } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Scale, ShoppingCart, Shield, RefreshCw, AlertTriangle, Users } from "lucide-react";
 import SEOHead from "@/components/seo/SEOHead";
 
 const TermsOfService = () => {
   const sections = [
     {
-      icon: <Users className="h-6 w-6" />,
+      icon: Users,
       title: "Account Terms",
       content: [
         "You must be 18 years or older to create an account",
-        "You are responsible for maintaining the security of your account credentials",
-        "You must provide accurate and complete information when creating your account",
-        "One person or entity may not maintain more than one free account",
-        "You are responsible for all activity that occurs under your account",
-        "We reserve the right to suspend or terminate accounts that violate these terms"
+        "Provide accurate and complete information during registration",
+        "Maintain the security of your account credentials",
+        "Notify us immediately of any unauthorized account access",
+        "You are responsible for all activities under your account"
       ]
     },
     {
-      icon: <Package className="h-6 w-6" />,
-      title: "Product & Customization Terms",
+      icon: ShoppingCart,
+      title: "Orders & Purchases",
       content: [
-        "All product descriptions, prices, and availability are subject to change without notice",
-        "Custom products are made to order and may take additional processing time",
-        "You retain ownership of your custom designs, but grant us license to produce them",
-        "We reserve the right to refuse custom orders that violate copyright or contain inappropriate content",
-        "Product colors may vary slightly from what appears on your screen",
-        "We guarantee our products will match the approved proof or preview"
+        "All orders are subject to acceptance and availability",
+        "Prices are subject to change without notice",
+        "Payment must be received before order processing begins",
+        "Custom orders may have longer processing times",
+        "Order modifications may not be possible once production starts"
       ]
     },
     {
-      icon: <CreditCard className="h-6 w-6" />,
-      title: "Payment Terms",
+      icon: RefreshCw,
+      title: "Returns & Refunds",
       content: [
-        "Payment is required at the time of order placement",
-        "We accept major credit cards, PayPal, and other listed payment methods",
-        "All prices are in USD unless otherwise specified",
-        "You authorize us to charge your payment method for all fees and taxes",
-        "Refunds are processed according to our return policy",
-        "We use secure, PCI-compliant payment processing"
+        "Standard products may be returned within 30 days",
+        "Customized products are generally non-returnable",
+        "Items must be in original condition for returns",
+        "Refunds will be processed within 5-10 business days",
+        "Return shipping costs may apply unless item is defective"
       ]
     },
     {
-      icon: <Package className="h-6 w-6" />,
-      title: "Shipping & Returns",
-      content: [
-        "Shipping costs and delivery times vary by location and method selected",
-        "Risk of loss transfers to you upon delivery to the shipping carrier",
-        "Standard items may be returned within 30 days of delivery",
-        "Custom products may only be returned if they contain manufacturing defects",
-        "Return shipping costs are the responsibility of the customer unless the item is defective",
-        "Refunds are processed within 5-10 business days after we receive returned items"
-      ]
-    },
-    {
-      icon: <Shield className="h-6 w-6" />,
+      icon: Shield,
       title: "Intellectual Property",
       content: [
-        "All website content, including text, graphics, and code, is owned by Zyra",
-        "You may not reproduce, distribute, or create derivative works without permission",
-        "User-submitted content must not infringe on third-party copyrights or trademarks",
-        "We respect intellectual property rights and respond to valid DMCA notices",
-        "You grant us a license to use your custom designs solely for fulfilling your orders",
-        "We reserve the right to remove content that violates intellectual property rights"
+        "All content on our website is protected by copyright",
+        "You retain rights to your custom designs and uploads",
+        "We may use order images for marketing with permission",
+        "Respect third-party intellectual property rights",
+        "Report any copyright infringement to our team"
       ]
     },
     {
-      icon: <Scale className="h-6 w-6" />,
-      title: "Limitation of Liability",
+      icon: AlertTriangle,
+      title: "Prohibited Uses",
       content: [
-        "Our total liability is limited to the amount you paid for the specific product or service",
-        "We are not liable for indirect, incidental, or consequential damages",
-        "We do not warrant that our service will be uninterrupted or error-free",
-        "You use our service at your own risk",
-        "Some jurisdictions do not allow limitation of liability, so these limits may not apply to you",
-        "Our liability limitations apply to the fullest extent permitted by law"
+        "No illegal, harmful, or offensive content in custom designs",
+        "Respect trademark and copyright laws",
+        "No harassment or abuse of our staff or systems",
+        "No attempts to circumvent security measures",
+        "No resale of products without written permission"
       ]
     }
   ];
@@ -88,93 +70,71 @@ const TermsOfService = () => {
     <>
       <SEOHead 
         title="Terms of Service - Zyra"
-        description="Read Zyra's terms of service to understand your rights and responsibilities when using our custom product platform."
-        keywords="terms of service, legal terms, user agreement, terms and conditions"
-        url="https://zyra.lovable.app/terms"
+        description="Review Zyra's terms of service, including account terms, ordering policies, and user responsibilities."
+        url="https://zyra.lovable.app/terms-of-service"
       />
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20">
         <Navbar />
         
         {/* Hero Section */}
-        <section className="relative py-20 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-purple-500/5 to-pink-500/5"></div>
-          <Container className="relative z-10">
-            <div className="text-center max-w-3xl mx-auto animate-fade-in">
-              <div className="flex items-center justify-center gap-4 mb-6">
-                <div className="relative">
-                  <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 via-purple-500/20 to-pink-500/20 rounded-full blur-xl animate-pulse"></div>
-                  <div className="relative bg-gradient-to-br from-primary/10 to-purple-500/10 p-4 rounded-2xl border border-primary/20 backdrop-blur-sm">
-                    <FileText className="h-10 w-10 text-primary animate-pulse" />
-                  </div>
-                </div>
+        <section className="py-20">
+          <Container>
+            <div className="text-center mb-16 animate-fade-in">
+              <div className="w-20 h-20 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce-in">
+                <Scale className="h-10 w-10 text-white" />
               </div>
-              <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent mb-6 animate-scale-in">
+              <h1 className="text-6xl font-bold mb-6 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-800 bg-clip-text text-transparent animate-text-shimmer">
                 Terms of Service
               </h1>
-              <p className="text-xl text-muted-foreground leading-relaxed animate-slide-in-right">
-                These terms govern your use of Zyra's services. By using our platform, 
-                you agree to these terms and conditions.
+              <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto animate-slide-in-up" style={{animationDelay: '0.2s'}}>
+                These terms govern your use of Zyra's services. By using our platform, you agree to these terms and conditions.
               </p>
-              <div className="mt-6 p-4 bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  <strong>Last updated:</strong> January 2024 | <strong>Effective:</strong> All users worldwide
-                </p>
+              <div className="mt-6 text-sm text-gray-500 dark:text-gray-400 animate-fade-in" style={{animationDelay: '0.4s'}}>
+                Last updated: {new Date().toLocaleDateString()}
               </div>
             </div>
           </Container>
         </section>
 
-        {/* Overview Section */}
-        <section className="py-16 bg-muted/30">
+        {/* Introduction */}
+        <section className="py-12">
           <Container>
-            <div className="max-w-4xl mx-auto">
-              <Card className="bg-card/50 backdrop-blur-sm border border-border/50 animate-fade-in">
-                <CardContent className="p-8">
-                  <h2 className="text-3xl font-bold mb-6 text-foreground">Agreement Overview</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <h3 className="text-xl font-semibold text-foreground">Your Agreement</h3>
-                      <p className="text-muted-foreground">
-                        By accessing or using Zyra's services, you agree to be bound by these Terms of Service. 
-                        If you disagree with any part of these terms, you may not access our service.
-                      </p>
-                    </div>
-                    <div className="space-y-4">
-                      <h3 className="text-xl font-semibold text-foreground">Changes to Terms</h3>
-                      <p className="text-muted-foreground">
-                        We reserve the right to update these terms at any time. We will notify users of significant 
-                        changes via email or through our website. Continued use constitutes acceptance of new terms.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <Card className="mb-12 animate-scale-in border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl">
+              <CardContent className="p-8">
+                <p className="text-lg text-gray-700 dark:text-gray-300 leading-relaxed mb-6">
+                  Welcome to Zyra! These Terms of Service ("Terms") govern your access to and use of our website, 
+                  products, and services. By accessing or using our services, you agree to be bound by these Terms. 
+                  If you disagree with any part of these terms, you may not access our services.
+                </p>
+                <p className="text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
+                  We reserve the right to update these Terms at any time. Continued use of our services after 
+                  changes constitutes acceptance of the new Terms.
+                </p>
+              </CardContent>
+            </Card>
           </Container>
         </section>
 
-        {/* Detailed Sections */}
-        <section className="py-16">
+        {/* Terms Sections */}
+        <section className="py-12">
           <Container>
-            <div className="max-w-4xl mx-auto space-y-8">
+            <div className="space-y-8">
               {sections.map((section, index) => (
-                <Card 
-                  key={index} 
-                  className="bg-card/50 backdrop-blur-sm border border-border/50 hover:shadow-lg transition-all duration-300 animate-slide-in-right"
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <CardContent className="p-8">
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/10 to-purple-500/10 text-primary">
-                        {section.icon}
+                <Card key={index} className="animate-slide-in-up border-0 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-xl hover:shadow-2xl transition-all duration-500" style={{animationDelay: `${index * 0.1}s`}}>
+                  <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50">
+                    <CardTitle className="flex items-center gap-4 text-2xl text-gray-900 dark:text-white">
+                      <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <section.icon className="h-6 w-6 text-white" />
                       </div>
-                      <h2 className="text-2xl font-bold text-foreground">{section.title}</h2>
-                    </div>
-                    <ul className="space-y-3">
+                      {section.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-8">
+                    <ul className="space-y-4">
                       {section.content.map((item, itemIndex) => (
-                        <li key={itemIndex} className="flex items-start gap-3">
-                          <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-                          <p className="text-muted-foreground">{item}</p>
+                        <li key={itemIndex} className="flex items-start gap-3 text-gray-700 dark:text-gray-300">
+                          <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <span className="leading-relaxed">{item}</span>
                         </li>
                       ))}
                     </ul>
@@ -186,35 +146,35 @@ const TermsOfService = () => {
         </section>
 
         {/* Additional Terms */}
-        <section className="py-16 bg-muted/30">
+        <section className="py-12">
           <Container>
-            <div className="max-w-4xl mx-auto">
-              <Card className="bg-card/50 backdrop-blur-sm border border-border/50 animate-fade-in">
-                <CardContent className="p-8">
-                  <h2 className="text-3xl font-bold mb-6 text-foreground">Additional Important Terms</h2>
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-xl font-semibold text-foreground mb-3">Governing Law</h3>
-                      <p className="text-muted-foreground">
-                        These terms are governed by the laws of [Your Jurisdiction]. Any disputes will be resolved 
-                        through binding arbitration or in the courts of [Your Jurisdiction].
-                      </p>
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-semibold text-foreground mb-3">Severability</h3>
-                      <p className="text-muted-foreground">
-                        If any provision of these terms is found to be unenforceable, the remaining provisions 
-                        will continue to be valid and enforceable.
-                      </p>
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-semibold text-foreground mb-3">Entire Agreement</h3>
-                      <p className="text-muted-foreground">
-                        These terms constitute the entire agreement between you and Zyra regarding the use of our service, 
-                        superseding any prior agreements.
-                      </p>
-                    </div>
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <Card className="animate-slide-in-left border-0 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-xl">
+                <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50">
+                  <CardTitle className="text-xl text-gray-900 dark:text-white">
+                    Limitation of Liability
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                    Zyra shall not be liable for any indirect, incidental, special, consequential, 
+                    or punitive damages, including loss of profits, data, or other intangible losses 
+                    resulting from your use of our services.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="animate-slide-in-right border-0 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-xl">
+                <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50">
+                  <CardTitle className="text-xl text-gray-900 dark:text-white">
+                    Governing Law
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                    These Terms shall be governed by and construed in accordance with the laws of 
+                    the jurisdiction where Zyra is headquartered, without regard to conflict of law principles.
+                  </p>
                 </CardContent>
               </Card>
             </div>
@@ -222,25 +182,33 @@ const TermsOfService = () => {
         </section>
 
         {/* Contact Section */}
-        <section className="py-16">
+        <section className="py-20 bg-gradient-to-r from-purple-600 to-pink-600 text-white">
           <Container>
-            <div className="max-w-4xl mx-auto">
-              <Card className="bg-card/50 backdrop-blur-sm border border-border/50 animate-fade-in">
-                <CardContent className="p-8 text-center">
-                  <h2 className="text-3xl font-bold mb-4 text-foreground">Questions About These Terms?</h2>
-                  <p className="text-lg text-muted-foreground mb-6">
-                    If you have any questions about these terms of service, please contact our legal team.
-                  </p>
-                  <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary/10 to-purple-500/10 rounded-2xl border border-primary/20">
-                    <Scale className="h-5 w-5 text-primary" />
-                    <span className="font-medium text-foreground">legal@zyra.com</span>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="text-center max-w-4xl mx-auto animate-fade-in">
+              <h2 className="text-4xl font-bold mb-6">
+                Questions About These Terms?
+              </h2>
+              <p className="text-xl opacity-90 mb-8">
+                If you have any questions about these Terms of Service, please contact our legal team.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <a 
+                  href="/contact" 
+                  className="inline-flex items-center justify-center px-8 py-4 bg-white text-purple-600 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg"
+                >
+                  Contact Legal Team
+                </a>
+                <a 
+                  href="mailto:legal@zyra.com" 
+                  className="inline-flex items-center justify-center px-8 py-4 bg-white/20 backdrop-blur-sm text-white rounded-xl font-semibold hover:bg-white/30 transition-all duration-300 transform hover:scale-105"
+                >
+                  legal@zyra.com
+                </a>
+              </div>
             </div>
           </Container>
         </section>
-
+        
         <Footer />
       </div>
     </>

@@ -1,68 +1,102 @@
 
-import React, { useState, useEffect } from 'react';
-import { AlertTriangle, X } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import React, { useEffect, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
 const MaintenanceBanner = () => {
+  const [maintenanceData, setMaintenanceData] = useState<{
+    isActive: boolean;
+    message: string;
+  } | null>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const [message, setMessage] = useState('');
-  const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
-    const dismissed = localStorage.getItem('maintenance-dismissed');
-    if (dismissed) {
-      setIsDismissed(true);
-    }
+    const fetchMaintenanceStatus = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('maintenance_mode')
+          .select('is_active, message')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching maintenance status:', error);
+          return;
+        }
+
+        if (data && data.is_active) {
+          setMaintenanceData({
+            isActive: data.is_active,
+            message: data.message || 'We are currently performing maintenance. Some features may be temporarily unavailable.'
+          });
+          setIsVisible(true);
+        }
+      } catch (error) {
+        console.error('Error in fetchMaintenanceStatus:', error);
+      }
+    };
+
     fetchMaintenanceStatus();
+
+    // Set up real-time subscription for maintenance status changes
+    const subscription = supabase
+      .channel('maintenance_mode_changes')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'maintenance_mode' 
+        }, 
+        (payload) => {
+          console.log('Maintenance mode changed:', payload);
+          if (payload.new && typeof payload.new === 'object') {
+            const newData = payload.new as any;
+            if (newData.is_active) {
+              setMaintenanceData({
+                isActive: newData.is_active,
+                message: newData.message || 'We are currently performing maintenance. Some features may be temporarily unavailable.'
+              });
+              setIsVisible(true);
+            } else {
+              setIsVisible(false);
+              setMaintenanceData(null);
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const fetchMaintenanceStatus = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('maintenance_mode')
-        .select('is_active, message')
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching maintenance status:', error);
-        return;
-      }
-
-      if (data?.is_active && !isDismissed) {
-        setIsVisible(true);
-        setMessage(data.message || 'We are currently performing maintenance. Some features may be temporarily unavailable.');
-      } else {
-        setIsVisible(false);
-      }
-    } catch (error) {
-      console.error('Error fetching maintenance status:', error);
-    }
-  };
-
-  const handleDismiss = () => {
-    setIsDismissed(true);
-    setIsVisible(false);
-    localStorage.setItem('maintenance-dismissed', 'true');
-  };
-
-  if (!isVisible) return null;
+  if (!isVisible || !maintenanceData?.isActive) {
+    return null;
+  }
 
   return (
-    <div className="relative overflow-hidden bg-gradient-to-r from-orange-500 via-red-500 to-orange-600 text-white z-50 transform transition-all duration-500">
-      <div className="absolute inset-0 bg-black/10 backdrop-blur-sm"></div>
-      <div className="relative flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-3 flex-1">
-          <AlertTriangle className="h-5 w-5 animate-pulse" />
-          <p className="text-sm font-medium">{message}</p>
-        </div>
-        <button
-          onClick={handleDismiss}
-          className="p-1 hover:bg-white/20 rounded-full transition-all duration-300 hover:scale-110"
-          aria-label="Dismiss maintenance notice"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
+    <div className="relative z-50 animate-slide-down">
+      <Alert className="rounded-none border-l-0 border-r-0 border-t-0 bg-gradient-to-r from-orange-500 to-red-500 text-white border-orange-600 animate-pulse-gentle">
+        <AlertTriangle className="h-5 w-5 text-white animate-wiggle" />
+        <AlertDescription className="flex items-center justify-between w-full">
+          <span className="font-medium text-white">
+            {maintenanceData.message}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsVisible(false)}
+            className="text-white hover:bg-white/20 h-auto p-1 animate-scale-in"
+            style={{animationDelay: '0.5s'}}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </AlertDescription>
+      </Alert>
     </div>
   );
 };
