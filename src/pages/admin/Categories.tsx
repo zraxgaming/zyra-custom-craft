@@ -3,11 +3,19 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, FolderOpen } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { FolderOpen, Plus, Edit, Trash2, Search, Tag } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import CategoryForm from "@/components/admin/CategoryForm";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface Category {
   id: string;
@@ -22,8 +30,9 @@ interface Category {
 const AdminCategories = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -39,7 +48,7 @@ const AdminCategories = () => {
 
       if (error) throw error;
       setCategories(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching categories:', error);
       toast({
         title: "Error",
@@ -51,23 +60,24 @@ const AdminCategories = () => {
     }
   };
 
-  const handleDelete = async (categoryId: string) => {
+  const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this category?')) return;
 
     try {
       const { error } = await supabase
         .from('categories')
         .delete()
-        .eq('id', categoryId);
+        .eq('id', id);
 
       if (error) throw error;
 
-      await fetchCategories();
       toast({
         title: "Success",
         description: "Category deleted successfully",
       });
-    } catch (error) {
+
+      fetchCategories();
+    } catch (error: any) {
       console.error('Error deleting category:', error);
       toast({
         title: "Error",
@@ -77,16 +87,16 @@ const AdminCategories = () => {
     }
   };
 
-  const handleEdit = (category: Category) => {
-    setEditingCategory(category);
-    setShowForm(true);
-  };
-
   const handleFormSuccess = () => {
-    setShowForm(false);
+    setIsDialogOpen(false);
     setEditingCategory(null);
     fetchCategories();
   };
+
+  const filteredCategories = categories.filter(category =>
+    category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    category.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (loading) {
     return (
@@ -102,94 +112,96 @@ const AdminCategories = () => {
     <AdminLayout>
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold animate-slide-in-left">Categories Management</h1>
-          <Button 
-            onClick={() => {
-              setEditingCategory(null);
-              setShowForm(true);
-            }}
-            className="animate-slide-in-right hover:scale-105 transition-transform"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Category
-          </Button>
+          <h1 className="text-3xl font-bold animate-slide-in-left flex items-center">
+            <FolderOpen className="h-8 w-8 mr-3" />
+            Category Management
+          </h1>
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="animate-slide-in-right btn-premium">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Category
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingCategory ? 'Edit Category' : 'Add New Category'}
+                </DialogTitle>
+              </DialogHeader>
+              <CategoryForm
+                category={editingCategory}
+                onSuccess={handleFormSuccess}
+              />
+            </DialogContent>
+          </Dialog>
         </div>
 
-        {showForm && (
-          <div className="animate-scale-in">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {editingCategory ? 'Edit Category' : 'Add New Category'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CategoryForm
-                  category={editingCategory || undefined}
-                  onSuccess={handleFormSuccess}
+        <Card className="animate-scale-in glass-card border-gradient">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Tag className="h-5 w-5" />
+                Categories ({filteredCategories.length})
+              </span>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search categories..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-64 hover-magnetic"
                 />
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setShowForm(false);
-                    setEditingCategory(null);
-                  }}
-                  className="mt-4"
-                >
-                  Cancel
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        <div className="grid gap-4">
-          {categories.length === 0 ? (
-            <Card className="animate-fade-in">
-              <CardContent className="text-center py-12">
-                <FolderOpen className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-xl font-medium mb-2">No Categories</h3>
-                <p className="text-muted-foreground mb-4">
-                  Create your first category to organize products.
-                </p>
-                <Button onClick={() => setShowForm(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add First Category
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            categories.map((category, index) => (
-              <Card key={category.id} className="animate-slide-in-up hover:shadow-lg transition-all duration-300" style={{animationDelay: `${index * 50}ms`}}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4">
+              {filteredCategories.length === 0 ? (
+                <div className="text-center py-8 animate-fade-in">
+                  <FolderOpen className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No Categories Found</h3>
+                  <p className="text-muted-foreground">
+                    {searchTerm ? 'No categories match your search.' : 'Create your first category to get started.'}
+                  </p>
+                </div>
+              ) : (
+                filteredCategories.map((category, index) => (
+                  <div
+                    key={category.id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:shadow-md transition-all duration-300 animate-slide-in-up hover-3d-lift glass-card"
+                    style={{animationDelay: `${index * 50}ms`}}
+                  >
                     <div className="flex items-center space-x-4">
                       <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <FolderOpen className="h-6 w-6 text-primary" />
+                        <Tag className="h-6 w-6 text-primary" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-lg">{category.name}</h3>
-                        <p className="text-sm text-muted-foreground">/{category.slug}</p>
-                        {category.description && (
-                          <p className="text-sm text-muted-foreground mt-1">{category.description}</p>
-                        )}
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge variant={category.is_active ? 'default' : 'secondary'}>
+                        <h3 className="font-semibold">{category.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {category.description || 'No description'}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant={category.is_active ? "default" : "secondary"}>
                             {category.is_active ? 'Active' : 'Inactive'}
                           </Badge>
-                          <Badge variant="outline">
+                          <span className="text-xs text-muted-foreground">
                             Order: {category.sort_order}
-                          </Badge>
+                          </span>
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex space-x-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleEdit(category)}
-                        className="hover:scale-105 transition-transform"
+                        onClick={() => {
+                          setEditingCategory(category);
+                          setIsDialogOpen(true);
+                        }}
+                        className="hover-magnetic"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -197,17 +209,17 @@ const AdminCategories = () => {
                         variant="destructive"
                         size="sm"
                         onClick={() => handleDelete(category.id)}
-                        className="hover:scale-105 transition-transform"
+                        className="hover-magnetic"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </AdminLayout>
   );

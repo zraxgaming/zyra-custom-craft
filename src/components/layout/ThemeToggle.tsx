@@ -1,27 +1,44 @@
 
 import React from "react";
+import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useTheme } from "next-themes";
-import { Sun, Moon } from "lucide-react";
+import { useTheme } from "@/hooks/use-theme";
 
 const ThemeToggle = () => {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, actualTheme } = useTheme();
 
   const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
+    const newTheme = actualTheme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
   };
 
   return (
     <Button
       variant="ghost"
-      size="sm"
+      size="icon"
       onClick={toggleTheme}
-      className="w-10 h-10 rounded-full hover:bg-muted/50 transition-all duration-200 hover:scale-110 hover-magnetic"
+      className="relative overflow-hidden transition-all duration-300 hover:scale-110 hover:shadow-lg hover-magnetic group"
       aria-label="Toggle theme"
     >
-      <Sun className="h-4 w-4 rotate-0 scale-100 transition-all duration-200 dark:-rotate-90 dark:scale-0" />
-      <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all duration-200 dark:rotate-0 dark:scale-100" />
-      <span className="sr-only">Toggle theme</span>
+      <div className="relative">
+        <Sun className={`h-[1.2rem] w-[1.2rem] transition-all duration-500 ${
+          actualTheme === 'dark' 
+            ? 'rotate-90 scale-0 opacity-0' 
+            : 'rotate-0 scale-100 opacity-100'
+        }`} />
+        <Moon className={`absolute inset-0 h-[1.2rem] w-[1.2rem] transition-all duration-500 ${
+          actualTheme === 'dark' 
+            ? 'rotate-0 scale-100 opacity-100' 
+            : '-rotate-90 scale-0 opacity-0'
+        }`} />
+      </div>
+      
+      {/* Animated background effect */}
+      <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 opacity-0 group-hover:opacity-20 transition-opacity duration-300 rounded-md" />
+      
+      <span className="sr-only">
+        Switch to {actualTheme === 'dark' ? 'light' : 'dark'} mode
+      </span>
     </Button>
   );
 };

@@ -1,22 +1,28 @@
 
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import AdminLayout from '@/components/admin/AdminLayout';
-import ProductForm from '@/components/admin/ProductForm';
-import { ArrowLeft, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import AdminLayout from "@/components/admin/AdminLayout";
+import ProductForm from "@/components/admin/ProductForm";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Edit, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const ProductEdit = () => {
-  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { id } = useParams();
+  const { toast } = useToast();
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const { data: product, isLoading, error } = useQuery({
-    queryKey: ['product', id],
-    queryFn: async () => {
-      if (!id) throw new Error('Product ID is required');
-      
+  useEffect(() => {
+    if (id) {
+      fetchProduct();
+    }
+  }, [id]);
+
+  const fetchProduct = async () => {
+    try {
       const { data, error } = await supabase
         .from('products')
         .select('*')
@@ -24,38 +30,29 @@ const ProductEdit = () => {
         .single();
 
       if (error) throw error;
-      return data;
-    },
-    enabled: !!id,
-  });
-
-  useEffect(() => {
-    if (error) {
-      console.error('Error loading product:', error);
+      setProduct(data);
+    } catch (error: any) {
+      console.error('Error fetching product:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load product",
+        variant: "destructive",
+      });
       navigate('/admin/products');
+    } finally {
+      setLoading(false);
     }
-  }, [error, navigate]);
+  };
 
-  if (isLoading) {
+  const handleSuccess = () => {
+    navigate('/admin/products');
+  };
+
+  if (loading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center h-64">
+        <div className="flex items-center justify-center min-h-screen">
           <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Loading product...</span>
-        </div>
-      </AdminLayout>
-    );
-  }
-
-  if (!product) {
-    return (
-      <AdminLayout>
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-bold mb-4">Product not found</h2>
-          <Button onClick={() => navigate('/admin/products')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Products
-          </Button>
         </div>
       </AdminLayout>
     );
@@ -63,37 +60,25 @@ const ProductEdit = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/admin/products')}
-            className="hover:scale-105 transition-transform duration-200"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Products
-          </Button>
-          <h1 className="text-3xl font-bold">Edit Product</h1>
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/admin/products')}
+              className="animate-slide-in-left"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Products
+            </Button>
+            <h1 className="text-3xl font-bold animate-slide-in-right flex items-center">
+              <Edit className="h-8 w-8 mr-3" />
+              Edit Product
+            </h1>
+          </div>
         </div>
 
-        <ProductForm
-          product={{
-            id: product.id,
-            name: product.name,
-            slug: product.slug,
-            description: product.description,
-            price: product.price,
-            images: Array.isArray(product.images) ? 
-              (product.images as any[]).filter(img => typeof img === 'string') : [],
-            is_featured: product.is_featured || false,
-            is_customizable: product.is_customizable || false,
-            stock_quantity: product.stock_quantity || 0
-          }}
-          onSuccess={() => {
-            console.log('Product updated successfully');
-            navigate('/admin/products');
-          }}
-        />
+        {product && <ProductForm product={product} onSuccess={handleSuccess} />}
       </div>
     </AdminLayout>
   );
