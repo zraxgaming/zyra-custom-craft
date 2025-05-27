@@ -5,11 +5,10 @@ import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/use-theme";
 
 const ThemeToggle = () => {
-  const { theme, setTheme, actualTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
   const toggleTheme = () => {
-    const newTheme = actualTheme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
+    setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
   return (
@@ -17,22 +16,22 @@ const ThemeToggle = () => {
       variant="ghost"
       size="icon"
       onClick={toggleTheme}
-      className="relative overflow-hidden transition-all duration-300 hover:scale-110"
+      className="relative overflow-hidden transition-all duration-300 hover:scale-105"
       aria-label="Toggle theme"
     >
       <Sun className={`h-[1.2rem] w-[1.2rem] transition-all duration-300 ${
-        actualTheme === 'dark' 
-          ? 'rotate-90 scale-0 opacity-0' 
-          : 'rotate-0 scale-100 opacity-100'
+        theme === 'dark' 
+          ? 'rotate-90 scale-0' 
+          : 'rotate-0 scale-100'
       }`} />
       <Moon className={`absolute inset-0 h-[1.2rem] w-[1.2rem] transition-all duration-300 ${
-        actualTheme === 'dark' 
-          ? 'rotate-0 scale-100 opacity-100' 
-          : '-rotate-90 scale-0 opacity-0'
+        theme === 'dark' 
+          ? 'rotate-0 scale-100' 
+          : '-rotate-90 scale-0'
       }`} />
       
       <span className="sr-only">
-        Switch to {actualTheme === 'dark' ? 'light' : 'dark'} mode
+        Switch to {theme === 'dark' ? 'light' : 'dark'} mode
       </span>
     </Button>
   );

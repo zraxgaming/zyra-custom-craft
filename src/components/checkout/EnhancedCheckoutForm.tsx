@@ -9,7 +9,9 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CreditCard, ShoppingBag, Lock } from "lucide-react";
+import { Loader2, CreditCard, ShoppingBag, Lock, Smartphone } from "lucide-react";
+import PayPalPayment from "./PayPalPayment";
+import ZiinaPayment from "./ZiinaPayment";
 
 interface EnhancedCheckoutFormProps {
   items: any[];
@@ -41,22 +43,17 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const createOrder = async () => {
     if (!formData.firstName || !formData.lastName || !formData.email) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields",
         variant: "destructive"
       });
-      return;
+      return null;
     }
 
-    setIsProcessing(true);
-
     try {
-      // Create order in database
       const { data: order, error } = await supabase
         .from('orders')
         .insert({
@@ -73,7 +70,6 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
 
       if (error) throw error;
 
-      // Add order items
       const orderItems = items.map(item => ({
         order_id: order.id,
         product_id: item.id,
@@ -85,15 +81,28 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
         .from('order_items')
         .insert(orderItems);
 
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      return order;
+    } catch (error: any) {
+      toast({
+        title: "Order Creation Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+      return null;
+    }
+  };
 
-      // Update order status
+  const handlePaymentSuccess = async (transactionId: string) => {
+    const order = await createOrder();
+    if (!order) return;
+
+    try {
       await supabase
         .from('orders')
         .update({ 
           status: 'completed',
-          payment_status: 'paid'
+          payment_status: 'paid',
+          tracking_number: transactionId
         })
         .eq('id', order.id);
 
@@ -103,22 +112,33 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
       });
 
       onPaymentSuccess(order.id);
-
     } catch (error: any) {
       toast({
-        title: "Payment Failed",
+        title: "Order Update Failed",
         description: error.message,
         variant: "destructive"
       });
-    } finally {
-      setIsProcessing(false);
     }
+  };
+
+  const handlePaymentError = (error: string) => {
+    toast({
+      title: "Payment Failed",
+      description: error,
+      variant: "destructive"
+    });
+  };
+
+  const orderData = {
+    ...formData,
+    items,
+    user_id: user?.id
   };
 
   return (
     <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-8">
       {/* Order Summary */}
-      <Card>
+      <Card className="h-fit">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5" />
@@ -162,18 +182,16 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
       </Card>
 
       {/* Checkout Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lock className="h-5 w-5" />
-            Checkout
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              Shipping Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Shipping Information</h3>
-              
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="firstName">First Name *</Label>
@@ -243,41 +261,51 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <Separator />
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment Method</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+              <div className="flex items-center space-x-2 p-4 border rounded-lg">
+                <RadioGroupItem value="paypal" id="paypal" />
+                <Label htmlFor="paypal" className="flex items-center gap-2 cursor-pointer flex-1">
+                  <CreditCard className="h-4 w-4" />
+                  PayPal
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2 p-4 border rounded-lg">
+                <RadioGroupItem value="ziina" id="ziina" />
+                <Label htmlFor="ziina" className="flex items-center gap-2 cursor-pointer flex-1">
+                  <Smartphone className="h-4 w-4" />
+                  Ziina (UAE)
+                </Label>
+              </div>
+            </RadioGroup>
 
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Payment Method</h3>
-              
-              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-                <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                  <RadioGroupItem value="paypal" id="paypal" />
-                  <Label htmlFor="paypal" className="flex items-center gap-2 cursor-pointer flex-1">
-                    <CreditCard className="h-4 w-4" />
-                    PayPal
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
+            {paymentMethod === "paypal" && (
+              <PayPalPayment
+                amount={subtotal}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+                orderData={orderData}
+              />
+            )}
 
-            <Button
-              type="submit"
-              disabled={isProcessing}
-              className="w-full"
-              size="lg"
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                `Complete Order - $${subtotal.toFixed(2)}`
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+            {paymentMethod === "ziina" && (
+              <ZiinaPayment
+                amount={subtotal}
+                orderData={orderData}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+              />
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
