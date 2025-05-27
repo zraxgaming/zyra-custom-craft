@@ -56,7 +56,7 @@ const App = () => (
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <ThemeProvider defaultTheme="system">
+        <ThemeProvider defaultTheme="system" enableSystem>
           <AuthProvider>
             <CartProvider>
               <WishlistProvider>

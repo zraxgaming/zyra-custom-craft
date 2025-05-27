@@ -35,7 +35,7 @@ const AdminAnalytics = () => {
         .select('total_amount', { count: 'exact' });
 
       // Calculate total revenue
-      const totalRevenue = orders?.reduce((sum, order) => sum + parseFloat(order.total_amount?.toString() || '0'), 0) || 0;
+      const totalRevenue = orders?.reduce((sum, order) => sum + parseFloat(order.total_amount || '0'), 0) || 0;
 
       // Fetch total products
       const { count: totalProducts } = await supabase
@@ -48,10 +48,10 @@ const AdminAnalytics = () => {
         .select('*', { count: 'exact', head: true });
 
       // Calculate average order value
-      const averageOrderValue = totalOrders && totalOrders > 0 ? totalRevenue / totalOrders : 0;
+      const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
       // Calculate conversion rate (orders / page views)
-      const conversionRate = pageViews && pageViews > 0 ? ((totalOrders || 0) / pageViews) * 100 : 0;
+      const conversionRate = pageViews > 0 ? (totalOrders / pageViews) * 100 : 0;
 
       // Get new users this month
       const startOfMonth = new Date();
