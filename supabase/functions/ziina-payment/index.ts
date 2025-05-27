@@ -60,9 +60,9 @@ serve(async (req) => {
       success_url: success_url,
       cancel_url: cancel_url,
       failure_url: cancel_url,
-      test: false,
+      test: true,
       transaction_source: 'directApi',
-      allow_tips: false,
+      allow_tips: true,
       customer_phone: order_data?.phone || null
     }
 
