@@ -31,7 +31,7 @@ const Dashboard = () => {
     first_name: '',
     last_name: '',
     phone: '',
-    address: ''
+    address: '' // This will be stored in a text field or separate addresses table
   });
 
   useEffect(() => {
@@ -62,7 +62,7 @@ const Dashboard = () => {
           first_name: profileData.first_name || '',
           last_name: profileData.last_name || '',
           phone: profileData.phone || '',
-          address: profileData.address || ''
+          address: profileData.display_name || '' // Use display_name as address for now
         });
       }
 
@@ -121,7 +121,10 @@ const Dashboard = () => {
         .from('profiles')
         .upsert({
           id: user.id,
-          ...profileData,
+          first_name: profileData.first_name,
+          last_name: profileData.last_name,
+          phone: profileData.phone,
+          display_name: profileData.address, // Store address in display_name for now
           updated_at: new Date().toISOString()
         });
 

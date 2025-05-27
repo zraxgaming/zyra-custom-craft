@@ -1,8 +1,14 @@
-
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/components/cart/CartProvider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Menu, ShoppingCart, User, Search, Sparkles, Crown, LogOut, Settings, Home, Package, Gift, Users as UsersIcon } from "lucide-react";
+import { Container } from "@/components/ui/container";
+import SearchBar from "@/components/search/SearchBar";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,13 +16,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ShoppingCart, User, Menu, X, LogOut, Package, Gift, Heart } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useCart } from "@/components/cart/CartProvider";
-import { useToast } from "@/hooks/use-toast";
-import ThemeToggle from "@/components/theme/ThemeToggle";
-import CartDrawer from "@/components/cart/CartDrawer";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);

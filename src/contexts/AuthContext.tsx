@@ -11,6 +11,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, metadata?: any) => Promise<void>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
+  isLoading: boolean; // Add this property
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -83,6 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     user,
     loading,
+    isLoading: loading, // Add this for backward compatibility
     signIn,
     signUp,
     signOut,
