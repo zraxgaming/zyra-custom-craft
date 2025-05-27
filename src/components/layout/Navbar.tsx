@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ShoppingCart, User, Menu, X, LogOut, Package } from "lucide-react";
+import { ShoppingCart, User, Menu, X, LogOut, Package, Gift, Heart } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/components/cart/CartProvider";
 import { useToast } from "@/hooks/use-toast";
@@ -47,6 +47,7 @@ const Navbar = () => {
     { name: "Home", href: "/home" },
     { name: "Shop", href: "/shop" },
     { name: "Categories", href: "/categories" },
+    { name: "Gift Cards", href: "/gift-cards" },
     { name: "About", href: "/about" },
     { name: "Contact", href: "/contact" },
   ];
@@ -80,6 +81,19 @@ const Navbar = () => {
             {/* Desktop Actions */}
             <div className="hidden md:flex items-center space-x-4">
               <ThemeToggle />
+              
+              {user && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  asChild
+                  className="hover:scale-110 transition-transform duration-200"
+                >
+                  <Link to="/wishlist">
+                    <Heart className="h-5 w-5" />
+                  </Link>
+                </Button>
+              )}
               
               <Button
                 variant="ghost"
@@ -120,9 +134,15 @@ const Navbar = () => {
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link to="/dashboard" className="cursor-pointer">
+                      <Link to="/account" className="cursor-pointer">
                         <User className="mr-2 h-4 w-4" />
                         My Account
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/gift-cards" className="cursor-pointer">
+                        <Gift className="mr-2 h-4 w-4" />
+                        Gift Cards
                       </Link>
                     </DropdownMenuItem>
                     {isAdmin && (
@@ -204,9 +224,21 @@ const Navbar = () => {
                       </span>
                     </div>
                     <Button asChild variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
-                      <Link to="/dashboard" onClick={() => setIsOpen(false)}>
+                      <Link to="/account" onClick={() => setIsOpen(false)}>
                         <User className="mr-2 h-4 w-4" />
                         My Account
+                      </Link>
+                    </Button>
+                    <Button asChild variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
+                      <Link to="/wishlist" onClick={() => setIsOpen(false)}>
+                        <Heart className="mr-2 h-4 w-4" />
+                        Wishlist
+                      </Link>
+                    </Button>
+                    <Button asChild variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
+                      <Link to="/gift-cards" onClick={() => setIsOpen(false)}>
+                        <Gift className="mr-2 h-4 w-4" />
+                        Gift Cards
                       </Link>
                     </Button>
                     {isAdmin && (

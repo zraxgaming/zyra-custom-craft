@@ -23,28 +23,21 @@ const MaintenanceToggle = () => {
   const fetchMaintenanceStatus = async () => {
     try {
       const { data, error } = await supabase
-        .from('maintenance_mode')
+        .from('site_config')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .in('key', ['maintenance_mode', 'maintenance_message']);
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching maintenance status:', error);
-        // Set defaults if there's an error
-        setIsActive(false);
-        setMessage('We are currently performing maintenance. Some features may be temporarily unavailable.');
-      } else if (data) {
-        setIsActive(data.is_active || false);
-        setMessage(data.message || 'We are currently performing maintenance. Some features may be temporarily unavailable.');
-      } else {
-        // No data found, set defaults
-        setIsActive(false);
-        setMessage('We are currently performing maintenance. Some features may be temporarily unavailable.');
-      }
+      if (error) throw error;
+
+      const config = data?.reduce((acc, item) => {
+        acc[item.key] = item.value;
+        return acc;
+      }, {} as any) || {};
+
+      setIsActive(config.maintenance_mode === true || config.maintenance_mode === 'true');
+      setMessage(config.maintenance_message || 'We are currently performing maintenance. Some features may be temporarily unavailable.');
     } catch (error) {
       console.error('Error fetching maintenance status:', error);
-      // Set defaults if there's an error
       setIsActive(false);
       setMessage('We are currently performing maintenance. Some features may be temporarily unavailable.');
     } finally {
@@ -55,45 +48,27 @@ const MaintenanceToggle = () => {
   const updateMaintenanceStatus = async () => {
     setSaving(true);
     try {
-      // First try to update existing record
-      const { data: existingData } = await supabase
-        .from('maintenance_mode')
-        .select('id')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      // Update maintenance mode
+      await supabase
+        .from('site_config')
+        .upsert({
+          key: 'maintenance_mode',
+          value: isActive
+        });
 
-      let result;
-      if (existingData) {
-        // Update existing record
-        result = await supabase
-          .from('maintenance_mode')
-          .update({
-            is_active: isActive,
-            message: message || 'We are currently performing maintenance. Some features may be temporarily unavailable.',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingData.id);
-      } else {
-        // Insert new record
-        result = await supabase
-          .from('maintenance_mode')
-          .insert({
-            is_active: isActive,
-            message: message || 'We are currently performing maintenance. Some features may be temporarily unavailable.',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-      }
-
-      if (result.error) throw result.error;
+      // Update maintenance message
+      await supabase
+        .from('site_config')
+        .upsert({
+          key: 'maintenance_message',
+          value: message || 'We are currently performing maintenance. Some features may be temporarily unavailable.'
+        });
 
       toast({
         title: "Maintenance Status Updated",
         description: `Maintenance mode is now ${isActive ? 'enabled' : 'disabled'}`,
       });
 
-      // Refresh the data
       await fetchMaintenanceStatus();
     } catch (error: any) {
       console.error('Error updating maintenance status:', error);
@@ -122,8 +97,8 @@ const MaintenanceToggle = () => {
     <Card className="animate-scale-in bg-card/80 backdrop-blur-sm border-border/50 shadow-lg hover:shadow-xl transition-all duration-300">
       <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50 rounded-t-lg">
         <CardTitle className="flex items-center gap-2 text-foreground">
-          <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-lg animate-pulse">
-            <AlertTriangle className="h-5 w-5 text-white" />
+          <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center shadow-lg animate-pulse">
+            <AlertTriangle className="h-4 w-4 text-white" />
           </div>
           Maintenance Mode Control
         </CardTitle>

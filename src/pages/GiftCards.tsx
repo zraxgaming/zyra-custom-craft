@@ -1,305 +1,379 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import { Container } from "@/components/ui/container";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Container } from "@/components/ui/container";
-import { Gift, Heart, Star, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import SEOHead from "@/components/seo/SEOHead";
-import ZiinaPayment from "@/components/checkout/ZiinaPayment";
+import { supabase } from "@/integrations/supabase/client";
+import { Gift, CreditCard, Star, Sparkles, Heart, Calendar } from "lucide-react";
 
 const GiftCards = () => {
-  const [selectedAmount, setSelectedAmount] = useState<number>(50);
-  const [customAmount, setCustomAmount] = useState<string>("");
-  const [recipientEmail, setRecipientEmail] = useState("");
-  const [recipientName, setRecipientName] = useState("");
-  const [message, setMessage] = useState("");
-  const [senderName, setSenderName] = useState("");
-  const [showPayment, setShowPayment] = useState(false);
+  const { user } = useAuth();
   const { toast } = useToast();
+  const [ownedCards, setOwnedCards] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState(false);
+  const [formData, setFormData] = useState({
+    amount: 50,
+    recipientEmail: "",
+    recipientName: "",
+    senderName: user?.user_metadata?.first_name || "",
+    message: "Hope you enjoy shopping with us!"
+  });
 
-  const predefinedAmounts = [25, 50, 100, 200];
+  const giftCardTemplates = [
+    { id: 1, name: "Birthday", icon: "🎂", color: "from-pink-500 to-purple-600" },
+    { id: 2, name: "Holiday", icon: "🎄", color: "from-green-500 to-red-600" },
+    { id: 3, name: "Anniversary", icon: "❤️", color: "from-red-500 to-pink-600" },
+    { id: 4, name: "Thank You", icon: "🙏", color: "from-blue-500 to-purple-600" },
+    { id: 5, name: "Congratulations", icon: "🎉", color: "from-yellow-500 to-orange-600" },
+  ];
 
-  const handleAmountSelect = (amount: number) => {
-    setSelectedAmount(amount);
-    setCustomAmount("");
-  };
+  useEffect(() => {
+    if (user) {
+      fetchOwnedGiftCards();
+    }
+  }, [user]);
 
-  const handleCustomAmountChange = (value: string) => {
-    setCustomAmount(value);
-    if (value) {
-      setSelectedAmount(parseFloat(value) || 0);
+  const fetchOwnedGiftCards = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('gift_cards')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setOwnedCards(data || []);
+    } catch (error) {
+      console.error('Error fetching gift cards:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleProceedToPayment = () => {
-    if (!recipientEmail || !recipientName || !senderName) {
+  const handlePurchase = async () => {
+    if (!user) {
       toast({
-        title: "Missing Information",
+        title: "Sign in required",
+        description: "Please sign in to purchase gift cards",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!formData.recipientEmail || !formData.recipientName) {
+      toast({
+        title: "Missing information",
         description: "Please fill in all required fields",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
 
-    if (selectedAmount < 10) {
+    setPurchasing(true);
+    try {
+      // Generate gift card code
+      const code = `GC${Date.now()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      
+      // Create gift card
+      const { data: giftCard, error } = await supabase
+        .from('gift_cards')
+        .insert({
+          code,
+          amount: formData.amount,
+          user_id: user.id,
+          recipient_email: formData.recipientEmail,
+          recipient_name: formData.recipientName,
+          sender_name: formData.senderName,
+          message: formData.message,
+          status: 'active'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Send email to recipient via edge function
+      await supabase.functions.invoke('send-gift-card-email', {
+        body: {
+          recipientEmail: formData.recipientEmail,
+          recipientName: formData.recipientName,
+          senderName: formData.senderName,
+          amount: formData.amount,
+          code: code,
+          message: formData.message
+        }
+      });
+
       toast({
-        title: "Invalid Amount",
-        description: "Gift card amount must be at least $10",
-        variant: "destructive",
+        title: "Gift card purchased!",
+        description: "The gift card has been sent to the recipient's email",
       });
-      return;
+
+      // Reset form
+      setFormData({
+        amount: 50,
+        recipientEmail: "",
+        recipientName: "",
+        senderName: user?.user_metadata?.first_name || "",
+        message: "Hope you enjoy shopping with us!"
+      });
+
+      fetchOwnedGiftCards();
+    } catch (error: any) {
+      console.error('Error purchasing gift card:', error);
+      toast({
+        title: "Purchase failed",
+        description: error.message || "Failed to purchase gift card",
+        variant: "destructive"
+      });
+    } finally {
+      setPurchasing(false);
     }
-
-    setShowPayment(true);
   };
-
-  const orderData = {
-    email: recipientEmail,
-    recipientName,
-    senderName,
-    message,
-    amount: selectedAmount,
-    type: 'gift_card'
-  };
-
-  const handlePaymentSuccess = (transactionId: string) => {
-    toast({
-      title: "Gift Card Purchased!",
-      description: "The gift card has been sent to the recipient's email",
-    });
-    // Reset form
-    setSelectedAmount(50);
-    setCustomAmount("");
-    setRecipientEmail("");
-    setRecipientName("");
-    setMessage("");
-    setSenderName("");
-    setShowPayment(false);
-  };
-
-  const handlePaymentError = (error: string) => {
-    toast({
-      title: "Payment Failed",
-      description: error,
-      variant: "destructive",
-    });
-  };
-
-  if (showPayment) {
-    return (
-      <>
-        <SEOHead 
-          title="Gift Cards Payment - Zyra"
-          description="Complete your gift card purchase with Ziina payment"
-        />
-        <Navbar />
-        <Container className="py-12">
-          <div className="max-w-2xl mx-auto">
-            <Button
-              variant="outline"
-              onClick={() => setShowPayment(false)}
-              className="mb-6"
-            >
-              ← Back to Gift Card Details
-            </Button>
-            <Card className="border-purple-200 dark:border-purple-800 bg-card">
-              <CardHeader>
-                <CardTitle className="text-center text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  Complete Your Gift Card Purchase
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ZiinaPayment
-                  amount={selectedAmount}
-                  orderData={orderData}
-                  onSuccess={handlePaymentSuccess}
-                  onError={handlePaymentError}
-                />
-              </CardContent>
-            </Card>
-          </div>
-        </Container>
-        <Footer />
-      </>
-    );
-  }
 
   return (
-    <>
-      <SEOHead 
-        title="Gift Cards - Zyra"
-        description="Give the gift of creativity with Zyra gift cards. Perfect for any occasion."
-        url="https://zyra.lovable.app/gift-cards"
-      />
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        
-        <section className="py-20 bg-gradient-to-br from-purple-500/10 via-pink-500/10 to-background">
-          <Container>
-            <div className="text-center mb-16">
-              <Gift className="h-16 w-16 text-purple-600 mx-auto mb-6" />
-              <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-800 bg-clip-text text-transparent">
-                Gift Cards
-              </h1>
-              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                Give the perfect gift of creativity and customization. Let your loved ones choose exactly what they want.
-              </p>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20">
+      <Navbar />
+      
+      <div className="py-12">
+        <Container>
+          {/* Header */}
+          <div className="text-center mb-16 animate-fade-in">
+            <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-purple-600 via-purple-700 to-pink-600 rounded-full mb-8 animate-bounce-in shadow-2xl">
+              <Gift className="h-12 w-12 text-white animate-pulse" />
             </div>
-          </Container>
-        </section>
+            <h1 className="text-6xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-purple-800 bg-clip-text text-transparent mb-6 animate-text-shimmer">
+              Gift Cards
+            </h1>
+            <p className="text-xl text-gray-600 dark:text-gray-300 animate-slide-in-up max-w-2xl mx-auto" style={{animationDelay: '200ms'}}>
+              Give the perfect gift with our digital gift cards. Perfect for any occasion!
+            </p>
+          </div>
 
-        <Container className="py-16">
-          <div className="max-w-4xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-              <div>
-                <Card className="border-purple-200 dark:border-purple-800 bg-card">
-                  <CardHeader>
-                    <CardTitle className="text-2xl font-bold text-foreground">Choose Amount</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      {predefinedAmounts.map((amount) => (
-                        <Button
-                          key={amount}
-                          variant={selectedAmount === amount && !customAmount ? "default" : "outline"}
-                          onClick={() => handleAmountSelect(amount)}
-                          className={`h-16 text-lg font-semibold ${
-                            selectedAmount === amount && !customAmount
-                              ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white"
-                              : "border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950/30"
-                          }`}
-                        >
-                          ${amount}
-                        </Button>
-                      ))}
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="custom-amount" className="text-foreground">Custom Amount (min $10)</Label>
-                      <Input
-                        id="custom-amount"
-                        type="number"
-                        placeholder="Enter custom amount"
-                        value={customAmount}
-                        onChange={(e) => handleCustomAmountChange(e.target.value)}
-                        className="mt-2 border-purple-200 dark:border-purple-800 focus:border-purple-500"
-                        min="10"
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="mt-6 border-purple-200 dark:border-purple-800 bg-card">
-                  <CardContent className="p-6">
-                    <div className="flex items-center mb-4">
-                      <Heart className="h-6 w-6 text-pink-500 mr-3" />
-                      <h3 className="text-lg font-semibold text-foreground">Why Choose Our Gift Cards?</h3>
-                    </div>
-                    <ul className="space-y-3 text-muted-foreground">
-                      <li className="flex items-center">
-                        <Sparkles className="h-4 w-4 text-purple-500 mr-2" />
-                        No expiration date
-                      </li>
-                      <li className="flex items-center">
-                        <Star className="h-4 w-4 text-purple-500 mr-2" />
-                        Use across all products
-                      </li>
-                      <li className="flex items-center">
-                        <Gift className="h-4 w-4 text-purple-500 mr-2" />
-                        Perfect for any occasion
-                      </li>
-                    </ul>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div>
-                <Card className="border-purple-200 dark:border-purple-800 bg-card">
-                  <CardHeader>
-                    <CardTitle className="text-2xl font-bold text-foreground">Gift Details</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div>
-                      <Label htmlFor="sender-name" className="text-foreground">Your Name *</Label>
-                      <Input
-                        id="sender-name"
-                        placeholder="Your name"
-                        value={senderName}
-                        onChange={(e) => setSenderName(e.target.value)}
-                        className="mt-2 border-purple-200 dark:border-purple-800 focus:border-purple-500"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="recipient-name" className="text-foreground">Recipient Name *</Label>
-                      <Input
-                        id="recipient-name"
-                        placeholder="Recipient's name"
-                        value={recipientName}
-                        onChange={(e) => setRecipientName(e.target.value)}
-                        className="mt-2 border-purple-200 dark:border-purple-800 focus:border-purple-500"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="recipient-email" className="text-foreground">Recipient Email *</Label>
-                      <Input
-                        id="recipient-email"
-                        type="email"
-                        placeholder="recipient@example.com"
-                        value={recipientEmail}
-                        onChange={(e) => setRecipientEmail(e.target.value)}
-                        className="mt-2 border-purple-200 dark:border-purple-800 focus:border-purple-500"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="message" className="text-foreground">Personal Message (Optional)</Label>
-                      <Textarea
-                        id="message"
-                        placeholder="Write a personal message..."
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        className="mt-2 border-purple-200 dark:border-purple-800 focus:border-purple-500"
-                        rows={4}
-                      />
-                    </div>
-
-                    <div className="border-t pt-6">
-                      <div className="flex justify-between items-center mb-4">
-                        <span className="text-lg font-semibold text-foreground">Total:</span>
-                        <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                          ${selectedAmount.toFixed(2)}
-                        </span>
-                      </div>
-                      
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-7xl mx-auto">
+            {/* Purchase Gift Card */}
+            <Card className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 border-purple-200 dark:border-purple-800 shadow-2xl animate-slide-in-left">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3 text-2xl text-purple-700 dark:text-purple-300">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <CreditCard className="h-5 w-5 text-white" />
+                  </div>
+                  Purchase Gift Card
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Amount Selection */}
+                <div className="space-y-3">
+                  <Label className="text-lg font-semibold">Amount</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[25, 50, 100, 200, 500, 1000].map((amount) => (
                       <Button
-                        onClick={handleProceedToPayment}
-                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 transition-all duration-300"
-                        size="lg"
+                        key={amount}
+                        variant={formData.amount === amount ? "default" : "outline"}
+                        onClick={() => setFormData(prev => ({ ...prev, amount }))}
+                        className={`p-4 h-auto ${formData.amount === amount 
+                          ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white' 
+                          : 'border-purple-200 hover:border-purple-400'
+                        } transition-all duration-300 hover:scale-105`}
                       >
-                        Proceed to Payment
+                        <div className="text-center">
+                          <div className="text-lg font-bold">${amount}</div>
+                        </div>
                       </Button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="custom-amount">Custom Amount:</Label>
+                    <Input
+                      id="custom-amount"
+                      type="number"
+                      min="10"
+                      max="5000"
+                      value={formData.amount}
+                      onChange={(e) => setFormData(prev => ({ ...prev, amount: parseInt(e.target.value) || 10 }))}
+                      className="w-32 border-purple-200 focus:border-purple-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Recipient Information */}
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="recipientName">Recipient Name *</Label>
+                    <Input
+                      id="recipientName"
+                      value={formData.recipientName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, recipientName: e.target.value }))}
+                      placeholder="Enter recipient's name"
+                      className="border-purple-200 focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="recipientEmail">Recipient Email *</Label>
+                    <Input
+                      id="recipientEmail"
+                      type="email"
+                      value={formData.recipientEmail}
+                      onChange={(e) => setFormData(prev => ({ ...prev, recipientEmail: e.target.value }))}
+                      placeholder="Enter recipient's email"
+                      className="border-purple-200 focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="senderName">Your Name</Label>
+                    <Input
+                      id="senderName"
+                      value={formData.senderName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, senderName: e.target.value }))}
+                      placeholder="Your name"
+                      className="border-purple-200 focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="message">Personal Message</Label>
+                    <Textarea
+                      id="message"
+                      value={formData.message}
+                      onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
+                      placeholder="Add a personal message..."
+                      rows={3}
+                      className="border-purple-200 focus:border-purple-500"
+                    />
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={handlePurchase}
+                  disabled={purchasing || !user}
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-4 rounded-xl transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
+                  size="lg"
+                >
+                  {purchasing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Gift className="h-5 w-5 mr-2" />
+                      Purchase Gift Card - ${formData.amount}
+                    </>
+                  )}
+                </Button>
+
+                {!user && (
+                  <p className="text-sm text-center text-muted-foreground">
+                    Please sign in to purchase gift cards
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Gift Card Templates & My Cards */}
+            <div className="space-y-8">
+              {/* Templates */}
+              <Card className="bg-gradient-to-br from-white to-pink-50 dark:from-gray-900 dark:to-pink-950 border-pink-200 dark:border-pink-800 shadow-2xl animate-slide-in-right">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3 text-2xl text-pink-700 dark:text-pink-300">
+                    <div className="w-10 h-10 bg-gradient-to-br from-pink-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                      <Sparkles className="h-5 w-5 text-white" />
                     </div>
+                    Gift Card Themes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3">
+                    {giftCardTemplates.map((template, index) => (
+                      <div
+                        key={template.id}
+                        className={`p-4 rounded-xl bg-gradient-to-br ${template.color} text-white text-center transform hover:scale-105 transition-all duration-300 shadow-lg animate-scale-in`}
+                        style={{animationDelay: `${index * 100}ms`}}
+                      >
+                        <div className="text-2xl mb-2">{template.icon}</div>
+                        <div className="font-medium">{template.name}</div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* My Gift Cards */}
+              {user && (
+                <Card className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 border-purple-200 dark:border-purple-800 shadow-2xl animate-fade-in" style={{animationDelay: '300ms'}}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-3 text-2xl text-purple-700 dark:text-purple-300">
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <Heart className="h-5 w-5 text-white" />
+                      </div>
+                      My Gift Cards
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {loading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+                      </div>
+                    ) : ownedCards.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Gift className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                        <p className="text-muted-foreground">No gift cards yet</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {ownedCards.map((card, index) => (
+                          <div
+                            key={card.id}
+                            className="p-4 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-lg border border-purple-200 dark:border-purple-700 animate-slide-in-up"
+                            style={{animationDelay: `${index * 100}ms`}}
+                          >
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <p className="font-mono text-sm">{card.code}</p>
+                                <p className="text-lg font-bold text-purple-700 dark:text-purple-300">
+                                  ${card.amount}
+                                </p>
+                              </div>
+                              <Badge 
+                                variant={card.status === 'active' ? 'default' : 'secondary'}
+                                className="capitalize"
+                              >
+                                {card.status}
+                              </Badge>
+                            </div>
+                            
+                            <div className="text-sm text-muted-foreground">
+                              <p>To: {card.recipient_name}</p>
+                              <div className="flex items-center gap-1 mt-1">
+                                <Calendar className="h-3 w-3" />
+                                <span>{new Date(card.created_at).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
-              </div>
+              )}
             </div>
           </div>
         </Container>
-        
-        <Footer />
       </div>
-    </>
+      
+      <Footer />
+    </div>
   );
 };
 

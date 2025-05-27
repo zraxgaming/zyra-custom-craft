@@ -4,11 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ShoppingBag, User, MapPin } from "lucide-react";
-import ZiinaPayment from "./ZiinaPayment";
+import { CreditCard, Smartphone, Shield, Loader2 } from "lucide-react";
 
 interface SimpleCheckoutFormProps {
   items: any[];
@@ -16,63 +16,55 @@ interface SimpleCheckoutFormProps {
   onPaymentSuccess: (orderId: string) => void;
 }
 
-const SimpleCheckoutForm: React.FC<SimpleCheckoutFormProps> = ({ 
-  items, 
-  subtotal, 
-  onPaymentSuccess 
+const SimpleCheckoutForm: React.FC<SimpleCheckoutFormProps> = ({
+  items,
+  subtotal,
+  onPaymentSuccess
 }) => {
-  const [formData, setFormData] = useState({
-    email: '',
-    firstName: '',
-    lastName: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    country: 'United Arab Emirates',
-    phone: ''
-  });
-  const [showPayment, setShowPayment] = useState(false);
-  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+  const { user } = useAuth();
   const { toast } = useToast();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("ziina");
+  const [formData, setFormData] = useState({
+    firstName: user?.user_metadata?.first_name || "",
+    lastName: user?.user_metadata?.last_name || "",
+    email: user?.email || "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    country: "UAE"
+  });
 
-  const tax = subtotal * 0.05; // 5% VAT in UAE
-  const shipping = 25.00; // AED 25 shipping
-  const total = subtotal + tax + shipping;
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleContinueToPayment = () => {
-    if (!formData.email || !formData.firstName || !formData.lastName || !formData.address) {
+  const processPayment = async () => {
+    if (!formData.firstName || !formData.lastName || !formData.email) {
       toast({
-        title: "Missing information",
+        title: "Missing Information",
         description: "Please fill in all required fields",
         variant: "destructive"
       });
       return;
     }
-    setShowPayment(true);
-  };
 
-  const handlePaymentSuccess = async (transactionId: string) => {
-    setIsCreatingOrder(true);
+    setIsProcessing(true);
+    
     try {
-      // Create order in database
+      // Create order
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
-          total_amount: total,
-          status: 'processing',
-          payment_status: 'paid',
-          payment_method: 'ziina',
+          user_id: user?.id,
+          total_amount: subtotal,
+          status: 'pending',
+          payment_status: 'pending',
+          payment_method: paymentMethod,
           shipping_address: formData,
-          billing_address: formData,
-          currency: 'USD'
+          billing_address: formData
         })
         .select()
         .single();
@@ -84,284 +76,194 @@ const SimpleCheckoutForm: React.FC<SimpleCheckoutFormProps> = ({
         order_id: order.id,
         product_id: item.id,
         quantity: item.quantity,
-        price: item.price,
-        customization: item.customization || null
+        price: item.price
       }));
 
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
+      await supabase.from('order_items').insert(orderItems);
 
-      if (itemsError) throw itemsError;
+      if (paymentMethod === 'ziina') {
+        // Process real Ziina payment
+        const orderData = {
+          email: formData.email,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          items,
+          subtotal
+        };
 
-      onPaymentSuccess(order.id);
+        const { data, error } = await supabase.functions.invoke('ziina-payment', {
+          body: {
+            amount: Math.round(subtotal * 367), // Convert USD to AED fils
+            success_url: `${window.location.origin}/order-success/${order.id}`,
+            cancel_url: `${window.location.origin}/checkout`,
+            order_data: orderData
+          }
+        });
+
+        if (error) throw error;
+
+        if (data?.payment_url) {
+          // Store order ID for success page
+          localStorage.setItem('pending_order_id', order.id);
+          window.location.href = data.payment_url;
+        } else {
+          throw new Error('No payment URL received');
+        }
+      }
     } catch (error: any) {
-      console.error('Order creation error:', error);
+      console.error('Payment error:', error);
       toast({
-        title: "Order Creation Failed",
-        description: "Payment successful but order creation failed. Please contact support.",
-        variant: "destructive"
+        title: "Payment Failed",
+        description: error.message || "Unable to process payment",
+        variant: "destructive",
       });
     } finally {
-      setIsCreatingOrder(false);
+      setIsProcessing(false);
     }
   };
 
-  const handlePaymentError = (error: string) => {
-    toast({
-      title: "Payment Failed",
-      description: error,
-      variant: "destructive"
-    });
-    setShowPayment(false);
-  };
-
-  if (showPayment) {
-    return (
-      <div className="max-w-md mx-auto animate-slide-in-up">
-        <Button 
-          variant="outline" 
-          onClick={() => setShowPayment(false)}
-          className="mb-6 hover:scale-105 transition-transform duration-200"
-          disabled={isCreatingOrder}
-        >
-          ← Back to Details
-        </Button>
-        
-        <Card className="mb-6 bg-card/80 backdrop-blur-sm border-border/50 shadow-xl animate-scale-in">
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center animate-slide-in-left">
-                <span className="flex items-center gap-2">
-                  <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-                  Subtotal:
-                </span>
-                <span className="font-medium">${subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center animate-slide-in-left" style={{animationDelay: '100ms'}}>
-                <span>Shipping:</span>
-                <span className="font-medium">${shipping.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center animate-slide-in-left" style={{animationDelay: '200ms'}}>
-                <span>VAT (5%):</span>
-                <span className="font-medium">${tax.toFixed(2)}</span>
-              </div>
-              <Separator className="animate-scale-in" />
-              <div className="flex justify-between font-bold text-xl animate-bounce-in bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                <span>Total:</span>
-                <span>${total.toFixed(2)}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <div className="animate-scale-in">
-          <ZiinaPayment
-            amount={total}
-            orderData={formData}
-            onSuccess={handlePaymentSuccess}
-            onError={handlePaymentError}
-          />
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12">
-      <div className="space-y-8">
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-xl animate-slide-in-left">
-          <CardHeader className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-primary/10">
-            <CardTitle className="flex items-center gap-3">
-              <User className="h-5 w-5 text-primary animate-float" />
-              Contact Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6 p-8">
-            <div className="animate-slide-in-up">
-              <Label htmlFor="email" className="text-base font-semibold">Email *</Label>
+    <div className="max-w-2xl mx-auto space-y-6">
+      <Card className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 border-purple-200 dark:border-purple-800 animate-fade-in">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
+            <Shield className="h-5 w-5" />
+            Shipping Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="firstName">First Name *</Label>
               <Input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleInputChange}
+                id="firstName"
+                value={formData.firstName}
+                onChange={(e) => handleInputChange('firstName', e.target.value)}
                 required
-                className="mt-2 transition-all duration-300 hover:border-primary/50 focus:border-primary"
-                placeholder="your@email.com"
+                className="border-purple-200 focus:border-purple-500"
               />
             </div>
-
-            <div className="grid grid-cols-2 gap-6">
-              <div className="animate-slide-in-up" style={{animationDelay: '100ms'}}>
-                <Label htmlFor="firstName" className="text-base font-semibold">First Name *</Label>
-                <Input
-                  id="firstName"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleInputChange}
-                  required
-                  className="mt-2 transition-all duration-300 hover:border-primary/50 focus:border-primary"
-                  placeholder="John"
-                />
-              </div>
-              <div className="animate-slide-in-up" style={{animationDelay: '200ms'}}>
-                <Label htmlFor="lastName" className="text-base font-semibold">Last Name *</Label>
-                <Input
-                  id="lastName"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleInputChange}
-                  required
-                  className="mt-2 transition-all duration-300 hover:border-primary/50 focus:border-primary"
-                  placeholder="Doe"
-                />
-              </div>
-            </div>
-
-            <div className="animate-slide-in-up" style={{animationDelay: '300ms'}}>
-              <Label htmlFor="phone" className="text-base font-semibold">Phone Number *</Label>
+            <div>
+              <Label htmlFor="lastName">Last Name *</Label>
               <Input
-                id="phone"
-                name="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={handleInputChange}
+                id="lastName"
+                value={formData.lastName}
+                onChange={(e) => handleInputChange('lastName', e.target.value)}
                 required
-                className="mt-2 transition-all duration-300 hover:border-primary/50 focus:border-primary"
-                placeholder="+971 50 123 4567"
+                className="border-purple-200 focus:border-purple-500"
               />
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-xl animate-slide-in-left" style={{animationDelay: '300ms'}}>
-          <CardHeader className="bg-gradient-to-r from-secondary/10 via-primary/10 to-secondary/10">
-            <CardTitle className="flex items-center gap-3">
-              <MapPin className="h-5 w-5 text-primary animate-float" />
-              Shipping Address
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6 p-8">
-            <div className="animate-slide-in-up">
-              <Label htmlFor="address" className="text-base font-semibold">Street Address *</Label>
+          <div>
+            <Label htmlFor="email">Email *</Label>
+            <Input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+              required
+              className="border-purple-200 focus:border-purple-500"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="phone">Phone</Label>
+            <Input
+              id="phone"
+              value={formData.phone}
+              onChange={(e) => handleInputChange('phone', e.target.value)}
+              placeholder="+971 50 123 4567"
+              className="border-purple-200 focus:border-purple-500"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="address">Address</Label>
+            <Input
+              id="address"
+              value={formData.address}
+              onChange={(e) => handleInputChange('address', e.target.value)}
+              className="border-purple-200 focus:border-purple-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="city">City</Label>
               <Input
-                id="address"
-                name="address"
-                value={formData.address}
-                onChange={handleInputChange}
-                required
-                className="mt-2 transition-all duration-300 hover:border-primary/50 focus:border-primary"
-                placeholder="123 Main Street"
+                id="city"
+                value={formData.city}
+                onChange={(e) => handleInputChange('city', e.target.value)}
+                className="border-purple-200 focus:border-purple-500"
               />
             </div>
-            
-            <div className="grid grid-cols-2 gap-6">
-              <div className="animate-slide-in-up" style={{animationDelay: '100ms'}}>
-                <Label htmlFor="city" className="text-base font-semibold">City *</Label>
-                <Input
-                  id="city"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleInputChange}
-                  required
-                  className="mt-2 transition-all duration-300 hover:border-primary/50 focus:border-primary"
-                  placeholder="Dubai"
-                />
-              </div>
-              <div className="animate-slide-in-up" style={{animationDelay: '200ms'}}>
-                <Label htmlFor="state" className="text-base font-semibold">Emirate *</Label>
-                <Input
-                  id="state"
-                  name="state"
-                  value={formData.state}
-                  onChange={handleInputChange}
-                  required
-                  className="mt-2 transition-all duration-300 hover:border-primary/50 focus:border-primary"
-                  placeholder="Dubai"
-                />
-              </div>
+            <div>
+              <Label htmlFor="state">State</Label>
+              <Input
+                id="state"
+                value={formData.state}
+                onChange={(e) => handleInputChange('state', e.target.value)}
+                className="border-purple-200 focus:border-purple-500"
+              />
             </div>
-            
-            <div className="animate-slide-in-up" style={{animationDelay: '300ms'}}>
-              <Label htmlFor="zipCode" className="text-base font-semibold">Postal Code</Label>
+            <div>
+              <Label htmlFor="zipCode">ZIP Code</Label>
               <Input
                 id="zipCode"
-                name="zipCode"
                 value={formData.zipCode}
-                onChange={handleInputChange}
-                className="mt-2 transition-all duration-300 hover:border-primary/50 focus:border-primary"
-                placeholder="00000"
+                onChange={(e) => handleInputChange('zipCode', e.target.value)}
+                className="border-purple-200 focus:border-purple-500"
               />
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="space-y-6">
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-xl sticky top-4 animate-slide-in-right">
-          <CardHeader className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-primary/10">
-            <CardTitle className="text-xl">Order Summary</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6 p-8">
-            <div className="space-y-4">
-              {items.map((item, index) => (
-                <div key={item.id} className="flex justify-between items-center p-4 rounded-lg bg-muted/30 animate-slide-in-up" style={{animationDelay: `${index * 100}ms`}}>
-                  <div className="flex items-center gap-4">
-                    <div className="relative">
-                      <img
-                        src={item.image || '/placeholder.svg'}
-                        alt={item.name}
-                        className="w-16 h-16 object-cover rounded-lg transition-transform duration-300 hover:scale-110"
-                      />
-                      <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs rounded-full w-6 h-6 flex items-center justify-center animate-bounce">
-                        {item.quantity}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="font-semibold text-lg">{item.name}</p>
-                      <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
-                    </div>
-                  </div>
-                  <p className="font-bold text-lg bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                    ${(item.price * item.quantity).toFixed(2)}
-                  </p>
-                </div>
-              ))}
+      <Card className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 border-purple-200 dark:border-purple-800 animate-slide-in-up">
+        <CardHeader>
+          <CardTitle className="text-purple-700 dark:text-purple-300">Payment Method</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+            <div className="flex items-center space-x-2 p-4 border-2 border-purple-200 dark:border-purple-800 rounded-lg bg-purple-50 dark:bg-purple-950 hover:shadow-md transition-all duration-300">
+              <RadioGroupItem value="ziina" id="ziina" />
+              <Label htmlFor="ziina" className="flex items-center gap-2 cursor-pointer flex-1">
+                <Smartphone className="h-4 w-4 text-purple-600" />
+                <span className="text-purple-700 dark:text-purple-300">Ziina Payment (AED)</span>
+              </Label>
             </div>
-            
-            <Separator className="animate-scale-in" />
-            
-            <div className="space-y-4">
-              <div className="flex justify-between text-lg animate-slide-in-right">
-                <p>Subtotal</p>
-                <p className="font-semibold">${subtotal.toFixed(2)}</p>
-              </div>
-              <div className="flex justify-between text-lg animate-slide-in-right" style={{animationDelay: '100ms'}}>
-                <p>Shipping</p>
-                <p className="font-semibold">${shipping.toFixed(2)}</p>
-              </div>
-              <div className="flex justify-between text-lg animate-slide-in-right" style={{animationDelay: '200ms'}}>
-                <p>VAT (5%)</p>
-                <p className="font-semibold">${tax.toFixed(2)}</p>
-              </div>
-              <Separator className="animate-scale-in" />
-              <div className="flex justify-between font-bold text-2xl animate-bounce-in bg-gradient-to-r from-primary via-purple-500 to-primary bg-clip-text text-transparent">
-                <p>Total</p>
-                <p>${total.toFixed(2)}</p>
-              </div>
-            </div>
+          </RadioGroup>
 
-            <Button 
-              onClick={handleContinueToPayment}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all duration-300 py-6 text-xl font-semibold animate-pulse-gentle"
-              size="lg"
-            >
-              Continue to Payment - ${total.toFixed(2)}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+          <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              💰 Amount: {(subtotal * 3.67).toFixed(2)} AED (${subtotal.toFixed(2)} USD)
+            </p>
+            <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+              🔒 Secure payment via Ziina Payment Gateway
+            </p>
+          </div>
+
+          <Button 
+            onClick={processPayment} 
+            disabled={isProcessing}
+            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 rounded-xl transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
+            size="lg"
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Processing Payment...
+              </>
+            ) : (
+              <>
+                <CreditCard className="h-4 w-4 mr-2" />
+                Pay {(subtotal * 3.67).toFixed(2)} AED with Ziina
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 };

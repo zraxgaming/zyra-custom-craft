@@ -36,30 +36,30 @@ serve(async (req) => {
 
     const ziinaApiKey = config.ziina_api_key
     const ziinaMerchantId = config.ziina_merchant_id
-    const ziinaBaseUrl = config.ziina_base_url || 'https://api.ziina.com'
+    const ziinaBaseUrl = config.ziina_base_url || 'https://api-v2.ziina.com'
 
-    if (!ziinaApiKey || !ziinaMerchantId) {
-      throw new Error('Ziina API credentials not configured')
+    if (!ziinaApiKey) {
+      throw new Error('Ziina API key not configured')
     }
 
     const { amount, success_url, cancel_url, order_data } = await req.json()
 
     // Create payment with real Ziina API
     const paymentPayload = {
-      amount: amount,
-      currency: 'AED',
-      merchant_id: ziinaMerchantId,
+      amount: amount, // Amount should already be in fils
+      currency_code: 'AED',
+      message: `Order payment for ${order_data?.email || 'customer'}`,
       success_url: success_url,
       cancel_url: cancel_url,
-      customer_email: order_data?.email,
-      customer_name: `${order_data?.firstName} ${order_data?.lastName}`,
-      description: `Order payment for ${order_data?.email}`,
-      reference: `order_${Date.now()}`,
+      failure_url: cancel_url,
+      test: false,
+      transaction_source: 'directApi',
+      allow_tips: false,
     }
 
     console.log('Creating Ziina payment with payload:', paymentPayload)
 
-    const ziinaResponse = await fetch(`${ziinaBaseUrl}/v1/payments`, {
+    const ziinaResponse = await fetch(`${ziinaBaseUrl}/api/payment_intent`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${ziinaApiKey}`,
@@ -68,19 +68,27 @@ serve(async (req) => {
       body: JSON.stringify(paymentPayload)
     })
 
+    const responseText = await ziinaResponse.text()
+    console.log('Ziina response status:', ziinaResponse.status)
+    console.log('Ziina response text:', responseText)
+
     if (!ziinaResponse.ok) {
-      const errorText = await ziinaResponse.text()
-      console.error('Ziina API error:', errorText)
-      throw new Error(`Ziina API error: ${ziinaResponse.status}`)
+      throw new Error(`Ziina API error: ${ziinaResponse.status} - ${responseText}`)
     }
 
-    const ziinaData = await ziinaResponse.json()
+    let ziinaData
+    try {
+      ziinaData = JSON.parse(responseText)
+    } catch (parseError) {
+      throw new Error('Invalid JSON response from Ziina API')
+    }
+
     console.log('Ziina payment created successfully:', ziinaData)
 
     return new Response(
       JSON.stringify({
         payment_url: ziinaData.payment_url || ziinaData.checkout_url,
-        payment_id: ziinaData.id || ziinaData.payment_id,
+        payment_id: ziinaData.id || ziinaData.payment_intent_id,
         amount: amount,
         currency: 'AED',
         status: 'pending'
