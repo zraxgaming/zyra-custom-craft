@@ -1,30 +1,45 @@
 
 import React, { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Package, User, Settings, Heart, LogOut, ShoppingBag } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { UserOrder } from "@/types/user";
+import { Container } from "@/components/ui/container";
+import { User, ShoppingBag, Heart, Gift, Users, Settings, LogOut, Award, Star, TrendingUp, Calendar } from "lucide-react";
 
 const Dashboard = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [orders, setOrders] = useState<UserOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+  
   const [profile, setProfile] = useState<any>(null);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [giftCards, setGiftCards] = useState<any[]>([]);
+  const [referrals, setReferrals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editMode, setEditMode] = useState(false);
+  const [profileData, setProfileData] = useState({
+    first_name: '',
+    last_name: '',
+    phone: '',
+    address: ''
+  });
 
   useEffect(() => {
     if (!user) {
       navigate('/auth');
       return;
     }
+    
     fetchUserData();
   }, [user, navigate]);
 
@@ -32,7 +47,7 @@ const Dashboard = () => {
     if (!user) return;
     
     try {
-      // Fetch user profile
+      // Fetch profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -40,247 +55,412 @@ const Dashboard = () => {
         .single();
 
       if (profileError && profileError.code !== 'PGRST116') {
-        console.error('Error fetching profile:', profileError);
-      } else {
+        console.error('Profile error:', profileError);
+      } else if (profileData) {
         setProfile(profileData);
+        setProfileData({
+          first_name: profileData.first_name || '',
+          last_name: profileData.last_name || '',
+          phone: profileData.phone || '',
+          address: profileData.address || ''
+        });
       }
 
-      // Fetch user orders with items and products
+      // Fetch orders
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
-        .select(`
-          id,
-          total_amount,
-          status,
-          payment_status,
-          created_at,
-          order_items!order_items_order_id_fkey (
-            id,
-            quantity,
-            price,
-            customization,
-            products!order_items_product_id_fkey (
-              id,
-              name,
-              images
-            )
-          )
-        `)
+        .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(10);
 
       if (ordersError) {
-        console.error('Error fetching orders:', ordersError);
-        toast({
-          title: "Error",
-          description: "Failed to load orders",
-          variant: "destructive",
-        });
+        console.error('Orders error:', ordersError);
       } else {
-        // Transform the data to match UserOrder interface
-        const transformedOrders: UserOrder[] = (ordersData || []).map(order => ({
-          ...order,
-          order_items: order.order_items.map((item: any) => ({
-            ...item,
-            products: {
-              ...item.products,
-              images: Array.isArray(item.products.images) 
-                ? item.products.images.filter((img: any) => typeof img === 'string')
-                : []
-            }
-          }))
-        }));
-        setOrders(transformedOrders);
+        setOrders(ordersData || []);
       }
+
+      // Fetch gift cards
+      const { data: giftCardsData, error: giftCardsError } = await supabase
+        .from('gift_cards')
+        .select('*')
+        .eq('created_by', user.id)
+        .order('created_at', { ascending: false });
+
+      if (giftCardsError) {
+        console.error('Gift cards error:', giftCardsError);
+      } else {
+        setGiftCards(giftCardsData || []);
+      }
+
+      // Fetch referrals
+      const { data: referralsData, error: referralsError } = await supabase
+        .from('referrals')
+        .select('*')
+        .eq('referrer_user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (referralsError) {
+        console.error('Referrals error:', referralsError);
+      } else {
+        setReferrals(referralsData || []);
+      }
+
     } catch (error) {
       console.error('Error fetching user data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load user data",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateProfile = async () => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          ...profileData,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated.",
+      });
+      
+      setEditMode(false);
+      fetchUserData();
+    } catch (error: any) {
+      toast({
+        title: "Update Failed",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
   const handleSignOut = async () => {
     try {
       await signOut();
-      navigate('/');
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'processing':
-        return 'bg-blue-100 text-blue-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      navigate('/home');
+    } catch (error: any) {
+      toast({
+        title: "Sign Out Failed",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20">
+        <Navbar />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
+        </div>
       </div>
     );
   }
 
+  const totalSpent = orders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+  const totalGiftCards = giftCards.reduce((sum, card) => sum + (card.amount || 0), 0);
+  const activeReferrals = referrals.filter(ref => ref.status === 'completed').length;
+
   return (
-    <>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20">
       <Navbar />
-      <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-8 animate-fade-in">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-              Welcome back, {profile?.first_name || profile?.display_name || user?.email?.split('@')[0] || 'User'}!
-            </h1>
-            <p className="text-muted-foreground text-lg mt-2">Manage your account and track your orders</p>
+      
+      <div className="py-12">
+        <Container>
+          {/* Header */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-12 animate-fade-in">
+            <div className="flex items-center gap-6 mb-6 lg:mb-0">
+              <Avatar className="w-20 h-20 border-4 border-purple-200 dark:border-purple-800">
+                <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-purple-600 to-pink-600 text-white">
+                  {user?.email?.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-purple-800 bg-clip-text text-transparent">
+                  Welcome Back!
+                </h1>
+                <p className="text-xl text-gray-600 dark:text-gray-300 mt-2">
+                  {profile?.first_name} {profile?.last_name} | {user?.email}
+                </p>
+                {isAdmin && (
+                  <Badge className="mt-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                    <Award className="h-3 w-3 mr-1" />
+                    Administrator
+                  </Badge>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex gap-3">
+              {isAdmin && (
+                <Button
+                  onClick={() => navigate('/admin')}
+                  variant="outline"
+                  className="border-purple-200 hover:border-purple-400 dark:border-purple-700"
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Admin Panel
+                </Button>
+              )}
+              <Button
+                onClick={handleSignOut}
+                variant="outline"
+                className="border-red-200 hover:border-red-400 text-red-600 hover:text-red-700"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Sidebar */}
-            <div className="lg:col-span-1">
-              <Card className="animate-slide-in-left card-premium">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    Account Menu
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Button variant="ghost" className="w-full justify-start hover-magnetic" onClick={() => navigate('/account/profile')}>
-                    <User className="h-4 w-4 mr-2" />
-                    Profile Settings
-                  </Button>
-                  <Button variant="ghost" className="w-full justify-start hover-magnetic" onClick={() => navigate('/wishlist')}>
-                    <Heart className="h-4 w-4 mr-2" />
-                    Wishlist
-                  </Button>
-                  <Button variant="ghost" className="w-full justify-start hover-magnetic" onClick={() => navigate('/account/settings')}>
-                    <Settings className="h-4 w-4 mr-2" />
-                    Account Settings
-                  </Button>
-                  <Button variant="ghost" onClick={handleSignOut} className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50">
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sign Out
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Main Content */}
-            <div className="lg:col-span-3 space-y-8">
-              {/* Profile Summary */}
-              <Card className="animate-slide-in-right card-premium">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    Profile Summary
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="text-center p-4 bg-primary/10 rounded-xl">
-                      <Package className="h-8 w-8 mx-auto text-primary mb-2" />
-                      <p className="text-2xl font-bold">{orders.length}</p>
-                      <p className="text-sm text-muted-foreground">Total Orders</p>
-                    </div>
-                    <div className="text-center p-4 bg-green-100 rounded-xl">
-                      <ShoppingBag className="h-8 w-8 mx-auto text-green-600 mb-2" />
-                      <p className="text-2xl font-bold">{orders.filter(o => o.status === 'completed').length}</p>
-                      <p className="text-sm text-muted-foreground">Completed</p>
-                    </div>
-                    <div className="text-center p-4 bg-blue-100 rounded-xl">
-                      <Package className="h-8 w-8 mx-auto text-blue-600 mb-2" />
-                      <p className="text-2xl font-bold">{orders.filter(o => o.status === 'processing').length}</p>
-                      <p className="text-sm text-muted-foreground">Processing</p>
-                    </div>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <Card className="animate-slide-in-left border-gradient hover-3d-lift">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
+                    <ShoppingBag className="h-6 w-6 text-purple-600" />
                   </div>
-                </CardContent>
-              </Card>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Orders</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{orders.length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-              {/* Recent Orders */}
-              <Card className="animate-slide-in-up card-premium">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Package className="h-5 w-5" />
-                    Your Orders
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {orders.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Package className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                      <h3 className="text-lg font-medium mb-2">No Orders Yet</h3>
-                      <p className="text-muted-foreground mb-4">Start shopping to see your orders here</p>
-                      <Button onClick={() => navigate('/shop')} className="btn-premium">
-                        Start Shopping
+            <Card className="animate-slide-in-left border-gradient hover-3d-lift" style={{animationDelay: '0.1s'}}>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
+                    <TrendingUp className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Spent</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">${totalSpent.toFixed(2)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="animate-slide-in-left border-gradient hover-3d-lift" style={{animationDelay: '0.2s'}}>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-pink-100 dark:bg-pink-900/30 rounded-xl">
+                    <Gift className="h-6 w-6 text-pink-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Gift Cards</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">${totalGiftCards.toFixed(2)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="animate-slide-in-left border-gradient hover-3d-lift" style={{animationDelay: '0.3s'}}>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                    <Users className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Referrals</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{activeReferrals}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Profile Section */}
+            <Card className="lg:col-span-1 animate-slide-in-left border-gradient">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5 text-purple-600" />
+                  Profile Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {editMode ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="first_name">First Name</Label>
+                        <Input
+                          id="first_name"
+                          value={profileData.first_name}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, first_name: e.target.value }))}
+                          className="hover-magnetic"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="last_name">Last Name</Label>
+                        <Input
+                          id="last_name"
+                          value={profileData.last_name}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, last_name: e.target.value }))}
+                          className="hover-magnetic"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        value={profileData.phone}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
+                        className="hover-magnetic"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="address">Address</Label>
+                      <Input
+                        id="address"
+                        value={profileData.address}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, address: e.target.value }))}
+                        className="hover-magnetic"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={handleUpdateProfile} className="flex-1 hover-3d-lift">
+                        Save Changes
+                      </Button>
+                      <Button variant="outline" onClick={() => setEditMode(false)} className="hover-3d-lift">
+                        Cancel
                       </Button>
                     </div>
-                  ) : (
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-gray-500">Name</p>
+                      <p className="font-medium">{profile?.first_name} {profile?.last_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Email</p>
+                      <p className="font-medium">{user?.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Phone</p>
+                      <p className="font-medium">{profile?.phone || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Address</p>
+                      <p className="font-medium">{profile?.address || 'Not provided'}</p>
+                    </div>
+                    <Button onClick={() => setEditMode(true)} className="w-full hover-3d-lift">
+                      Edit Profile
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Recent Orders & Activity */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* Recent Orders */}
+              <Card className="animate-slide-in-right border-gradient">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ShoppingBag className="h-5 w-5 text-green-600" />
+                    Recent Orders
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {orders.length > 0 ? (
                     <div className="space-y-4">
-                      {orders.map((order, index) => (
-                        <div key={order.id} className="border rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover-3d-lift animate-fade-in" style={{animationDelay: `${index * 100}ms`}}>
-                          <div className="flex justify-between items-start mb-4">
-                            <div>
-                              <h3 className="font-semibold text-lg">Order #{order.id.slice(-8)}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                {new Date(order.created_at).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <Badge className={getStatusColor(order.status)}>
-                                {order.status}
-                              </Badge>
-                              <p className="text-lg font-bold mt-1">${order.total_amount.toFixed(2)}</p>
-                            </div>
+                      {orders.slice(0, 5).map((order, index) => (
+                        <div key={order.id} className={`flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg hover:shadow-md transition-all duration-300 animate-fade-in hover-3d-lift`} style={{animationDelay: `${index * 100}ms`}}>
+                          <div>
+                            <p className="font-medium">Order #{order.id.slice(0, 8)}</p>
+                            <p className="text-sm text-gray-500">
+                              {new Date(order.created_at).toLocaleDateString()}
+                            </p>
                           </div>
-                          
-                          <div className="space-y-3">
-                            {order.order_items.map((item, itemIndex) => (
-                              <div key={item.id} className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg">
-                                <img
-                                  src={item.products.images[0] || '/placeholder-product.jpg'}
-                                  alt={item.products.name}
-                                  className="w-12 h-12 object-cover rounded-lg"
-                                />
-                                <div className="flex-1">
-                                  <h4 className="font-medium">{item.products.name}</h4>
-                                  <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
-                                  {item.customization && (
-                                    <div className="text-xs text-blue-600 mt-1">
-                                      {item.customization.text && `Text: ${item.customization.text}`}
-                                      {item.customization.color && ` • Color: ${item.customization.color}`}
-                                    </div>
-                                  )}
-                                </div>
-                                <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
-                              </div>
-                            ))}
+                          <div className="text-right">
+                            <p className="font-bold">${order.total_amount?.toFixed(2)}</p>
+                            <Badge variant={order.status === 'completed' ? 'default' : 'secondary'}>
+                              {order.status}
+                            </Badge>
                           </div>
                         </div>
                       ))}
                     </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <ShoppingBag className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-500">No orders yet</p>
+                      <Button onClick={() => navigate('/shop')} className="mt-4 hover-3d-lift">
+                        Start Shopping
+                      </Button>
+                    </div>
                   )}
+                </CardContent>
+              </Card>
+
+              {/* Quick Actions */}
+              <Card className="animate-slide-in-up border-gradient">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Star className="h-5 w-5 text-yellow-600" />
+                    Quick Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <Button 
+                      onClick={() => navigate('/shop')} 
+                      variant="outline" 
+                      className="h-20 flex-col gap-2 hover-3d-lift"
+                    >
+                      <ShoppingBag className="h-5 w-5" />
+                      <span className="text-sm">Shop</span>
+                    </Button>
+                    <Button 
+                      onClick={() => navigate('/gift-cards')} 
+                      variant="outline" 
+                      className="h-20 flex-col gap-2 hover-3d-lift"
+                    >
+                      <Gift className="h-5 w-5" />
+                      <span className="text-sm">Gift Cards</span>
+                    </Button>
+                    <Button 
+                      onClick={() => navigate('/referrals')} 
+                      variant="outline" 
+                      className="h-20 flex-col gap-2 hover-3d-lift"
+                    >
+                      <Users className="h-5 w-5" />
+                      <span className="text-sm">Referrals</span>
+                    </Button>
+                    <Button 
+                      onClick={() => navigate('/cart')} 
+                      variant="outline" 
+                      className="h-20 flex-col gap-2 hover-3d-lift"
+                    >
+                      <Heart className="h-5 w-5" />
+                      <span className="text-sm">Cart</span>
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </div>
           </div>
-        </div>
+        </Container>
       </div>
+      
       <Footer />
-    </>
+    </div>
   );
 };
 

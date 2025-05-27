@@ -7,13 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Mail, Lock, User, Sparkles, Chrome, ArrowRight, Shield } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, Sparkles, ArrowRight, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const EnhancedAuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [signInData, setSignInData] = useState({ email: "", password: "" });
   const [signUpData, setSignUpData] = useState({ 
     email: "", 
@@ -23,7 +22,7 @@ const EnhancedAuthPage = () => {
     lastName: ""
   });
   
-  const { signIn, signUp, signInWithGoogle } = useAuth();
+  const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -76,21 +75,6 @@ const EnhancedAuthPage = () => {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setIsGoogleLoading(true);
-    try {
-      await signInWithGoogle();
-    } catch (error: any) {
-      toast({
-        title: "Google Sign In Failed",
-        description: error.message || "Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGoogleLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20 flex items-center justify-center p-4">
       {/* Animated Background Pattern */}
@@ -132,38 +116,6 @@ const EnhancedAuthPage = () => {
                   Sign Up
                 </TabsTrigger>
               </TabsList>
-
-              {/* Google Sign In Button */}
-              <Button
-                onClick={handleGoogleSignIn}
-                disabled={isGoogleLoading}
-                variant="outline"
-                className="w-full h-12 mb-6 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-300 animate-fade-in group"
-              >
-                {isGoogleLoading ? (
-                  <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-                    <span>Connecting...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <Chrome className="h-5 w-5 text-blue-600" />
-                    <span className="font-medium">Continue with Google</span>
-                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                )}
-              </Button>
-
-              <div className="relative mb-6">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-gray-300 dark:border-gray-600" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white dark:bg-gray-900 px-3 text-gray-500 dark:text-gray-400">
-                    Or continue with email
-                  </span>
-                </div>
-              </div>
 
               <TabsContent value="signin" className="space-y-6">
                 <form onSubmit={handleSignIn} className="space-y-6">
