@@ -1,6 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Hero from "@/components/home/Hero";
 import Categories from "@/components/home/Categories";
@@ -10,6 +11,7 @@ import Footer from "@/components/layout/Footer";
 import SEOHead from "@/components/seo/SEOHead";
 import { Container } from "@/components/ui/container";
 import { Product } from "@/types/product";
+import { registerServiceWorker, requestNotificationPermission, setupPromotionalNotifications } from "@/utils/pwa";
 
 const Index = () => {
   const { data: featuredProducts, isLoading } = useQuery({
@@ -55,6 +57,20 @@ const Index = () => {
       return transformedProducts;
     },
   });
+
+  useEffect(() => {
+    // Register service worker and setup PWA features
+    const initPWA = async () => {
+      await registerServiceWorker();
+      const notificationPermission = await requestNotificationPermission();
+      
+      if (notificationPermission) {
+        setupPromotionalNotifications();
+      }
+    };
+
+    initPWA();
+  }, []);
 
   return (
     <>

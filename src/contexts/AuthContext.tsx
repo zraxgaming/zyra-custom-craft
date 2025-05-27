@@ -78,7 +78,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .then(({ data: profile }) => {
             setIsAdmin(profile?.role === 'admin');
           })
-          .catch(() => {
+          .catch((error) => {
+            console.error('Error fetching profile:', error);
             setIsAdmin(false);
           });
       }

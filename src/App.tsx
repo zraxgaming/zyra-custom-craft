@@ -1,176 +1,95 @@
 
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/components/cart/CartProvider";
-import { ThemeProvider } from "@/hooks/use-theme";
+import { WishlistProvider } from "@/components/wishlist/WishlistProvider";
+import { HelmetProvider } from 'react-helmet-async';
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import AdminRoute from "@/components/admin/AdminRoute";
 import MaintenanceBanner from "@/components/layout/MaintenanceBanner";
 
-// Pages
-import Home from "@/pages/Home";
-import About from "@/pages/About";
-import Contact from "@/pages/Contact";
-import PrivacyPolicy from "@/pages/PrivacyPolicy";
-import TermsOfService from "@/pages/TermsOfService";
-import GiftCards from "@/pages/GiftCards";
-import Auth from "@/pages/Auth";
-import Shop from "@/pages/Shop";
-import ProductDetails from "@/pages/ProductDetails";
-import Cart from "@/pages/Cart";
-import Checkout from "@/pages/Checkout";
-import OrderSuccess from "@/pages/OrderSuccess";
-import OrderFailed from "@/pages/OrderFailed";
-import Dashboard from "@/pages/Dashboard";
-import Profile from "@/pages/Profile";
-import Wishlist from "@/pages/Wishlist";
-import Categories from "@/pages/Categories";
-import NotFound from "@/pages/NotFound";
+// Page imports
+import Index from "./pages/Index";
+import Auth from "./pages/Auth";
+import Shop from "./pages/Shop";
+import ProductDetail from "./pages/ProductDetail";
+import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
+import Account from "./pages/Account";
+import Categories from "./pages/Categories";
+import Wishlist from "./pages/Wishlist";
+import Contact from "./pages/Contact";
+import About from "./pages/About";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
+import OrderSuccess from "./pages/OrderSuccess";
+import OrderFailed from "./pages/OrderFailed";
 
-// Admin Pages
-import AdminDashboard from "@/pages/admin/AdminDashboard";
-import AdminProducts from "@/pages/admin/AdminProducts";
-import AdminProductNew from "@/pages/admin/ProductNew";
-import AdminProductEdit from "@/pages/admin/ProductEdit";
-import AdminOrders from "@/pages/admin/AdminOrders";
-import AdminUsers from "@/pages/admin/Users";
-import AdminCategories from "@/pages/admin/Categories";
-import AdminInventory from "@/pages/admin/Inventory";
-import AdminScanner from "@/pages/admin/Scanner";
-import AdminBarcodes from "@/pages/admin/Barcodes";
-import AdminGiftCards from "@/pages/admin/GiftCards";
-import AdminSettings from "@/pages/admin/Settings";
-import AdminZiina from "@/pages/admin/Ziina";
-
-// Auth Components
-import AuthPage from "@/components/auth/AuthPage";
-import AuthCallback from "@/pages/auth/callback";
+// Admin pages
+import AdminDashboard from "./pages/admin/Dashboard";
+import AdminProducts from "./pages/admin/AdminProducts";
+import AdminOrders from "./pages/admin/Orders";
+import AdminUsers from "./pages/admin/Users";
+import AdminReviews from "./pages/admin/Reviews";
+import AdminSettings from "./pages/admin/Settings";
+import AdminNewsletter from "./pages/admin/Newsletter";
 
 const queryClient = new QueryClient();
 
-function App() {
-  return (
+const App = () => (
+  <HelmetProvider>
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="system" storageKey="zyra-theme">
-        <AuthProvider>
-          <CartProvider>
-            <Router>
-              <MaintenanceBanner />
-              <Routes>
-                {/* Public Pages */}
-                <Route path="/" element={<Home />} />
-                <Route path="/home" element={<Home />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                <Route path="/terms-of-service" element={<TermsOfService />} />
-                <Route path="/categories" element={<Categories />} />
-                <Route path="/gift-cards" element={<GiftCards />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/auth/callback" element={<AuthCallback />} />
-                
-                <Route path="/shop" element={<Shop />} />
-                <Route path="/product/:productId" element={<ProductDetails />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/order-success/:orderId" element={<OrderSuccess />} />
-                <Route path="/order-failed" element={<OrderFailed />} />
-                <Route path="/wishlist" element={<Wishlist />} />
+      <BrowserRouter>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <AuthProvider>
+            <CartProvider>
+              <WishlistProvider>
+                <TooltipProvider>
+                  <MaintenanceBanner />
+                  <Toaster />
+                  <Sonner />
+                  <Routes>
+                    {/* Root redirect to home */}
+                    <Route path="/" element={<Navigate to="/home" replace />} />
+                    
+                    {/* Main pages */}
+                    <Route path="/home" element={<Index />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/shop" element={<Shop />} />
+                    <Route path="/product/:slug" element={<ProductDetail />} />
+                    <Route path="/cart" element={<Cart />} />
+                    <Route path="/checkout" element={<Checkout />} />
+                    <Route path="/account" element={<Account />} />
+                    <Route path="/categories" element={<Categories />} />
+                    <Route path="/wishlist" element={<Wishlist />} />
+                    <Route path="/contact" element={<Contact />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/terms" element={<Terms />} />
+                    <Route path="/privacy" element={<Privacy />} />
+                    <Route path="/order-success/:orderId?" element={<OrderSuccess />} />
+                    <Route path="/order-failed" element={<OrderFailed />} />
 
-                {/* Protected User Pages */}
-                <Route path="/dashboard" element={
-                  <AuthPage>
-                    <Dashboard />
-                  </AuthPage>
-                } />
-                <Route path="/profile" element={
-                  <AuthPage>
-                    <Profile />
-                  </AuthPage>
-                } />
-
-                {/* Admin Routes */}
-                <Route path="/admin" element={
-                  <AuthPage requireAuth={true}>
-                    <AdminDashboard />
-                  </AuthPage>
-                } />
-                <Route path="/admin/dashboard" element={
-                  <AuthPage requireAuth={true}>
-                    <AdminDashboard />
-                  </AuthPage>
-                } />
-                <Route path="/admin/products" element={
-                  <AuthPage requireAuth={true}>
-                    <AdminProducts />
-                  </AuthPage>
-                } />
-                <Route path="/admin/products/new" element={
-                  <AuthPage requireAuth={true}>
-                    <AdminProductNew />
-                  </AuthPage>
-                } />
-                <Route path="/admin/products/edit/:id" element={
-                  <AuthPage requireAuth={true}>
-                    <AdminProductEdit />
-                  </AuthPage>
-                } />
-                <Route path="/admin/orders" element={
-                  <AuthPage requireAuth={true}>
-                    <AdminOrders />
-                  </AuthPage>
-                } />
-                <Route path="/admin/users" element={
-                  <AuthPage requireAuth={true}>
-                    <AdminUsers />
-                  </AuthPage>
-                } />
-                <Route path="/admin/categories" element={
-                  <AuthPage requireAuth={true}>
-                    <AdminCategories />
-                  </AuthPage>
-                } />
-                <Route path="/admin/inventory" element={
-                  <AuthPage requireAuth={true}>
-                    <AdminInventory />
-                  </AuthPage>
-                } />
-                <Route path="/admin/scanner" element={
-                  <AuthPage requireAuth={true}>
-                    <AdminScanner />
-                  </AuthPage>
-                } />
-                <Route path="/admin/barcodes" element={
-                  <AuthPage requireAuth={true}>
-                    <AdminBarcodes />
-                  </AuthPage>
-                } />
-                <Route path="/admin/gift-cards" element={
-                  <AuthPage requireAuth={true}>
-                    <AdminGiftCards />
-                  </AuthPage>
-                } />
-                <Route path="/admin/settings" element={
-                  <AuthPage requireAuth={true}>
-                    <AdminSettings />
-                  </AuthPage>
-                } />
-                <Route path="/admin/ziina" element={
-                  <AuthPage requireAuth={true}>
-                    <AdminZiina />
-                  </AuthPage>
-                } />
-
-                {/* 404 Page */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-              <Toaster />
-            </Router>
-          </CartProvider>
-        </AuthProvider>
-      </ThemeProvider>
+                    {/* Admin routes */}
+                    <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                    <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
+                    <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
+                    <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+                    <Route path="/admin/reviews" element={<AdminRoute><AdminReviews /></AdminRoute>} />
+                    <Route path="/admin/newsletter" element={<AdminRoute><AdminNewsletter /></AdminRoute>} />
+                    <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+                  </Routes>
+                </TooltipProvider>
+              </WishlistProvider>
+            </CartProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </BrowserRouter>
     </QueryClientProvider>
-  );
-}
+  </HelmetProvider>
+);
 
 export default App;
