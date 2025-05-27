@@ -1,287 +1,240 @@
 
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ShoppingCart, User, Menu, X, LogOut, Package } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/components/cart/CartProvider";
-import { 
-  ShoppingCart, 
-  User, 
-  Menu, 
-  X, 
-  Home, 
-  Store, 
-  Gift,
-  Heart,
-  Phone,
-  Info,
-  LogOut,
-  Settings,
-  Package
-} from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import ThemeToggle from "@/components/theme/ThemeToggle";
 import CartDrawer from "@/components/cart/CartDrawer";
 
 const Navbar = () => {
-  const { user, signOut, isAdmin } = useAuth();
-  const { items } = useCart();
   const [isOpen, setIsOpen] = useState(false);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-
-  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const { user, isAdmin, signOut } = useAuth();
+  const { toggleCart, totalItems } = useCart();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleSignOut = async () => {
     try {
       await signOut();
+      navigate("/");
+      toast({
+        title: "Signed out successfully",
+        description: "You have been signed out of your account.",
+      });
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error("Error signing out:", error);
+      toast({
+        title: "Error signing out",
+        description: "There was an error signing out. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
+  const navigation = [
+    { name: "Home", href: "/home" },
+    { name: "Shop", href: "/shop" },
+    { name: "Categories", href: "/categories" },
+    { name: "About", href: "/about" },
+    { name: "Contact", href: "/contact" },
+  ];
+
   return (
     <>
-      <nav className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border-b border-purple-200/30 dark:border-purple-800/30 sticky top-0 z-50 animate-slide-down shadow-lg">
+      <nav className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <Link to="/home" className="flex items-center space-x-3 hover-scale animate-slide-in-left">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center shadow-lg animate-float">
-                <span className="text-white font-bold text-xl">Z</span>
-              </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                Zyra
-              </span>
-            </Link>
-
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-8 animate-slide-in-up">
-              <Link 
-                to="/home" 
-                className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-300 hover-scale story-link font-medium"
-              >
-                <Home className="h-4 w-4" />
-                Home
-              </Link>
-              <Link 
-                to="/shop" 
-                className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-300 hover-scale story-link font-medium"
-              >
-                <Store className="h-4 w-4" />
-                Shop
-              </Link>
-              <Link 
-                to="/categories" 
-                className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-300 hover-scale story-link font-medium"
-              >
-                <Package className="h-4 w-4" />
-                Categories
-              </Link>
-              <Link 
-                to="/gift-cards" 
-                className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-300 hover-scale story-link font-medium"
-              >
-                <Gift className="h-4 w-4" />
-                Gift Cards
-              </Link>
-              <Link 
-                to="/about" 
-                className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-300 hover-scale story-link font-medium"
-              >
-                <Info className="h-4 w-4" />
-                About
-              </Link>
-              <Link 
-                to="/contact" 
-                className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-300 hover-scale story-link font-medium"
-              >
-                <Phone className="h-4 w-4" />
-                Contact
+          <div className="flex justify-between h-16">
+            <div className="flex items-center">
+              <Link to="/home" className="flex-shrink-0 flex items-center">
+                <span className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                  Zyra
+                </span>
               </Link>
             </div>
 
-            {/* Right Side Actions */}
-            <div className="flex items-center space-x-4 animate-slide-in-right">
-              {/* Cart */}
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-8">
+              {navigation.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className="text-muted-foreground hover:text-foreground transition-colors duration-200 font-medium hover:scale-105 transform"
+                >
+                  {item.name}
+                </Link>
+              ))}
+            </div>
+
+            {/* Desktop Actions */}
+            <div className="hidden md:flex items-center space-x-4">
+              <ThemeToggle />
+              
               <Button
                 variant="ghost"
-                size="sm"
-                onClick={() => setIsCartOpen(true)}
-                className="relative hover-scale"
+                size="icon"
+                onClick={toggleCart}
+                className="relative hover:scale-110 transition-transform duration-200"
               >
                 <ShoppingCart className="h-5 w-5" />
                 {totalItems > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-gradient-to-r from-purple-600 to-pink-600 text-white animate-bounce">
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs animate-pulse">
                     {totalItems}
                   </Badge>
                 )}
               </Button>
 
-              {/* User Menu */}
               {user ? (
-                <div className="hidden md:flex items-center space-x-2">
-                  {user && (
-                    <Link 
-                      to="/wishlist" 
-                      className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-300 hover-scale"
-                    >
-                      <Heart className="h-4 w-4" />
-                    </Link>
-                  )}
-                  <Link 
-                    to="/dashboard" 
-                    className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-300 hover-scale"
-                  >
-                    <User className="h-4 w-4" />
-                    Dashboard
-                  </Link>
-                  {isAdmin && (
-                    <Link 
-                      to="/admin" 
-                      className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-300 hover-scale"
-                    >
-                      <Settings className="h-4 w-4" />
-                      Admin
-                    </Link>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSignOut}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <Link to="/auth">
-                  <Button className="btn-premium">
-                    <User className="h-4 w-4 mr-2" />
-                    Sign In
-                  </Button>
-                </Link>
-              )}
-
-              {/* Mobile Menu Toggle */}
-              <Sheet open={isOpen} onOpenChange={setIsOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="sm" className="md:hidden">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-                  <div className="flex flex-col space-y-4 mt-6">
-                    <Link 
-                      to="/home" 
-                      onClick={() => setIsOpen(false)}
-                      className="flex items-center gap-3 text-lg font-medium hover:text-purple-600 transition-colors"
-                    >
-                      <Home className="h-5 w-5" />
-                      Home
-                    </Link>
-                    <Link 
-                      to="/shop" 
-                      onClick={() => setIsOpen(false)}
-                      className="flex items-center gap-3 text-lg font-medium hover:text-purple-600 transition-colors"
-                    >
-                      <Store className="h-5 w-5" />
-                      Shop
-                    </Link>
-                    <Link 
-                      to="/categories" 
-                      onClick={() => setIsOpen(false)}
-                      className="flex items-center gap-3 text-lg font-medium hover:text-purple-600 transition-colors"
-                    >
-                      <Package className="h-5 w-5" />
-                      Categories
-                    </Link>
-                    <Link 
-                      to="/gift-cards" 
-                      onClick={() => setIsOpen(false)}
-                      className="flex items-center gap-3 text-lg font-medium hover:text-purple-600 transition-colors"
-                    >
-                      <Gift className="h-5 w-5" />
-                      Gift Cards
-                    </Link>
-                    <Link 
-                      to="/about" 
-                      onClick={() => setIsOpen(false)}
-                      className="flex items-center gap-3 text-lg font-medium hover:text-purple-600 transition-colors"
-                    >
-                      <Info className="h-5 w-5" />
-                      About
-                    </Link>
-                    <Link 
-                      to="/contact" 
-                      onClick={() => setIsOpen(false)}
-                      className="flex items-center gap-3 text-lg font-medium hover:text-purple-600 transition-colors"
-                    >
-                      <Phone className="h-5 w-5" />
-                      Contact
-                    </Link>
-                    
-                    {user ? (
-                      <>
-                        <div className="border-t pt-4 space-y-4">
-                          <Link 
-                            to="/dashboard" 
-                            onClick={() => setIsOpen(false)}
-                            className="flex items-center gap-3 text-lg font-medium hover:text-purple-600 transition-colors"
-                          >
-                            <User className="h-5 w-5" />
-                            Dashboard
-                          </Link>
-                          <Link 
-                            to="/wishlist" 
-                            onClick={() => setIsOpen(false)}
-                            className="flex items-center gap-3 text-lg font-medium hover:text-purple-600 transition-colors"
-                          >
-                            <Heart className="h-5 w-5" />
-                            Wishlist
-                          </Link>
-                          {isAdmin && (
-                            <Link 
-                              to="/admin" 
-                              onClick={() => setIsOpen(false)}
-                              className="flex items-center gap-3 text-lg font-medium hover:text-purple-600 transition-colors"
-                            >
-                              <Settings className="h-5 w-5" />
-                              Admin Panel
-                            </Link>
-                          )}
-                          <Button
-                            variant="ghost"
-                            onClick={() => {
-                              handleSignOut();
-                              setIsOpen(false);
-                            }}
-                            className="justify-start p-0 h-auto text-red-600 hover:text-red-700 text-lg font-medium"
-                          >
-                            <LogOut className="h-5 w-5 mr-3" />
-                            Sign Out
-                          </Button>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="border-t pt-4">
-                        <Link to="/auth" onClick={() => setIsOpen(false)}>
-                          <Button className="w-full btn-premium">
-                            <User className="h-4 w-4 mr-2" />
-                            Sign In
-                          </Button>
-                        </Link>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:scale-110 transition-transform duration-200">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={user.user_metadata?.avatar_url} alt={user.user_metadata?.first_name || "User"} />
+                        <AvatarFallback>
+                          {user.user_metadata?.first_name?.charAt(0) || user.email?.charAt(0) || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56 animate-slide-in-right" align="end" forceMount>
+                    <div className="flex items-center justify-start gap-2 p-2">
+                      <div className="flex flex-col space-y-1 leading-none">
+                        <p className="font-medium">
+                          {user.user_metadata?.first_name || "User"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {user.email}
+                        </p>
                       </div>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/dashboard" className="cursor-pointer">
+                        <User className="mr-2 h-4 w-4" />
+                        My Account
+                      </Link>
+                    </DropdownMenuItem>
+                    {isAdmin && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin" className="cursor-pointer">
+                          <Package className="mr-2 h-4 w-4" />
+                          Admin Panel
+                        </Link>
+                      </DropdownMenuItem>
                     )}
-                  </div>
-                </SheetContent>
-              </Sheet>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button asChild className="hover:scale-105 transition-transform duration-200">
+                  <Link to="/auth">Sign In</Link>
+                </Button>
+              )}
+            </div>
+
+            {/* Mobile menu button */}
+            <div className="md:hidden flex items-center space-x-2">
+              <ThemeToggle />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleCart}
+                className="relative hover:scale-110 transition-transform duration-200"
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {totalItems > 0 && (
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                    {totalItems}
+                  </Badge>
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsOpen(!isOpen)}
+                className="hover:scale-110 transition-transform duration-200"
+              >
+                {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </Button>
             </div>
           </div>
         </div>
-      </nav>
 
-      {/* Cart Drawer */}
-      <CartDrawer open={isCartOpen} onOpenChange={setIsCartOpen} />
+        {/* Mobile Navigation */}
+        {isOpen && (
+          <div className="md:hidden animate-slide-in-right">
+            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-background border-t border-border">
+              {navigation.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className="block px-3 py-2 text-muted-foreground hover:text-foreground transition-colors duration-200 hover:scale-105 transform"
+                  onClick={() => setIsOpen(false)}
+                >
+                  {item.name}
+                </Link>
+              ))}
+              <div className="px-3 py-2">
+                {user ? (
+                  <div className="space-y-2 animate-fade-in">
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={user.user_metadata?.avatar_url} alt={user.user_metadata?.first_name || "User"} />
+                        <AvatarFallback>
+                          {user.user_metadata?.first_name?.charAt(0) || user.email?.charAt(0) || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium">
+                        {user.user_metadata?.first_name || "User"}
+                      </span>
+                    </div>
+                    <Button asChild variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
+                      <Link to="/dashboard" onClick={() => setIsOpen(false)}>
+                        <User className="mr-2 h-4 w-4" />
+                        My Account
+                      </Link>
+                    </Button>
+                    {isAdmin && (
+                      <Button asChild variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
+                        <Link to="/admin" onClick={() => setIsOpen(false)}>
+                          <Package className="mr-2 h-4 w-4" />
+                          Admin Panel
+                        </Link>
+                      </Button>
+                    )}
+                    <Button onClick={handleSignOut} variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign out
+                    </Button>
+                  </div>
+                ) : (
+                  <Button asChild className="w-full hover:scale-105 transition-transform duration-200">
+                    <Link to="/auth" onClick={() => setIsOpen(false)}>
+                      Sign In
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </nav>
+      <CartDrawer />
     </>
   );
 };

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,17 +31,20 @@ const MaintenanceToggle = () => {
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching maintenance status:', error);
+        // Set defaults if there's an error
         setIsActive(false);
         setMessage('We are currently performing maintenance. Some features may be temporarily unavailable.');
       } else if (data) {
         setIsActive(data.is_active || false);
         setMessage(data.message || 'We are currently performing maintenance. Some features may be temporarily unavailable.');
       } else {
+        // No data found, set defaults
         setIsActive(false);
         setMessage('We are currently performing maintenance. Some features may be temporarily unavailable.');
       }
     } catch (error) {
       console.error('Error fetching maintenance status:', error);
+      // Set defaults if there's an error
       setIsActive(false);
       setMessage('We are currently performing maintenance. Some features may be temporarily unavailable.');
     } finally {
@@ -51,7 +55,7 @@ const MaintenanceToggle = () => {
   const updateMaintenanceStatus = async () => {
     setSaving(true);
     try {
-      // Check if any records exist
+      // First try to update existing record
       const { data: existingData } = await supabase
         .from('maintenance_mode')
         .select('id')
@@ -89,7 +93,7 @@ const MaintenanceToggle = () => {
         description: `Maintenance mode is now ${isActive ? 'enabled' : 'disabled'}`,
       });
 
-      // Refresh the data to ensure UI is in sync
+      // Refresh the data
       await fetchMaintenanceStatus();
     } catch (error: any) {
       console.error('Error updating maintenance status:', error);

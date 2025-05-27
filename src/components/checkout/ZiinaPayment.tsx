@@ -66,14 +66,14 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
     setIsProcessing(true);
     
     try {
-      // Convert USD to AED (1 USD = 3.67 AED) and then to fils (1 AED = 100 fils)
+      // Convert USD to AED and then to fils (1 AED = 100 fils)
       const aedAmount = amount * 3.67;
-      const filsAmount = Math.round(aedAmount * 100); // Convert to fils for Ziina API
+      const filsAmount = Math.round(aedAmount * 100); // Convert to fils
       
       console.log(`Converting $${amount} USD to ${aedAmount} AED to ${filsAmount} fils`);
       
       const paymentPayload = {
-        amount: filsAmount, // Amount in fils (smallest currency unit)
+        amount: filsAmount, // Amount in fils
         currency_code: "AED",
         message: `Order payment for ${orderData.email || 'customer'}`,
         success_url: `${window.location.origin}/order-success`,
@@ -129,11 +129,6 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
           title: "Payment Window Opened",
           description: "Complete your payment in the new tab, then return here.",
         });
-
-        // Simulate successful payment for demo (remove in production)
-        setTimeout(() => {
-          onSuccess(ziinaData.id || 'demo-transaction-id');
-        }, 5000);
       } else {
         throw new Error('No payment URL received from Ziina');
       }
