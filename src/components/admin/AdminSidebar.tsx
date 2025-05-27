@@ -15,7 +15,8 @@ import {
   Mail,
   Gift,
   Users,
-  AlertTriangle
+  AlertTriangle,
+  TrendingUp
 } from "lucide-react";
 
 const AdminSidebar = () => {
@@ -34,6 +35,8 @@ const AdminSidebar = () => {
     { title: "Scanner", href: "/admin/scanner", icon: ScanLine },
     { title: "Newsletter", href: "/admin/newsletter", icon: Mail },
     { title: "Ziina", href: "/admin/ziina", icon: AlertTriangle },
+    { title: "Ziina Stats", href: "/admin/ziina-stats", icon: TrendingUp },
+    { title: "Traffic", href: "/admin/traffic", icon: BarChart3 },
     { title: "Settings", href: "/admin/settings", icon: Settings },
   ];
 

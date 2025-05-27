@@ -1,14 +1,16 @@
+
 import React, { useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/components/cart/CartProvider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, ShoppingCart, User, Search, Sparkles, Crown, LogOut, Settings, Home, Package, Gift, Users as UsersIcon } from "lucide-react";
-import { Container } from "@/components/ui/container";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Menu, ShoppingCart, User, Heart, LogOut, Package, Gift, X } from "lucide-react";
 import SearchBar from "@/components/search/SearchBar";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import CartDrawer from "@/components/cart/CartDrawer";
+import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -79,6 +81,7 @@ const Navbar = () => {
 
             {/* Desktop Actions */}
             <div className="hidden md:flex items-center space-x-4">
+              <SearchBar />
               <ThemeToggle />
               
               {user && (
@@ -133,9 +136,9 @@ const Navbar = () => {
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link to="/account" className="cursor-pointer">
+                      <Link to="/dashboard" className="cursor-pointer">
                         <User className="mr-2 h-4 w-4" />
-                        My Account
+                        Dashboard
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
@@ -223,9 +226,9 @@ const Navbar = () => {
                       </span>
                     </div>
                     <Button asChild variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
-                      <Link to="/account" onClick={() => setIsOpen(false)}>
+                      <Link to="/dashboard" onClick={() => setIsOpen(false)}>
                         <User className="mr-2 h-4 w-4" />
-                        My Account
+                        Dashboard
                       </Link>
                     </Button>
                     <Button asChild variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
