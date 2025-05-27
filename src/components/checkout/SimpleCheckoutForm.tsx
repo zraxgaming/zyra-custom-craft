@@ -124,6 +124,7 @@ const SimpleCheckoutForm: React.FC<SimpleCheckoutFormProps> = ({
   // State for PayPal modal
   const [showPayPal, setShowPayPal] = useState(false);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
+  
   const handlePayPalSuccess = async (transactionId: string) => {
     if (!currentOrderId) return;
     await supabase.from('orders').update({
@@ -134,6 +135,7 @@ const SimpleCheckoutForm: React.FC<SimpleCheckoutFormProps> = ({
     setShowPayPal(false);
     onPaymentSuccess(currentOrderId);
   };
+  
   const handlePayPalError = (error: string) => {
     toast({
       title: "PayPal Payment Failed",
@@ -330,6 +332,7 @@ const SimpleCheckoutForm: React.FC<SimpleCheckoutFormProps> = ({
                   orderData={formData}
                   onSuccess={handlePayPalSuccess}
                   onError={handlePayPalError}
+                  clientId="demo-client-id"
                 />
               </div>
             </div>
