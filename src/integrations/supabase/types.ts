@@ -357,6 +357,30 @@ export type Database = {
         }
         Relationships: []
       }
+      maintenance_mode: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          message: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          message?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          message?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       newsletter_subscriptions: {
         Row: {
           created_at: string

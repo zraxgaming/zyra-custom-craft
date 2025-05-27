@@ -14,12 +14,16 @@ const MaintenanceBanner = () => {
 
   const fetchMaintenanceStatus = async () => {
     try {
+      // Use direct query since maintenance_mode might not be in types yet
       const { data, error } = await supabase
-        .from('maintenance_mode')
+        .from('maintenance_mode' as any)
         .select('is_active, message')
         .single();
 
-      if (error) throw error;
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching maintenance status:', error);
+        return;
+      }
 
       if (data?.is_active && !isDismissed) {
         setIsVisible(true);
@@ -38,8 +42,8 @@ const MaintenanceBanner = () => {
   if (!isVisible) return null;
 
   return (
-    <div className="relative overflow-hidden bg-gradient-to-r from-orange-500 via-purple-600 to-pink-500 text-white animate-fade-in">
-      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm"></div>
+    <div className="relative overflow-hidden bg-gradient-to-r from-purple-600 via-pink-600 to-purple-800 text-white animate-fade-in z-50">
+      <div className="absolute inset-0 bg-black/10 backdrop-blur-sm"></div>
       <div className="relative flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3 flex-1">
           <AlertTriangle className="h-5 w-5 animate-pulse" />

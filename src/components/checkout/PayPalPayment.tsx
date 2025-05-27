@@ -34,10 +34,10 @@ const PayPalPayment: React.FC<PayPalPaymentProps> = ({
         return;
       }
 
-      // Use client ID from .env.local
+      // Use client ID from .env.local - this should be set by user
       const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
       if (!clientId) {
-        onError('PayPal client ID not configured');
+        onError('PayPal client ID not configured in .env.local');
         return;
       }
 

@@ -22,19 +22,32 @@ const MaintenanceToggle = () => {
 
   const fetchMaintenanceStatus = async () => {
     try {
+      // Use raw SQL query since maintenance_mode table might not be in types yet
       const { data, error } = await supabase
-        .from('maintenance_mode')
-        .select('*')
-        .single();
+        .rpc('get_maintenance_status');
 
-      if (error) throw error;
-
-      if (data) {
-        setIsActive(data.is_active);
-        setMessage(data.message || '');
+      if (error) {
+        // Fallback to direct query if RPC doesn't exist
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('maintenance_mode' as any)
+          .select('*')
+          .single();
+        
+        if (fallbackError) throw fallbackError;
+        
+        if (fallbackData) {
+          setIsActive(fallbackData.is_active);
+          setMessage(fallbackData.message || '');
+        }
+      } else if (data && data.length > 0) {
+        setIsActive(data[0].is_active);
+        setMessage(data[0].message || '');
       }
     } catch (error) {
       console.error('Error fetching maintenance status:', error);
+      // Set defaults if table doesn't exist yet
+      setIsActive(false);
+      setMessage('We are currently performing maintenance. Some features may be temporarily unavailable.');
     } finally {
       setLoading(false);
     }
@@ -43,14 +56,17 @@ const MaintenanceToggle = () => {
   const updateMaintenanceStatus = async () => {
     setSaving(true);
     try {
+      // Try to update existing record or insert new one
       const { error } = await supabase
-        .from('maintenance_mode')
-        .update({
+        .from('maintenance_mode' as any)
+        .upsert({
+          id: '00000000-0000-0000-0000-000000000001', // Fixed UUID
           is_active: isActive,
           message: message || 'We are currently performing maintenance. Some features may be temporarily unavailable.',
           updated_at: new Date().toISOString()
-        })
-        .eq('id', (await supabase.from('maintenance_mode').select('id').single()).data?.id);
+        }, {
+          onConflict: 'id'
+        });
 
       if (error) throw error;
 
@@ -80,7 +96,7 @@ const MaintenanceToggle = () => {
   }
 
   return (
-    <Card>
+    <Card className="animate-scale-in">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <AlertTriangle className="h-5 w-5" />

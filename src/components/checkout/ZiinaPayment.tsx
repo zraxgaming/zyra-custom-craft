@@ -37,8 +37,15 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
         .eq('key', 'ziina_api_key')
         .single();
 
-      if (error) throw error;
-      setZiinaApiKey(data?.value);
+      if (error && error.code !== 'PGRST116') throw error;
+      
+      if (data?.value) {
+        // Handle both string and JSON values
+        const apiKey = typeof data.value === 'string' ? data.value : 
+                      typeof data.value === 'object' && data.value !== null ? 
+                      (data.value as any).toString() : null;
+        setZiinaApiKey(apiKey);
+      }
     } catch (error) {
       console.error('Error fetching Ziina config:', error);
       onError('Ziina payment not configured');
@@ -65,54 +72,32 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
     try {
       const aedAmount = amount * 3.67; // USD to AED conversion
       
-      // Create payment intent with Ziina API
-      const paymentPayload = {
-        amount: Math.round(aedAmount * 100), // Amount in fils (AED cents)
-        currency: 'AED',
-        customer: {
-          phone: phoneNumber,
-          email: orderData.email,
-          name: `${orderData.firstName} ${orderData.lastName}`
-        },
-        description: `Order payment for ${orderData.email}`,
-        success_url: `${window.location.origin}/order-success`,
-        cancel_url: `${window.location.origin}/checkout`,
-        metadata: {
-          order_id: `order_${Date.now()}`,
-          customer_id: orderData.user_id
+      // Use Supabase Edge Function for Ziina payment
+      const { data, error } = await supabase.functions.invoke('ziina-payment', {
+        body: {
+          amount: Math.round(aedAmount * 100), // Amount in fils
+          currency: 'AED',
+          customer_phone: phoneNumber,
+          customer_email: orderData.email,
+          customer_name: `${orderData.firstName} ${orderData.lastName}`,
+          description: `Order payment for ${orderData.email}`,
+          success_url: `${window.location.origin}/order-success`,
+          cancel_url: `${window.location.origin}/checkout`,
+          order_data: orderData
         }
-      };
-
-      console.log('Creating Ziina payment with payload:', paymentPayload);
-
-      const response = await fetch('https://api.ziina.com/v1/payment_intents', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${ziinaApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(paymentPayload)
       });
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Ziina API error response:', errorData);
-        throw new Error(`Ziina API error: ${response.status}`);
-      }
+      if (error) throw error;
 
-      const paymentData = await response.json();
-      console.log('Ziina payment created:', paymentData);
-      
-      if (paymentData.checkout_url || paymentData.payment_url) {
+      if (data?.payment_url || data?.checkout_url) {
         // Redirect to Ziina checkout
-        window.location.href = paymentData.checkout_url || paymentData.payment_url;
-      } else if (paymentData.status === 'succeeded') {
-        // Payment completed immediately
+        window.location.href = data.payment_url || data.checkout_url;
+      } else if (data?.status === 'succeeded') {
         toast({
           title: "Payment Successful",
           description: `Ziina payment of AED ${aedAmount.toFixed(2)} completed`,
         });
-        onSuccess(paymentData.id || `ziina_${Date.now()}`);
+        onSuccess(data.id || `ziina_${Date.now()}`);
       } else {
         throw new Error('Invalid payment response from Ziina');
       }
