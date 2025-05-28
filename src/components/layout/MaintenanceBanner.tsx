@@ -24,6 +24,7 @@ const MaintenanceBanner = () => {
         .single();
 
       if (error) {
+        console.log('No maintenance mode config found');
         setIsMaintenanceMode(false);
         return;
       }
@@ -45,6 +46,7 @@ const MaintenanceBanner = () => {
         setMaintenanceMessage(message);
       }
     } catch (error) {
+      console.error('Error fetching maintenance status:', error);
       setIsMaintenanceMode(false);
     } finally {
       setLoading(false);
@@ -56,19 +58,19 @@ const MaintenanceBanner = () => {
   }
 
   return (
-    <Alert className="rounded-none border-x-0 border-t-0 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 py-3 animate-slide-in-down">
-      <AlertTriangle className="h-4 w-4 text-amber-600" />
+    <Alert className="rounded-none border-x-0 border-t-0 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 py-4 animate-slide-in-down shadow-lg">
+      <AlertTriangle className="h-5 w-5 text-amber-600 animate-pulse" />
       <AlertDescription className="flex items-center justify-between w-full">
-        <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
+        <span className="text-base font-semibold text-amber-800 dark:text-amber-200 flex items-center">
           🚧 {maintenanceMessage}
         </span>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setIsDismissed(true)}
-          className="h-6 w-6 p-0 hover:bg-amber-100 dark:hover:bg-amber-900/20"
+          className="h-8 w-8 p-0 hover:bg-amber-100 dark:hover:bg-amber-900/20 rounded-full transition-all duration-300 hover-3d-lift"
         >
-          <X className="h-3 w-3" />
+          <X className="h-4 w-4" />
         </Button>
       </AlertDescription>
     </Alert>

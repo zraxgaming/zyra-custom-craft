@@ -49,6 +49,7 @@ import AdminBarcodes from "./pages/admin/Barcodes";
 import AdminScanner from "./pages/admin/Scanner";
 import AdminContact from "./pages/admin/Contact";
 import AdminZiina from "./pages/admin/AdminZiina";
+import AdminProducts from "./pages/admin/Products";
 
 const queryClient = new QueryClient();
 
@@ -103,6 +104,7 @@ const App = () => {
                     <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
                     <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
                     <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
+                    <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
                     <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
                     <Route path="/admin/inventory" element={<AdminRoute><AdminInventory /></AdminRoute>} />
                     <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />

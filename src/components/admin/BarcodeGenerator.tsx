@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { QrCode, Plus } from "lucide-react";
-import EnhancedProductSearch from "./EnhancedProductSearch";
+import { QrCode, Plus, Package } from "lucide-react";
+import ProductSearch from "./ProductSearch";
 
 interface Product {
   id: string;
@@ -77,22 +77,22 @@ const BarcodeGenerator = () => {
   };
 
   return (
-    <Card className="animate-scale-in">
+    <Card className="glass-card border-gradient hover-3d-lift animate-scale-in">
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <Plus className="mr-2 h-5 w-5" />
+        <CardTitle className="flex items-center text-2xl">
+          <Plus className="mr-3 h-6 w-6" />
           Generate New Barcode
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="barcodeType">Barcode Type</Label>
+      <CardContent className="space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <Label htmlFor="barcodeType" className="text-lg font-semibold">Barcode Type</Label>
             <Select value={barcodeType} onValueChange={setBarcodeType}>
-              <SelectTrigger>
+              <SelectTrigger className="h-12 text-lg hover-magnetic rounded-xl">
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-xl">
                 <SelectItem value="qr">QR Code</SelectItem>
                 <SelectItem value="code128">Code 128</SelectItem>
                 <SelectItem value="ean13">EAN-13</SelectItem>
@@ -101,37 +101,39 @@ const BarcodeGenerator = () => {
             </Select>
           </div>
 
-          <div>
-            <Label htmlFor="customData">Custom Data (Optional)</Label>
+          <div className="space-y-3">
+            <Label htmlFor="customData" className="text-lg font-semibold">Custom Data (Optional)</Label>
             <Input
               id="customData"
               value={customData}
               onChange={(e) => setCustomData(e.target.value)}
               placeholder="Enter custom barcode data"
+              className="h-12 text-lg hover-magnetic rounded-xl"
             />
           </div>
         </div>
 
-        <EnhancedProductSearch
-          onProductSelect={setSelectedProduct}
-          selectedProduct={selectedProduct}
-          label="Product (Optional)"
-          placeholder="Search for a product to generate barcode..."
-        />
+        <div className="space-y-3">
+          <Label className="text-lg font-semibold">Select Product (Optional)</Label>
+          <ProductSearch 
+            onProductSelect={setSelectedProduct}
+            selectedProduct={selectedProduct}
+          />
+        </div>
 
         <Button 
-          onClick={handleGenerate} 
+          onClick={handleGenerate}
           disabled={isGenerating}
-          className="w-full"
+          className="w-full h-14 text-lg font-semibold btn-premium hover-3d-lift rounded-xl"
         >
           {isGenerating ? (
             <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
               Generating...
             </>
           ) : (
             <>
-              <QrCode className="h-4 w-4 mr-2" />
+              <QrCode className="h-5 w-5 mr-3" />
               Generate Barcode
             </>
           )}

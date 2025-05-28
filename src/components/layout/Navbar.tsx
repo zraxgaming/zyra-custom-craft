@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/components/cart/CartProvider";
-import { useWishlist } from "@/components/wishlist/WishlistProvider";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Search, 
@@ -36,7 +35,6 @@ import { useTheme } from "@/contexts/ThemeContext";
 const Navbar = () => {
   const { user, signOut, isAdmin } = useAuth();
   const { items, itemCount } = useCart();
-  const { wishlistCount } = useWishlist();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -81,81 +79,81 @@ const Navbar = () => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className={`sticky top-0 z-50 transition-all duration-300 ${
+    <nav className={`sticky top-0 z-50 transition-all duration-500 ${
       isScrolled 
-        ? 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-md shadow-lg border-b border-border/50' 
-        : 'bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm'
+        ? 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl shadow-2xl border-b border-gradient' 
+        : 'bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg'
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center h-20">
           {/* Logo */}
           <Link 
             to="/" 
-            className="flex items-center space-x-2 group transition-all duration-300 hover:scale-105"
+            className="flex items-center space-x-3 group transition-all duration-500 hover-3d-lift"
           >
-            <div className="w-10 h-10 bg-gradient-to-br from-primary via-purple-600 to-pink-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300">
-              <Sparkles className="h-6 w-6 text-white animate-pulse" />
+            <div className="w-12 h-12 bg-gradient-to-br from-primary via-purple-600 to-pink-600 rounded-2xl flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-500 animate-float">
+              <Sparkles className="h-7 w-7 text-white animate-pulse" />
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
+            <span className="text-2xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent animate-shimmer">
               Zyra
             </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-10">
             <Link 
               to="/shop" 
-              className={`font-medium transition-all duration-300 hover:text-primary relative group ${
+              className={`font-semibold text-lg transition-all duration-500 hover:text-primary relative group hover-magnetic ${
                 isActive('/shop') ? 'text-primary' : 'text-foreground/80'
               }`}
             >
               Shop
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-purple-600 transition-all duration-300 group-hover:w-full"></span>
+              <span className="absolute -bottom-2 left-0 w-0 h-1 bg-gradient-to-r from-primary to-purple-600 transition-all duration-500 group-hover:w-full rounded-full"></span>
             </Link>
             <Link 
               to="/about" 
-              className={`font-medium transition-all duration-300 hover:text-primary relative group ${
+              className={`font-semibold text-lg transition-all duration-500 hover:text-primary relative group hover-magnetic ${
                 isActive('/about') ? 'text-primary' : 'text-foreground/80'
               }`}
             >
               About
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-purple-600 transition-all duration-300 group-hover:w-full"></span>
+              <span className="absolute -bottom-2 left-0 w-0 h-1 bg-gradient-to-r from-primary to-purple-600 transition-all duration-500 group-hover:w-full rounded-full"></span>
             </Link>
             <Link 
               to="/contact" 
-              className={`font-medium transition-all duration-300 hover:text-primary relative group ${
+              className={`font-semibold text-lg transition-all duration-500 hover:text-primary relative group hover-magnetic ${
                 isActive('/contact') ? 'text-primary' : 'text-foreground/80'
               }`}
             >
               Contact
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-purple-600 transition-all duration-300 group-hover:w-full"></span>
+              <span className="absolute -bottom-2 left-0 w-0 h-1 bg-gradient-to-r from-primary to-purple-600 transition-all duration-500 group-hover:w-full rounded-full"></span>
             </Link>
           </div>
 
           {/* Search Bar */}
-          <form onSubmit={handleSearch} className="hidden md:flex items-center space-x-2 flex-1 max-w-md mx-8">
+          <form onSubmit={handleSearch} className="hidden md:flex items-center space-x-3 flex-1 max-w-lg mx-10">
             <div className="relative flex-1 group">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 transition-colors group-focus-within:text-primary" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5 transition-colors group-focus-within:text-primary" />
               <Input
                 type="text"
                 placeholder="Search products..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-background/50 border-border/50 focus:border-primary/50 focus:bg-background transition-all duration-300 hover:bg-background/70"
+                className="pl-12 h-12 bg-background/60 border-2 border-border/50 focus:border-primary/70 focus:bg-background transition-all duration-500 hover:bg-background/80 rounded-2xl text-lg hover-magnetic"
               />
             </div>
           </form>
 
           {/* Right Side Actions */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             {/* Theme Toggle */}
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleTheme}
-              className="hover:bg-primary/10 hover:text-primary transition-all duration-300 hover:scale-110"
+              className="h-12 w-12 hover:bg-primary/10 hover:text-primary transition-all duration-500 hover-3d-lift rounded-xl"
             >
-              {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              {theme === 'dark' ? <Sun className="h-6 w-6" /> : <Moon className="h-6 w-6" />}
             </Button>
 
             {/* Wishlist */}
@@ -163,14 +161,12 @@ const Navbar = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20 transition-all duration-300 hover:scale-110"
+                className="relative h-12 w-12 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20 transition-all duration-500 hover-3d-lift rounded-xl"
               >
-                <Heart className="h-5 w-5" />
-                {wishlistCount > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 text-xs bg-gradient-to-r from-red-500 to-pink-500 animate-pulse">
-                    {wishlistCount}
-                  </Badge>
-                )}
+                <Heart className="h-6 w-6" />
+                <Badge className="absolute -top-2 -right-2 h-6 w-6 p-0 text-xs bg-gradient-to-r from-red-500 to-pink-500 animate-pulse rounded-full">
+                  0
+                </Badge>
               </Button>
             </Link>
 
@@ -179,11 +175,11 @@ const Navbar = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative hover:bg-primary/10 hover:text-primary transition-all duration-300 hover:scale-110"
+                className="relative h-12 w-12 hover:bg-primary/10 hover:text-primary transition-all duration-500 hover-3d-lift rounded-xl"
               >
-                <ShoppingCart className="h-5 w-5" />
+                <ShoppingCart className="h-6 w-6" />
                 {itemCount > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 text-xs bg-gradient-to-r from-primary to-purple-600 animate-bounce">
+                  <Badge className="absolute -top-2 -right-2 h-6 w-6 p-0 text-xs bg-gradient-to-r from-primary to-purple-600 animate-bounce rounded-full">
                     {itemCount}
                   </Badge>
                 )}
@@ -197,40 +193,40 @@ const Navbar = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="hover:bg-primary/10 hover:text-primary transition-all duration-300 hover:scale-110"
+                    className="h-12 w-12 hover:bg-primary/10 hover:text-primary transition-all duration-500 hover-3d-lift rounded-xl"
                   >
-                    <User className="h-5 w-5" />
+                    <User className="h-6 w-6" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-background/95 backdrop-blur-md border border-border/50">
-                  <div className="p-2">
-                    <p className="text-sm font-medium">{user.email}</p>
-                    <p className="text-xs text-muted-foreground">
+                <DropdownMenuContent align="end" className="w-64 bg-background/95 backdrop-blur-xl border-2 border-border/50 rounded-2xl shadow-2xl">
+                  <div className="p-4">
+                    <p className="text-lg font-semibold">{user.email}</p>
+                    <p className="text-sm text-muted-foreground">
                       {isAdmin ? 'Administrator' : 'Customer'}
                     </p>
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link to="/dashboard" className="flex items-center cursor-pointer">
-                      <User className="mr-2 h-4 w-4" />
+                    <Link to="/dashboard" className="flex items-center cursor-pointer p-3 text-base">
+                      <User className="mr-3 h-5 w-5" />
                       Dashboard
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/orders" className="flex items-center cursor-pointer">
-                      <Package className="mr-2 h-4 w-4" />
+                    <Link to="/orders" className="flex items-center cursor-pointer p-3 text-base">
+                      <Package className="mr-3 h-5 w-5" />
                       My Orders
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/wishlist" className="flex items-center cursor-pointer">
-                      <Heart className="mr-2 h-4 w-4" />
+                    <Link to="/wishlist" className="flex items-center cursor-pointer p-3 text-base">
+                      <Heart className="mr-3 h-5 w-5" />
                       Wishlist
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/referrals" className="flex items-center cursor-pointer">
-                      <Gift className="mr-2 h-4 w-4" />
+                    <Link to="/referrals" className="flex items-center cursor-pointer p-3 text-base">
+                      <Gift className="mr-3 h-5 w-5" />
                       Referrals
                     </Link>
                   </DropdownMenuItem>
@@ -238,23 +234,23 @@ const Navbar = () => {
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link to="/admin" className="flex items-center cursor-pointer text-primary">
-                          <Settings className="mr-2 h-4 w-4" />
+                        <Link to="/admin" className="flex items-center cursor-pointer p-3 text-base text-primary">
+                          <Settings className="mr-3 h-5 w-5" />
                           Admin Panel
                         </Link>
                       </DropdownMenuItem>
                     </>
                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-red-600 dark:text-red-400">
-                    <LogOut className="mr-2 h-4 w-4" />
+                  <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-red-600 dark:text-red-400 p-3 text-base">
+                    <LogOut className="mr-3 h-5 w-5" />
                     Sign Out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
               <Link to="/auth">
-                <Button size="sm" className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 transition-all duration-300 hover:scale-105 hover:shadow-lg">
+                <Button size="lg" className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 transition-all duration-500 hover-3d-lift hover:shadow-2xl rounded-2xl px-8 text-lg font-semibold">
                   Sign In
                 </Button>
               </Link>
@@ -264,51 +260,51 @@ const Navbar = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden"
+              className="md:hidden h-12 w-12 rounded-xl"
               onClick={() => setIsOpen(!isOpen)}
             >
-              {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
           </div>
         </div>
 
         {/* Mobile Menu */}
         {isOpen && (
-          <div className="md:hidden absolute top-full left-0 right-0 bg-background/95 backdrop-blur-md border-b border-border/50 animate-slide-in-down">
-            <div className="p-4 space-y-4">
+          <div className="md:hidden absolute top-full left-0 right-0 bg-background/95 backdrop-blur-xl border-b-2 border-border/50 animate-slide-in-down shadow-2xl">
+            <div className="p-6 space-y-6">
               {/* Mobile Search */}
-              <form onSubmit={handleSearch} className="flex space-x-2">
+              <form onSubmit={handleSearch} className="flex space-x-3">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
                   <Input
                     type="text"
                     placeholder="Search products..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-12 h-12 rounded-2xl"
                   />
                 </div>
               </form>
 
               {/* Mobile Navigation Links */}
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Link
                   to="/shop"
-                  className="block px-3 py-2 rounded-md text-base font-medium hover:bg-primary/10 hover:text-primary transition-colors"
+                  className="block px-4 py-3 rounded-2xl text-lg font-semibold hover:bg-primary/10 hover:text-primary transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
                   Shop
                 </Link>
                 <Link
                   to="/about"
-                  className="block px-3 py-2 rounded-md text-base font-medium hover:bg-primary/10 hover:text-primary transition-colors"
+                  className="block px-4 py-3 rounded-2xl text-lg font-semibold hover:bg-primary/10 hover:text-primary transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
                   About
                 </Link>
                 <Link
                   to="/contact"
-                  className="block px-3 py-2 rounded-md text-base font-medium hover:bg-primary/10 hover:text-primary transition-colors"
+                  className="block px-4 py-3 rounded-2xl text-lg font-semibold hover:bg-primary/10 hover:text-primary transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
                   Contact
