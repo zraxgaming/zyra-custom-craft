@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate, useLocation } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Hero from "@/components/home/Hero";
 import Categories from "@/components/home/Categories";
@@ -11,6 +12,8 @@ import Newsletter from "@/components/home/Newsletter";
 import Footer from "@/components/layout/Footer";
 import SEOHead from "@/components/seo/SEOHead";
 import ChatBot from "@/components/chat/ChatBot";
+import OnlineStatus from "@/components/layout/OnlineStatus";
+import MaintenanceBanner from "@/components/layout/MaintenanceBanner";
 import { Container } from "@/components/ui/container";
 
 interface Product {
@@ -27,6 +30,15 @@ interface Product {
 const Index = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const { isAdmin } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Redirect from / to /home
+  useEffect(() => {
+    if (location.pathname === '/') {
+      navigate('/home', { replace: true });
+    }
+  }, [location.pathname, navigate]);
   
   const { data: featuredProducts, isLoading } = useQuery({
     queryKey: ['featured-products'],
@@ -64,6 +76,8 @@ const Index = () => {
     <>
       <SEOHead />
       <div className="min-h-screen bg-background">
+        <MaintenanceBanner />
+        <OnlineStatus />
         <Navbar />
         <Container>
           <Hero />

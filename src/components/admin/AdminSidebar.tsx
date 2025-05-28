@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -11,7 +10,7 @@ import {
   Percent,
   Settings,
   Tags,
-  Inventory,
+  PackageCheck,
   Mail,
   TrendingUp,
   QrCode,
@@ -23,10 +22,9 @@ import {
 
 const sidebarItems = [
   { icon: Home, label: "Dashboard", path: "/admin" },
-  { icon: Package, label: "Products", path: "/admin/products" },
   { icon: Tags, label: "Categories", path: "/admin/categories" },
+  { icon: PackageCheck, label: "Inventory", path: "/admin/inventory" },
   { icon: ShoppingCart, label: "Orders", path: "/admin/orders" },
-  { icon: Inventory, label: "Inventory", path: "/admin/inventory" },
   { icon: Users, label: "Users", path: "/admin/users" },
   { icon: Gift, label: "Gift Cards", path: "/admin/gift-cards" },
   { icon: Percent, label: "Coupons", path: "/admin/coupons" },

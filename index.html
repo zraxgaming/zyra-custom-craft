@@ -3,21 +3,43 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Zyra Custom Craft - Premium Custom Products</title>
-    <meta name="description" content="Discover unique, personalized products at Zyra Custom Craft. From custom gifts to home decor, we create quality items tailored just for you." />
+    <title>Zyra Custom Craft - Premium Custom Products & Personalized Gifts</title>
     
-    <!-- Zapier Chatbot Scripts -->
-    <script async type='module' src='https://interfaces.zapier.com/assets/web-components/zapier-interfaces/zapier-interfaces.esm.js'></script>
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#8B5CF6" />
+    <meta name="description" content="Discover exceptional custom products and personalized gifts at Zyra Custom Craft. From custom printing to bespoke designs, we create unique items tailored to your vision." />
+    <meta name="keywords" content="custom products, personalized gifts, custom printing, bespoke design, unique items, custom craft, personalized products" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Zyra" />
+    
+    <!-- Microsoft Tiles -->
+    <meta name="msapplication-TileImage" content="/icon-192.png" />
+    <meta name="msapplication-TileColor" content="#8B5CF6" />
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="Zyra Custom Craft - Premium Custom Products" />
+    <meta property="og:description" content="Discover exceptional custom products and personalized gifts at Zyra Custom Craft." />
+    <meta property="og:image" content="/icon-512.png" />
+    <meta property="og:type" content="website" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Zyra Custom Craft" />
+    <meta name="twitter:description" content="Premium custom products and personalized gifts" />
+    <meta name="twitter:image" content="/icon-512.png" />
   </head>
   <body>
     <div id="root"></div>
-    
-    <!-- Customer Support Chatbot -->
-    <zapier-interfaces-chatbot-embed is-popup='true' chatbot-id='cmb7qi8k400ejvoldtd71q4kc'></zapier-interfaces-chatbot-embed>
-    
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
-    <script src="https://cdn.gpteng.co/gptengineer.js" defer></script>
   </body>
 </html>
