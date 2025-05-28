@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,9 +39,9 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       if (error) throw error;
 
       const config = data?.reduce((acc, item) => {
-        acc[item.key] = item.value;
+        acc[item.key] = typeof item.value === 'string' ? item.value : String(item.value);
         return acc;
-      }, {} as any);
+      }, {} as Record<string, string>) || {};
 
       setZiinaConfig(config);
     } catch (error) {
@@ -94,13 +95,12 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
         failure_url: `${window.location.origin}/order-failed`,
         test: true,
         transaction_source: 'directApi',
-        allow_tips: true,
+        allow_tips: false,
         customer_phone: phoneNumber
       };
 
       // Call Ziina API directly
-      const ziinaBaseUrl = ziinaConfig.ziina_base_url || 'https://api-v2.ziina.com';
-      const response = await fetch(`${ziinaBaseUrl}/api/payment_intent`, {
+      const response = await fetch('https://api-v2.ziina.com/api/payment_intent', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${ziinaConfig.ziina_api_key}`,
@@ -111,15 +111,16 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`Ziina API error: ${response.status} - ${errorText}`);
         throw new Error(`Payment gateway error: ${response.status}`);
       }
 
       const ziinaData = await response.json();
-      // Use redirect_url, payment_url, or checkout_url for redirection
-      const url = ziinaData.redirect_url || ziinaData.payment_url || ziinaData.checkout_url;
-      if (url) {
-        // Store payment info for verification (no sensitive data)
+      
+      // Extract redirect URL - Ziina can return different field names
+      const redirectUrl = ziinaData.redirect_url || ziinaData.payment_url || ziinaData.checkout_url;
+      
+      if (redirectUrl) {
+        // Store payment info for verification
         localStorage.setItem('pending_ziina_payment', JSON.stringify({
           payment_id: ziinaData.id || ziinaData.payment_intent_id,
           amount: amount,
@@ -130,9 +131,11 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
           title: "Redirecting to Ziina",
           description: "You will be redirected to complete your payment securely.",
         });
-        window.location.href = url; // Redirect browser to payment page
+        
+        // Redirect to Ziina payment page
+        window.location.href = redirectUrl;
       } else {
-        throw new Error('No payment URL received from Ziina');
+        throw new Error('No redirect URL received from Ziina payment response');
       }
     } catch (error: any) {
       console.error('Ziina payment error:', error);
@@ -160,29 +163,28 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
   const aedAmount = (amount * 3.67).toFixed(2);
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Premium Header */}
-      <div className="text-center p-8 bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-purple-950/30 dark:via-gray-900 dark:to-pink-950/30 rounded-2xl border border-purple-200/50 dark:border-purple-800/50 animate-scale-in shadow-2xl">
-        <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-purple-600 via-purple-700 to-pink-600 rounded-full mb-6 animate-float shadow-xl">
-          <CreditCard className="h-10 w-10 text-white" />
+    <div className="space-y-6 animate-fade-in">
+      {/* Professional Header */}
+      <div className="text-center p-6 bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-blue-950/30 dark:via-gray-900 dark:to-indigo-950/30 rounded-xl border border-blue-200/50 dark:border-blue-800/50 shadow-lg">
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full mb-4 shadow-lg">
+          <CreditCard className="h-8 w-8 text-white" />
         </div>
-        <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">Secure Payment via Ziina</h3>
-        <p className="text-2xl font-bold text-purple-700 dark:text-purple-300 mb-2">
+        <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Secure Payment via Ziina</h3>
+        <p className="text-xl font-semibold text-blue-700 dark:text-blue-300 mb-1">
           AED {aedAmount} 
         </p>
-        <p className="text-lg text-gray-600 dark:text-gray-400 mb-4">
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
           (≈ ${amount.toFixed(2)} USD)
         </p>
-        <div className="flex items-center justify-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex items-center justify-center gap-2 text-xs text-gray-600 dark:text-gray-400">
           {ziinaConfig?.ziina_api_key ? (
             <>
-              <Shield className="h-5 w-5 text-green-600" />
+              <Shield className="h-4 w-4 text-green-600" />
               <span>Bank-grade security powered by Ziina</span>
-              <Zap className="h-5 w-5 text-yellow-600 animate-pulse" />
             </>
           ) : (
             <>
-              <AlertCircle className="h-5 w-5 text-red-600" />
+              <AlertCircle className="h-4 w-4 text-red-600" />
               <span>Payment gateway configuration required</span>
             </>
           )}
@@ -190,9 +192,9 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       </div>
       
       {/* Phone Input */}
-      <div className="animate-slide-in-up space-y-4">
-        <Label htmlFor="phone" className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <Smartphone className="h-5 w-5 text-purple-600" />
+      <div className="space-y-3">
+        <Label htmlFor="phone" className="text-base font-medium text-gray-900 dark:text-white flex items-center gap-2">
+          <Smartphone className="h-4 w-4 text-blue-600" />
           UAE Mobile Number *
         </Label>
         <Input
@@ -201,9 +203,9 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
           placeholder="+971 50 123 4567"
           value={phoneNumber}
           onChange={(e) => setPhoneNumber(e.target.value)}
-          className="h-14 text-lg bg-white/90 dark:bg-gray-800/90 border-2 border-purple-200 dark:border-purple-700 focus:border-purple-500 dark:focus:border-purple-400 transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 rounded-xl shadow-lg focus:shadow-xl"
+          className="h-12 text-base bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 rounded-lg"
         />
-        <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
+        <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
           <p>• Required for payment verification and order updates</p>
           <p>• Supported formats: +971501234567, 0501234567, 971501234567</p>
         </div>
@@ -213,79 +215,73 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       <Button
         onClick={handleZiinaPayment}
         disabled={isProcessing || !phoneNumber || !ziinaConfig?.ziina_api_key}
-        className="w-full h-16 bg-gradient-to-r from-purple-600 via-purple-700 to-pink-600 hover:from-purple-700 hover:via-purple-800 hover:to-pink-700 text-white font-bold text-xl rounded-xl shadow-2xl hover:shadow-purple-500/25 transition-all duration-500 transform hover:scale-[1.02] active:scale-[0.98] animate-bounce-in disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium text-base rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
         size="lg"
       >
         {isProcessing ? (
-          <div className="flex items-center gap-4">
-            <Loader2 className="h-7 w-7 animate-spin" />
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-5 w-5 animate-spin" />
             <span>Redirecting to Ziina...</span>
           </div>
         ) : (
-          <div className="flex items-center gap-4">
-            <Smartphone className="h-7 w-7" />
+          <div className="flex items-center gap-3">
+            <Smartphone className="h-5 w-5" />
             <span>Pay AED {aedAmount} with Ziina</span>
-            <Zap className="h-6 w-6 animate-pulse" />
           </div>
         )}
       </Button>
       
       {/* Security Features */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
-        <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800 hover:shadow-lg transition-all duration-300">
-          <Shield className="h-6 w-6 text-green-600" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+          <Shield className="h-5 w-5 text-green-600" />
           <div>
-            <p className="font-medium text-green-800 dark:text-green-400">Bank Security</p>
-            <p className="text-sm text-green-600 dark:text-green-500">256-bit encryption</p>
+            <p className="font-medium text-green-800 dark:text-green-400 text-sm">Bank Security</p>
+            <p className="text-xs text-green-600 dark:text-green-500">256-bit encryption</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 hover:shadow-lg transition-all duration-300">
-          <CreditCard className="h-6 w-6 text-blue-600" />
+        <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <CreditCard className="h-5 w-5 text-blue-600" />
           <div>
-            <p className="font-medium text-blue-800 dark:text-blue-400">Licensed Gateway</p>
-            <p className="text-sm text-blue-600 dark:text-blue-500">UAE Central Bank</p>
+            <p className="font-medium text-blue-800 dark:text-blue-400 text-sm">Licensed Gateway</p>
+            <p className="text-xs text-blue-600 dark:text-blue-500">UAE Central Bank</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800 hover:shadow-lg transition-all duration-300">
-          <Zap className="h-6 w-6 text-purple-600" />
+        <div className="flex items-center gap-2 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+          <Zap className="h-5 w-5 text-purple-600" />
           <div>
-            <p className="font-medium text-purple-800 dark:text-purple-400">Instant Processing</p>
-            <p className="text-sm text-purple-600 dark:text-purple-500">Real-time verification</p>
+            <p className="font-medium text-purple-800 dark:text-purple-400 text-sm">Instant Processing</p>
+            <p className="text-xs text-purple-600 dark:text-purple-500">Real-time verification</p>
           </div>
         </div>
       </div>
       
       {/* Additional Info */}
-      <div className="text-center space-y-3 animate-fade-in p-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+      <div className="text-center space-y-2 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
         {ziinaConfig?.ziina_api_key ? (
           <>
             <div className="flex items-center justify-center gap-2 text-green-600 dark:text-green-400">
-              <CheckCircle className="h-5 w-5" />
-              <span className="font-medium">Real Ziina Payment Integration</span>
+              <CheckCircle className="h-4 w-4" />
+              <span className="font-medium text-sm">Real Ziina Payment Integration</span>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              💡 <strong>You will be redirected to Ziina's secure payment page.</strong> Complete your payment and you'll be redirected back automatically.
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              You will be redirected to Ziina's secure payment page to complete your transaction.
             </p>
           </>
         ) : (
           <>
             <div className="flex items-center justify-center gap-2 text-red-600 dark:text-red-400">
-              <AlertCircle className="h-5 w-5" />
-              <span className="font-medium">Payment Gateway Not Configured</span>
+              <AlertCircle className="h-4 w-4" />
+              <span className="font-medium text-sm">Payment Gateway Not Configured</span>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
               Please contact the administrator to configure Ziina payment settings.
             </p>
           </>
         )}
-        <p className="text-xs text-gray-500 dark:text-gray-500">
-          Powered by Ziina Payment Gateway - Licensed by Central Bank of UAE
-        </p>
       </div>
     </div>
   );
 };
 
 export default ZiinaPayment;
-
-// NOTE: Do not log or expose API keys or sensitive config in frontend logs or UI.

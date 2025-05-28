@@ -38,10 +38,11 @@ const MaintenanceBanner = () => {
           .eq('key', 'maintenance_message')
           .single();
 
-        setMaintenanceMessage(
-          messageData?.value || 
-          'We are currently performing maintenance. Some features may be temporarily unavailable.'
-        );
+        const message = typeof messageData?.value === 'string' 
+          ? messageData.value 
+          : 'We are currently performing maintenance. Some features may be temporarily unavailable.';
+        
+        setMaintenanceMessage(message);
       }
     } catch (error) {
       setIsMaintenanceMode(false);
