@@ -27,12 +27,9 @@ import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import NotFound from "@/pages/NotFound";
 import GiftCards from "@/pages/GiftCards";
 import Referrals from "@/pages/Referrals";
-import AccountSettings from "@/pages/AccountSettings";
-import AccountProfile from "@/pages/AccountProfile";
 
 // Admin pages
 import AdminRoute from "@/components/admin/AdminRoute";
-import AdminLayout from "@/components/admin/AdminLayout";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminProducts from "@/pages/admin/AdminProducts";
 import AdminCategories from "@/pages/admin/AdminCategories";
@@ -86,8 +83,6 @@ function App() {
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/gift-cards" element={<GiftCards />} />
                   <Route path="/referrals" element={<Referrals />} />
-                  <Route path="/accounts/settings" element={<AccountSettings />} />
-                  <Route path="/accounts/profile" element={<AccountProfile />} />
                   
                   {/* Admin routes */}
                   <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />

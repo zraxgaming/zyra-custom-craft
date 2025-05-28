@@ -21,18 +21,31 @@ const MaintenanceBanner = () => {
         .select('*')
         .in('key', ['maintenance_mode', 'maintenance_message']);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching maintenance status:', error);
+        return;
+      }
 
       const config = data?.reduce((acc, item) => {
         acc[item.key] = item.value;
         return acc;
       }, {} as any) || {};
 
-      const isActive = config.maintenance_mode === true || config.maintenance_mode === 'true';
+      // Check if maintenance mode is active
+      const maintenanceMode = config.maintenance_mode;
+      const isActive = maintenanceMode === true || 
+                      maintenanceMode === 'true' || 
+                      maintenanceMode === 1 ||
+                      (typeof maintenanceMode === 'object' && maintenanceMode === true);
+      
       setIsMaintenanceMode(isActive);
-      setMaintenanceMessage(config.maintenance_message || 'We are currently performing maintenance. Some features may be temporarily unavailable.');
+      setMaintenanceMessage(
+        config.maintenance_message || 
+        'We are currently performing maintenance. Some features may be temporarily unavailable.'
+      );
     } catch (error) {
       console.error('Error fetching maintenance status:', error);
+      setIsMaintenanceMode(false);
     }
   };
 
@@ -41,7 +54,7 @@ const MaintenanceBanner = () => {
   }
 
   return (
-    <Alert className="rounded-none border-x-0 border-t-0 bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800 py-3">
+    <Alert className="rounded-none border-x-0 border-t-0 bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800 py-2">
       <AlertTriangle className="h-4 w-4 text-yellow-600" />
       <AlertDescription className="flex items-center justify-between w-full">
         <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
@@ -51,7 +64,7 @@ const MaintenanceBanner = () => {
           variant="ghost"
           size="sm"
           onClick={() => setIsDismissed(true)}
-          className="h-6 w-6 p-0 hover:bg-yellow-100 dark:hover:bg-yellow-900/20"
+          className="h-5 w-5 p-0 hover:bg-yellow-100 dark:hover:bg-yellow-900/20"
         >
           <X className="h-3 w-3" />
         </Button>
