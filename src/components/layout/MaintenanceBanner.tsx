@@ -13,25 +13,51 @@ const MaintenanceBanner = () => {
 
   useEffect(() => {
     fetchMaintenanceStatus();
+    
+    // Set up real-time subscription
+    const subscription = supabase
+      .channel('maintenance-banner')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'site_config',
+        filter: 'key=eq.maintenance_mode'
+      }, () => {
+        fetchMaintenanceStatus();
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchMaintenanceStatus = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch maintenance mode status
+      const { data: modeData, error: modeError } = await supabase
         .from('site_config')
-        .select('*')
+        .select('value')
         .eq('key', 'maintenance_mode')
         .single();
 
-      if (error) {
+      if (modeError && modeError.code !== 'PGRST116') {
+        console.error('Error fetching maintenance mode:', modeError);
         setIsMaintenanceMode(false);
+        setLoading(false);
         return;
       }
 
-      const isActive = data?.value === true || data?.value === 'true';
-      setIsMaintenanceMode(isActive);
+      // Check if maintenance mode is enabled
+      const isEnabled = modeData?.value === true || 
+                       modeData?.value === 'true' || 
+                       modeData?.value === '1' ||
+                       (typeof modeData?.value === 'string' && modeData.value.toLowerCase() === 'true');
+      
+      setIsMaintenanceMode(isEnabled);
 
-      if (isActive) {
+      if (isEnabled) {
+        // Fetch maintenance message
         const { data: messageData } = await supabase
           .from('site_config')
           .select('value')
@@ -45,30 +71,38 @@ const MaintenanceBanner = () => {
         setMaintenanceMessage(message);
       }
     } catch (error) {
+      console.error('Error in fetchMaintenanceStatus:', error);
       setIsMaintenanceMode(false);
     } finally {
       setLoading(false);
     }
   };
 
+  // Don't render if loading, not in maintenance mode, or dismissed
   if (loading || !isMaintenanceMode || isDismissed) {
     return null;
   }
 
   return (
-    <Alert className="rounded-none border-x-0 border-t-0 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 py-3">
-      <AlertTriangle className="h-4 w-4 text-amber-600" />
+    <Alert className="rounded-none border-x-0 border-t-0 bg-gradient-to-r from-amber-50 via-orange-50 to-yellow-50 dark:from-amber-950/30 dark:via-orange-950/30 dark:to-yellow-950/30 border-amber-200 dark:border-amber-800 py-4 animate-slide-in-down">
+      <AlertTriangle className="h-5 w-5 text-amber-600 animate-pulse" />
       <AlertDescription className="flex items-center justify-between w-full">
-        <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
-          🚧 {maintenanceMessage}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-semibold text-amber-800 dark:text-amber-200 animate-fade-in">
+            🚧 Maintenance Notice
+          </span>
+          <span className="text-sm text-amber-700 dark:text-amber-300">
+            {maintenanceMessage}
+          </span>
+        </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setIsDismissed(true)}
-          className="h-6 w-6 p-0 hover:bg-amber-100 dark:hover:bg-amber-900/20"
+          className="h-8 w-8 p-0 hover:bg-amber-100 dark:hover:bg-amber-900/20 transition-colors"
+          aria-label="Dismiss maintenance notice"
         >
-          <X className="h-3 w-3" />
+          <X className="h-4 w-4 text-amber-700 dark:text-amber-300" />
         </Button>
       </AlertDescription>
     </Alert>

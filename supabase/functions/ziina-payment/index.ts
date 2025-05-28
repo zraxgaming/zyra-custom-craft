@@ -1,130 +1,141 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+interface ZiinaPaymentRequest {
+  amount: number;
+  currency_code: string;
+  message: string;
+  success_url: string;
+  cancel_url: string;
+  failure_url: string;
+  customer_phone?: string;
+  order_id: string;
 }
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+const handler = async (req: Request): Promise<Response> => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    )
+    const {
+      amount,
+      currency_code,
+      message,
+      success_url,
+      cancel_url,
+      failure_url,
+      customer_phone,
+      order_id
+    }: ZiinaPaymentRequest = await req.json();
 
-    // Get Ziina API credentials from site_config
-    const { data: configData, error: configError } = await supabaseClient
-      .from('site_config')
-      .select('*')
-      .in('key', ['ziina_api_key', 'ziina_merchant_id', 'ziina_base_url'])
-
-    if (configError) {
-      console.error('Error fetching Ziina config:', configError)
-      throw new Error('Failed to fetch payment configuration')
+    // Get Ziina API key from environment
+    const ziinaApiKey = Deno.env.get("ZIINA_API_KEY");
+    
+    if (!ziinaApiKey) {
+      console.error("Ziina API key not configured");
+      return new Response(
+        JSON.stringify({ 
+          error: "Payment gateway not configured. Please contact support." 
+        }),
+        { 
+          status: 500, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
     }
 
-    const config = configData.reduce((acc, item) => {
-      acc[item.key] = item.value
-      return acc
-    }, {} as any)
-
-    const ziinaApiKey = config.ziina_api_key || 'test_key_placeholder'
-    const ziinaMerchantId = config.ziina_merchant_id
-    const ziinaBaseUrl = config.ziina_base_url || 'https://api-v2.ziina.com'
-
-    console.log('Using Ziina configuration:', {
-      baseUrl: ziinaBaseUrl,
-      hasApiKey: !!ziinaApiKey,
-      hasMerchantId: !!ziinaMerchantId
-    })
-
-    const { amount, success_url, cancel_url, order_data } = await req.json()
-
-    // Convert USD to AED and then to fils (1 AED = 100 fils)
-    const aedAmount = amount * 3.67
-    const filsAmount = Math.round(aedAmount * 100)
-
-    console.log(`Converting $${amount} USD to ${aedAmount} AED to ${filsAmount} fils`)
-
-    // Create payment with real Ziina API
-    const paymentPayload = {
-      amount: filsAmount,
-      currency_code: 'AED',
-      message: `Order payment for ${order_data?.email || 'customer'}`,
+    // Create Ziina payment intent
+    const ziinaPayload = {
+      amount: amount, // Amount in fils (already converted)
+      currency_code: currency_code,
+      message: message,
       success_url: success_url,
       cancel_url: cancel_url,
-      failure_url: cancel_url,
-      test: true,
-      transaction_source: 'directApi',
-      allow_tips: true,
-      customer_phone: order_data?.phone || null
-    }
+      failure_url: failure_url,
+      test: true, // Set to false for production
+      transaction_source: "directApi",
+      allow_tips: false,
+      customer_phone: customer_phone || null
+    };
 
-    console.log('Creating Ziina payment with payload:', paymentPayload)
+    console.log("Creating Ziina payment intent:", {
+      amount: ziinaPayload.amount,
+      currency: ziinaPayload.currency_code,
+      message: ziinaPayload.message
+    });
 
-    const ziinaResponse = await fetch(`${ziinaBaseUrl}/api/payment_intent`, {
-      method: 'POST',
+    const response = await fetch("https://api-v2.ziina.com/api/payment_intent", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${ziinaApiKey}`,
-        'Content-Type': 'application/json',
+        "Authorization": `Bearer ${ziinaApiKey}`,
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(paymentPayload)
-    })
+      body: JSON.stringify(ziinaPayload)
+    });
 
-    const responseText = await ziinaResponse.text()
-    console.log('Ziina response status:', ziinaResponse.status)
-    console.log('Ziina response text:', responseText)
-
-    if (!ziinaResponse.ok) {
-      console.error(`Ziina API error: ${ziinaResponse.status} - ${responseText}`)
-      throw new Error(`Ziina API error: ${ziinaResponse.status} - ${responseText}`)
-    }
-
-    let ziinaData
-    try {
-      ziinaData = JSON.parse(responseText)
-    } catch (parseError) {
-      console.error('Failed to parse Ziina response:', parseError)
-      throw new Error('Invalid JSON response from Ziina API')
-    }
-
-    console.log('Ziina payment created successfully:', ziinaData)
-
-    return new Response(
-      JSON.stringify({
-        payment_url: ziinaData.payment_url || ziinaData.checkout_url,
-        payment_id: ziinaData.id || ziinaData.payment_intent_id,
-        amount: amount,
-        currency: 'AED',
-        status: 'pending'
-      }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Ziina API error:", response.status, errorText);
+      
+      let errorMessage = "Payment processing failed";
+      if (response.status === 401) {
+        errorMessage = "Payment gateway authentication failed";
+      } else if (response.status === 400) {
+        errorMessage = "Invalid payment details";
       }
-    )
-  } catch (error) {
-    console.error('Ziina payment error:', error)
+      
+      return new Response(
+        JSON.stringify({ error: errorMessage }),
+        { 
+          status: response.status, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
+    }
+
+    const ziinaData = await response.json();
+    console.log("Ziina response:", ziinaData);
+
+    if (ziinaData.payment_url || ziinaData.checkout_url) {
+      return new Response(
+        JSON.stringify({
+          payment_url: ziinaData.payment_url || ziinaData.checkout_url,
+          payment_id: ziinaData.id || ziinaData.payment_intent_id,
+          order_id: order_id
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    } else {
+      console.error("No payment URL in Ziina response:", ziinaData);
+      return new Response(
+        JSON.stringify({ error: "Failed to create payment link" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+  } catch (error: any) {
+    console.error("Error in ziina-payment function:", error);
     return new Response(
       JSON.stringify({ 
-        error: error.message,
-        details: 'Please ensure Ziina API credentials are configured in admin settings'
+        error: error.message || "Internal server error" 
       }),
-      { 
-        status: 400,
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       }
-    )
+    );
   }
-})
+};
+
+serve(handler);

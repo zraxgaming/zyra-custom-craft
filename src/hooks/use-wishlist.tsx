@@ -1,147 +1,115 @@
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { WishlistItem } from '@/types/wishlist';
 
-export interface WishlistItem {
-  id: string;
-  product_id: string;
-  user_id: string;
-  created_at: string;
-  product?: {
-    id: string;
-    name: string;
-    price: number;
-    images: string[];
-    slug: string;
-  };
+interface WishlistContextType {
+  items: WishlistItem[];
+  addItem: (productId: string) => Promise<void>;
+  removeItem: (productId: string) => Promise<void>;
+  isInWishlist: (productId: string) => boolean;
+  isLoading: boolean;
 }
 
+const WishlistContext = createContext<WishlistContextType>({
+  items: [],
+  addItem: async () => {},
+  removeItem: async () => {},
+  isInWishlist: () => false,
+  isLoading: false,
+});
+
 export const useWishlist = () => {
+  const context = useContext(WishlistContext);
+  if (!context) {
+    throw new Error('useWishlist must be used within a WishlistProvider');
+  }
+  return context;
+};
+
+export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const { toast } = useToast();
   const [items, setItems] = useState<WishlistItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
-      fetchWishlist();
+      fetchWishlistItems();
     } else {
       setItems([]);
-      setIsLoading(false);
     }
   }, [user]);
 
-  const fetchWishlist = async () => {
+  const fetchWishlistItems = async () => {
     if (!user) return;
-
+    
+    setIsLoading(true);
     try {
-      setIsLoading(true);
       const { data, error } = await supabase
-        .from('wishlists')
+        .from('wishlist_items')
         .select(`
           *,
-          product:products(id, name, price, images, slug)
+          products (
+            id,
+            name,
+            slug,
+            price,
+            images,
+            rating,
+            review_count
+          )
         `)
         .eq('user_id', user.id);
 
       if (error) throw error;
-      
-      // Transform the data to ensure proper typing
-      const transformedData: WishlistItem[] = (data || []).map(item => ({
+
+      const wishlistItems = data?.map(item => ({
         ...item,
-        product: item.product ? {
-          ...item.product,
-          images: Array.isArray(item.product.images) 
-            ? item.product.images.map((img: any) => typeof img === 'string' ? img : String(img))
-            : typeof item.product.images === 'string'
-            ? [item.product.images]
-            : []
-        } : undefined
-      }));
-      
-      setItems(transformedData);
-    } catch (error: any) {
+        ...item.products,
+        product_id: item.product_id
+      })) || [];
+
+      setItems(wishlistItems);
+    } catch (error) {
       console.error('Error fetching wishlist:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load wishlist items",
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const addToWishlist = async (productId: string) => {
-    if (!user) {
-      toast({
-        title: "Please sign in",
-        description: "You need to be signed in to add items to your wishlist.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('wishlists')
-        .insert({ product_id: productId, user_id: user.id });
-
-      if (error) {
-        if (error.code === '23505') {
-          toast({
-            title: "Already in wishlist",
-            description: "This item is already in your wishlist.",
-            variant: "destructive",
-          });
-          return;
-        }
-        throw error;
-      }
-
-      toast({
-        title: "Added to wishlist!",
-        description: "Item has been added to your wishlist.",
-      });
-
-      fetchWishlist();
-    } catch (error: any) {
-      console.error('Error adding to wishlist:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add item to wishlist.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const removeFromWishlist = async (productId: string) => {
+  const addItem = async (productId: string) => {
     if (!user) return;
 
     try {
       const { error } = await supabase
-        .from('wishlists')
-        .delete()
-        .eq('product_id', productId)
-        .eq('user_id', user.id);
+        .from('wishlist_items')
+        .insert({
+          user_id: user.id,
+          product_id: productId
+        });
 
       if (error) throw error;
+      await fetchWishlistItems();
+    } catch (error) {
+      console.error('Error adding to wishlist:', error);
+    }
+  };
 
-      toast({
-        title: "Removed from wishlist",
-        description: "Item has been removed from your wishlist.",
-      });
+  const removeItem = async (productId: string) => {
+    if (!user) return;
 
-      fetchWishlist();
-    } catch (error: any) {
+    try {
+      const { error } = await supabase
+        .from('wishlist_items')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('product_id', productId);
+
+      if (error) throw error;
+      await fetchWishlistItems();
+    } catch (error) {
       console.error('Error removing from wishlist:', error);
-      toast({
-        title: "Error",
-        description: "Failed to remove item from wishlist.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -149,12 +117,15 @@ export const useWishlist = () => {
     return items.some(item => item.product_id === productId);
   };
 
-  return {
-    items,
-    isLoading,
-    addToWishlist,
-    removeFromWishlist,
-    isInWishlist,
-    refetch: fetchWishlist
-  };
+  return (
+    <WishlistContext.Provider value={{
+      items,
+      addItem,
+      removeItem,
+      isInWishlist,
+      isLoading
+    }}>
+      {children}
+    </WishlistContext.Provider>
+  );
 };
