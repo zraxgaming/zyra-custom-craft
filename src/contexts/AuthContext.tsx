@@ -11,7 +11,6 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, metadata?: any) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,6 +21,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -30,6 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     });
 
+    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -83,16 +84,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw error;
   };
 
-  const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth`
-      }
-    });
-    if (error) throw error;
-  };
-
   const signOut = async () => {
     await supabase.auth.signOut();
   };
@@ -105,8 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isAdmin,
       signOut,
       signIn,
-      signUp,
-      signInWithGoogle
+      signUp
     }}>
       {children}
     </AuthContext.Provider>

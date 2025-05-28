@@ -47,7 +47,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       const { data: configData, error: configError } = await supabase
         .from('site_config')
         .select('*')
-        .in('key', ['ziina_api_key', 'ziina_merchant_id', 'ziina_base_url']);
+        .in('key', ['ziina_api_key', 'ziina_merchant_id'])
 
       if (configError) throw new Error('Failed to load payment configuration');
 
@@ -110,7 +110,6 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 
       // Create Ziina payment intent
       const aedAmount = Math.round(finalAmount * 3.67 * 100); // Convert to fils
-      const baseUrl = config.ziina_base_url || 'https://api-v2.ziina.com';
 
       const ziinaPayload = {
         amount: aedAmount,
@@ -124,7 +123,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 
       console.log('Creating Ziina payment with payload:', ziinaPayload);
 
-      const response = await fetch(`${baseUrl}/api/payment_intent`, {
+      const response = await fetch('https://api-v2.ziina.com/api/payment_intent', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${config.ziina_api_key}`,
@@ -156,18 +155,14 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
         })
         .eq('id', order.id);
 
-      // Extract redirect URL from response - check multiple possible fields
-      const redirectUrl = ziinaData.payment_url || 
-                         ziinaData.redirect_url || 
-                         ziinaData.checkout_url ||
-                         ziinaData.url ||
-                         ziinaData.link;
+      // Extract redirect URL from response
+      const redirectUrl = ziinaData.payment_url || ziinaData.redirect_url || ziinaData.checkout_url;
       
       if (redirectUrl) {
         console.log('Redirecting to Ziina payment page:', redirectUrl);
         window.location.href = redirectUrl;
       } else {
-        console.log('Full Ziina response data:', ziinaData);
+        console.log('Ziina response data:', ziinaData);
         throw new Error('No redirect URL received from Ziina. Please try again.');
       }
     } catch (error: any) {

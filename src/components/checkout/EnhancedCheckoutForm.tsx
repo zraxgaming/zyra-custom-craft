@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CreditCard, ShoppingBag, Lock, Smartphone, Gift } from "lucide-react";
-import ZiinaPayment from "@/components/payment/ZiinaPayment";
+import ZiinaPayment from "./ZiinaPayment";
 
 interface EnhancedCheckoutFormProps {
   items: any[];
@@ -42,38 +42,81 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handlePaymentSuccess = async (orderId: string) => {
-    try {
-      // Send order confirmation email
-      await fetch('https://hooks.zapier.com/hooks/catch/18195840/2jeyebc/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        mode: 'no-cors',
-        body: JSON.stringify({
-          type: 'order_confirmation',
-          to: formData.email,
-          subject: `Order Confirmation - ${orderId}`,
-          name: `${formData.firstName} ${formData.lastName}`,
-          order_id: orderId,
-          items: items.map(item => ({
-            name: item.name,
-            qty: item.quantity,
-            price: `$${(item.price * item.quantity).toFixed(2)}`
-          })),
-          total: `$${subtotal.toFixed(2)}`,
-          message: "We're processing your order and will notify you when it ships."
-        })
+  const createOrder = async () => {
+    if (!formData.firstName || !formData.lastName || !formData.email) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields",
+        variant: "destructive"
       });
+      return null;
+    }
+
+    try {
+      const { data: order, error } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user?.id,
+          total_amount: subtotal,
+          status: 'pending',
+          payment_status: 'pending',
+          payment_method: paymentMethod,
+          shipping_address: formData,
+          billing_address: formData
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const orderItems = items.map(item => ({
+        order_id: order.id,
+        product_id: item.id,
+        quantity: item.quantity,
+        price: item.price
+      }));
+
+      await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      return order;
+    } catch (error: any) {
+      toast({
+        title: "Order Creation Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+      return null;
+    }
+  };
+
+  const handlePaymentSuccess = async (transactionId: string) => {
+    const order = await createOrder();
+    if (!order) return;
+
+    try {
+      await supabase
+        .from('orders')
+        .update({ 
+          status: 'completed',
+          payment_status: 'paid',
+          tracking_number: transactionId
+        })
+        .eq('id', order.id);
 
       toast({
-        title: "Order Placed Successfully!",
-        description: "You will receive a confirmation email shortly.",
+        title: "Payment Successful!",
+        description: "Your order has been placed successfully",
       });
 
-      onPaymentSuccess(orderId);
-    } catch (error) {
-      console.error('Error sending confirmation email:', error);
-      onPaymentSuccess(orderId);
+      onPaymentSuccess(order.id);
+    } catch (error: any) {
+      toast({
+        title: "Order Update Failed",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   };
 
@@ -93,52 +136,50 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
   };
 
   return (
-    <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-8 animate-fade-in">
+    <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-8">
       {/* Order Summary */}
-      <Card className="h-fit bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border-purple-200 dark:border-purple-800 shadow-xl hover:shadow-2xl transition-all duration-300">
+      <Card className="h-fit bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border-purple-200 dark:border-purple-800 animate-fade-in">
         <CardHeader>
-          <CardTitle className="flex items-center gap-3 text-purple-700 dark:text-purple-300 text-xl">
-            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-              <ShoppingBag className="h-6 w-6" />
-            </div>
+          <CardTitle className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
+            <ShoppingBag className="h-5 w-5" />
             Order Summary
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {items.map((item, index) => (
-            <div key={`${item.id}-${index}`} className="flex items-center gap-4 p-4 bg-white/80 dark:bg-gray-800/80 rounded-xl backdrop-blur-sm border border-purple-100 dark:border-purple-800 hover:bg-white/90 dark:hover:bg-gray-800/90 transition-all duration-300 animate-slide-in-up" style={{animationDelay: `${index * 100}ms`}}>
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 rounded-xl flex items-center justify-center overflow-hidden shadow-md">
+            <div key={`${item.id}-${index}`} className="flex items-center gap-3 p-3 bg-white/60 dark:bg-gray-800/60 rounded-lg backdrop-blur-sm animate-slide-in-up" style={{animationDelay: `${index * 100}ms`}}>
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 rounded-lg flex items-center justify-center overflow-hidden">
                 {item.image ? (
                   <img
                     src={item.image}
                     alt={item.name}
-                    className="w-full h-full object-cover rounded-xl"
+                    className="w-full h-full object-cover"
                   />
                 ) : (
-                  <Gift className="h-8 w-8 text-purple-500" />
+                  <Gift className="h-6 w-6 text-purple-400" />
                 )}
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold text-gray-900 dark:text-white">{item.name}</h4>
-                <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">Qty: {item.quantity}</p>
+                <h4 className="font-medium text-sm">{item.name}</h4>
+                <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
               </div>
-              <p className="font-bold text-lg text-purple-700 dark:text-purple-300">${(item.price * item.quantity).toFixed(2)}</p>
+              <p className="font-bold text-purple-700 dark:text-purple-300">${(item.price * item.quantity).toFixed(2)}</p>
             </div>
           ))}
           
-          <Separator className="bg-purple-200 dark:bg-purple-800" />
+          <Separator />
           
-          <div className="space-y-3 p-4 bg-white/60 dark:bg-gray-800/60 rounded-xl">
-            <div className="flex justify-between text-lg">
-              <span className="font-medium">Subtotal</span>
-              <span className="font-semibold">${subtotal.toFixed(2)}</span>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span>${subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-lg">
-              <span className="font-medium">Shipping</span>
-              <span className="text-green-600 font-semibold">Free</span>
+            <div className="flex justify-between">
+              <span>Shipping</span>
+              <span className="text-green-600">Free</span>
             </div>
-            <Separator className="bg-purple-200 dark:bg-purple-800" />
-            <div className="flex justify-between text-xl font-bold text-purple-700 dark:text-purple-300">
+            <Separator />
+            <div className="flex justify-between text-lg font-bold text-purple-700 dark:text-purple-300">
               <span>Total</span>
               <span>${subtotal.toFixed(2)}</span>
             </div>
@@ -148,89 +189,87 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
 
       {/* Checkout Form */}
       <div className="space-y-6">
-        <Card className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 border-purple-200 dark:border-purple-800 shadow-xl hover:shadow-2xl transition-all duration-300 animate-slide-in-right">
+        <Card className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 border-purple-200 dark:border-purple-800 animate-slide-in-right">
           <CardHeader>
-            <CardTitle className="flex items-center gap-3 text-purple-700 dark:text-purple-300 text-xl">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                <Lock className="h-6 w-6" />
-              </div>
+            <CardTitle className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
+              <Lock className="h-5 w-5" />
               Shipping Information
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName" className="text-sm font-semibold text-gray-700 dark:text-gray-300">First Name *</Label>
+                <div>
+                  <Label htmlFor="firstName">First Name *</Label>
                   <Input
                     id="firstName"
                     value={formData.firstName}
                     onChange={(e) => handleInputChange('firstName', e.target.value)}
                     required
-                    className="h-12 border-2 border-purple-200 dark:border-purple-700 focus:border-purple-500 dark:focus:border-purple-400 rounded-xl bg-white/80 dark:bg-gray-800/80 transition-all duration-300 focus:shadow-lg"
+                    className="border-purple-200 focus:border-purple-500"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName" className="text-sm font-semibold text-gray-700 dark:text-gray-300">Last Name *</Label>
+                <div>
+                  <Label htmlFor="lastName">Last Name *</Label>
                   <Input
                     id="lastName"
                     value={formData.lastName}
                     onChange={(e) => handleInputChange('lastName', e.target.value)}
                     required
-                    className="h-12 border-2 border-purple-200 dark:border-purple-700 focus:border-purple-500 dark:focus:border-purple-400 rounded-xl bg-white/80 dark:bg-gray-800/80 transition-all duration-300 focus:shadow-lg"
+                    className="border-purple-200 focus:border-purple-500"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-semibold text-gray-700 dark:text-gray-300">Email *</Label>
+              <div>
+                <Label htmlFor="email">Email *</Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
                   required
-                  className="h-12 border-2 border-purple-200 dark:border-purple-700 focus:border-purple-500 dark:focus:border-purple-400 rounded-xl bg-white/80 dark:bg-gray-800/80 transition-all duration-300 focus:shadow-lg"
+                  className="border-purple-200 focus:border-purple-500"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm font-semibold text-gray-700 dark:text-gray-300">Phone</Label>
+              <div>
+                <Label htmlFor="phone">Phone</Label>
                 <Input
                   id="phone"
                   value={formData.phone}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
-                  className="h-12 border-2 border-purple-200 dark:border-purple-700 focus:border-purple-500 dark:focus:border-purple-400 rounded-xl bg-white/80 dark:bg-gray-800/80 transition-all duration-300 focus:shadow-lg"
+                  className="border-purple-200 focus:border-purple-500"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="address" className="text-sm font-semibold text-gray-700 dark:text-gray-300">Address</Label>
+              <div>
+                <Label htmlFor="address">Address</Label>
                 <Input
                   id="address"
                   value={formData.address}
                   onChange={(e) => handleInputChange('address', e.target.value)}
-                  className="h-12 border-2 border-purple-200 dark:border-purple-700 focus:border-purple-500 dark:focus:border-purple-400 rounded-xl bg-white/80 dark:bg-gray-800/80 transition-all duration-300 focus:shadow-lg"
+                  className="border-purple-200 focus:border-purple-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="city" className="text-sm font-semibold text-gray-700 dark:text-gray-300">City</Label>
+                <div>
+                  <Label htmlFor="city">City</Label>
                   <Input
                     id="city"
                     value={formData.city}
                     onChange={(e) => handleInputChange('city', e.target.value)}
-                    className="h-12 border-2 border-purple-200 dark:border-purple-700 focus:border-purple-500 dark:focus:border-purple-400 rounded-xl bg-white/80 dark:bg-gray-800/80 transition-all duration-300 focus:shadow-lg"
+                    className="border-purple-200 focus:border-purple-500"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="zipCode" className="text-sm font-semibold text-gray-700 dark:text-gray-300">ZIP Code</Label>
+                <div>
+                  <Label htmlFor="zipCode">ZIP Code</Label>
                   <Input
                     id="zipCode"
                     value={formData.zipCode}
                     onChange={(e) => handleInputChange('zipCode', e.target.value)}
-                    className="h-12 border-2 border-purple-200 dark:border-purple-700 focus:border-purple-500 dark:focus:border-purple-400 rounded-xl bg-white/80 dark:bg-gray-800/80 transition-all duration-300 focus:shadow-lg"
+                    className="border-purple-200 focus:border-purple-500"
                   />
                 </div>
               </div>
@@ -238,37 +277,28 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 border-purple-200 dark:border-purple-800 shadow-xl hover:shadow-2xl transition-all duration-300 animate-scale-in">
+        <Card className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 border-purple-200 dark:border-purple-800 animate-scale-in">
           <CardHeader>
-            <CardTitle className="flex items-center gap-3 text-purple-700 dark:text-purple-300 text-xl">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                <CreditCard className="h-6 w-6" />
-              </div>
-              Payment Method
-            </CardTitle>
+            <CardTitle className="text-purple-700 dark:text-purple-300">Payment Method</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-              <div className="flex items-center space-x-3 p-4 border-2 border-purple-200 dark:border-purple-800 rounded-xl bg-purple-50 dark:bg-purple-950 hover:bg-purple-100 dark:hover:bg-purple-900 transition-all duration-300">
-                <RadioGroupItem value="ziina" id="ziina" className="border-purple-500" />
-                <Label htmlFor="ziina" className="flex items-center gap-3 cursor-pointer flex-1 font-medium">
-                  <div className="p-1 bg-purple-100 dark:bg-purple-800 rounded">
-                    <Smartphone className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <span className="text-purple-700 dark:text-purple-300">Ziina Payment (UAE)</span>
+              <div className="flex items-center space-x-2 p-4 border-2 border-purple-200 dark:border-purple-800 rounded-lg bg-purple-50 dark:bg-purple-950">
+                <RadioGroupItem value="ziina" id="ziina" />
+                <Label htmlFor="ziina" className="flex items-center gap-2 cursor-pointer flex-1">
+                  <Smartphone className="h-4 w-4 text-purple-600" />
+                  <span className="text-purple-700 dark:text-purple-300">Ziina (UAE)</span>
                 </Label>
               </div>
             </RadioGroup>
 
             {paymentMethod === "ziina" && (
-              <div className="animate-fade-in">
-                <ZiinaPayment
-                  amount={subtotal}
-                  orderData={orderData}
-                  onSuccess={handlePaymentSuccess}
-                  onError={handlePaymentError}
-                />
-              </div>
+              <ZiinaPayment
+                amount={subtotal}
+                orderData={orderData}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+              />
             )}
           </CardContent>
         </Card>

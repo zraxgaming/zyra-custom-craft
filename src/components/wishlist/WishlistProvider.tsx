@@ -13,11 +13,10 @@ interface WishlistItem {
 
 interface WishlistContextType {
   wishlistItems: WishlistItem[];
-  wishlistCount: number;
   addToWishlist: (productId: string) => Promise<void>;
   removeFromWishlist: (productId: string) => Promise<void>;
   isInWishlist: (productId: string) => boolean;
-  loading: boolean;
+  isLoading: boolean;
 }
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
@@ -32,42 +31,44 @@ export const useWishlist = () => {
 
 export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const fetchWishlist = async () => {
-    if (!user) {
+  useEffect(() => {
+    if (user) {
+      fetchWishlist();
+    } else {
       setWishlistItems([]);
-      return;
     }
+  }, [user]);
 
-    setLoading(true);
+  const fetchWishlist = async () => {
+    if (!user) return;
+
     try {
+      setIsLoading(true);
       const { data, error } = await supabase
         .from('wishlists')
         .select('*')
         .eq('user_id', user.id);
 
       if (error) throw error;
+
       setWishlistItems(data || []);
     } catch (error) {
       console.error('Error fetching wishlist:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchWishlist();
-  }, [user]);
 
   const addToWishlist = async (productId: string) => {
     if (!user) {
       toast({
-        title: "Authentication required",
+        title: "Sign in required",
         description: "Please sign in to add items to your wishlist",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
@@ -77,23 +78,31 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .from('wishlists')
         .insert({
           user_id: user.id,
-          product_id: productId,
+          product_id: productId
         });
 
       if (error) throw error;
 
       await fetchWishlist();
+      
       toast({
-        title: "Added to wishlist",
+        title: "Added to wishlist!",
         description: "Item has been added to your wishlist",
       });
-    } catch (error) {
-      console.error('Error adding to wishlist:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add item to wishlist",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      if (error.code === '23505') {
+        toast({
+          title: "Already in wishlist",
+          description: "This item is already in your wishlist",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to add item to wishlist",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -109,17 +118,17 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (error) throw error;
 
-      await fetchWishlist();
+      setWishlistItems(prev => prev.filter(item => item.product_id !== productId));
+      
       toast({
         title: "Removed from wishlist",
         description: "Item has been removed from your wishlist",
       });
     } catch (error) {
-      console.error('Error removing from wishlist:', error);
       toast({
         title: "Error",
         description: "Failed to remove item from wishlist",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
@@ -128,19 +137,14 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return wishlistItems.some(item => item.product_id === productId);
   };
 
-  const wishlistCount = wishlistItems.length;
-
   return (
-    <WishlistContext.Provider
-      value={{
-        wishlistItems,
-        wishlistCount,
-        addToWishlist,
-        removeFromWishlist,
-        isInWishlist,
-        loading,
-      }}
-    >
+    <WishlistContext.Provider value={{
+      wishlistItems,
+      addToWishlist,
+      removeFromWishlist,
+      isInWishlist,
+      isLoading
+    }}>
       {children}
     </WishlistContext.Provider>
   );

@@ -2,60 +2,87 @@
 import React from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import SEOHead from "@/components/seo/SEOHead";
 import { Container } from "@/components/ui/container";
 
 const TermsOfService = () => {
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title="Terms of Service - Zyra Custom Craft"
+        description="Read our terms of service for Zyra Custom Craft. Learn about our policies, user responsibilities, and service conditions."
+        url="https://shopzyra.vercel.app/terms"
+      />
       <Navbar />
       
-      <Container className="py-12">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl font-bold mb-8">Terms of Service</h1>
-          
-          <div className="prose prose-lg max-w-none">
-            <h2>1. Agreement to Terms</h2>
-            <p>
-              By accessing and using Zyra Custom Craft, you accept and agree to be bound by the terms and provision of this agreement.
-            </p>
+      <div className="py-12">
+        <Container>
+          <div className="max-w-4xl mx-auto">
+            <h1 className="text-4xl font-bold mb-8">Terms of Service</h1>
+            
+            <div className="space-y-8 text-gray-700 dark:text-gray-300">
+              <section>
+                <h2 className="text-2xl font-semibold mb-4 text-foreground">1. Acceptance of Terms</h2>
+                <p>
+                  By accessing and using Zyra Custom Craft's website and services, you accept and agree to be bound by the terms and provision of this agreement.
+                </p>
+              </section>
 
-            <h2>2. Use License</h2>
-            <p>
-              Permission is granted to temporarily download one copy of the materials on Zyra Custom Craft's website for personal, non-commercial transitory viewing only.
-            </p>
+              <section>
+                <h2 className="text-2xl font-semibold mb-4 text-foreground">2. Services</h2>
+                <p>
+                  Zyra Custom Craft provides personalized craft and gift services, including but not limited to custom printing, engraving, and design services.
+                </p>
+              </section>
 
-            <h2>3. Disclaimer</h2>
-            <p>
-              The materials on Zyra Custom Craft's website are provided on an 'as is' basis. Zyra Custom Craft makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties including, without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.
-            </p>
+              <section>
+                <h2 className="text-2xl font-semibold mb-4 text-foreground">3. User Responsibilities</h2>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li>Provide accurate and complete information when placing orders</li>
+                  <li>Ensure uploaded content does not violate copyright or trademark laws</li>
+                  <li>Use our services in compliance with applicable laws and regulations</li>
+                  <li>Respect intellectual property rights of others</li>
+                </ul>
+              </section>
 
-            <h2>4. Limitations</h2>
-            <p>
-              In no event shall Zyra Custom Craft or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use the materials on Zyra Custom Craft's website.
-            </p>
+              <section>
+                <h2 className="text-2xl font-semibold mb-4 text-foreground">4. Orders and Payment</h2>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li>All orders are subject to acceptance and availability</li>
+                  <li>Prices are subject to change without notice</li>
+                  <li>Payment must be received before production begins</li>
+                  <li>Custom orders may have longer processing times</li>
+                </ul>
+              </section>
 
-            <h2>5. Accuracy of Materials</h2>
-            <p>
-              The materials appearing on Zyra Custom Craft's website could include technical, typographical, or photographic errors. Zyra Custom Craft does not warrant that any of the materials on its website are accurate, complete, or current.
-            </p>
+              <section>
+                <h2 className="text-2xl font-semibold mb-4 text-foreground">5. Intellectual Property</h2>
+                <p>
+                  You retain ownership of your original content. By uploading content, you grant us a license to use it for the purpose of fulfilling your order.
+                </p>
+              </section>
 
-            <h2>6. Links</h2>
-            <p>
-              Zyra Custom Craft has not reviewed all of the sites linked to our website and is not responsible for the contents of any such linked site.
-            </p>
+              <section>
+                <h2 className="text-2xl font-semibold mb-4 text-foreground">6. Limitation of Liability</h2>
+                <p>
+                  Our liability is limited to the cost of the product or service ordered. We are not liable for indirect, incidental, or consequential damages.
+                </p>
+              </section>
 
-            <h2>7. Modifications</h2>
-            <p>
-              Zyra Custom Craft may revise these terms of service for its website at any time without notice. By using this website, you are agreeing to be bound by the then current version of these terms of service.
-            </p>
-
-            <h2>8. Governing Law</h2>
-            <p>
-              These terms and conditions are governed by and construed in accordance with the laws of UAE and you irrevocably submit to the exclusive jurisdiction of the courts in that state or location.
-            </p>
+              <section>
+                <h2 className="text-2xl font-semibold mb-4 text-foreground">7. Contact Information</h2>
+                <p>
+                  For questions about these Terms of Service, please contact us at:
+                </p>
+                <ul className="list-none pl-6 space-y-1 mt-2">
+                  <li>Email: support@zyracustomcraft.com</li>
+                  <li>Phone: +971 XX XXX XXXX</li>
+                </ul>
+              </section>
+            </div>
           </div>
-        </div>
-      </Container>
+        </Container>
+      </div>
       
       <Footer />
     </div>

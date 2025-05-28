@@ -105,7 +105,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       const response = await fetch('https://api-v2.ziina.com/api/payment_intent', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer W1LcJdWu9Y6v9/z3pb7o/ R7tARuTGnfnkUmcZQ3HoAuPPuJlTIP7AlY2vWO7DewJ`,
+          'Authorization': `Bearer ${config.ziina_api_key}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(ziinaPayload)
