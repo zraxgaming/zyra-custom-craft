@@ -1,275 +1,192 @@
 
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Menu, 
+  ShoppingCart, 
+  User, 
+  Heart, 
+  Search,
+  LogOut,
+  Settings,
+  Package
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/components/cart/CartProvider";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Menu, ShoppingCart, User, Heart, LogOut, Package, Gift, X } from "lucide-react";
-import SearchBar from "@/components/search/SearchBar";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { useWishlist } from "@/components/wishlist/WishlistProvider";
 import CartDrawer from "@/components/cart/CartDrawer";
-import { useToast } from "@/hooks/use-toast";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const { user, isAdmin, signOut } = useAuth();
-  const { toggleCart, totalItems } = useCart();
+  const { user, signOut, isAdmin } = useAuth();
+  const { itemCount } = useCart();
+  const { itemCount: wishlistCount } = useWishlist();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const [isCartOpen, setIsCartOpen] = useState(false);
 
   const handleSignOut = async () => {
     try {
       await signOut();
-      navigate("/");
-      toast({
-        title: "Signed out successfully",
-        description: "You have been signed out of your account.",
-      });
+      navigate('/');
     } catch (error) {
-      console.error("Error signing out:", error);
-      toast({
-        title: "Error signing out",
-        description: "There was an error signing out. Please try again.",
-        variant: "destructive",
-      });
+      console.error('Error signing out:', error);
     }
   };
 
-  const navigation = [
-    { name: "Home", href: "/home" },
-    { name: "Shop", href: "/shop" },
-    { name: "Categories", href: "/categories" },
-    { name: "Gift Cards", href: "/gift-cards" },
-    { name: "About", href: "/about" },
-    { name: "Contact", href: "/contact" },
+  const navItems = [
+    { href: "/", label: "Home" },
+    { href: "/shop", label: "Shop" },
+    { href: "/about", label: "About" },
+    { href: "/contact", label: "Contact" },
   ];
 
   return (
-    <>
-      <nav className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link to="/home" className="flex-shrink-0 flex items-center">
-                <span className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                  Zyra
-                </span>
+    <nav className="sticky top-0 z-50 w-full border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur-md supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-gray-900/60">
+      <div className="container mx-auto px-4">
+        <div className="flex h-16 items-center justify-between">
+          {/* Logo */}
+          <Link to="/" className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">Z</span>
+            </div>
+            <span className="font-bold text-xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Zyra
+            </span>
+          </Link>
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-8">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                to={item.href}
+                className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              >
+                {item.label}
               </Link>
-            </div>
+            ))}
+          </div>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-8">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className="text-muted-foreground hover:text-foreground transition-colors duration-200 font-medium hover:scale-105 transform"
-                >
-                  {item.name}
-                </Link>
-              ))}
-            </div>
+          {/* Right Section */}
+          <div className="flex items-center space-x-3">
+            <ThemeToggle />
+            
+            {/* Search */}
+            <Button variant="ghost" size="sm" className="hidden sm:flex">
+              <Search className="h-4 w-4" />
+            </Button>
 
-            {/* Desktop Actions */}
-            <div className="hidden md:flex items-center space-x-4">
-              <SearchBar />
-              <ThemeToggle />
-              
-              {user && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  asChild
-                  className="hover:scale-110 transition-transform duration-200"
-                >
-                  <Link to="/wishlist">
-                    <Heart className="h-5 w-5" />
-                  </Link>
-                </Button>
-              )}
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleCart}
-                className="relative hover:scale-110 transition-transform duration-200"
-              >
-                <ShoppingCart className="h-5 w-5" />
-                {totalItems > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs animate-pulse">
-                    {totalItems}
+            {/* Wishlist */}
+            <Link to="/wishlist">
+              <Button variant="ghost" size="sm" className="relative">
+                <Heart className="h-4 w-4" />
+                {wishlistCount > 0 && (
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs bg-red-500">
+                    {wishlistCount}
                   </Badge>
                 )}
               </Button>
+            </Link>
 
-              {user ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:scale-110 transition-transform duration-200">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={user.user_metadata?.avatar_url} alt={user.user_metadata?.first_name || "User"} />
-                        <AvatarFallback>
-                          {user.user_metadata?.first_name?.charAt(0) || user.email?.charAt(0) || "U"}
-                        </AvatarFallback>
-                      </Avatar>
+            {/* Cart */}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="relative"
+              onClick={() => setIsCartOpen(true)}
+            >
+              <ShoppingCart className="h-4 w-4" />
+              {itemCount > 0 && (
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs bg-blue-500">
+                  {itemCount}
+                </Badge>
+              )}
+            </Button>
+
+            {/* User Menu */}
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <User className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="flex items-center">
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/account" className="flex items-center">
+                      <Package className="mr-2 h-4 w-4" />
+                      Orders
+                    </Link>
+                  </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" className="flex items-center">
+                        <Settings className="mr-2 h-4 w-4" />
+                        Admin
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button asChild size="sm">
+                <Link to="/auth">Sign In</Link>
+              </Button>
+            )}
+
+            {/* Mobile Menu */}
+            <Sheet>
+              <SheetTrigger asChild className="md:hidden">
+                <Button variant="ghost" size="sm">
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="bg-white dark:bg-gray-900">
+                <div className="flex flex-col space-y-4 mt-8">
+                  {navItems.map((item) => (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      className="text-lg font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                  {!user && (
+                    <Button asChild className="mt-4">
+                      <Link to="/auth">Sign In</Link>
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56 animate-slide-in-right" align="end" forceMount>
-                    <div className="flex items-center justify-start gap-2 p-2">
-                      <div className="flex flex-col space-y-1 leading-none">
-                        <p className="font-medium">
-                          {user.user_metadata?.first_name || "User"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {user.email}
-                        </p>
-                      </div>
-                    </div>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link to="/dashboard" className="cursor-pointer">
-                        <User className="mr-2 h-4 w-4" />
-                        Dashboard
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/gift-cards" className="cursor-pointer">
-                        <Gift className="mr-2 h-4 w-4" />
-                        Gift Cards
-                      </Link>
-                    </DropdownMenuItem>
-                    {isAdmin && (
-                      <DropdownMenuItem asChild>
-                        <Link to="/admin" className="cursor-pointer">
-                          <Package className="mr-2 h-4 w-4" />
-                          Admin Panel
-                        </Link>
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sign out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <Button asChild className="hover:scale-105 transition-transform duration-200">
-                  <Link to="/auth">Sign In</Link>
-                </Button>
-              )}
-            </div>
-
-            {/* Mobile menu button */}
-            <div className="md:hidden flex items-center space-x-2">
-              <ThemeToggle />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleCart}
-                className="relative hover:scale-110 transition-transform duration-200"
-              >
-                <ShoppingCart className="h-5 w-5" />
-                {totalItems > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
-                    {totalItems}
-                  </Badge>
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsOpen(!isOpen)}
-                className="hover:scale-110 transition-transform duration-200"
-              >
-                {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-              </Button>
-            </div>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
+      </div>
 
-        {/* Mobile Navigation */}
-        {isOpen && (
-          <div className="md:hidden animate-slide-in-right">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-background border-t border-border">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className="block px-3 py-2 text-muted-foreground hover:text-foreground transition-colors duration-200 hover:scale-105 transform"
-                  onClick={() => setIsOpen(false)}
-                >
-                  {item.name}
-                </Link>
-              ))}
-              <div className="px-3 py-2">
-                {user ? (
-                  <div className="space-y-2 animate-fade-in">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.user_metadata?.avatar_url} alt={user.user_metadata?.first_name || "User"} />
-                        <AvatarFallback>
-                          {user.user_metadata?.first_name?.charAt(0) || user.email?.charAt(0) || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm font-medium">
-                        {user.user_metadata?.first_name || "User"}
-                      </span>
-                    </div>
-                    <Button asChild variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
-                      <Link to="/dashboard" onClick={() => setIsOpen(false)}>
-                        <User className="mr-2 h-4 w-4" />
-                        Dashboard
-                      </Link>
-                    </Button>
-                    <Button asChild variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
-                      <Link to="/wishlist" onClick={() => setIsOpen(false)}>
-                        <Heart className="mr-2 h-4 w-4" />
-                        Wishlist
-                      </Link>
-                    </Button>
-                    <Button asChild variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
-                      <Link to="/gift-cards" onClick={() => setIsOpen(false)}>
-                        <Gift className="mr-2 h-4 w-4" />
-                        Gift Cards
-                      </Link>
-                    </Button>
-                    {isAdmin && (
-                      <Button asChild variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
-                        <Link to="/admin" onClick={() => setIsOpen(false)}>
-                          <Package className="mr-2 h-4 w-4" />
-                          Admin Panel
-                        </Link>
-                      </Button>
-                    )}
-                    <Button onClick={handleSignOut} variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sign out
-                    </Button>
-                  </div>
-                ) : (
-                  <Button asChild className="w-full hover:scale-105 transition-transform duration-200">
-                    <Link to="/auth" onClick={() => setIsOpen(false)}>
-                      Sign In
-                    </Link>
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </nav>
-      <CartDrawer />
-    </>
+      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+    </nav>
   );
 };
 
