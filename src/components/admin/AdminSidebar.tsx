@@ -3,72 +3,78 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
-  Package,
-  FolderOpen,
-  ShoppingCart,
-  Star,
   BarChart3,
-  Settings,
-  QrCode,
-  ScanLine,
-  Mail,
-  Gift,
+  Package,
+  ShoppingCart,
   Users,
-  AlertTriangle,
-  TrendingUp
+  Gift,
+  Percent,
+  Settings,
+  Tags,
+  Inventory,
+  Mail,
+  TrendingUp,
+  QrCode,
+  Scan,
+  MessageSquare,
+  CreditCard,
+  Home
 } from "lucide-react";
+
+const sidebarItems = [
+  { icon: Home, label: "Dashboard", path: "/admin" },
+  { icon: Package, label: "Products", path: "/admin/products" },
+  { icon: Tags, label: "Categories", path: "/admin/categories" },
+  { icon: ShoppingCart, label: "Orders", path: "/admin/orders" },
+  { icon: Inventory, label: "Inventory", path: "/admin/inventory" },
+  { icon: Users, label: "Users", path: "/admin/users" },
+  { icon: Gift, label: "Gift Cards", path: "/admin/gift-cards" },
+  { icon: Percent, label: "Coupons", path: "/admin/coupons" },
+  { icon: BarChart3, label: "Analytics", path: "/admin/analytics" },
+  { icon: Mail, label: "Newsletter", path: "/admin/newsletter" },
+  { icon: TrendingUp, label: "Traffic", path: "/admin/traffic" },
+  { icon: QrCode, label: "Barcodes", path: "/admin/barcodes" },
+  { icon: Scan, label: "Scanner", path: "/admin/scanner" },
+  { icon: MessageSquare, label: "Contact", path: "/admin/contact" },
+  { icon: CreditCard, label: "Ziina", path: "/admin/ziina" },
+  { icon: Settings, label: "Settings", path: "/admin/settings" },
+];
 
 const AdminSidebar = () => {
   const location = useLocation();
 
-  const menuItems = [
-    { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { title: "Products", href: "/admin/products", icon: Package },
-    { title: "Categories", href: "/admin/categories", icon: FolderOpen },
-    { title: "Inventory", href: "/admin/inventory", icon: BarChart3 },
-    { title: "Orders", href: "/admin/orders", icon: ShoppingCart },
-    { title: "Users", href: "/admin/users", icon: Users },
-    { title: "Reviews", href: "/admin/reviews", icon: Star },
-    { title: "Gift Cards", href: "/admin/gift-cards", icon: Gift },
-    { title: "Barcodes", href: "/admin/barcodes", icon: QrCode },
-    { title: "Scanner", href: "/admin/scanner", icon: ScanLine },
-    { title: "Newsletter", href: "/admin/newsletter", icon: Mail },
-    { title: "Ziina", href: "/admin/ziina", icon: AlertTriangle },
-    { title: "Ziina Stats", href: "/admin/ziina-stats", icon: TrendingUp },
-    { title: "Traffic", href: "/admin/traffic", icon: BarChart3 },
-    { title: "Settings", href: "/admin/settings", icon: Settings },
-  ];
-
   return (
-    <div className="w-64 bg-card/80 backdrop-blur-sm border-r border-border/50 h-screen overflow-y-auto">
-      <div className="p-6 border-b border-border/50 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50">
-        <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-          Admin Panel
-        </h2>
+    <aside className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 min-h-screen">
+      <div className="p-6">
+        <div className="flex items-center space-x-2 mb-8">
+          <div className="w-8 h-8 bg-gradient-to-br from-primary to-purple-600 rounded-lg"></div>
+          <span className="text-xl font-bold text-gray-900 dark:text-white">
+            Zyra Admin
+          </span>
+        </div>
+
+        <nav className="space-y-2">
+          {sidebarItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={cn(
+                  "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                )}
+              >
+                <item.icon className="h-5 w-5" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
       </div>
-      
-      <nav className="p-4 space-y-2">
-        {menuItems.map((item) => (
-          <Link
-            key={item.href}
-            to={item.href}
-            className={cn(
-              "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group",
-              location.pathname === item.href
-                ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg"
-                : "text-muted-foreground hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 dark:hover:from-purple-950/50 dark:hover:to-pink-950/50 hover:text-foreground"
-            )}
-          >
-            <item.icon className={cn(
-              "h-5 w-5 transition-transform duration-200 group-hover:scale-110",
-              location.pathname === item.href ? "text-white" : ""
-            )} />
-            <span className="font-medium">{item.title}</span>
-          </Link>
-        ))}
-      </nav>
-    </div>
+    </aside>
   );
 };
 

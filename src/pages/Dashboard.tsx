@@ -24,7 +24,11 @@ import {
   Bell,
   Gift,
   Users,
-  LogOut
+  LogOut,
+  Shield,
+  Mail,
+  Phone,
+  Edit
 } from "lucide-react";
 
 const Dashboard = () => {
@@ -33,6 +37,7 @@ const Dashboard = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [orders, setOrders] = useState([]);
+  const [wishlistCount, setWishlistCount] = useState(0);
   const [profile, setProfile] = useState({
     display_name: '',
     first_name: '',
@@ -79,6 +84,14 @@ const Dashboard = () => {
         .limit(5);
 
       setOrders(ordersData || []);
+
+      // Fetch wishlist count
+      const { data: wishlistData } = await supabase
+        .from('wishlists')
+        .select('id')
+        .eq('user_id', user.id);
+
+      setWishlistCount(wishlistData?.length || 0);
     } catch (error) {
       console.error('Error fetching user data:', error);
     }
@@ -114,18 +127,41 @@ const Dashboard = () => {
     }
   };
 
+  const sendPasswordReset = async () => {
+    if (!user?.email) return;
+    
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Password Reset Sent",
+        description: "Check your email for password reset instructions.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
       case 'processing':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
       case 'shipped':
-        return 'bg-purple-100 text-purple-800';
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
       case 'cancelled':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
     }
   };
 
@@ -139,53 +175,54 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900">
       <SEOHead 
         title="Dashboard - Zyra Custom Craft"
         description="Manage your account, orders, and preferences"
       />
       <Navbar />
       
-      <div className="py-12">
+      <div className="py-12 animate-fade-in">
         <Container>
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold mb-4">My Dashboard</h1>
-            <p className="text-lg text-muted-foreground">
-              Welcome back, {profile.display_name || profile.first_name || 'User'}!
+          <div className="text-center mb-8 animate-scale-in">
+            <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
+              My Dashboard
+            </h1>
+            <p className="text-xl text-muted-foreground">
+              Welcome back, {profile.display_name || profile.first_name || 'User'}! ✨
             </p>
           </div>
 
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex justify-between items-center mb-6 animate-slide-in-right">
             <div className="flex gap-4">
               {isAdmin && (
-                <Button onClick={() => navigate('/admin')}>
-                  <Settings className="mr-2 h-4 w-4" />
+                <Button onClick={() => navigate('/admin')} className="hover-3d-lift">
+                  <Shield className="mr-2 h-4 w-4" />
                   Admin Panel
                 </Button>
               )}
-              <Button variant="outline" onClick={() => navigate('/shop')}>
+              <Button variant="outline" onClick={() => navigate('/shop')} className="hover-3d-lift">
                 <Package className="mr-2 h-4 w-4" />
                 Continue Shopping
               </Button>
             </div>
-            <Button variant="outline" onClick={handleSignOut}>
+            <Button variant="outline" onClick={handleSignOut} className="hover-3d-lift">
               <LogOut className="mr-2 h-4 w-4" />
               Sign Out
             </Button>
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-4 glass-card">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="orders">Orders</TabsTrigger>
               <TabsTrigger value="profile">Profile</TabsTrigger>
-              <TabsTrigger value="settings">Settings</TabsTrigger>
-              <TabsTrigger value="referrals">Referrals</TabsTrigger>
+              <TabsTrigger value="security">Security</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <Card className="glass-card border-gradient hover-3d-lift animate-scale-in">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
                     <Package className="h-4 w-4 text-muted-foreground" />
@@ -196,38 +233,38 @@ const Dashboard = () => {
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="glass-card border-gradient hover-3d-lift animate-scale-in" style={{animationDelay: '100ms'}}>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Wishlist Items</CardTitle>
                     <Heart className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">0</div>
+                    <div className="text-2xl font-bold">{wishlistCount}</div>
                     <p className="text-xs text-muted-foreground">Saved items</p>
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="glass-card border-gradient hover-3d-lift animate-scale-in" style={{animationDelay: '200ms'}}>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Referrals</CardTitle>
+                    <CardTitle className="text-sm font-medium">Account Status</CardTitle>
                     <Users className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">0</div>
-                    <p className="text-xs text-muted-foreground">Friends referred</p>
+                    <div className="text-2xl font-bold text-green-600">Active</div>
+                    <p className="text-xs text-muted-foreground">Verified account</p>
                   </CardContent>
                 </Card>
               </div>
 
-              <Card className="mt-6">
+              <Card className="glass-card border-gradient animate-slide-in-up">
                 <CardHeader>
                   <CardTitle>Recent Orders</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {orders.length > 0 ? (
                     <div className="space-y-4">
-                      {orders.map((order: any) => (
-                        <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      {orders.map((order: any, index) => (
+                        <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg hover-3d-lift animate-slide-in-up" style={{animationDelay: `${index * 50}ms`}}>
                           <div>
                             <p className="font-medium">Order #{order.id.slice(0, 8)}</p>
                             <p className="text-sm text-muted-foreground">
@@ -246,8 +283,8 @@ const Dashboard = () => {
                   ) : (
                     <div className="text-center py-8">
                       <Package className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                      <p className="text-muted-foreground">No orders yet</p>
-                      <Button className="mt-4" onClick={() => navigate('/shop')}>
+                      <p className="text-muted-foreground mb-4">No orders yet</p>
+                      <Button onClick={() => navigate('/shop')} className="btn-premium">
                         Start Shopping
                       </Button>
                     </div>
@@ -257,15 +294,15 @@ const Dashboard = () => {
             </TabsContent>
 
             <TabsContent value="orders">
-              <Card>
+              <Card className="glass-card border-gradient">
                 <CardHeader>
                   <CardTitle>Order History</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {orders.length > 0 ? (
                     <div className="space-y-4">
-                      {orders.map((order: any) => (
-                        <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      {orders.map((order: any, index) => (
+                        <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg hover-3d-lift animate-slide-in-up" style={{animationDelay: `${index * 50}ms`}}>
                           <div className="space-y-1">
                             <p className="font-medium">Order #{order.id.slice(0, 8)}</p>
                             <p className="text-sm text-muted-foreground">
@@ -281,7 +318,7 @@ const Dashboard = () => {
                               {order.status}
                             </Badge>
                             <div>
-                              <Button variant="outline" size="sm">
+                              <Button variant="outline" size="sm" className="hover-magnetic">
                                 View Details
                               </Button>
                             </div>
@@ -300,9 +337,12 @@ const Dashboard = () => {
             </TabsContent>
 
             <TabsContent value="profile">
-              <Card>
+              <Card className="glass-card border-gradient">
                 <CardHeader>
-                  <CardTitle>Profile Information</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Edit className="h-5 w-5" />
+                    Profile Information
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -312,6 +352,7 @@ const Dashboard = () => {
                         id="first_name"
                         value={profile.first_name}
                         onChange={(e) => setProfile(prev => ({ ...prev, first_name: e.target.value }))}
+                        className="hover-magnetic"
                       />
                     </div>
                     <div>
@@ -320,6 +361,7 @@ const Dashboard = () => {
                         id="last_name"
                         value={profile.last_name}
                         onChange={(e) => setProfile(prev => ({ ...prev, last_name: e.target.value }))}
+                        className="hover-magnetic"
                       />
                     </div>
                   </div>
@@ -330,6 +372,7 @@ const Dashboard = () => {
                       id="display_name"
                       value={profile.display_name}
                       onChange={(e) => setProfile(prev => ({ ...prev, display_name: e.target.value }))}
+                      className="hover-magnetic"
                     />
                   </div>
 
@@ -340,6 +383,7 @@ const Dashboard = () => {
                       type="email"
                       value={profile.email}
                       onChange={(e) => setProfile(prev => ({ ...prev, email: e.target.value }))}
+                      className="hover-magnetic"
                     />
                   </div>
 
@@ -349,10 +393,11 @@ const Dashboard = () => {
                       id="phone"
                       value={profile.phone}
                       onChange={(e) => setProfile(prev => ({ ...prev, phone: e.target.value }))}
+                      className="hover-magnetic"
                     />
                   </div>
 
-                  <Button onClick={updateProfile} disabled={loading}>
+                  <Button onClick={updateProfile} disabled={loading} className="btn-premium">
                     <User className="mr-2 h-4 w-4" />
                     {loading ? "Updating..." : "Update Profile"}
                   </Button>
@@ -360,75 +405,51 @@ const Dashboard = () => {
               </Card>
             </TabsContent>
 
-            <TabsContent value="settings">
+            <TabsContent value="security">
               <div className="grid gap-6">
-                <Card>
+                <Card className="glass-card border-gradient">
                   <CardHeader>
-                    <CardTitle>Account Settings</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5" />
+                      Security Settings
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium">Email Notifications</h4>
-                        <p className="text-sm text-muted-foreground">Receive updates about your orders</p>
+                        <h4 className="font-medium">Password Reset</h4>
+                        <p className="text-sm text-muted-foreground">Send a password reset link to your email</p>
                       </div>
-                      <Button variant="outline" size="sm">
-                        <Bell className="mr-2 h-4 w-4" />
-                        Configure
+                      <Button variant="outline" size="sm" onClick={sendPasswordReset} className="hover-magnetic">
+                        <Mail className="mr-2 h-4 w-4" />
+                        Reset Password
                       </Button>
                     </div>
                     
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium">Shipping Addresses</h4>
-                        <p className="text-sm text-muted-foreground">Manage your delivery addresses</p>
+                        <h4 className="font-medium">Two-Factor Authentication</h4>
+                        <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
                       </div>
-                      <Button variant="outline" size="sm">
-                        <MapPin className="mr-2 h-4 w-4" />
-                        Manage
+                      <Button variant="outline" size="sm" className="hover-magnetic">
+                        <Shield className="mr-2 h-4 w-4" />
+                        Setup 2FA
                       </Button>
                     </div>
                     
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium">Payment Methods</h4>
-                        <p className="text-sm text-muted-foreground">Manage your payment options</p>
+                        <h4 className="font-medium">Login Sessions</h4>
+                        <p className="text-sm text-muted-foreground">Manage your active sessions</p>
                       </div>
-                      <Button variant="outline" size="sm">
-                        <CreditCard className="mr-2 h-4 w-4" />
-                        Manage
+                      <Button variant="outline" size="sm" className="hover-magnetic">
+                        <Users className="mr-2 h-4 w-4" />
+                        View Sessions
                       </Button>
                     </div>
                   </CardContent>
                 </Card>
               </div>
-            </TabsContent>
-
-            <TabsContent value="referrals">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Referral Program</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-8">
-                    <Gift className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium mb-2">Refer Friends & Earn Rewards</h3>
-                    <p className="text-muted-foreground mb-6">
-                      Share your unique referral code and earn credits when your friends make their first purchase.
-                    </p>
-                    <div className="max-w-md mx-auto space-y-4">
-                      <div className="p-4 bg-muted rounded-lg">
-                        <p className="text-sm text-muted-foreground mb-2">Your Referral Code</p>
-                        <p className="font-mono text-lg font-bold">USER{user.id.slice(0, 8).toUpperCase()}</p>
-                      </div>
-                      <Button className="w-full">
-                        <Users className="mr-2 h-4 w-4" />
-                        Share Referral Code
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </TabsContent>
           </Tabs>
         </Container>

@@ -17,7 +17,7 @@ import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Auth from "./pages/Auth";
-import Profile from "./pages/Profile";
+import Dashboard from "./pages/Dashboard";
 import OrderSuccess from "./pages/OrderSuccess";
 import Wishlist from "./pages/Wishlist";
 import GiftCards from "./pages/GiftCards";
@@ -29,8 +29,10 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import AuthCallback from "./pages/auth/callback";
 
 // Admin Pages
-import AdminDashboard from "./pages/admin/Dashboard";
-import AdminProducts from "./pages/admin/Products";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminProducts from "./pages/admin/AdminProducts";
+import ProductNew from "./pages/admin/ProductNew";
+import ProductEdit from "./pages/admin/ProductEdit";
 import AdminOrders from "./pages/admin/Orders";
 import AdminUsers from "./pages/admin/Users";
 import AdminAnalytics from "./pages/admin/Analytics";
@@ -67,7 +69,7 @@ const App = () => (
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/auth/callback" element={<AuthCallback />} />
-                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/wishlist" element={<Wishlist />} />
                   <Route path="/gift-cards" element={<GiftCards />} />
                   <Route path="/newsletter" element={<Newsletter />} />
@@ -81,6 +83,8 @@ const App = () => (
                   <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
                   <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
                   <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
+                  <Route path="/admin/products/new" element={<AdminRoute><ProductNew /></AdminRoute>} />
+                  <Route path="/admin/products/edit/:id" element={<AdminRoute><ProductEdit /></AdminRoute>} />
                   <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
                   <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
                   <Route path="/admin/inventory" element={<AdminRoute><AdminInventory /></AdminRoute>} />
