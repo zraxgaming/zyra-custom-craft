@@ -1,71 +1,47 @@
 
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import AdminAccess from "./AdminAccess";
 
 interface AdminRouteProps {
   children: React.ReactNode;
 }
 
 const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
-  const { user, loading } = useAuth();
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const { user, loading, isAdmin } = useAuth();
   const [checking, setChecking] = useState(true);
-  const location = useLocation();
 
   useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (!user) {
-        setIsAdmin(false);
-        setChecking(false);
-        return;
-      }
-
-      try {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        if (error) {
-          console.error('Error checking admin status:', error);
-          setIsAdmin(false);
-        } else {
-          setIsAdmin(profile?.role === 'admin');
-        }
-      } catch (error) {
-        console.error('Error checking admin status:', error);
-        setIsAdmin(false);
-      } finally {
-        setChecking(false);
-      }
-    };
-
     if (!loading) {
-      checkAdminStatus();
+      setChecking(false);
     }
-  }, [user, loading]);
+  }, [loading]);
 
   if (loading || checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-          <p className="text-gray-600 dark:text-gray-400">Verifying access...</p>
+          <div className="relative">
+            <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 via-purple-500/20 to-pink-500/20 rounded-full blur-xl animate-pulse"></div>
+            <div className="relative p-6 bg-white dark:bg-gray-900 rounded-full shadow-xl">
+              <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+            </div>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            Verifying Access...
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            Please wait while we check your permissions.
+          </p>
         </div>
       </div>
     );
   }
 
-  if (!user) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
-  }
-
-  if (isAdmin === false) {
-    return <Navigate to="/home" replace />;
+  if (!user || !isAdmin) {
+    return <AdminAccess />;
   }
 
   return <>{children}</>;

@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -25,6 +26,7 @@ import Contact from "./pages/Contact";
 import About from "./pages/About";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import AuthCallback from "./pages/auth/callback";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -64,6 +66,7 @@ const App = () => (
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/wishlist" element={<Wishlist />} />
                   <Route path="/gift-cards" element={<GiftCards />} />
@@ -75,6 +78,7 @@ const App = () => (
                   <Route path="/order-success/:orderId" element={<OrderSuccess />} />
                   
                   {/* Admin Routes */}
+                  <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
                   <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
                   <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
                   <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
