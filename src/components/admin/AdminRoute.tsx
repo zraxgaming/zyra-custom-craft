@@ -1,51 +1,71 @@
 
-import React, { useEffect } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { Navigate, useLocation } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 interface AdminRouteProps {
   children: React.ReactNode;
 }
 
 const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
-  const { user, isAdmin, isLoading } = useAuth();
-  const { toast } = useToast();
+  const { user, loading } = useAuth();
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [checking, setChecking] = useState(true);
   const location = useLocation();
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      toast({
-        title: "Authentication required",
-        description: "Please login to access the admin panel.",
-        variant: "destructive",
-      });
-    } else if (!isLoading && user && !isAdmin) {
-      toast({
-        title: "Access denied",
-        description: "You don't have permission to access the admin panel.",
-        variant: "destructive",
-      });
-    }
-  }, [isLoading, user, isAdmin, toast]);
+    const checkAdminStatus = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        setChecking(false);
+        return;
+      }
 
-  // Show loading while checking auth status
-  if (isLoading) {
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error checking admin status:', error);
+          setIsAdmin(false);
+        } else {
+          setIsAdmin(profile?.role === 'admin');
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        setIsAdmin(false);
+      } finally {
+        setChecking(false);
+      }
+    };
+
+    if (!loading) {
+      checkAdminStatus();
+    }
+  }, [user, loading]);
+
+  if (loading || checking) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+          <p className="text-gray-600 dark:text-gray-400">Verifying access...</p>
+        </div>
       </div>
     );
   }
 
-  // Redirect to auth page if not logged in
   if (!user) {
-    return <Navigate to={`/auth?redirect=${encodeURIComponent(location.pathname)}`} replace />;
+    return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // Redirect to home if not admin
-  if (!isAdmin) {
-    return <Navigate to="/" replace />;
+  if (isAdmin === false) {
+    return <Navigate to="/home" replace />;
   }
 
   return <>{children}</>;

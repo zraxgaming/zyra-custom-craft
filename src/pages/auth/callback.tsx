@@ -1,56 +1,50 @@
 
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import React, { useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Loader2 } from 'lucide-react';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    const handleCallback = async () => {
+    const handleAuthCallback = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
-          throw error;
+          console.error('Auth callback error:', error);
+          navigate('/auth?error=callback_failed');
+          return;
         }
-        
+
         if (data?.session) {
-          toast({
-            title: "Sign-in successful",
-            description: "You have successfully signed in.",
-          });
-          
-          navigate("/dashboard");
+          // Get redirect URL from state or default to dashboard
+          const redirectTo = searchParams.get('redirect_to') || '/dashboard';
+          navigate(redirectTo);
         } else {
-          toast({
-            title: "Authentication failed",
-            description: "Could not complete the authentication process.",
-            variant: "destructive",
-          });
-          navigate("/auth");
+          navigate('/auth');
         }
-      } catch (error: any) {
-        console.error("Error processing authentication callback:", error);
-        toast({
-          title: "Authentication error",
-          description: error.message || "An error occurred during the authentication process.",
-          variant: "destructive",
-        });
-        navigate("/auth");
+      } catch (error) {
+        console.error('Auth callback error:', error);
+        navigate('/auth?error=callback_failed');
       }
     };
 
-    handleCallback();
-  }, [navigate, toast]);
+    handleAuthCallback();
+  }, [navigate, searchParams]);
 
   return (
-    <div className="flex items-center justify-center h-screen bg-background">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-        <p className="mt-4 text-lg">Completing authentication...</p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="text-center space-y-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+          Completing sign in...
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400">
+          Please wait while we redirect you.
+        </p>
       </div>
     </div>
   );
