@@ -25,21 +25,35 @@ import OrderSuccess from "@/pages/OrderSuccess";
 import TermsOfService from "@/pages/TermsOfService";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import NotFound from "@/pages/NotFound";
+import GiftCards from "@/pages/GiftCards";
+import Referrals from "@/pages/Referrals";
+import AccountSettings from "@/pages/AccountSettings";
+import AccountProfile from "@/pages/AccountProfile";
 
 // Admin pages
+import AdminRoute from "@/components/admin/AdminRoute";
+import AdminLayout from "@/components/admin/AdminLayout";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminProducts from "@/pages/admin/AdminProducts";
-import AdminOrders from "@/pages/admin/Orders";
+import AdminCategories from "@/pages/admin/AdminCategories";
+import AdminOrders from "@/pages/admin/AdminOrders";
 import AdminOrderDetails from "@/pages/admin/AdminOrderDetails";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminCoupons from "@/pages/admin/AdminCoupons";
-import AdminGiftCards from "@/pages/admin/GiftCards";
+import AdminGiftCards from "@/pages/admin/AdminGiftCards";
 import AdminAnalytics from "@/pages/admin/AdminAnalytics";
-import AdminBranding from "@/pages/admin/AdminBranding";
-import AdminCustomization from "@/pages/admin/AdminCustomization";
-import AdminBackups from "@/pages/admin/AdminBackups";
-import ZiinaStats from "@/pages/admin/ZiinaStats";
+import AdminInventory from "@/pages/admin/AdminInventory";
+import AdminNewsletter from "@/pages/admin/AdminNewsletter";
+import AdminTraffic from "@/pages/admin/AdminTraffic";
+import AdminBarcodes from "@/pages/admin/AdminBarcodes";
+import AdminBarcodeScanner from "@/pages/admin/AdminBarcodeScanner";
+import AdminContact from "@/pages/admin/AdminContact";
+import AdminZiina from "@/pages/admin/AdminZiina";
+import AdminZiinaStats from "@/pages/admin/AdminZiinaStats";
+import ProductNew from "@/pages/admin/ProductNew";
+import ProductEdit from "@/pages/admin/ProductEdit";
+import AuthCallback from "@/pages/auth/callback";
 
 const queryClient = new QueryClient();
 
@@ -64,28 +78,39 @@ function App() {
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/auth" element={<Auth />} />
-                  <Route path="/auth/callback" element={<Auth />} />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/order-success/:orderId" element={<OrderSuccess />} />
                   <Route path="/terms" element={<TermsOfService />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/gift-cards" element={<GiftCards />} />
+                  <Route path="/referrals" element={<Referrals />} />
+                  <Route path="/accounts/settings" element={<AccountSettings />} />
+                  <Route path="/accounts/profile" element={<AccountProfile />} />
                   
                   {/* Admin routes */}
-                  <Route path="/admin" element={<AdminDashboard />} />
-                  <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                  <Route path="/admin/products" element={<AdminProducts />} />
-                  <Route path="/admin/orders" element={<AdminOrders />} />
-                  <Route path="/admin/orders/:id" element={<AdminOrderDetails />} />
-                  <Route path="/admin/users" element={<AdminUsers />} />
-                  <Route path="/admin/settings" element={<AdminSettings />} />
-                  <Route path="/admin/coupons" element={<AdminCoupons />} />
-                  <Route path="/admin/gift-cards" element={<AdminGiftCards />} />
-                  <Route path="/admin/analytics" element={<AdminAnalytics />} />
-                  <Route path="/admin/branding" element={<AdminBranding />} />
-                  <Route path="/admin/customization" element={<AdminCustomization />} />
-                  <Route path="/admin/backups" element={<AdminBackups />} />
-                  <Route path="/admin/ziina-stats" element={<ZiinaStats />} />
+                  <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                  <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                  <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
+                  <Route path="/admin/products/new" element={<AdminRoute><ProductNew /></AdminRoute>} />
+                  <Route path="/admin/products/:id/edit" element={<AdminRoute><ProductEdit /></AdminRoute>} />
+                  <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
+                  <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
+                  <Route path="/admin/orders/:id" element={<AdminRoute><AdminOrderDetails /></AdminRoute>} />
+                  <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+                  <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+                  <Route path="/admin/coupons" element={<AdminRoute><AdminCoupons /></AdminRoute>} />
+                  <Route path="/admin/gift-cards" element={<AdminRoute><AdminGiftCards /></AdminRoute>} />
+                  <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
+                  <Route path="/admin/inventory" element={<AdminRoute><AdminInventory /></AdminRoute>} />
+                  <Route path="/admin/newsletter" element={<AdminRoute><AdminNewsletter /></AdminRoute>} />
+                  <Route path="/admin/traffic" element={<AdminRoute><AdminTraffic /></AdminRoute>} />
+                  <Route path="/admin/barcodes" element={<AdminRoute><AdminBarcodes /></AdminRoute>} />
+                  <Route path="/admin/scanner" element={<AdminRoute><AdminBarcodeScanner /></AdminRoute>} />
+                  <Route path="/admin/contact" element={<AdminRoute><AdminContact /></AdminRoute>} />
+                  <Route path="/admin/ziina" element={<AdminRoute><AdminZiina /></AdminRoute>} />
+                  <Route path="/admin/ziina-stats" element={<AdminRoute><AdminZiinaStats /></AdminRoute>} />
                   
                   {/* 404 route */}
                   <Route path="*" element={<NotFound />} />

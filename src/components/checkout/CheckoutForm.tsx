@@ -1,13 +1,16 @@
 
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect } from "react";
+import { useForm, Controller } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import ZiinaPayment from "@/components/payment/ZiinaPayment";
+import { Check, CreditCard, MapPin, Home, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Smartphone, Truck, Package, MapPin } from "lucide-react";
 
 interface CheckoutFormProps {
   items: any[];
@@ -18,442 +21,677 @@ interface CheckoutFormProps {
 const CheckoutForm: React.FC<CheckoutFormProps> = ({
   items,
   subtotal,
-  onPaymentSuccess
+  onPaymentSuccess,
 }) => {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [deliveryType, setDeliveryType] = useState("delivery");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [shippingAddress, setShippingAddress] = useState({
-    firstName: "",
-    lastName: "",
-    address: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    country: "UAE"
-  });
-  const [couponCode, setCouponCode] = useState("");
-  const [giftCardCode, setGiftCardCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
-  const [appliedGiftCard, setAppliedGiftCard] = useState<any>(null);
+  const { register, handleSubmit, control, setValue, formState: { errors } } = useForm();
+  const { user } = useAuth();
   const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [deliveryOption, setDeliveryOption] = useState("delivery");
+  const [giftCardCode, setGiftCardCode] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [giftCardDiscount, setGiftCardDiscount] = useState(0);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [appliedGiftCard, setAppliedGiftCard] = useState<any>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [validatingCode, setValidatingCode] = useState(false);
 
-  const shippingCost = deliveryType === "delivery" ? 30 : 0;
-  const discount = appliedCoupon ? (appliedCoupon.discount_type === 'percentage' 
-    ? (subtotal * appliedCoupon.discount_value / 100) 
-    : appliedCoupon.discount_value) : 0;
-  const giftCardDiscount = appliedGiftCard ? Math.min(appliedGiftCard.amount, subtotal + shippingCost - discount) : 0;
-  const total = Math.max(0, subtotal + shippingCost - discount - giftCardDiscount);
+  // Calculate shipping cost and total
+  const shippingCost = deliveryOption === "delivery" ? 30 : 0;
+  const total = subtotal + shippingCost - giftCardDiscount - couponDiscount;
 
-  const applyCoupon = async () => {
-    if (!couponCode.trim()) return;
+  useEffect(() => {
+    if (user) {
+      fetchUserProfile();
+    }
+  }, [user]);
 
+  const fetchUserProfile = async () => {
     try {
-      const { data: coupon, error } = await supabase
-        .from('coupons')
+      const { data, error } = await supabase
+        .from('profiles')
         .select('*')
-        .eq('code', couponCode.trim().toUpperCase())
-        .eq('active', true)
+        .eq('id', user?.id)
         .single();
 
-      if (error || !coupon) {
-        throw new Error('Invalid coupon code');
-      }
+      if (error) throw error;
 
-      if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
-        throw new Error('This coupon has expired');
+      if (data) {
+        setUserProfile(data);
+        setValue("firstName", data.first_name);
+        setValue("lastName", data.last_name);
+        setValue("email", data.email || user?.email);
+        setValue("phone", data.phone);
       }
-
-      if (coupon.max_uses && coupon.used_count >= coupon.max_uses) {
-        throw new Error('This coupon has reached its usage limit');
-      }
-
-      if (subtotal < coupon.min_purchase) {
-        throw new Error(`Minimum purchase of $${coupon.min_purchase} required`);
-      }
-
-      setAppliedCoupon(coupon);
-      toast({
-        title: "Coupon applied",
-        description: `${coupon.discount_type === 'percentage' ? coupon.discount_value + '%' : '$' + coupon.discount_value} discount applied`
-      });
     } catch (error: any) {
-      toast({
-        title: "Invalid coupon",
-        description: error.message,
-        variant: "destructive"
-      });
+      console.error('Error fetching user profile:', error);
     }
+  };
+
+  const onSubmit = async (data: any) => {
+    if (total <= 0) {
+      // Handle free order
+      setLoading(true);
+      try {
+        // Create order
+        const { data: order, error: orderError } = await supabase
+          .from('orders')
+          .insert({
+            user_id: user?.id,
+            total_amount: 0,
+            status: 'processing',
+            payment_status: 'paid',
+            payment_method: 'gift_card',
+            currency: 'USD',
+            shipping_address: {
+              firstName: data.firstName,
+              lastName: data.lastName,
+              address: data.address,
+              city: data.city,
+              postalCode: data.postalCode,
+              country: data.country,
+              email: data.email,
+              phone: data.phone,
+            },
+            delivery_type: deliveryOption,
+          })
+          .select()
+          .single();
+
+        if (orderError) throw orderError;
+
+        // Insert order items
+        if (items.length > 0) {
+          const { error: itemsError } = await supabase
+            .from('order_items')
+            .insert(
+              items.map(item => ({
+                order_id: order.id,
+                product_id: item.id,
+                quantity: item.quantity,
+                price: item.price,
+                customization: item.customization
+              }))
+            );
+
+          if (itemsError) throw itemsError;
+        }
+
+        // Update gift card balance if used
+        if (appliedGiftCard) {
+          const { error: giftCardError } = await supabase
+            .from('gift_cards')
+            .update({ 
+              amount: Math.max(0, appliedGiftCard.amount - giftCardDiscount),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', appliedGiftCard.id);
+
+          if (giftCardError) throw giftCardError;
+        }
+
+        // Update coupon usage if used
+        if (appliedCoupon) {
+          const { error: couponError } = await supabase
+            .from('coupons')
+            .update({ 
+              used_count: appliedCoupon.used_count + 1,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', appliedCoupon.id);
+
+          if (couponError) throw couponError;
+        }
+
+        toast({
+          title: "Order Placed!",
+          description: "Your order has been placed successfully.",
+        });
+
+        onPaymentSuccess(order.id);
+      } catch (error: any) {
+        console.error('Error placing order:', error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to place order",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // For orders requiring payment, pass the data to the payment component
+    // The orderData will be used in ZiinaPayment component
   };
 
   const applyGiftCard = async () => {
-    if (!giftCardCode.trim()) return;
-
-    try {
-      const { data: giftCard, error } = await supabase
-        .from('gift_cards')
-        .select('*')
-        .eq('code', giftCardCode.trim().toUpperCase())
-        .eq('is_active', true)
-        .single();
-
-      if (error || !giftCard) {
-        throw new Error('Invalid gift card code');
-      }
-
-      if (giftCard.expires_at && new Date(giftCard.expires_at) < new Date()) {
-        throw new Error('This gift card has expired');
-      }
-
-      if (giftCard.amount <= 0) {
-        throw new Error('This gift card has no remaining balance');
-      }
-
-      setAppliedGiftCard(giftCard);
+    if (!giftCardCode.trim()) {
       toast({
-        title: "Gift card applied",
-        description: `$${Math.min(giftCard.amount, total).toFixed(2)} applied from your gift card`
-      });
-    } catch (error: any) {
-      toast({
-        title: "Invalid gift card",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const processZiinaPayment = async (orderId: string) => {
-    try {
-      // Simulate Ziina payment
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      await supabase
-        .from('orders')
-        .update({ 
-          status: 'processing',
-          payment_status: 'paid'
-        })
-        .eq('id', orderId);
-
-      toast({
-        title: "Payment Successful",
-        description: "Your payment has been processed successfully",
-      });
-
-      return true;
-    } catch (error: any) {
-      console.error('Payment error:', error);
-      toast({
-        title: "Payment Failed",
-        description: "Payment failed. Please try again.",
+        title: "Error",
+        description: "Please enter a gift card code",
         variant: "destructive",
       });
-      return false;
+      return;
+    }
+
+    setValidatingCode(true);
+    try {
+      const { data, error } = await supabase
+        .from('gift_cards')
+        .select('*')
+        .eq('code', giftCardCode.trim())
+        .eq('is_active', true)
+        .gt('amount', 0)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        const currentDate = new Date();
+        if (data.expires_at && new Date(data.expires_at) < currentDate) {
+          toast({
+            title: "Expired Gift Card",
+            description: "This gift card has expired",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Calculate the discount (up to the total amount)
+        const discount = Math.min(data.amount, total - couponDiscount);
+        
+        setGiftCardDiscount(discount);
+        setAppliedGiftCard(data);
+        
+        toast({
+          title: "Gift Card Applied",
+          description: `$${discount.toFixed(2)} discount applied`,
+        });
+      } else {
+        toast({
+          title: "Invalid Gift Card",
+          description: "Gift card not found or has no balance",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Error applying gift card:', error);
+      toast({
+        title: "Error",
+        description: "Invalid gift card code",
+        variant: "destructive",
+      });
+    } finally {
+      setValidatingCode(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!phoneNumber) {
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) {
       toast({
-        title: "Phone number required",
-        description: "Please enter your phone number",
-        variant: "destructive"
+        title: "Error",
+        description: "Please enter a coupon code",
+        variant: "destructive",
       });
       return;
     }
 
-    if (deliveryType === "delivery" && (!shippingAddress.firstName || !shippingAddress.address)) {
-      toast({
-        title: "Address required",
-        description: "Please fill in your delivery address",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsProcessing(true);
-
+    setValidatingCode(true);
     try {
-      // Create order
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          total_amount: total,
-          status: 'pending',
-          payment_status: 'pending',
-          payment_method: 'ziina',
-          delivery_type: deliveryType,
-          shipping_address: deliveryType === "delivery" ? shippingAddress : null,
-          billing_address: { ...shippingAddress, phone: phoneNumber }
-        })
-        .select()
+      const { data, error } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('code', couponCode.trim())
+        .eq('active', true)
         .single();
 
-      if (orderError) throw orderError;
+      if (error) throw error;
 
-      // Add order items
-      const orderItems = items.map((item: any) => ({
-        order_id: order.id,
-        product_id: item.id,
-        quantity: item.quantity,
-        price: item.price,
-        customization: item.customization || null
-      }));
+      if (data) {
+        const currentDate = new Date();
+        if (data.expires_at && new Date(data.expires_at) < currentDate) {
+          toast({
+            title: "Expired Coupon",
+            description: "This coupon has expired",
+            variant: "destructive",
+          });
+          return;
+        }
 
-      await supabase.from('order_items').insert(orderItems);
+        if (data.starts_at && new Date(data.starts_at) > currentDate) {
+          toast({
+            title: "Coupon Not Active Yet",
+            description: "This coupon is not active yet",
+            variant: "destructive",
+          });
+          return;
+        }
 
-      // Update coupon usage
-      if (appliedCoupon) {
-        await supabase
-          .from('coupons')
-          .update({ used_count: appliedCoupon.used_count + 1 })
-          .eq('id', appliedCoupon.id);
-      }
+        if (data.max_uses && data.used_count >= data.max_uses) {
+          toast({
+            title: "Coupon Fully Used",
+            description: "This coupon has reached its usage limit",
+            variant: "destructive",
+          });
+          return;
+        }
 
-      // Update gift card balance
-      if (appliedGiftCard) {
-        const usedAmount = Math.min(appliedGiftCard.amount, total);
-        await supabase
-          .from('gift_cards')
-          .update({ amount: appliedGiftCard.amount - usedAmount })
-          .eq('id', appliedGiftCard.id);
-      }
+        if (data.min_purchase && subtotal < data.min_purchase) {
+          toast({
+            title: "Minimum Purchase Required",
+            description: `This coupon requires a minimum purchase of $${data.min_purchase}`,
+            variant: "destructive",
+          });
+          return;
+        }
 
-      // Process payment
-      const paymentSuccess = await processZiinaPayment(order.id);
+        // Calculate discount based on type
+        let discount = 0;
+        if (data.discount_type === 'percentage') {
+          discount = (subtotal * data.discount_value) / 100;
+        } else {
+          discount = Math.min(data.discount_value, subtotal);
+        }
 
-      if (paymentSuccess) {
-        onPaymentSuccess(order.id);
+        setCouponDiscount(discount);
+        setAppliedCoupon(data);
+        
+        toast({
+          title: "Coupon Applied",
+          description: `$${discount.toFixed(2)} discount applied`,
+        });
+      } else {
+        toast({
+          title: "Invalid Coupon",
+          description: "Coupon not found or expired",
+          variant: "destructive",
+        });
       }
     } catch (error: any) {
-      console.error('Order error:', error);
+      console.error('Error applying coupon:', error);
       toast({
-        title: "Order failed",
-        description: error.message || "Unable to process order",
-        variant: "destructive"
+        title: "Error",
+        description: "Invalid coupon code",
+        variant: "destructive",
       });
     } finally {
-      setIsProcessing(false);
+      setValidatingCode(false);
     }
+  };
+
+  const removeGiftCard = () => {
+    setGiftCardDiscount(0);
+    setAppliedGiftCard(null);
+    setGiftCardCode("");
+  };
+
+  const removeCoupon = () => {
+    setCouponDiscount(0);
+    setAppliedCoupon(null);
+    setCouponCode("");
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Delivery Method
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RadioGroup value={deliveryType} onValueChange={setDeliveryType}>
-              <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                <RadioGroupItem value="delivery" id="delivery" />
-                <Label htmlFor="delivery" className="flex items-center gap-2 cursor-pointer flex-1">
-                  <Truck className="h-4 w-4" />
-                  Delivery - $30 USD / 30 AED
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                <RadioGroupItem value="pickup" id="pickup" />
-                <Label htmlFor="pickup" className="flex items-center gap-2 cursor-pointer flex-1">
-                  <MapPin className="h-4 w-4" />
-                  Pickup - Free
-                </Label>
-              </div>
-            </RadioGroup>
-          </CardContent>
-        </Card>
-
-        {deliveryType === "delivery" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Delivery Address</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input
-                    id="firstName"
-                    value={shippingAddress.firstName}
-                    onChange={(e) => setShippingAddress(prev => ({ ...prev, firstName: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input
-                    id="lastName"
-                    value={shippingAddress.lastName}
-                    onChange={(e) => setShippingAddress(prev => ({ ...prev, lastName: e.target.value }))}
-                    required
-                  />
-                </div>
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <MapPin className="mr-2 h-5 w-5" />
+              Shipping Information
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  {...register("firstName", { required: "First name is required" })}
+                />
+                {errors.firstName && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {errors.firstName.message as string}
+                  </p>
+                )}
               </div>
               <div>
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  {...register("lastName", { required: "Last name is required" })}
+                />
+                {errors.lastName && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {errors.lastName.message as string}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  {...register("email", { required: "Email is required" })}
+                />
+                {errors.email && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {errors.email.message as string}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  {...register("phone", { required: "Phone is required" })}
+                />
+                {errors.phone && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {errors.phone.message as string}
+                  </p>
+                )}
+              </div>
+              <div className="md:col-span-2">
                 <Label htmlFor="address">Address</Label>
                 <Input
                   id="address"
-                  value={shippingAddress.address}
-                  onChange={(e) => setShippingAddress(prev => ({ ...prev, address: e.target.value }))}
-                  required
+                  {...register("address", { required: "Address is required" })}
                 />
+                {errors.address && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {errors.address.message as string}
+                  </p>
+                )}
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    value={shippingAddress.city}
-                    onChange={(e) => setShippingAddress(prev => ({ ...prev, city: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="zipCode">ZIP Code</Label>
-                  <Input
-                    id="zipCode"
-                    value={shippingAddress.zipCode}
-                    onChange={(e) => setShippingAddress(prev => ({ ...prev, zipCode: e.target.value }))}
-                    required
-                  />
-                </div>
+              <div>
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  {...register("city", { required: "City is required" })}
+                />
+                {errors.city && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {errors.city.message as string}
+                  </p>
+                )}
               </div>
-            </CardContent>
+              <div>
+                <Label htmlFor="postalCode">Postal Code</Label>
+                <Input
+                  id="postalCode"
+                  {...register("postalCode", { required: "Postal code is required" })}
+                />
+                {errors.postalCode && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {errors.postalCode.message as string}
+                  </p>
+                )}
+              </div>
+              <div className="md:col-span-2">
+                <Label htmlFor="country">Country</Label>
+                <Controller
+                  name="country"
+                  control={control}
+                  defaultValue="United Arab Emirates"
+                  rules={{ required: "Country is required" }}
+                  render={({ field }) => (
+                    <select
+                      id="country"
+                      className="w-full p-2 border rounded-md bg-background"
+                      {...field}
+                    >
+                      <option value="United Arab Emirates">United Arab Emirates</option>
+                      <option value="Saudi Arabia">Saudi Arabia</option>
+                      <option value="Qatar">Qatar</option>
+                      <option value="Bahrain">Bahrain</option>
+                      <option value="Kuwait">Kuwait</option>
+                      <option value="Oman">Oman</option>
+                    </select>
+                  )}
+                />
+                {errors.country && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {errors.country.message as string}
+                  </p>
+                )}
+              </div>
+            </div>
           </Card>
-        )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Contact Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div>
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="+971 50 123 4567"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                required
-              />
-            </div>
-          </CardContent>
-        </Card>
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <Home className="mr-2 h-5 w-5" />
+              Delivery Options
+            </h2>
+            <div className="space-y-3">
+              <div
+                className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-all ${
+                  deliveryOption === "delivery"
+                    ? "border-primary bg-primary/5"
+                    : "hover:bg-muted/50"
+                }`}
+                onClick={() => setDeliveryOption("delivery")}
+              >
+                <div className="flex items-center">
+                  <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
+                    deliveryOption === "delivery" ? "border-primary" : ""
+                  }`}>
+                    {deliveryOption === "delivery" && (
+                      <div className="w-3 h-3 rounded-full bg-primary"></div>
+                    )}
+                  </div>
+                  <div className="ml-3">
+                    <p className="font-medium">Standard Delivery</p>
+                    <p className="text-sm text-muted-foreground">
+                      Delivery within 3-5 business days
+                    </p>
+                  </div>
+                </div>
+                <p className="font-medium">$30.00</p>
+              </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Discounts</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter coupon code"
-                value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value)}
-              />
-              <Button type="button" onClick={applyCoupon} variant="outline">
-                Apply
-              </Button>
-            </div>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter gift card code"
-                value={giftCardCode}
-                onChange={(e) => setGiftCardCode(e.target.value)}
-              />
-              <Button type="button" onClick={applyGiftCard} variant="outline">
-                Apply
-              </Button>
-            </div>
-            {appliedCoupon && (
-              <div className="text-sm text-green-600">
-                ✓ Coupon applied: {appliedCoupon.code} (-${discount.toFixed(2)})
+              <div
+                className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-all ${
+                  deliveryOption === "pickup"
+                    ? "border-primary bg-primary/5"
+                    : "hover:bg-muted/50"
+                }`}
+                onClick={() => setDeliveryOption("pickup")}
+              >
+                <div className="flex items-center">
+                  <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
+                    deliveryOption === "pickup" ? "border-primary" : ""
+                  }`}>
+                    {deliveryOption === "pickup" && (
+                      <div className="w-3 h-3 rounded-full bg-primary"></div>
+                    )}
+                  </div>
+                  <div className="ml-3">
+                    <p className="font-medium">Store Pickup</p>
+                    <p className="text-sm text-muted-foreground">
+                      Pick up at our store location
+                    </p>
+                  </div>
+                </div>
+                <p className="font-medium">Free</p>
               </div>
-            )}
-            {appliedGiftCard && (
-              <div className="text-sm text-green-600">
-                ✓ Gift card applied: {appliedGiftCard.code} (-${giftCardDiscount.toFixed(2)})
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            </div>
+          </Card>
+        </div>
 
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Order Summary</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {items.map((item) => (
-              <div key={item.id} className="flex justify-between">
-                <span>{item.name} x {item.quantity}</span>
-                <span>${(item.price * item.quantity).toFixed(2)}</span>
-              </div>
-            ))}
-            <div className="border-t pt-4 space-y-2">
+        <div className="space-y-6">
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+            <div className="space-y-4 mb-4">
+              {items.map((item) => (
+                <div key={item.id} className="flex justify-between">
+                  <div className="flex">
+                    <span>{item.quantity} x</span>
+                    <span className="ml-2 font-medium truncate max-w-[200px]">
+                      {item.name}
+                    </span>
+                  </div>
+                  <span>${(item.price * item.quantity).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+            <Separator className="my-4" />
+            <div className="space-y-2">
               <div className="flex justify-between">
                 <span>Subtotal</span>
                 <span>${subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span>{deliveryType === "delivery" ? "Delivery" : "Pickup"}</span>
+                <span>Shipping</span>
                 <span>${shippingCost.toFixed(2)}</span>
               </div>
-              {appliedCoupon && (
+              {giftCardDiscount > 0 && (
                 <div className="flex justify-between text-green-600">
-                  <span>Coupon Discount</span>
-                  <span>-${discount.toFixed(2)}</span>
-                </div>
-              )}
-              {appliedGiftCard && (
-                <div className="flex justify-between text-green-600">
-                  <span>Gift Card</span>
+                  <span className="flex items-center">
+                    Gift Card
+                    <button
+                      type="button"
+                      className="ml-1 text-muted-foreground hover:text-red-500"
+                      onClick={removeGiftCard}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
                   <span>-${giftCardDiscount.toFixed(2)}</span>
                 </div>
               )}
-              <div className="flex justify-between font-bold text-lg border-t pt-2">
+              {couponDiscount > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span className="flex items-center">
+                    Coupon
+                    <button
+                      type="button"
+                      className="ml-1 text-muted-foreground hover:text-red-500"
+                      onClick={removeCoupon}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                  <span>-${couponDiscount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-lg font-bold pt-2">
                 <span>Total</span>
                 <span>${total.toFixed(2)}</span>
               </div>
             </div>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Smartphone className="h-5 w-5" />
-              Payment Method
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center p-4 border rounded-lg bg-purple-50">
-              <Smartphone className="h-8 w-8 mx-auto mb-2 text-purple-600" />
-              <p className="font-medium">Ziina Payment</p>
-              <p className="text-sm text-gray-600">Secure payment via Ziina</p>
+            <div className="mt-6 space-y-4">
+              {!appliedGiftCard && (
+                <div className="flex space-x-2">
+                  <Input
+                    placeholder="Gift Card Code"
+                    value={giftCardCode}
+                    onChange={(e) => setGiftCardCode(e.target.value)}
+                    disabled={validatingCode}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={applyGiftCard}
+                    disabled={validatingCode}
+                  >
+                    Apply
+                  </Button>
+                </div>
+              )}
+
+              {!appliedCoupon && (
+                <div className="flex space-x-2">
+                  <Input
+                    placeholder="Coupon Code"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    disabled={validatingCode}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={applyCoupon}
+                    disabled={validatingCode}
+                  >
+                    Apply
+                  </Button>
+                </div>
+              )}
             </div>
-          </CardContent>
-        </Card>
+          </Card>
 
-        <Button
-          onClick={handleSubmit}
-          disabled={isProcessing}
-          className="w-full"
-          size="lg"
-        >
-          {isProcessing ? "Processing..." : `Pay $${total.toFixed(2)} with Ziina`}
-        </Button>
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <CreditCard className="mr-2 h-5 w-5" />
+              Payment
+            </h2>
+            
+            {total <= 0 ? (
+              <Button 
+                type="submit"
+                className="w-full"
+                size="lg"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Check className="mr-2 h-5 w-5" />
+                    Complete Order (Fully Paid)
+                  </>
+                )}
+              </Button>
+            ) : (
+              <ZiinaPayment
+                amount={total}
+                onSuccess={onPaymentSuccess}
+                onError={(error) => {
+                  toast({
+                    title: "Payment Failed",
+                    description: error,
+                    variant: "destructive",
+                  });
+                }}
+                orderData={{
+                  user_id: user?.id,
+                  items: items.map(item => ({
+                    id: item.id,
+                    quantity: item.quantity,
+                    price: item.price,
+                    customization: item.customization
+                  })),
+                  shipping_address: {
+                    firstName: document.getElementById("firstName")?.value,
+                    lastName: document.getElementById("lastName")?.value,
+                    address: document.getElementById("address")?.value,
+                    city: document.getElementById("city")?.value,
+                    postalCode: document.getElementById("postalCode")?.value,
+                    country: document.getElementById("country")?.value,
+                  },
+                  email: document.getElementById("email")?.value,
+                  phone: document.getElementById("phone")?.value,
+                  delivery_type: deliveryOption,
+                  gift_card_id: appliedGiftCard?.id,
+                  coupon_id: appliedCoupon?.id
+                }}
+              />
+            )}
+          </Card>
+        </div>
       </div>
-    </div>
+    </form>
   );
 };
 

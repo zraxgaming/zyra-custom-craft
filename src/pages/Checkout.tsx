@@ -7,6 +7,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Container } from "@/components/ui/container";
 import CheckoutForm from "@/components/checkout/CheckoutForm";
+import SEOHead from "@/components/seo/SEOHead";
 
 const Checkout = () => {
   const { user } = useAuth();
@@ -15,7 +16,7 @@ const Checkout = () => {
 
   useEffect(() => {
     if (!user) {
-      navigate('/auth');
+      navigate('/auth?redirect=/checkout');
       return;
     }
 
@@ -36,6 +37,10 @@ const Checkout = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead 
+        title="Checkout - Zyra Custom Craft"
+        description="Complete your purchase securely at Zyra Custom Craft. We accept multiple payment methods and offer secure checkout."
+      />
       <Navbar />
       
       <div className="py-12">

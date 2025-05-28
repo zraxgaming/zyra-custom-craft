@@ -41,7 +41,7 @@ const MaintenanceBanner = () => {
   }
 
   return (
-    <Alert className="rounded-none border-x-0 border-t-0 bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800 py-2">
+    <Alert className="rounded-none border-x-0 border-t-0 bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800 py-3">
       <AlertTriangle className="h-4 w-4 text-yellow-600" />
       <AlertDescription className="flex items-center justify-between w-full">
         <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">

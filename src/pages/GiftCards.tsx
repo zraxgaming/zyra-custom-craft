@@ -1,44 +1,33 @@
 
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Gift, CreditCard, Mail, Heart, Star, Sparkles } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Container } from "@/components/ui/container";
-import SEOHead from "@/components/seo/SEOHead";
-import ZiinaPayment from "@/components/checkout/ZiinaPayment";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Gift, CreditCard, Check } from "lucide-react";
 
 const GiftCards = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  
-  const [selectedAmount, setSelectedAmount] = useState(50);
-  const [customAmount, setCustomAmount] = useState("");
-  const [recipientEmail, setRecipientEmail] = useState("");
-  const [recipientName, setRecipientName] = useState("");
-  const [senderName, setSenderName] = useState("");
-  const [message, setMessage] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [ownedGiftCards, setOwnedGiftCards] = useState<any[]>([]);
-  const [showPayment, setShowPayment] = useState(false);
-
-  const predefinedAmounts = [25, 50, 100, 150, 200];
+  const [loading, setLoading] = useState(false);
+  const [giftCards, setGiftCards] = useState([]);
+  const [purchaseAmount, setPurchaseAmount] = useState('50');
+  const [recipientEmail, setRecipientEmail] = useState('');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     if (user) {
-      fetchOwnedGiftCards();
+      fetchGiftCards();
     }
   }, [user]);
 
-  const fetchOwnedGiftCards = async () => {
+  const fetchGiftCards = async () => {
     if (!user) return;
 
     try {
@@ -46,403 +35,288 @@ const GiftCards = () => {
         .from('gift_cards')
         .select('*')
         .eq('created_by', user.id)
-        .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setOwnedGiftCards(data || []);
-    } catch (error) {
+      setGiftCards(data || []);
+    } catch (error: any) {
       console.error('Error fetching gift cards:', error);
     }
   };
 
-  const generateGiftCardCode = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = '';
-    for (let i = 0; i < 12; i++) {
-      if (i > 0 && i % 4 === 0) result += '-';
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-  };
-
-  const handleProceedToPayment = () => {
+  const handlePurchaseGiftCard = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!user) {
       toast({
-        title: "Sign In Required",
-        description: "Please sign in to purchase gift cards",
-        variant: "destructive"
+        title: "Authentication Required",
+        description: "Please log in to purchase gift cards",
+        variant: "destructive",
       });
       return;
     }
 
-    if (!recipientEmail || !recipientName || !senderName) {
-      toast({
-        title: "Required Fields",
-        description: "Please fill in all required fields",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const amount = customAmount ? parseFloat(customAmount) : selectedAmount;
-    if (amount < 5 || amount > 1000) {
-      toast({
-        title: "Invalid Amount",
-        description: "Gift card amount must be between $5 and $1000",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setShowPayment(true);
-  };
-
-  const handlePaymentSuccess = async (transactionId: string) => {
+    setLoading(true);
     try {
-      const amount = customAmount ? parseFloat(customAmount) : selectedAmount;
-      const giftCardCode = generateGiftCardCode();
-      
-      const { data: giftCard, error: giftCardError } = await supabase
+      const amount = parseFloat(purchaseAmount);
+      if (amount < 10) {
+        throw new Error('Minimum gift card amount is $10');
+      }
+
+      // Generate unique gift card code
+      const code = `GC${Date.now()}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+      const { error } = await supabase
         .from('gift_cards')
         .insert({
-          code: giftCardCode,
+          code: code,
           amount: amount,
           initial_amount: amount,
-          created_by: user!.id,
-          recipient_email: recipientEmail,
-          message: message || null
-        })
-        .select()
-        .single();
+          created_by: user.id,
+          recipient_email: recipientEmail || null,
+          message: message || null,
+          is_active: true,
+          expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 year
+        });
 
-      if (giftCardError) throw giftCardError;
+      if (error) throw error;
 
       toast({
-        title: "Gift Card Created!",
-        description: "Your gift card has been created and will be sent via email.",
+        title: "Success",
+        description: "Gift card purchased successfully!",
       });
 
       // Reset form
-      setSelectedAmount(50);
-      setCustomAmount("");
-      setRecipientEmail("");
-      setRecipientName("");
-      setSenderName("");
-      setMessage("");
-      setShowPayment(false);
+      setPurchaseAmount('50');
+      setRecipientEmail('');
+      setMessage('');
       
-      // Refresh owned gift cards
-      fetchOwnedGiftCards();
+      // Refresh gift cards
+      fetchGiftCards();
     } catch (error: any) {
-      console.error('Gift card creation error:', error);
+      console.error('Error purchasing gift card:', error);
       toast({
-        title: "Creation Failed",
-        description: error.message || "Failed to create gift card",
-        variant: "destructive"
+        title: "Error",
+        description: error.message || "Failed to purchase gift card",
+        variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handlePaymentError = (error: string) => {
-    toast({
-      title: "Payment Failed",
-      description: error,
-      variant: "destructive"
-    });
-    setShowPayment(false);
-  };
-
-  const finalAmount = customAmount ? parseFloat(customAmount) || 0 : selectedAmount;
-
-  if (showPayment) {
-    return (
-      <>
-        <SEOHead 
-          title="Gift Card Payment - Zyra Store"
-          description="Complete your gift card purchase with secure Ziina payment"
-        />
-        <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20">
-          <Navbar />
-          
-          <div className="py-12">
-            <Container>
-              <div className="max-w-2xl mx-auto">
-                <Button
-                  onClick={() => setShowPayment(false)}
-                  variant="outline"
-                  className="mb-6"
-                >
-                  ← Back to Gift Card Details
-                </Button>
-                
-                <ZiinaPayment
-                  amount={finalAmount}
-                  orderData={{
-                    type: 'gift_card',
-                    recipient_email: recipientEmail,
-                    recipient_name: recipientName,
-                    sender_name: senderName,
-                    message: message,
-                    email: user?.email
-                  }}
-                  onSuccess={handlePaymentSuccess}
-                  onError={handlePaymentError}
-                />
-              </div>
-            </Container>
-          </div>
-          
-          <Footer />
-        </div>
-      </>
-    );
-  }
-
   return (
-    <>
-      <SEOHead 
-        title="Gift Cards - Zyra Store"
-        description="Purchase digital gift cards for your loved ones. Perfect for any occasion."
-      />
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20">
-        <Navbar />
-        
-        <div className="py-12">
-          <Container>
-            {/* Header */}
-            <div className="text-center mb-16 animate-fade-in">
-              <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-purple-600 via-pink-600 to-purple-800 rounded-full mb-8 animate-bounce-in shadow-2xl">
-                <Gift className="h-12 w-12 text-white animate-pulse" />
-              </div>
-              <h1 className="text-6xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-purple-800 bg-clip-text text-transparent mb-6 animate-text-shimmer">
-                Digital Gift Cards
-              </h1>
-              <p className="text-xl text-gray-600 dark:text-gray-300 animate-slide-in-up max-w-2xl mx-auto" style={{animationDelay: '200ms'}}>
-                Give the gift of choice with our digital gift cards. Perfect for any occasion and delivered instantly via email.
-              </p>
-              <div className="flex items-center justify-center gap-4 mt-6 animate-fade-in" style={{animationDelay: '400ms'}}>
-                <Badge className="bg-green-100 text-green-800 border-green-200">
-                  <Sparkles className="h-3 w-3 mr-1" />
-                  Instant Delivery
-                </Badge>
-                <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-                  <Star className="h-3 w-3 mr-1" />
-                  Never Expires
-                </Badge>
-                <Badge className="bg-purple-100 text-purple-800 border-purple-200">
-                  <Heart className="h-3 w-3 mr-1" />
-                  Perfect Gift
-                </Badge>
-              </div>
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      
+      <Container className="py-12">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="p-4 bg-primary/10 rounded-full w-fit mx-auto mb-6">
+              <Gift className="h-12 w-12 text-primary" />
             </div>
+            <h1 className="text-4xl font-bold mb-4">Gift Cards</h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Give the perfect gift with our digital gift cards. Perfect for any occasion!
+            </p>
+          </div>
 
-            <div className="grid lg:grid-cols-2 gap-12">
-              {/* Purchase Form */}
-              <Card className="animate-slide-in-left card-premium border-gradient">
-                <CardHeader>
-                  <CardTitle className="text-2xl flex items-center gap-2">
-                    <CreditCard className="h-6 w-6 text-purple-600" />
-                    Purchase Gift Card
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Amount Selection */}
-                  <div className="space-y-4">
-                    <Label className="text-lg font-semibold">Select Amount</Label>
-                    <div className="grid grid-cols-3 gap-3">
-                      {predefinedAmounts.map((amount) => (
-                        <Button
-                          key={amount}
-                          variant={selectedAmount === amount ? "default" : "outline"}
-                          onClick={() => {
-                            setSelectedAmount(amount);
-                            setCustomAmount("");
-                          }}
-                          className="h-16 text-lg font-bold hover-3d-lift"
-                        >
-                          ${amount}
-                        </Button>
-                      ))}
-                      <div className="space-y-2">
-                        <Label htmlFor="custom-amount" className="text-sm">Custom Amount</Label>
-                        <Input
-                          id="custom-amount"
-                          type="number"
-                          placeholder="$5-$1000"
-                          value={customAmount}
-                          onChange={(e) => {
-                            setCustomAmount(e.target.value);
-                            setSelectedAmount(0);
-                          }}
-                          min="5"
-                          max="1000"
-                          className="hover-magnetic"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Recipient Information */}
-                  <div className="space-y-4">
-                    <Label className="text-lg font-semibold">Recipient Information</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="recipient-name">Recipient Name *</Label>
-                        <Input
-                          id="recipient-name"
-                          value={recipientName}
-                          onChange={(e) => setRecipientName(e.target.value)}
-                          placeholder="John Doe"
-                          className="hover-magnetic"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="recipient-email">Recipient Email *</Label>
-                        <Input
-                          id="recipient-email"
-                          type="email"
-                          value={recipientEmail}
-                          onChange={(e) => setRecipientEmail(e.target.value)}
-                          placeholder="john@example.com"
-                          className="hover-magnetic"
-                          required
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Sender Information */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Purchase Gift Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Purchase Gift Card
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handlePurchaseGiftCard} className="space-y-4">
                   <div>
-                    <Label htmlFor="sender-name">Your Name *</Label>
+                    <Label htmlFor="amount">Amount (USD)</Label>
+                    <select
+                      id="amount"
+                      value={purchaseAmount}
+                      onChange={(e) => setPurchaseAmount(e.target.value)}
+                      className="w-full p-3 border rounded-md bg-background"
+                    >
+                      <option value="25">$25</option>
+                      <option value="50">$50</option>
+                      <option value="100">$100</option>
+                      <option value="150">$150</option>
+                      <option value="200">$200</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="recipient_email">Recipient Email (Optional)</Label>
                     <Input
-                      id="sender-name"
-                      value={senderName}
-                      onChange={(e) => setSenderName(e.target.value)}
-                      placeholder="Jane Smith"
-                      className="hover-magnetic"
-                      required
+                      id="recipient_email"
+                      type="email"
+                      value={recipientEmail}
+                      onChange={(e) => setRecipientEmail(e.target.value)}
+                      placeholder="recipient@example.com"
                     />
                   </div>
 
-                  {/* Personal Message */}
                   <div>
                     <Label htmlFor="message">Personal Message (Optional)</Label>
-                    <Textarea
+                    <Input
                       id="message"
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Happy Birthday! Hope you find something you love..."
-                      className="hover-magnetic resize-none"
-                      rows={3}
+                      placeholder="Happy Birthday!"
+                      maxLength={200}
                     />
                   </div>
 
-                  {/* Payment Summary */}
-                  <div className="p-6 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border">
-                    <div className="flex justify-between items-center mb-4">
-                      <span className="text-lg font-semibold">Total Amount:</span>
-                      <span className="text-2xl font-bold text-purple-600">
-                        ${finalAmount.toFixed(2)}
-                      </span>
+                  <div className="bg-muted p-4 rounded-lg">
+                    <div className="flex justify-between items-center mb-2">
+                      <span>Gift Card Amount:</span>
+                      <span className="font-bold">${purchaseAmount}</span>
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                      <p>• Gift card will be sent to {recipientEmail || 'recipient email'}</p>
-                      <p>• Payment processed securely via Ziina</p>
-                      <p>• Digital delivery within minutes</p>
+                    <div className="flex justify-between items-center mb-2">
+                      <span>Processing Fee:</span>
+                      <span>$0.00</span>
+                    </div>
+                    <hr className="my-2" />
+                    <div className="flex justify-between items-center font-bold">
+                      <span>Total:</span>
+                      <span>${purchaseAmount}</span>
                     </div>
                   </div>
 
-                  {/* Purchase Button */}
-                  <Button
-                    onClick={handleProceedToPayment}
-                    disabled={isProcessing || finalAmount < 5 || !recipientEmail || !recipientName || !senderName}
-                    className="w-full h-14 text-lg font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-purple-800 hover:from-purple-700 hover:via-pink-700 hover:to-purple-900 shadow-2xl hover:shadow-purple-500/25 transition-all duration-500 transform hover:scale-[1.02] active:scale-[0.98] animate-bounce-in"
+                  <Button 
+                    type="submit" 
+                    disabled={loading || !user} 
+                    className="w-full"
                   >
-                    <div className="flex items-center gap-3">
-                      <Gift className="h-5 w-5" />
-                      Proceed to Payment - ${finalAmount.toFixed(2)}
-                    </div>
+                    {loading ? 'Processing...' : 'Purchase Gift Card'}
                   </Button>
-                </CardContent>
-              </Card>
+                </form>
+              </CardContent>
+            </Card>
 
-              {/* Preview & Owned Cards */}
-              <div className="space-y-8">
-                {/* Gift Card Preview */}
-                <Card className="animate-slide-in-right card-premium border-gradient">
-                  <CardHeader>
-                    <CardTitle className="text-2xl flex items-center gap-2">
-                      <Mail className="h-6 w-6 text-pink-600" />
-                      Gift Card Preview
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-gradient-to-br from-purple-600 via-pink-600 to-purple-800 p-8 rounded-2xl text-white shadow-2xl animate-float">
-                      <div className="text-center space-y-4">
-                        <Gift className="h-12 w-12 mx-auto animate-pulse" />
-                        <h3 className="text-2xl font-bold">Zyra Store Gift Card</h3>
-                        <div className="text-4xl font-bold">${finalAmount.toFixed(2)}</div>
-                        <div className="bg-white/20 px-4 py-2 rounded-lg">
-                          <p className="text-sm opacity-90">To: {recipientName || 'Recipient Name'}</p>
-                          <p className="text-sm opacity-90">From: {senderName || 'Your Name'}</p>
-                        </div>
-                        {message && (
-                          <div className="bg-white/10 p-4 rounded-lg">
-                            <p className="text-sm italic">"{message}"</p>
+            {/* My Gift Cards */}
+            <Card>
+              <CardHeader>
+                <CardTitle>My Gift Cards</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {!user ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground mb-4">
+                      Please log in to view your gift cards
+                    </p>
+                    <Button onClick={() => window.location.href = '/auth'}>
+                      Log In
+                    </Button>
+                  </div>
+                ) : giftCards.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Gift className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No Gift Cards</h3>
+                    <p className="text-muted-foreground">
+                      You haven't purchased any gift cards yet.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {giftCards.map((card: any) => (
+                      <div key={card.id} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-mono text-lg font-bold">{card.code}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Created: {new Date(card.created_at).toLocaleDateString()}
+                            </p>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Owned Gift Cards */}
-                {user && ownedGiftCards.length > 0 && (
-                  <Card className="animate-slide-in-up card-premium border-gradient">
-                    <CardHeader>
-                      <CardTitle className="text-2xl flex items-center gap-2">
-                        <Star className="h-6 w-6 text-yellow-600" />
-                        Your Gift Cards
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {ownedGiftCards.map((card, index) => (
-                          <div
-                            key={card.id}
-                            className="p-4 border rounded-xl hover:shadow-lg transition-all duration-300 animate-fade-in hover-3d-lift"
-                            style={{animationDelay: `${index * 100}ms`}}
-                          >
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <p className="font-semibold">{card.code}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  Balance: ${Number(card.amount).toFixed(2)}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  To: {card.recipient_email}
-                                </p>
-                              </div>
-                              <Badge variant={Number(card.amount) > 0 ? "default" : "secondary"}>
-                                {Number(card.amount) > 0 ? "Active" : "Used"}
-                              </Badge>
+                          <div className="text-right">
+                            <p className="text-2xl font-bold text-primary">${card.amount}</p>
+                            <div className="flex items-center gap-1 text-sm">
+                              <Check className="h-4 w-4 text-green-500" />
+                              <span className={card.is_active ? 'text-green-600' : 'text-red-600'}>
+                                {card.is_active ? 'Active' : 'Inactive'}
+                              </span>
                             </div>
                           </div>
-                        ))}
+                        </div>
+
+                        {card.recipient_email && (
+                          <p className="text-sm">
+                            <span className="font-medium">Recipient:</span> {card.recipient_email}
+                          </p>
+                        )}
+
+                        {card.message && (
+                          <p className="text-sm">
+                            <span className="font-medium">Message:</span> {card.message}
+                          </p>
+                        )}
+
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              navigator.clipboard.writeText(card.code);
+                              toast({ title: "Code copied to clipboard!" });
+                            }}
+                          >
+                            Copy Code
+                          </Button>
+                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    ))}
+                  </div>
                 )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* How to Use */}
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle>How to Use Gift Cards</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                <div>
+                  <div className="p-4 bg-primary/10 rounded-full w-fit mx-auto mb-4">
+                    <Gift className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="font-medium mb-2">1. Purchase</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Choose an amount and purchase your gift card
+                  </p>
+                </div>
+                
+                <div>
+                  <div className="p-4 bg-primary/10 rounded-full w-fit mx-auto mb-4">
+                    <CreditCard className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="font-medium mb-2">2. Receive Code</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Get your unique gift card code immediately
+                  </p>
+                </div>
+                
+                <div>
+                  <div className="p-4 bg-primary/10 rounded-full w-fit mx-auto mb-4">
+                    <Check className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="font-medium mb-2">3. Redeem</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Use the code at checkout to apply the balance
+                  </p>
+                </div>
               </div>
-            </div>
-          </Container>
+            </CardContent>
+          </Card>
         </div>
-        
-        <Footer />
-      </div>
-    </>
+      </Container>
+      
+      <Footer />
+    </div>
   );
 };
 
