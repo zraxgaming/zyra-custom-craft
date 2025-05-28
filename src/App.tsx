@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,6 +19,12 @@ import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import OrderSuccess from "./pages/OrderSuccess";
 import Wishlist from "./pages/Wishlist";
+import GiftCards from "./pages/GiftCards";
+import Newsletter from "./pages/Newsletter";
+import Contact from "./pages/Contact";
+import About from "./pages/About";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -61,6 +66,12 @@ const App = () => (
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/wishlist" element={<Wishlist />} />
+                  <Route path="/gift-cards" element={<GiftCards />} />
+                  <Route path="/newsletter" element={<Newsletter />} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/terms" element={<TermsOfService />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/order-success/:orderId" element={<OrderSuccess />} />
                   
                   {/* Admin Routes */}

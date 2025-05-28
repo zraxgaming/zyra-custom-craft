@@ -41,10 +41,10 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from('wishlist_items')
+        .from('wishlists')
         .select(`
           *,
-          products!wishlist_items_product_id_fkey (
+          products!wishlists_product_id_fkey (
             id,
             name,
             price,
@@ -95,7 +95,7 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const addItem = async (newItem: Omit<WishlistItem, 'id'>) => {
     const existingItem = items.find(item => item.productId === newItem.productId);
-    if (existingItem) return; // Item already in wishlist
+    if (existingItem) return;
 
     const wishlistItem: WishlistItem = {
       ...newItem,
@@ -116,13 +116,11 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!user) return;
 
     try {
-      // Clear existing wishlist items
       await supabase
-        .from('wishlist_items')
+        .from('wishlists')
         .delete()
         .eq('user_id', user.id);
 
-      // Insert new wishlist items
       const wishlistData = wishlistItems.map(item => ({
         user_id: user.id,
         product_id: item.productId
@@ -130,7 +128,7 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (wishlistData.length > 0) {
         const { error } = await supabase
-          .from('wishlist_items')
+          .from('wishlists')
           .insert(wishlistData);
 
         if (error) throw error;
