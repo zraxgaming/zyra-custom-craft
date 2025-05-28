@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock, User, Sparkles, ArrowRight, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import GoogleSignIn from "./GoogleSignIn";
 
 const EnhancedAuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -76,37 +77,34 @@ const EnhancedAuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20 flex items-center justify-center p-4">
-      {/* Animated Background Pattern */}
-      <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.05] pointer-events-none">
-        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="auth-pattern" x="0" y="0" width="120" height="120" patternUnits="userSpaceOnUse">
-              <circle cx="60" cy="60" r="50" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.3"/>
-              <circle cx="60" cy="60" r="25" fill="none" stroke="currentColor" strokeWidth="0.3" opacity="0.4"/>
-              <circle cx="60" cy="60" r="8" fill="currentColor" opacity="0.2"/>
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#auth-pattern)"/>
-        </svg>
-      </div>
-
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900/20 flex items-center justify-center p-4">
       <div className="relative z-10 w-full max-w-md">
-        <Card className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-purple-200/50 dark:border-purple-800/50 shadow-2xl animate-scale-in">
+        <Card className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-slate-200/50 dark:border-slate-800/50 shadow-2xl">
           <CardHeader className="text-center space-y-4 pb-8">
             <div className="mx-auto relative">
-              <div className="absolute -inset-3 bg-gradient-to-r from-purple-600/20 via-pink-600/20 to-purple-800/20 rounded-full blur-xl animate-pulse"></div>
-              <div className="relative bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 p-4 rounded-2xl border border-purple-200/50 dark:border-purple-800/50">
-                <Sparkles className="h-8 w-8 text-purple-600 animate-wiggle" />
+              <div className="absolute -inset-3 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-blue-800/20 rounded-full blur-xl"></div>
+              <div className="relative bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/50 dark:to-purple-900/50 p-4 rounded-2xl border border-blue-200/50 dark:border-blue-800/50">
+                <Sparkles className="h-8 w-8 text-blue-600" />
               </div>
             </div>
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-purple-800 bg-clip-text text-transparent">
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 bg-clip-text text-transparent">
               Welcome to Zyra
             </CardTitle>
             <p className="text-gray-600 dark:text-gray-400">Create your account or sign in to continue</p>
           </CardHeader>
           
           <CardContent>
+            <GoogleSignIn />
+            
+            <div className="relative mb-6">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-gray-200 dark:border-gray-700" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white dark:bg-gray-900 px-2 text-gray-500">Or continue with email</span>
+              </div>
+            </div>
+
             <Tabs defaultValue="signin" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-8 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
                 <TabsTrigger value="signin" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-md transition-all duration-300">
@@ -119,7 +117,7 @@ const EnhancedAuthPage = () => {
 
               <TabsContent value="signin" className="space-y-6">
                 <form onSubmit={handleSignIn} className="space-y-6">
-                  <div className="space-y-2 animate-slide-in-left" style={{animationDelay: '0.1s'}}>
+                  <div className="space-y-2">
                     <Label htmlFor="signin-email" className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                       <Mail className="h-4 w-4" />
                       Email Address
@@ -131,11 +129,11 @@ const EnhancedAuthPage = () => {
                       value={signInData.email}
                       onChange={(e) => setSignInData(prev => ({ ...prev, email: e.target.value }))}
                       required
-                      className="h-12 bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200 dark:border-gray-700 focus:border-purple-500 dark:focus:border-purple-400 transition-all duration-300 rounded-xl"
+                      className="h-12 bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-300 rounded-xl"
                     />
                   </div>
                   
-                  <div className="space-y-2 animate-slide-in-right" style={{animationDelay: '0.2s'}}>
+                  <div className="space-y-2">
                     <Label htmlFor="signin-password" className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                       <Lock className="h-4 w-4" />
                       Password
@@ -148,7 +146,7 @@ const EnhancedAuthPage = () => {
                         value={signInData.password}
                         onChange={(e) => setSignInData(prev => ({ ...prev, password: e.target.value }))}
                         required
-                        className="h-12 bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200 dark:border-gray-700 focus:border-purple-500 dark:focus:border-purple-400 transition-all duration-300 rounded-xl pr-12"
+                        className="h-12 bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-300 rounded-xl pr-12"
                       />
                       <Button
                         type="button"
@@ -164,9 +162,8 @@ const EnhancedAuthPage = () => {
                   
                   <Button 
                     type="submit" 
-                    className="w-full h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 animate-bounce-in group" 
+                    className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group" 
                     disabled={isLoading}
-                    style={{animationDelay: '0.3s'}}
                   >
                     {isLoading ? (
                       <div className="flex items-center gap-3">
@@ -187,7 +184,7 @@ const EnhancedAuthPage = () => {
               <TabsContent value="signup" className="space-y-6">
                 <form onSubmit={handleSignUp} className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2 animate-slide-in-left" style={{animationDelay: '0.1s'}}>
+                    <div className="space-y-2">
                       <Label htmlFor="first-name" className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                         <User className="h-4 w-4" />
                         First Name
@@ -199,10 +196,10 @@ const EnhancedAuthPage = () => {
                         value={signUpData.firstName}
                         onChange={(e) => setSignUpData(prev => ({ ...prev, firstName: e.target.value }))}
                         required
-                        className="h-12 bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200 dark:border-gray-700 focus:border-purple-500 dark:focus:border-purple-400 transition-all duration-300 rounded-xl"
+                        className="h-12 bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-300 rounded-xl"
                       />
                     </div>
-                    <div className="space-y-2 animate-slide-in-right" style={{animationDelay: '0.2s'}}>
+                    <div className="space-y-2">
                       <Label htmlFor="last-name" className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                         <User className="h-4 w-4" />
                         Last Name
@@ -214,12 +211,12 @@ const EnhancedAuthPage = () => {
                         value={signUpData.lastName}
                         onChange={(e) => setSignUpData(prev => ({ ...prev, lastName: e.target.value }))}
                         required
-                        className="h-12 bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200 dark:border-gray-700 focus:border-purple-500 dark:focus:border-purple-400 transition-all duration-300 rounded-xl"
+                        className="h-12 bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-300 rounded-xl"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-2 animate-fade-in" style={{animationDelay: '0.3s'}}>
+                  <div className="space-y-2">
                     <Label htmlFor="signup-email" className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                       <Mail className="h-4 w-4" />
                       Email Address
@@ -231,11 +228,11 @@ const EnhancedAuthPage = () => {
                       value={signUpData.email}
                       onChange={(e) => setSignUpData(prev => ({ ...prev, email: e.target.value }))}
                       required
-                      className="h-12 bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200 dark:border-gray-700 focus:border-purple-500 dark:focus:border-purple-400 transition-all duration-300 rounded-xl"
+                      className="h-12 bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-300 rounded-xl"
                     />
                   </div>
                   
-                  <div className="space-y-2 animate-fade-in" style={{animationDelay: '0.4s'}}>
+                  <div className="space-y-2">
                     <Label htmlFor="signup-password" className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                       <Lock className="h-4 w-4" />
                       Password
@@ -248,7 +245,7 @@ const EnhancedAuthPage = () => {
                         value={signUpData.password}
                         onChange={(e) => setSignUpData(prev => ({ ...prev, password: e.target.value }))}
                         required
-                        className="h-12 bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200 dark:border-gray-700 focus:border-purple-500 dark:focus:border-purple-400 transition-all duration-300 rounded-xl pr-12"
+                        className="h-12 bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-300 rounded-xl pr-12"
                       />
                       <Button
                         type="button"
@@ -262,7 +259,7 @@ const EnhancedAuthPage = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-2 animate-fade-in" style={{animationDelay: '0.5s'}}>
+                  <div className="space-y-2">
                     <Label htmlFor="confirm-password" className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                       <Lock className="h-4 w-4" />
                       Confirm Password
@@ -274,15 +271,14 @@ const EnhancedAuthPage = () => {
                       value={signUpData.confirmPassword}
                       onChange={(e) => setSignUpData(prev => ({ ...prev, confirmPassword: e.target.value }))}
                       required
-                      className="h-12 bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200 dark:border-gray-700 focus:border-purple-500 dark:focus:border-purple-400 transition-all duration-300 rounded-xl"
+                      className="h-12 bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-300 rounded-xl"
                     />
                   </div>
                   
                   <Button 
                     type="submit" 
-                    className="w-full h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 animate-bounce-in group" 
+                    className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group" 
                     disabled={isLoading}
-                    style={{animationDelay: '0.6s'}}
                   >
                     {isLoading ? (
                       <div className="flex items-center gap-3">

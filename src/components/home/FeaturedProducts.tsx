@@ -18,17 +18,23 @@ interface Product {
   image_url: string;
   category: string;
   featured: boolean;
+  images?: string[];
 }
 
-const FeaturedProducts = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+const FeaturedProducts = ({ products, isLoading }: { products?: Product[]; isLoading?: boolean }) => {
+  const [localProducts, setLocalProducts] = useState<Product[]>([]);
+  const [localLoading, setLocalLoading] = useState(true);
   const { addItem } = useCart();
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchFeaturedProducts();
-  }, []);
+    if (products) {
+      setLocalProducts(products);
+      setLocalLoading(isLoading || false);
+    } else {
+      fetchFeaturedProducts();
+    }
+  }, [products, isLoading]);
 
   const fetchFeaturedProducts = async () => {
     try {
@@ -39,17 +45,31 @@ const FeaturedProducts = () => {
         .limit(6);
 
       if (error) throw error;
-      setProducts(data || []);
+      
+      const transformedProducts = (data || []).map(product => ({
+        id: product.id,
+        name: product.name,
+        description: product.description || '',
+        price: product.price,
+        image_url: Array.isArray(product.images) && product.images.length > 0 
+          ? product.images[0] 
+          : '/placeholder.svg',
+        category: product.category || '',
+        featured: product.featured || false,
+        images: Array.isArray(product.images) ? product.images : []
+      }));
+      
+      setLocalProducts(transformedProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
-      setLoading(false);
+      setLocalLoading(false);
     }
   };
 
   const handleAddToCart = (product: Product) => {
     addItem({
-      id: product.id,
+      productId: product.id,
       name: product.name,
       price: product.price,
       image: product.image_url,
@@ -62,7 +82,7 @@ const FeaturedProducts = () => {
     });
   };
 
-  if (loading) {
+  if (localLoading) {
     return (
       <section className="py-20 bg-white dark:bg-gray-800">
         <Container>
@@ -86,7 +106,7 @@ const FeaturedProducts = () => {
           </p>
         </div>
 
-        {products.length === 0 ? (
+        {localProducts.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-600 dark:text-gray-300 mb-6">
               No featured products available at the moment.
@@ -101,7 +121,7 @@ const FeaturedProducts = () => {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-              {products.map((product, index) => (
+              {localProducts.map((product, index) => (
                 <Card 
                   key={product.id} 
                   className="group overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:scale-105 animate-fade-in"

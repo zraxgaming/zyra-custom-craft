@@ -39,7 +39,7 @@ const GoogleSignIn: React.FC = () => {
       variant="outline"
       onClick={handleGoogleSignIn}
       disabled={isLoading}
-      className="w-full"
+      className="w-full mb-4"
     >
       <Chrome className="h-4 w-4 mr-2" />
       {isLoading ? "Signing in..." : "Continue with Google"}

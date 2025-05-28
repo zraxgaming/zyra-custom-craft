@@ -135,6 +135,82 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  // Load cart items when user changes
+  useEffect(() => {
+    if (user) {
+      loadCartFromDatabase();
+    } else {
+      dispatch({ type: "CLEAR_CART" });
+    }
+  }, [user]);
+
+  // Save cart to database whenever items change
+  useEffect(() => {
+    if (user && state.items.length >= 0) {
+      saveCartToDatabase();
+    }
+  }, [state.items, user]);
+
+  const loadCartFromDatabase = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('cart_items')
+        .select(`
+          *,
+          products (name, price, images)
+        `)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      const cartItems: CartItem[] = (data || []).map(item => ({
+        id: item.id,
+        productId: item.product_id,
+        name: item.products?.name || 'Unknown Product',
+        price: item.products?.price || 0,
+        quantity: item.quantity,
+        customization: item.customization,
+        image: Array.isArray(item.products?.images) && item.products.images.length > 0 
+          ? item.products.images[0] 
+          : '/placeholder.svg'
+      }));
+
+      dispatch({ type: "SET_ITEMS", payload: cartItems });
+    } catch (error) {
+      console.error('Error loading cart:', error);
+    }
+  };
+
+  const saveCartToDatabase = async () => {
+    if (!user) return;
+
+    try {
+      // Delete existing cart items
+      await supabase
+        .from('cart_items')
+        .delete()
+        .eq('user_id', user.id);
+
+      // Insert current cart items
+      if (state.items.length > 0) {
+        const cartData = state.items.map(item => ({
+          user_id: user.id,
+          product_id: item.productId,
+          quantity: item.quantity,
+          customization: item.customization
+        }));
+
+        await supabase
+          .from('cart_items')
+          .insert(cartData);
+      }
+    } catch (error) {
+      console.error('Error saving cart:', error);
+    }
+  };
+
   const addToCart = async (productId: string, quantity: number, customization?: Record<string, any>) => {
     try {
       const { data: product, error } = await supabase
@@ -156,18 +232,18 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         price: product.price,
         quantity,
         customization,
-        image: Array.isArray(product.images) && product.images.length > 0 ? product.images[0] as string : undefined,
+        image: Array.isArray(product.images) && product.images.length > 0 
+          ? product.images[0] 
+          : '/placeholder.svg'
       };
 
       dispatch({ type: "ADD_ITEM", payload: cartItem });
-      dispatch({ type: "OPEN_CART" });
 
       toast({
-        title: "Added to cart!",
+        title: "Added to Cart",
         description: `${product.name} has been added to your cart.`,
       });
     } catch (error: any) {
-      console.error('Error adding to cart:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to add item to cart",
@@ -177,27 +253,12 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   };
 
   const addItem = async (item: Omit<CartItem, 'id'>) => {
-    try {
-      const cartItem: CartItem = {
-        ...item,
-        id: `${item.productId}-${Date.now()}`,
-      };
+    const cartItem: CartItem = {
+      ...item,
+      id: `${item.productId}-${Date.now()}`
+    };
 
-      dispatch({ type: "ADD_ITEM", payload: cartItem });
-      dispatch({ type: "OPEN_CART" });
-
-      toast({
-        title: "Added to cart!",
-        description: `${item.name} has been added to your cart.`,
-      });
-    } catch (error: any) {
-      console.error('Error adding item to cart:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add item to cart",
-        variant: "destructive",
-      });
-    }
+    dispatch({ type: "ADD_ITEM", payload: cartItem });
   };
 
   const removeFromCart = (itemId: string) => {
