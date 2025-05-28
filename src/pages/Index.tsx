@@ -2,6 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/layout/Navbar";
 import Hero from "@/components/home/Hero";
 import Categories from "@/components/home/Categories";
@@ -25,6 +26,7 @@ interface Product {
 
 const Index = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const { isAdmin } = useAuth();
   
   const { data: featuredProducts, isLoading } = useQuery({
     queryKey: ['featured-products'],
@@ -71,9 +73,9 @@ const Index = () => {
         </Container>
         <Footer />
         
-        {/* Customer Support Chatbot */}
+        {/* Show appropriate chatbot based on user role */}
         <ChatBot 
-          type="customer" 
+          type={isAdmin ? "admin" : "customer"} 
           isOpen={isChatOpen} 
           onToggle={() => setIsChatOpen(!isChatOpen)} 
         />

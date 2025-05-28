@@ -21,8 +21,14 @@ interface CartContextType {
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
   total: number;
+  subtotal: number;
   itemCount: number;
+  totalItems: number;
+  totalPrice: number;
   isLoading: boolean;
+  isOpen: boolean;
+  toggleCart: () => void;
+  removeFromCart: (productId: string) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -30,6 +36,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -172,6 +179,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const removeFromCart = removeItem;
+
   const updateQuantity = async (productId: string, quantity: number) => {
     if (quantity <= 0) {
       removeItem(productId);
@@ -208,19 +217,30 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const toggleCart = () => setIsOpen(!isOpen);
+
   const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const subtotal = total;
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalItems = itemCount;
+  const totalPrice = total;
 
   return (
     <CartContext.Provider value={{
       items,
       addItem,
       removeItem,
+      removeFromCart,
       updateQuantity,
       clearCart,
       total,
+      subtotal,
       itemCount,
-      isLoading
+      totalItems,
+      totalPrice,
+      isLoading,
+      isOpen,
+      toggleCart
     }}>
       {children}
     </CartContext.Provider>
