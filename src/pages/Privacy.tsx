@@ -1,175 +1,208 @@
 
-import React from 'react';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
-import { Container } from '@/components/ui/container';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Shield, Eye, Lock, UserCheck, FileText, Mail } from 'lucide-react';
-import SEOHead from '@/components/seo/SEOHead';
+import React from "react";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import { Container } from "@/components/ui/container";
+import SEOHead from "@/components/seo/SEOHead";
+import { Card, CardContent } from "@/components/ui/card";
+import { Shield, Eye, Lock, Users, Mail, Phone, MapPin, Clock, AlertTriangle, CheckCircle } from "lucide-react";
 
 const Privacy = () => {
+  const sections = [
+    {
+      icon: <Eye className="h-6 w-6" />,
+      title: "Information We Collect",
+      content: [
+        "Personal information you provide when creating an account or making purchases",
+        "Payment and billing information for order processing",
+        "Communication preferences and contact details",
+        "Usage data and website interaction analytics",
+        "Device information and technical specifications"
+      ]
+    },
+    {
+      icon: <Lock className="h-6 w-6" />,
+      title: "How We Use Your Information",
+      content: [
+        "Process and fulfill your orders and customization requests",
+        "Provide customer support and respond to inquiries",
+        "Send important updates about your orders and account",
+        "Improve our products and services based on user feedback",
+        "Comply with legal obligations and prevent fraud"
+      ]
+    },
+    {
+      icon: <Users className="h-6 w-6" />,
+      title: "Information Sharing",
+      content: [
+        "We never sell your personal information to third parties",
+        "Trusted payment processors for secure transaction handling",
+        "Shipping partners for order delivery purposes only",
+        "Legal authorities when required by law or to protect rights",
+        "Service providers who help us operate our platform securely"
+      ]
+    },
+    {
+      icon: <Shield className="h-6 w-6" />,
+      title: "Data Security",
+      content: [
+        "Industry-standard encryption for all sensitive data",
+        "Secure payment processing through verified providers",
+        "Regular security audits and system updates",
+        "Limited access controls for employee data handling",
+        "Secure backup systems and data recovery procedures"
+      ]
+    },
+    {
+      icon: <CheckCircle className="h-6 w-6" />,
+      title: "Your Rights",
+      content: [
+        "Access and review your personal information",
+        "Request corrections to inaccurate data",
+        "Delete your account and associated data",
+        "Opt-out of marketing communications",
+        "Download your data in a portable format"
+      ]
+    },
+    {
+      icon: <Mail className="h-6 w-6" />,
+      title: "Contact Us",
+      content: [
+        "Email us at privacy@zyracustomcraft.com for privacy concerns",
+        "Call our support team during business hours",
+        "Visit our physical location in Dubai, UAE",
+        "Submit a privacy request through your account dashboard",
+        "Follow up on any data protection inquiries"
+      ]
+    }
+  ];
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20">
       <SEOHead 
         title="Privacy Policy - Zyra Custom Craft"
-        description="Read our comprehensive privacy policy to understand how we collect, use, and protect your personal information at Zyra Custom Craft."
+        description="Learn how Zyra Custom Craft protects your privacy and handles your personal information. Our comprehensive privacy policy explains our data practices."
+        url="https://shopzyra.vercel.app/privacy"
       />
+      
       <Navbar />
       
-      <div className="py-12 animate-fade-in">
-        <Container>
-          <div className="text-center mb-12 animate-scale-in">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-6">
-              <Shield className="h-8 w-8 text-primary" />
+      <Container className="py-20">
+        <div className="max-w-4xl mx-auto animate-fade-in">
+          {/* Header */}
+          <div className="text-center mb-16 animate-bounce-in">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full mb-8 animate-pulse-glow shadow-2xl">
+              <Shield className="h-10 w-10 text-white animate-float" />
             </div>
-            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-text-shimmer">
               Privacy Policy
             </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-300 animate-slide-in-up">
               Your privacy is important to us. This policy explains how we collect, use, and protect your information.
             </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Last updated: December 2024
-            </p>
-          </div>
-
-          <div className="grid gap-8 max-w-4xl mx-auto">
-            <Card className="animate-slide-in-up hover:shadow-lg transition-all duration-300" style={{animationDelay: '100ms'}}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <Eye className="h-6 w-6 text-primary" />
-                  Information We Collect
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h4 className="font-semibold mb-2">Personal Information</h4>
-                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                    <li>Name, email address, and contact information</li>
-                    <li>Billing and shipping addresses</li>
-                    <li>Payment information (processed securely through our payment partners)</li>
-                    <li>Account preferences and settings</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">Usage Information</h4>
-                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                    <li>Pages visited and time spent on our website</li>
-                    <li>Products viewed and purchased</li>
-                    <li>Search queries and interactions</li>
-                    <li>Device information and browser details</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="animate-slide-in-up hover:shadow-lg transition-all duration-300" style={{animationDelay: '200ms'}}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <UserCheck className="h-6 w-6 text-primary" />
-                  How We Use Your Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-                  <li>Process and fulfill your orders</li>
-                  <li>Provide customer support and respond to inquiries</li>
-                  <li>Send order confirmations and shipping updates</li>
-                  <li>Improve our products and services</li>
-                  <li>Send promotional emails (with your consent)</li>
-                  <li>Prevent fraud and ensure platform security</li>
-                  <li>Comply with legal obligations</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card className="animate-slide-in-up hover:shadow-lg transition-all duration-300" style={{animationDelay: '300ms'}}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <Lock className="h-6 w-6 text-primary" />
-                  Data Protection & Security
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-muted-foreground">
-                  We implement industry-standard security measures to protect your personal information:
-                </p>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                  <li>SSL encryption for all data transmission</li>
-                  <li>Secure payment processing through trusted partners</li>
-                  <li>Regular security audits and updates</li>
-                  <li>Limited access to personal data on a need-to-know basis</li>
-                  <li>Data backup and recovery procedures</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card className="animate-slide-in-up hover:shadow-lg transition-all duration-300" style={{animationDelay: '400ms'}}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <FileText className="h-6 w-6 text-primary" />
-                  Your Rights
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="font-semibold mb-2">Access & Control</h4>
-                    <ul className="list-disc list-inside space-y-1 text-muted-foreground text-sm">
-                      <li>Request a copy of your data</li>
-                      <li>Update or correct your information</li>
-                      <li>Delete your account and data</li>
-                      <li>Opt out of marketing communications</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold mb-2">Data Portability</h4>
-                    <ul className="list-disc list-inside space-y-1 text-muted-foreground text-sm">
-                      <li>Export your data in a readable format</li>
-                      <li>Transfer data to another service</li>
-                      <li>Request data processing restrictions</li>
-                      <li>Object to certain data processing</li>
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="animate-slide-in-up hover:shadow-lg transition-all duration-300" style={{animationDelay: '500ms'}}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <Mail className="h-6 w-6 text-primary" />
-                  Contact Us
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">
-                  If you have any questions about this Privacy Policy or how we handle your data, please contact us:
-                </p>
-                <div className="space-y-2">
-                  <p><strong>Email:</strong> privacy@zyracustomcraft.com</p>
-                  <p><strong>Address:</strong> 123 Craft Street, Dubai, UAE</p>
-                  <p><strong>Phone:</strong> +971 XX XXX XXXX</p>
-                </div>
-                <p className="text-sm text-muted-foreground mt-4">
-                  We will respond to your inquiry within 30 days.
-                </p>
-              </CardContent>
-            </Card>
-
-            <div className="text-center animate-fade-in">
-              <div className="bg-primary/5 rounded-lg p-6 border border-primary/10">
-                <h3 className="font-semibold mb-2">Policy Updates</h3>
-                <p className="text-muted-foreground text-sm">
-                  We may update this Privacy Policy from time to time. We will notify you of any material changes 
-                  by posting the new policy on this page and updating the "Last updated" date. Please review this 
-                  policy periodically for any changes.
-                </p>
-              </div>
+            <div className="flex items-center justify-center gap-2 mt-6 animate-fade-in" style={{animationDelay: '0.3s'}}>
+              <Clock className="h-5 w-5 text-blue-500" />
+              <span className="text-sm text-gray-500 dark:text-gray-400">Last updated: December 2024</span>
             </div>
           </div>
-        </Container>
-      </div>
+
+          {/* Introduction */}
+          <Card className="mb-12 animate-scale-in bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 border-blue-200 dark:border-blue-800">
+            <CardContent className="p-8">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center flex-shrink-0 animate-float">
+                  <AlertTriangle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold mb-4 text-blue-800 dark:text-blue-200">Important Notice</h2>
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                    At Zyra Custom Craft, we are committed to protecting your privacy and ensuring the security of your personal information. 
+                    This privacy policy applies to all services provided through our website and describes how we handle your data with care and transparency.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Sections */}
+          <div className="space-y-8">
+            {sections.map((section, index) => (
+              <Card 
+                key={index} 
+                className="animate-slide-in-up hover:shadow-xl transition-all duration-500 hover:-translate-y-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-0 shadow-lg overflow-hidden group"
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <CardContent className="p-8">
+                  <div className="flex items-start gap-6">
+                    <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/50 dark:to-blue-900/50 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300 animate-pulse-glow">
+                      <div className="text-purple-600 dark:text-purple-400 animate-float">
+                        {section.icon}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300">
+                        {section.title}
+                      </h3>
+                      <ul className="space-y-4">
+                        {section.content.map((item, itemIndex) => (
+                          <li 
+                            key={itemIndex} 
+                            className="flex items-start gap-3 text-gray-700 dark:text-gray-300 animate-fade-in"
+                            style={{animationDelay: `${(index * 0.1) + (itemIndex * 0.05)}s`}}
+                          >
+                            <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full mt-2 flex-shrink-0 animate-pulse"></div>
+                            <span className="leading-relaxed group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-300">
+                              {item}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Contact Section */}
+          <Card className="mt-16 animate-bounce-in bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-600 text-white border-0 shadow-2xl overflow-hidden">
+            <CardContent className="p-8 relative">
+              <div className="absolute inset-0 bg-white/10 animate-shimmer"></div>
+              <div className="relative z-10">
+                <h3 className="text-3xl font-bold mb-6 text-center animate-text-glow">
+                  Have Privacy Questions?
+                </h3>
+                <p className="text-xl text-center mb-8 opacity-90">
+                  We're here to help with any privacy-related concerns or questions you may have.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="text-center animate-scale-in" style={{animationDelay: '0.1s'}}>
+                    <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-float">
+                      <Mail className="h-8 w-8" />
+                    </div>
+                    <p className="font-semibold">Email Us</p>
+                    <p className="text-sm opacity-80">privacy@zyra.com</p>
+                  </div>
+                  <div className="text-center animate-scale-in" style={{animationDelay: '0.2s'}}>
+                    <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-float-reverse">
+                      <Phone className="h-8 w-8" />
+                    </div>
+                    <p className="font-semibold">Call Us</p>
+                    <p className="text-sm opacity-80">+971 50 123 4567</p>
+                  </div>
+                  <div className="text-center animate-scale-in" style={{animationDelay: '0.3s'}}>
+                    <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-float">
+                      <MapPin className="h-8 w-8" />
+                    </div>
+                    <p className="font-semibold">Visit Us</p>
+                    <p className="text-sm opacity-80">Dubai, UAE</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </Container>
       
       <Footer />
     </div>

@@ -12,7 +12,6 @@ import MaintenanceBanner from "@/components/layout/MaintenanceBanner";
 import OnlineStatus from "@/components/layout/OnlineStatus";
 
 // Pages
-import Index from "@/pages/Index";
 import Home from "@/pages/Home";
 import Shop from "@/pages/Shop";
 import Product from "@/pages/Product";
@@ -24,7 +23,6 @@ import Terms from "@/pages/Terms";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import Wishlist from "@/pages/Wishlist";
-import Account from "@/pages/Account";
 import Checkout from "@/pages/Checkout";
 import GiftCards from "@/pages/GiftCards";
 import OrderSuccess from "@/pages/OrderSuccess";
@@ -69,7 +67,6 @@ function App() {
                     <Route path="/" element={<Navigate to="/home" replace />} />
                     
                     {/* Public Pages */}
-                    <Route path="/index" element={<Index />} />
                     <Route path="/home" element={<Home />} />
                     <Route path="/shop" element={<Shop />} />
                     <Route path="/product/:slug" element={<Product />} />
@@ -83,9 +80,8 @@ function App() {
                     {/* Auth Pages */}
                     <Route path="/auth" element={<Auth />} />
                     
-                    {/* User Dashboard & Account */}
+                    {/* User Dashboard */}
                     <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/account" element={<Account />} />
                     <Route path="/wishlist" element={<Wishlist />} />
                     <Route path="/referrals" element={<Referrals />} />
                     
