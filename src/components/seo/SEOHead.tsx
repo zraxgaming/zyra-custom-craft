@@ -9,6 +9,7 @@ interface SEOHeadProps {
   image?: string;
   type?: string;
   siteName?: string;
+  keywords?: string;
 }
 
 const SEOHead: React.FC<SEOHeadProps> = ({
@@ -17,13 +18,15 @@ const SEOHead: React.FC<SEOHeadProps> = ({
   url = 'https://shopzyra.vercel.app',
   image = 'https://shopzyra.vercel.app/og-image.jpg',
   type = 'website',
-  siteName = 'Zyra Custom Craft'
+  siteName = 'Zyra Custom Craft',
+  keywords = 'custom products, personalized gifts, crafting, UAE, customization, premium quality'
 }) => {
   return (
     <Helmet>
       {/* Basic SEO */}
       <title>{title}</title>
       <meta name="description" content={description} />
+      <meta name="keywords" content={keywords} />
       <meta name="robots" content="index, follow" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <link rel="canonical" href={url} />
@@ -46,7 +49,6 @@ const SEOHead: React.FC<SEOHeadProps> = ({
 
       {/* Additional SEO */}
       <meta name="author" content="Zyra Custom Craft" />
-      <meta name="keywords" content="custom products, personalized gifts, crafting, UAE, customization, premium quality" />
       <meta name="theme-color" content="#9333ea" />
       
       {/* Structured Data */}

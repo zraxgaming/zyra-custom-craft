@@ -36,17 +36,17 @@ import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminProducts from "@/pages/admin/AdminProducts";
 import ProductNew from "@/pages/admin/ProductNew";
 import ProductEdit from "@/pages/admin/ProductEdit";
-import AdminCategories from "@/pages/admin/Categories";
-import AdminInventory from "@/pages/admin/Inventory";
-import AdminOrders from "@/pages/admin/Orders";
-import AdminUsers from "@/pages/admin/Users";
-import AdminGiftCards from "@/pages/admin/GiftCards";
+import AdminCategories from "@/pages/admin/AdminCategories";
+import AdminInventory from "@/pages/admin/AdminInventory";
+import AdminOrders from "@/pages/admin/AdminOrders";
+import AdminUsers from "@/pages/admin/AdminUsers";
+import AdminGiftCards from "@/pages/admin/AdminGiftCards";
 import AdminZiina from "@/pages/admin/AdminZiina";
-import AdminScanner from "@/pages/admin/Scanner";
-import AdminAnalytics from "@/pages/admin/Analytics";
-import AdminSettings from "@/pages/admin/Settings";
+import AdminScanner from "@/pages/admin/AdminScanner";
+import AdminAnalytics from "@/pages/admin/AdminAnalytics";
+import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminNewsletter from "@/pages/admin/AdminNewsletter";
-import AdminBarcodes from "@/pages/admin/Barcodes";
+import AdminBarcodes from "@/pages/admin/AdminBarcodes";
 
 import "./index.css";
 

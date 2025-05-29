@@ -6,9 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Mail, Send, Users, Plus } from "lucide-react";
+import { Mail, Send, Users, Plus, Phone } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
+import PhoneCallInterface from "@/components/admin/PhoneCallInterface";
 import { sendEmailDirect } from '@/utils/sendgrid';
+import SEOHead from "@/components/seo/SEOHead";
 
 interface Newsletter {
   id: string;
