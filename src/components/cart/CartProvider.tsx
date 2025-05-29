@@ -18,8 +18,14 @@ interface CartContextType {
   items: CartItem[];
   isLoading: boolean;
   subtotal: number;
+  isOpen: boolean;
+  toggleCart: () => void;
+  totalItems: number;
+  totalPrice: number;
   addToCart: (item: Omit<CartItem, 'id'>) => Promise<void>;
+  addItem: (item: Omit<CartItem, 'id'>) => Promise<void>;
   removeFromCart: (itemId: string) => Promise<void>;
+  removeItem: (itemId: string) => Promise<void>;
   updateQuantity: (itemId: string, quantity: number) => Promise<void>;
   clearCart: () => Promise<void>;
 }
@@ -39,6 +45,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -47,6 +54,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setItems([]);
     }
   }, [user]);
+
+  const toggleCart = () => setIsOpen(!isOpen);
 
   const fetchCartItems = async () => {
     if (!user) return;
@@ -60,7 +69,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           product_id,
           quantity,
           customization,
-          products:product_id (
+          products:products!cart_items_product_id_fkey (
             name,
             price,
             images
@@ -131,6 +140,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const addItem = addToCart; // Alias for compatibility
+
   const removeFromCart = async (itemId: string) => {
     if (!user) return;
 
@@ -147,6 +158,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error removing from cart:', error);
     }
   };
+
+  const removeItem = removeFromCart; // Alias for compatibility
 
   const updateQuantity = async (itemId: string, quantity: number) => {
     if (!user) return;
@@ -187,6 +200,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = subtotal;
 
   return (
     <CartContext.Provider
@@ -194,8 +209,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         items,
         isLoading,
         subtotal,
+        isOpen,
+        toggleCart,
+        totalItems,
+        totalPrice,
         addToCart,
+        addItem,
         removeFromCart,
+        removeItem,
         updateQuantity,
         clearCart,
       }}

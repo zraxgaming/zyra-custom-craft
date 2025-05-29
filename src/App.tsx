@@ -16,6 +16,7 @@ import Index from "@/pages/Index";
 import Home from "@/pages/Home";
 import Shop from "@/pages/Shop";
 import Product from "@/pages/Product";
+import Categories from "@/pages/Categories";
 import About from "@/pages/About";
 import Contact from "@/pages/Contact";
 import Privacy from "@/pages/Privacy";
@@ -30,11 +31,11 @@ import OrderSuccess from "@/pages/OrderSuccess";
 import OrderFailed from "@/pages/OrderFailed";
 import Referrals from "@/pages/Referrals";
 import Newsletter from "@/pages/Newsletter";
-import NotFound from "@/pages/404";
+import NotFound from "@/pages/NotFound";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";
-import AdminProducts from "@/pages/admin/Products";
+import AdminProducts from "@/pages/admin/AdminProducts";
 import ProductNew from "@/pages/admin/ProductNew";
 import ProductEdit from "@/pages/admin/ProductEdit";
 import AdminCategories from "@/pages/admin/Categories";
@@ -72,6 +73,7 @@ function App() {
                     <Route path="/home" element={<Home />} />
                     <Route path="/shop" element={<Shop />} />
                     <Route path="/product/:slug" element={<Product />} />
+                    <Route path="/categories" element={<Categories />} />
                     <Route path="/about" element={<About />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/privacy" element={<Privacy />} />

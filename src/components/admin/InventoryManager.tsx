@@ -1,273 +1,252 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, Plus, Minus, AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
-
-interface InventoryItem {
-  id: string;
-  name: string;
-  sku: string;
-  stock_quantity: number;
-  price: number;
-  category: string;
-  status: string;
-}
+import { Product } from "@/types/product";
+import { Package, Search, TrendingUp, TrendingDown, AlertTriangle, Check } from "lucide-react";
 
 const InventoryManager = () => {
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedProduct, setSelectedProduct] = useState<string>("");
-  const [quantityChange, setQuantityChange] = useState<number>(0);
-  const [reason, setReason] = useState<string>("");
   const { toast } = useToast();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [updateQuantities, setUpdateQuantities] = useState<{[key: string]: string}>({});
 
   useEffect(() => {
-    fetchInventory();
+    fetchProducts();
   }, []);
 
-  const fetchInventory = async () => {
+  const fetchProducts = async () => {
     try {
       const { data, error } = await supabase
-        .from("products")
-        .select("id, name, sku, stock_quantity, price, category, status")
-        .eq("status", "published")
-        .order("stock_quantity", { ascending: true });
+        .from('products')
+        .select('*')
+        .order('stock_quantity', { ascending: true });
 
       if (error) throw error;
-      setInventory(data || []);
+
+      const transformedProducts: Product[] = (data || []).map(product => ({
+        ...product,
+        images: Array.isArray(product.images) 
+          ? product.images.filter(img => typeof img === 'string') as string[]
+          : [],
+        is_featured: product.is_featured || false,
+        is_customizable: product.is_customizable || false,
+        stock_quantity: product.stock_quantity || 0
+      }));
+
+      setProducts(transformedProducts);
     } catch (error: any) {
+      console.error('Error fetching products:', error);
       toast({
-        title: "Error fetching inventory",
-        description: error.message,
+        title: "Error",
+        description: "Failed to load inventory",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const updateStock = async (productId: string, change: number, type: 'increase' | 'decrease' | 'adjustment') => {
+  const updateStock = async (productId: string, newQuantity: number) => {
     try {
-      const product = inventory.find(p => p.id === productId);
-      if (!product) return;
+      const { error } = await supabase
+        .from('products')
+        .update({ 
+          stock_quantity: newQuantity,
+          in_stock: newQuantity > 0,
+          stock_status: newQuantity > 0 ? 'in_stock' : 'out_of_stock'
+        })
+        .eq('id', productId);
 
-      const newQuantity = Math.max(0, product.stock_quantity + change);
+      if (error) throw error;
 
-      const { error: updateError } = await supabase
-        .from("products")
-        .update({ stock_quantity: newQuantity })
-        .eq("id", productId);
-
-      if (updateError) throw updateError;
-
-      // Note: inventory_logs table will be created but we'll skip logging for now
-      // since it requires the table to be properly set up in types
-
+      await fetchProducts();
+      setUpdateQuantities(prev => ({ ...prev, [productId]: '' }));
+      
       toast({
-        title: "Stock updated",
-        description: `${product.name} stock updated to ${newQuantity}`,
+        title: "Success",
+        description: "Stock quantity updated successfully",
       });
-
-      fetchInventory();
-      setQuantityChange(0);
-      setReason("");
     } catch (error: any) {
+      console.error('Error updating stock:', error);
       toast({
-        title: "Error updating stock",
-        description: error.message,
+        title: "Error",
+        description: "Failed to update stock quantity",
         variant: "destructive",
       });
     }
   };
 
-  const getStockStatus = (quantity: number) => {
-    if (quantity === 0) return { label: "Out of Stock", variant: "destructive" as const, icon: AlertTriangle };
-    if (quantity < 10) return { label: "Low Stock", variant: "secondary" as const, icon: TrendingDown };
-    return { label: "In Stock", variant: "default" as const, icon: TrendingUp };
-  };
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.sku?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const lowStockCount = inventory.filter(item => item.stock_quantity < 10).length;
-  const outOfStockCount = inventory.filter(item => item.stock_quantity === 0).length;
-  const totalValue = inventory.reduce((sum, item) => sum + (item.stock_quantity * item.price), 0);
+  const lowStockProducts = products.filter(p => (p.stock_quantity || 0) < 10);
+  const outOfStockProducts = products.filter(p => (p.stock_quantity || 0) === 0);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8 animate-fade-in">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold text-foreground">Inventory Manager</h2>
-      </div>
-
+    <div className="space-y-8 animate-fade-in">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800 animate-scale-in">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-300">Total Products</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{inventory.length}</div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="border-0 shadow-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 hover:shadow-2xl transition-all duration-300 animate-slide-in-left">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-green-600 dark:text-green-400">Total Products</p>
+                <p className="text-3xl font-bold text-green-700 dark:text-green-300">{products.length}</p>
+              </div>
+              <Package className="h-12 w-12 text-green-500 animate-bounce" />
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800 animate-scale-in" style={{ animationDelay: '100ms' }}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-red-700 dark:text-red-300">Out of Stock</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-900 dark:text-red-100">{outOfStockCount}</div>
+        <Card className="border-0 shadow-xl bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 hover:shadow-2xl transition-all duration-300 animate-scale-in">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400">Low Stock</p>
+                <p className="text-3xl font-bold text-yellow-700 dark:text-yellow-300">{lowStockProducts.length}</p>
+              </div>
+              <TrendingDown className="h-12 w-12 text-yellow-500 animate-pulse" />
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 border-orange-200 dark:border-orange-800 animate-scale-in" style={{ animationDelay: '200ms' }}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-orange-700 dark:text-orange-300">Low Stock</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{lowStockCount}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800 animate-scale-in" style={{ animationDelay: '300ms' }}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-700 dark:text-green-300">Total Value</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-900 dark:text-green-100">${totalValue.toFixed(2)}</div>
+        <Card className="border-0 shadow-xl bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 hover:shadow-2xl transition-all duration-300 animate-slide-in-right">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-red-600 dark:text-red-400">Out of Stock</p>
+                <p className="text-3xl font-bold text-red-700 dark:text-red-300">{outOfStockProducts.length}</p>
+              </div>
+              <AlertTriangle className="h-12 w-12 text-red-500 animate-wiggle" />
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Stock Update */}
-      <Card className="bg-card border-border animate-slide-in-right" style={{ animationDelay: '400ms' }}>
-        <CardHeader>
-          <CardTitle className="text-foreground flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Quick Stock Update
+      {/* Search */}
+      <div className="relative animate-fade-in">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+        <Input
+          placeholder="Search products by name or SKU..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 h-12 text-lg border-2 focus:border-purple-500 transition-all duration-300 hover:shadow-lg"
+        />
+      </div>
+
+      {/* Products List */}
+      <Card className="border-0 shadow-2xl bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm animate-slide-in-up">
+        <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
+          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            Inventory Management
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <select
-              value={selectedProduct}
-              onChange={(e) => setSelectedProduct(e.target.value)}
-              className="px-3 py-2 border border-border rounded-md bg-background text-foreground"
-            >
-              <option value="">Select Product</option>
-              {inventory.map((product) => (
-                <option key={product.id} value={product.id}>
-                  {product.name} (Current: {product.stock_quantity})
-                </option>
-              ))}
-            </select>
-
-            <Input
-              type="number"
-              placeholder="Quantity change"
-              value={quantityChange || ""}
-              onChange={(e) => setQuantityChange(parseInt(e.target.value) || 0)}
-              className="bg-background text-foreground border-border"
-            />
-
-            <Input
-              placeholder="Reason (optional)"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="bg-background text-foreground border-border"
-            />
-
-            <div className="flex gap-2">
-              <Button
-                onClick={() => selectedProduct && updateStock(selectedProduct, Math.abs(quantityChange), 'increase')}
-                disabled={!selectedProduct || quantityChange <= 0}
-                size="sm"
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Add
-              </Button>
-              <Button
-                onClick={() => selectedProduct && updateStock(selectedProduct, -Math.abs(quantityChange), 'decrease')}
-                disabled={!selectedProduct || quantityChange <= 0}
-                size="sm"
-                variant="destructive"
-              >
-                <Minus className="h-4 w-4 mr-1" />
-                Remove
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Inventory Table */}
-      <Card className="bg-card border-border animate-fade-in" style={{ animationDelay: '500ms' }}>
-        <CardHeader>
-          <CardTitle className="text-foreground">Inventory Overview</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-border">
-                  <TableHead className="text-foreground">Product</TableHead>
-                  <TableHead className="text-foreground">SKU</TableHead>
-                  <TableHead className="text-foreground">Category</TableHead>
-                  <TableHead className="text-foreground">Stock</TableHead>
-                  <TableHead className="text-foreground">Status</TableHead>
-                  <TableHead className="text-foreground">Value</TableHead>
-                  <TableHead className="text-foreground">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {inventory.map((item, index) => {
-                  const status = getStockStatus(item.stock_quantity);
-                  const StatusIcon = status.icon;
-                  return (
-                    <TableRow key={item.id} className="border-border animate-fade-in" style={{ animationDelay: `${600 + index * 50}ms` }}>
-                      <TableCell className="font-medium text-foreground">{item.name}</TableCell>
-                      <TableCell className="text-foreground">{item.sku || '—'}</TableCell>
-                      <TableCell className="text-foreground">{item.category}</TableCell>
-                      <TableCell className="text-foreground font-mono">{item.stock_quantity}</TableCell>
-                      <TableCell>
-                        <Badge variant={status.variant} className="flex items-center gap-1 w-fit">
-                          <StatusIcon className="h-3 w-3" />
-                          {status.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-foreground">${(item.stock_quantity * item.price).toFixed(2)}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateStock(item.id, 1, 'increase')}
-                            className="h-7 w-7 p-0"
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateStock(item.id, -1, 'decrease')}
-                            disabled={item.stock_quantity === 0}
-                            className="h-7 w-7 p-0"
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Product</th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">SKU</th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Current Stock</th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Update Stock</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredProducts.map((product, index) => (
+                  <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200 animate-fade-in" style={{animationDelay: `${index * 0.05}s`}}>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-4">
+                        <img
+                          src={product.images?.[0] || '/placeholder-product.jpg'}
+                          alt={product.name}
+                          className="w-12 h-12 rounded-lg object-cover border-2 border-gray-200 dark:border-gray-700 hover:scale-110 transition-transform duration-300"
+                        />
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-white hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+                            {product.name}
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">${product.price}</p>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-mono">
+                      {product.sku || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {product.stock_quantity || 0}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {(product.stock_quantity || 0) === 0 ? (
+                        <Badge variant="destructive" className="animate-pulse">
+                          Out of Stock
+                        </Badge>
+                      ) : (product.stock_quantity || 0) < 10 ? (
+                        <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400 animate-bounce">
+                          Low Stock
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                          <Check className="h-3 w-3 mr-1" />
+                          In Stock
+                        </Badge>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          type="number"
+                          placeholder="New quantity"
+                          value={updateQuantities[product.id] || ''}
+                          onChange={(e) => setUpdateQuantities(prev => ({ ...prev, [product.id]: e.target.value }))}
+                          className="w-32 h-10 border-2 focus:border-purple-500 transition-all duration-300"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            const quantity = parseInt(updateQuantities[product.id] || '0');
+                            if (!isNaN(quantity) && quantity >= 0) {
+                              updateStock(product.id, quantity);
+                            }
+                          }}
+                          disabled={!updateQuantities[product.id]}
+                          className="h-10 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all duration-300 hover:scale-105"
+                        >
+                          Update
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {filteredProducts.length === 0 && (
+            <div className="text-center py-12 animate-bounce-in">
+              <Package className="h-16 w-16 text-gray-400 mx-auto mb-4 animate-float" />
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Products Found</h3>
+              <p className="text-gray-500 dark:text-gray-400">Try adjusting your search terms.</p>
+            </div>
           )}
         </CardContent>
       </Card>
