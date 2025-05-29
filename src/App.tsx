@@ -82,6 +82,7 @@ function App() {
                     
                     {/* User Dashboard */}
                     <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/account" element={<Navigate to="/dashboard" replace />} />
                     <Route path="/wishlist" element={<Wishlist />} />
                     <Route path="/referrals" element={<Referrals />} />
                     

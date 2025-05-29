@@ -23,11 +23,15 @@ export interface CartItem {
 interface CartContextType {
   items: CartItem[];
   addToCart: (item: Omit<CartItem, "id">) => void;
+  addItem: (item: Omit<CartItem, "id">) => void; // Alias for addToCart
   removeFromCart: (itemId: string) => void;
+  removeItem: (itemId: string) => void; // Alias for removeFromCart
   updateQuantity: (itemId: string, quantity: number) => void;
   clearCart: () => void;
   itemCount: number;
+  totalItems: number; // Alias for itemCount
   subtotal: number;
+  totalPrice: number; // Alias for subtotal
   loading: boolean;
   isOpen: boolean;
   toggleCart: () => void;
@@ -46,7 +50,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (user) {
       loadCart();
     } else {
-      // Load from localStorage for guest users
       const savedCart = localStorage.getItem('cart');
       if (savedCart) {
         try {
@@ -58,7 +61,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [user]);
 
-  // Save to localStorage whenever items change (for guest users)
   useEffect(() => {
     if (!user) {
       localStorage.setItem('cart', JSON.stringify(items));
@@ -98,7 +100,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         image_url: Array.isArray(item.products?.images) && item.products.images.length > 0 
           ? String(item.products.images[0])
           : undefined,
-        customization: item.customization || undefined
+        customization: item.customization ? 
+          (typeof item.customization === 'object' ? item.customization as CartItem['customization'] : undefined) : 
+          undefined
       }));
 
       setItems(cartItems);
@@ -149,7 +153,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setItems(prev => [...prev, cartItem]);
     
     toast({
-      title: "Added to cart",
+      title: "Added to cart ✨",
       description: `${newItem.name} has been added to your cart`,
     });
   };
@@ -221,11 +225,15 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     <CartContext.Provider value={{
       items,
       addToCart,
+      addItem: addToCart, // Alias
       removeFromCart,
+      removeItem: removeFromCart, // Alias
       updateQuantity,
       clearCart,
       itemCount,
+      totalItems: itemCount, // Alias
       subtotal,
+      totalPrice: subtotal, // Alias
       loading,
       isOpen,
       toggleCart

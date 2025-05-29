@@ -1,13 +1,14 @@
 
 {
-  "name": "Zyra Custom Craft",
+  "name": "Zyra Custom Craft - Premium Custom Products",
   "short_name": "Zyra Craft",
-  "description": "Premium custom products and personalized gifts",
+  "description": "Premium custom products and personalized gifts with exceptional quality and fast delivery",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#3b82f6",
+  "theme_color": "#9333ea",
   "orientation": "portrait-primary",
+  "scope": "/",
   "icons": [
     {
       "src": "/icon-192x192.png",
@@ -22,7 +23,46 @@
       "purpose": "maskable any"
     }
   ],
-  "categories": ["shopping", "lifestyle"],
+  "categories": ["shopping", "lifestyle", "business"],
   "lang": "en",
-  "dir": "ltr"
+  "dir": "ltr",
+  "shortcuts": [
+    {
+      "name": "Shop Products",
+      "short_name": "Shop",
+      "description": "Browse our premium custom products",
+      "url": "/shop",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My Account",
+      "short_name": "Account",
+      "description": "Access your account and orders",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Wishlist",
+      "short_name": "Wishlist",
+      "description": "View your saved items",
+      "url": "/wishlist",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/screenshot-narrow.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
 }
