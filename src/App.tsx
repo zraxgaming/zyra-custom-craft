@@ -18,8 +18,8 @@ import Shop from "@/pages/Shop";
 import Product from "@/pages/Product";
 import About from "@/pages/About";
 import Contact from "@/pages/Contact";
-import PrivacyPolicy from "@/pages/PrivacyPolicy";
-import TermsOfService from "@/pages/TermsOfService";
+import Privacy from "@/pages/Privacy";
+import Terms from "@/pages/Terms";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import Wishlist from "@/pages/Wishlist";
@@ -35,6 +35,8 @@ import NotFound from "@/pages/404";
 // Admin Pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminProducts from "@/pages/admin/Products";
+import ProductNew from "@/pages/admin/ProductNew";
+import ProductEdit from "@/pages/admin/ProductEdit";
 import AdminCategories from "@/pages/admin/Categories";
 import AdminInventory from "@/pages/admin/Inventory";
 import AdminOrders from "@/pages/admin/Orders";
@@ -44,18 +46,20 @@ import AdminZiina from "@/pages/admin/AdminZiina";
 import AdminScanner from "@/pages/admin/Scanner";
 import AdminAnalytics from "@/pages/admin/Analytics";
 import AdminSettings from "@/pages/admin/Settings";
+import AdminNewsletter from "@/pages/admin/AdminNewsletter";
+import AdminBarcodes from "@/pages/admin/Barcodes";
 
 import "./index.css";
 
 function App() {
   return (
     <HelmetProvider>
-      <ThemeProvider defaultTheme="light" storageKey="zyra-ui-theme">
+      <ThemeProvider defaultTheme="system" storageKey="zyra-ui-theme">
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
               <Router>
-                <div className="min-h-screen bg-background">
+                <div className="min-h-screen bg-background page-transition">
                   <MaintenanceBanner />
                   <OnlineStatus />
                   
@@ -70,8 +74,8 @@ function App() {
                     <Route path="/product/:slug" element={<Product />} />
                     <Route path="/about" element={<About />} />
                     <Route path="/contact" element={<Contact />} />
-                    <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                    <Route path="/terms-of-service" element={<TermsOfService />} />
+                    <Route path="/privacy" element={<Privacy />} />
+                    <Route path="/terms" element={<Terms />} />
                     <Route path="/newsletter" element={<Newsletter />} />
                     
                     {/* Auth Pages */}
@@ -98,6 +102,16 @@ function App() {
                     <Route path="/admin/products" element={
                       <AdminRoute>
                         <AdminProducts />
+                      </AdminRoute>
+                    } />
+                    <Route path="/admin/products/new" element={
+                      <AdminRoute>
+                        <ProductNew />
+                      </AdminRoute>
+                    } />
+                    <Route path="/admin/products/:id/edit" element={
+                      <AdminRoute>
+                        <ProductEdit />
                       </AdminRoute>
                     } />
                     <Route path="/admin/categories" element={
@@ -143,6 +157,16 @@ function App() {
                     <Route path="/admin/settings" element={
                       <AdminRoute>
                         <AdminSettings />
+                      </AdminRoute>
+                    } />
+                    <Route path="/admin/newsletter" element={
+                      <AdminRoute>
+                        <AdminNewsletter />
+                      </AdminRoute>
+                    } />
+                    <Route path="/admin/barcodes" element={
+                      <AdminRoute>
+                        <AdminBarcodes />
                       </AdminRoute>
                     } />
                     

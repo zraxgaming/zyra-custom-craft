@@ -2,22 +2,33 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { WishlistItem } from '@/types/wishlist';
+import { useToast } from '@/hooks/use-toast';
+
+interface WishlistItem {
+  id: string;
+  product_id: string;
+  name: string;
+  price: number;
+  images: string[];
+  slug: string;
+}
 
 interface WishlistContextType {
   items: WishlistItem[];
-  addItem: (productId: string) => Promise<void>;
-  removeItem: (productId: string) => Promise<void>;
-  isInWishlist: (productId: string) => boolean;
   isLoading: boolean;
+  addToWishlist: (productId: string) => Promise<void>;
+  removeFromWishlist: (productId: string) => Promise<void>;
+  isInWishlist: (productId: string) => boolean;
+  refetch: () => Promise<void>;
 }
 
 const WishlistContext = createContext<WishlistContextType>({
   items: [],
-  addItem: async () => {},
-  removeItem: async () => {},
-  isInWishlist: () => false,
   isLoading: false,
+  addToWishlist: async () => {},
+  removeFromWishlist: async () => {},
+  isInWishlist: () => false,
+  refetch: async () => {}
 });
 
 export const useWishlist = () => {
@@ -30,6 +41,7 @@ export const useWishlist = () => {
 
 export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -47,17 +59,15 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from('wishlist_items')
+        .from('wishlists')
         .select(`
-          *,
+          id,
+          product_id,
           products (
-            id,
             name,
-            slug,
             price,
             images,
-            rating,
-            review_count
+            slug
           )
         `)
         .eq('user_id', user.id);
@@ -65,9 +75,12 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (error) throw error;
 
       const wishlistItems = data?.map(item => ({
-        ...item,
-        ...item.products,
-        product_id: item.product_id
+        id: item.id,
+        product_id: item.product_id,
+        name: item.products?.name || '',
+        price: item.products?.price || 0,
+        images: Array.isArray(item.products?.images) ? item.products.images : [],
+        slug: item.products?.slug || ''
       })) || [];
 
       setItems(wishlistItems);
@@ -78,38 +91,65 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const addItem = async (productId: string) => {
-    if (!user) return;
+  const addToWishlist = async (productId: string) => {
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to add items to your wishlist",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       const { error } = await supabase
-        .from('wishlist_items')
+        .from('wishlists')
         .insert({
           user_id: user.id,
           product_id: productId
         });
 
       if (error) throw error;
+      
       await fetchWishlistItems();
+      toast({
+        title: "Added to wishlist",
+        description: "Item has been added to your wishlist",
+      });
     } catch (error) {
       console.error('Error adding to wishlist:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add item to wishlist",
+        variant: "destructive",
+      });
     }
   };
 
-  const removeItem = async (productId: string) => {
+  const removeFromWishlist = async (productId: string) => {
     if (!user) return;
 
     try {
       const { error } = await supabase
-        .from('wishlist_items')
+        .from('wishlists')
         .delete()
         .eq('user_id', user.id)
         .eq('product_id', productId);
 
       if (error) throw error;
+      
       await fetchWishlistItems();
+      toast({
+        title: "Removed from wishlist",
+        description: "Item has been removed from your wishlist",
+      });
     } catch (error) {
       console.error('Error removing from wishlist:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove item from wishlist",
+        variant: "destructive",
+      });
     }
   };
 
@@ -117,13 +157,18 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return items.some(item => item.product_id === productId);
   };
 
+  const refetch = async () => {
+    await fetchWishlistItems();
+  };
+
   return (
     <WishlistContext.Provider value={{
       items,
-      addItem,
-      removeItem,
+      isLoading,
+      addToWishlist,
+      removeFromWishlist,
       isInWishlist,
-      isLoading
+      refetch
     }}>
       {children}
     </WishlistContext.Provider>

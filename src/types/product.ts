@@ -33,4 +33,6 @@ export interface Product {
   discount_percentage?: number;
   created_at?: string;
   updated_at?: string;
+  customization_options?: any;
+  is_published?: boolean;
 }
