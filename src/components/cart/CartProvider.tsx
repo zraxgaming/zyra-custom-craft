@@ -29,6 +29,8 @@ interface CartContextType {
   itemCount: number;
   subtotal: number;
   loading: boolean;
+  isOpen: boolean;
+  toggleCart: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -36,6 +38,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -61,6 +64,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.setItem('cart', JSON.stringify(items));
     }
   }, [items, user]);
+
+  const toggleCart = () => setIsOpen(!isOpen);
 
   const loadCart = async () => {
     if (!user) return;
@@ -91,7 +96,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         price: item.products?.price || 0,
         quantity: item.quantity,
         image_url: Array.isArray(item.products?.images) && item.products.images.length > 0 
-          ? item.products.images[0] 
+          ? String(item.products.images[0])
           : undefined,
         customization: item.customization || undefined
       }));
@@ -142,6 +147,11 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     setItems(prev => [...prev, cartItem]);
+    
+    toast({
+      title: "Added to cart",
+      description: `${newItem.name} has been added to your cart`,
+    });
   };
 
   const removeFromCart = async (itemId: string) => {
@@ -216,7 +226,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       clearCart,
       itemCount,
       subtotal,
-      loading
+      loading,
+      isOpen,
+      toggleCart
     }}>
       {children}
     </CartContext.Provider>
