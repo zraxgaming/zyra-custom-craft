@@ -58,7 +58,7 @@ function App() {
           <CartProvider>
             <WishlistProvider>
               <Router>
-                <div className="min-h-screen bg-background page-transition">
+                <div className="min-h-screen bg-background page-transition w-full">
                   <MaintenanceBanner />
                   <OnlineStatus />
                   

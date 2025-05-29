@@ -1,49 +1,66 @@
 
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { CreditCard } from "lucide-react";
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, CreditCard } from 'lucide-react';
 
-interface PayPalPaymentProps {
+export interface PayPalPaymentProps {
   amount: number;
   orderData: any;
+  clientId: string;
   onSuccess: (transactionId: string) => void;
   onError: (error: string) => void;
-  clientId: string;
 }
 
-const PayPalPayment: React.FC<PayPalPaymentProps> = ({
-  amount,
-  orderData,
-  onSuccess,
-  onError,
-  clientId
+const PayPalPayment: React.FC<PayPalPaymentProps> = ({ 
+  amount, 
+  orderData, 
+  clientId, 
+  onSuccess, 
+  onError 
 }) => {
-  const handlePayPalPayment = () => {
-    // Simulate PayPal payment for demo purposes
-    const transactionId = `PAYPAL_${Date.now()}`;
-    onSuccess(transactionId);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handlePayment = async () => {
+    setIsProcessing(true);
+    
+    try {
+      // PayPal integration would go here
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const transactionId = `PP${Date.now()}`;
+      onSuccess(transactionId);
+    } catch (error: any) {
+      onError(error.message || 'PayPal payment failed');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
-        <p className="text-lg font-semibold text-blue-800 dark:text-blue-300">
-          PayPal Payment
-        </p>
-        <p className="text-2xl font-bold text-blue-900 dark:text-blue-200">
-          ${amount.toFixed(2)} USD
-        </p>
-      </div>
-      
-      <Button 
-        onClick={handlePayPalPayment}
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-        size="lg"
-      >
-        <CreditCard className="h-4 w-4 mr-2" />
-        Pay with PayPal
-      </Button>
-    </div>
+    <Card className="border-2 border-blue-200 dark:border-blue-800 animate-scale-in">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+          <CreditCard className="h-5 w-5" />
+          PayPal
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Button
+          onClick={handlePayment}
+          disabled={isProcessing}
+          className="w-full bg-blue-600 hover:bg-blue-700"
+        >
+          {isProcessing ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            `Pay $${amount.toFixed(2)} with PayPal`
+          )}
+        </Button>
+      </CardContent>
+    </Card>
   );
 };
 
