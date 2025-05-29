@@ -73,7 +73,9 @@ const handler = async (req: Request): Promise<Response> => {
     const response = await fetch("https://api-v2.ziina.com/api/payment_intent", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${ziinaApiKey}`,
+        "Authorization": `Bearer m4+Pg5S4Qu+L4naXkkfCElwkJUr9
+ykZeafvKPfkDJQOSGnAs/4d7DDeB
+ml9Dwlls`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(ziinaPayload)
