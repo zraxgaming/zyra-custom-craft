@@ -16,7 +16,7 @@ const Index = () => {
         title="Zyra Custom Craft - Premium Custom Products & Personalization"
         description="Discover premium custom products and personalization services at Zyra. Create unique, personalized items with our advanced customization tools."
         keywords="custom products, personalization, custom gifts, UAE, handmade, premium"
-        ogImage="/og-image.jpg"
+        image="/og-image.jpg"
       />
       <Navbar />
       <main>

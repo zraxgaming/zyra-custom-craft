@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 interface WishlistItem {
@@ -9,46 +9,42 @@ interface WishlistItem {
   product_id: string;
   name: string;
   price: number;
-  images?: string[];
+  images: string[];
   created_at: string;
 }
 
 interface WishlistContextType {
   items: WishlistItem[];
+  isLoading: boolean;
   addToWishlist: (productId: string) => Promise<void>;
   removeFromWishlist: (productId: string) => Promise<void>;
   isInWishlist: (productId: string) => boolean;
-  isLoading: boolean;
+  fetchWishlist: () => Promise<void>;
 }
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
 export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<WishlistItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (user) {
-      loadWishlist();
-    } else {
+  const fetchWishlist = async () => {
+    if (!user) {
       setItems([]);
+      setIsLoading(false);
+      return;
     }
-  }, [user]);
 
-  const loadWishlist = async () => {
-    if (!user) return;
-    
-    setIsLoading(true);
     try {
+      setIsLoading(true);
       const { data, error } = await supabase
         .from('wishlist')
         .select(`
           id,
           product_id,
-          created_at,
-          products!wishlist_product_id_fkey (
+          products!inner (
             name,
             price,
             images
@@ -58,18 +54,19 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
 
       if (error) throw error;
 
-      const wishlistItems: WishlistItem[] = (data || []).map(item => ({
+      const wishlistItems = data?.map(item => ({
         id: item.id,
         product_id: item.product_id,
-        name: item.products?.name || 'Unknown Product',
-        price: item.products?.price || 0,
-        images: Array.isArray(item.products?.images) ? item.products.images.filter(img => typeof img === 'string') as string[] : [],
-        created_at: item.created_at
-      }));
+        name: item.products.name,
+        price: item.products.price,
+        images: Array.isArray(item.products.images) ? item.products.images : [],
+        created_at: new Date().toISOString()
+      })) || [];
 
       setItems(wishlistItems);
     } catch (error) {
-      console.error('Error loading wishlist:', error);
+      console.error('Error fetching wishlist:', error);
+      setItems([]);
     } finally {
       setIsLoading(false);
     }
@@ -78,8 +75,8 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
   const addToWishlist = async (productId: string) => {
     if (!user) {
       toast({
-        title: "Please sign in",
-        description: "You need to be signed in to add items to wishlist",
+        title: "Login Required",
+        description: "Please login to add items to your wishlist",
         variant: "destructive",
       });
       return;
@@ -88,24 +85,20 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
     try {
       const { error } = await supabase
         .from('wishlist')
-        .insert({
-          user_id: user.id,
-          product_id: productId
-        });
+        .insert({ user_id: user.id, product_id: productId });
 
       if (error) throw error;
 
-      await loadWishlist();
-      
       toast({
-        title: "Added to wishlist ❤️",
+        title: "Added to Wishlist! ❤️",
         description: "Item has been added to your wishlist",
       });
-    } catch (error) {
-      console.error('Error adding to wishlist:', error);
+
+      await fetchWishlist();
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to add item to wishlist",
+        description: error.message || "Failed to add item to wishlist",
         variant: "destructive",
       });
     }
@@ -123,14 +116,18 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
 
       if (error) throw error;
 
-      setItems(prev => prev.filter(item => item.product_id !== productId));
-      
       toast({
-        title: "Removed from wishlist",
+        title: "Removed from Wishlist",
         description: "Item has been removed from your wishlist",
       });
-    } catch (error) {
-      console.error('Error removing from wishlist:', error);
+
+      await fetchWishlist();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove item from wishlist",
+        variant: "destructive",
+      });
     }
   };
 
@@ -138,14 +135,21 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
     return items.some(item => item.product_id === productId);
   };
 
+  useEffect(() => {
+    fetchWishlist();
+  }, [user]);
+
+  const value = {
+    items,
+    isLoading,
+    addToWishlist,
+    removeFromWishlist,
+    isInWishlist,
+    fetchWishlist
+  };
+
   return (
-    <WishlistContext.Provider value={{
-      items,
-      addToWishlist,
-      removeFromWishlist,
-      isInWishlist,
-      isLoading
-    }}>
+    <WishlistContext.Provider value={value}>
       {children}
     </WishlistContext.Provider>
   );

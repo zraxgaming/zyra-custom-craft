@@ -21,7 +21,7 @@ const MaintenanceBanner = () => {
         event: '*',
         schema: 'public',
         table: 'site_config',
-        filter: 'key=eq.maintenance_mode'
+        filter: 'key=in.(maintenance_mode,maintenance_message)'
       }, () => {
         fetchMaintenanceStatus();
       })
@@ -34,38 +34,36 @@ const MaintenanceBanner = () => {
 
   const fetchMaintenanceStatus = async () => {
     try {
-      // Fetch maintenance mode status
-      const { data: modeData, error: modeError } = await supabase
+      // Fetch both maintenance mode and message
+      const { data, error } = await supabase
         .from('site_config')
-        .select('value')
-        .eq('key', 'maintenance_mode')
-        .single();
+        .select('key, value')
+        .in('key', ['maintenance_mode', 'maintenance_message']);
 
-      if (modeError && modeError.code !== 'PGRST116') {
-        console.error('Error fetching maintenance mode:', modeError);
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching maintenance status:', error);
         setIsMaintenanceMode(false);
         setLoading(false);
         return;
       }
 
+      const config = data?.reduce((acc, item) => {
+        acc[item.key] = item.value;
+        return acc;
+      }, {} as any) || {};
+
       // Check if maintenance mode is enabled
-      const isEnabled = modeData?.value === true || 
-                       modeData?.value === 'true' || 
-                       modeData?.value === '1' ||
-                       (typeof modeData?.value === 'string' && modeData.value.toLowerCase() === 'true');
+      const isEnabled = config.maintenance_mode === true || 
+                       config.maintenance_mode === 'true' || 
+                       config.maintenance_mode === '1' ||
+                       (typeof config.maintenance_mode === 'string' && 
+                        config.maintenance_mode.toLowerCase() === 'true');
       
       setIsMaintenanceMode(isEnabled);
 
       if (isEnabled) {
-        // Fetch maintenance message
-        const { data: messageData } = await supabase
-          .from('site_config')
-          .select('value')
-          .eq('key', 'maintenance_message')
-          .single();
-
-        const message = typeof messageData?.value === 'string' 
-          ? messageData.value 
+        const message = typeof config.maintenance_message === 'string' 
+          ? config.maintenance_message 
           : 'We are currently performing maintenance. Some features may be temporarily unavailable.';
         
         setMaintenanceMessage(message);
