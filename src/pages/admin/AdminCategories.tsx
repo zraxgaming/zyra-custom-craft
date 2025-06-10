@@ -16,6 +16,7 @@ interface Category {
   id: string;
   name: string;
   description: string;
+  slug: string;
   image_url?: string;
   is_active: boolean;
   sort_order: number;
@@ -29,6 +30,7 @@ const AdminCategories = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    slug: '',
     image_url: '',
     is_active: true,
     sort_order: 0
@@ -62,17 +64,24 @@ const AdminCategories = () => {
     }
   };
 
+  const generateSlug = (name: string) => {
+    return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
+      const categoryData = {
+        ...formData,
+        slug: formData.slug || generateSlug(formData.name),
+        updated_at: new Date().toISOString()
+      };
+
       if (editingId) {
         const { error } = await supabase
           .from('categories')
-          .update({
-            ...formData,
-            updated_at: new Date().toISOString()
-          })
+          .update(categoryData)
           .eq('id', editingId);
 
         if (error) throw error;
@@ -85,9 +94,8 @@ const AdminCategories = () => {
         const { error } = await supabase
           .from('categories')
           .insert([{
-            ...formData,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            ...categoryData,
+            created_at: new Date().toISOString()
           }]);
 
         if (error) throw error;
@@ -114,6 +122,7 @@ const AdminCategories = () => {
     setFormData({
       name: category.name,
       description: category.description,
+      slug: category.slug,
       image_url: category.image_url || '',
       is_active: category.is_active,
       sort_order: category.sort_order
@@ -153,6 +162,7 @@ const AdminCategories = () => {
     setFormData({
       name: '',
       description: '',
+      slug: '',
       image_url: '',
       is_active: true,
       sort_order: 0
@@ -229,13 +239,31 @@ const AdminCategories = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="name">Category Name</Label>
+                    <Label htmlFor="name">Category Name *</Label>
                     <Input
                       id="name"
                       value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      onChange={(e) => {
+                        const name = e.target.value;
+                        setFormData({
+                          ...formData, 
+                          name,
+                          slug: formData.slug || generateSlug(name)
+                        });
+                      }}
                       placeholder="Enter category name"
                       required
+                      className="transition-all duration-300 focus:ring-2 focus:ring-primary/30"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="slug">Slug</Label>
+                    <Input
+                      id="slug"
+                      value={formData.slug}
+                      onChange={(e) => setFormData({...formData, slug: e.target.value})}
+                      placeholder="category-slug"
                       className="transition-all duration-300 focus:ring-2 focus:ring-primary/30"
                     />
                   </div>
@@ -347,6 +375,9 @@ const AdminCategories = () => {
                                 Order: {category.sort_order}
                               </Badge>
                             </div>
+                            <p className="text-sm text-muted-foreground mb-1">
+                              Slug: /{category.slug}
+                            </p>
                             {category.description && (
                               <p className="text-muted-foreground text-sm line-clamp-2">
                                 {category.description}

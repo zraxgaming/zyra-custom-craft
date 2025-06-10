@@ -1,107 +1,73 @@
 
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useCart } from "@/components/cart/CartProvider";
-import { useWishlist } from "@/hooks/use-wishlist";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
-import { Product as ProductType } from "@/types/product";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import { Container } from "@/components/ui/container";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import SEOHead from "@/components/seo/SEOHead";
-import { 
-  Heart, 
-  ShoppingCart, 
-  Star, 
-  Truck, 
-  Shield, 
-  RefreshCw,
-  Palette,
-  Type,
-  Upload,
-  Plus,
-  Minus
-} from "lucide-react";
+import React, { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { useCart } from '@/components/cart/CartProvider';
+import { useWishlist } from '@/hooks/use-wishlist';
+import { Heart, ShoppingCart, Star, ArrowLeft, Share2, Package, Truck, Shield, CheckCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
+import { Container } from '@/components/ui/container';
+import SEOHead from '@/components/seo/SEOHead';
 
 const Product = () => {
-  const { slug } = useParams();
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const { addToCart } = useCart();
-  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
-
-  const [selectedImage, setSelectedImage] = useState(0);
+  const { id } = useParams<{ id: string }>();
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
-  const [customization, setCustomization] = useState({
-    text: '',
-    color: '',
-    image: null as File | null
-  });
+  const [selectedImage, setSelectedImage] = useState(0);
+  const { addToCart } = useCart();
+  const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
+  const { toast } = useToast();
 
-  const { data: product, isLoading, error } = useQuery({
-    queryKey: ['product', slug],
-    queryFn: async () => {
+  useEffect(() => {
+    if (id) {
+      fetchProduct();
+    }
+  }, [id]);
+
+  const fetchProduct = async () => {
+    try {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
-        .eq('slug', slug)
-        .eq('status', 'published')
+        .select(`
+          *,
+          categories (
+            name,
+            slug
+          )
+        `)
+        .eq('id', id)
         .single();
 
       if (error) throw error;
-      
-      // Transform the product data to match our Product interface
-      const transformedProduct: ProductType = {
-        ...data,
-        images: Array.isArray(data.images) 
-          ? data.images.filter((img: any) => typeof img === 'string') as string[]
-          : [],
-        is_featured: data.is_featured || false,
-        is_customizable: data.is_customizable || false,
-        is_digital: data.is_digital || false,
-        stock_quantity: data.stock_quantity || 0
-      };
-
-      return transformedProduct;
-    },
-    retry: false
-  });
+      setProduct(data);
+    } catch (error) {
+      console.error('Error fetching product:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load product",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAddToCart = async () => {
     if (!product) return;
 
-    try {
-      await addToCart({
-        productId: product.id,
-        name: product.name,
-        price: product.price,
-        quantity,
-        customization: product.is_customizable ? customization : undefined,
-        image: product.images[0] || '/placeholder-product.jpg'
-      });
-
-      toast({
-        title: "Added to cart!",
-        description: `${product.name} has been added to your cart.`,
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add item to cart. Please try again.",
-        variant: "destructive",
-      });
-    }
+    await addToCart({
+      product_id: product.id,
+      name: product.name,
+      price: product.price,
+      quantity,
+      image_url: Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : undefined
+    });
   };
 
   const handleWishlistToggle = async () => {
@@ -114,28 +80,20 @@ const Product = () => {
     }
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <Container className="py-20">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="space-y-4">
-              <div className="aspect-square bg-muted rounded-lg animate-pulse"></div>
-              <div className="flex gap-2">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="w-20 h-20 bg-muted rounded animate-pulse"></div>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-6">
-              <div className="h-8 bg-muted rounded animate-pulse"></div>
-              <div className="h-4 bg-muted rounded animate-pulse w-3/4"></div>
-              <div className="h-6 bg-muted rounded animate-pulse w-1/2"></div>
-              <div className="space-y-2">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-4 bg-muted rounded animate-pulse"></div>
-                ))}
+        <Container>
+          <div className="py-12">
+            <div className="animate-pulse">
+              <div className="grid md:grid-cols-2 gap-8">
+                <div className="aspect-square bg-gray-300 dark:bg-gray-700 rounded-2xl"></div>
+                <div className="space-y-4">
+                  <div className="h-8 bg-gray-300 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-2/3"></div>
+                  <div className="h-6 bg-gray-300 dark:bg-gray-700 rounded w-1/3"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -145,14 +103,17 @@ const Product = () => {
     );
   }
 
-  if (error || !product) {
+  if (!product) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <Container className="py-20 text-center">
-          <h1 className="text-2xl font-bold mb-4">Product Not Found</h1>
-          <p className="text-muted-foreground mb-8">The product you're looking for doesn't exist or has been removed.</p>
-          <Button onClick={() => navigate('/shop')}>Browse Products</Button>
+        <Container>
+          <div className="py-12 text-center">
+            <h1 className="text-2xl font-bold mb-4">Product Not Found</h1>
+            <Link to="/shop">
+              <Button>Back to Shop</Button>
+            </Link>
+          </div>
         </Container>
         <Footer />
       </div>
@@ -160,235 +121,259 @@ const Product = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-purple-950/30 dark:via-pink-950/30 dark:to-blue-950/30">
       <SEOHead 
         title={`${product.name} - Zyra Custom Craft`}
-        description={product.short_description || product.description?.substring(0, 160) || `Shop ${product.name} at Zyra Custom Craft`}
-        url={`https://shopzyra.vercel.app/product/${product.slug}`}
-        image={product.images[0]}
+        description={product.description || `Shop ${product.name} at Zyra Custom Craft. Premium custom products with personalization options.`}
+        ogImage={Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : undefined}
       />
-      
       <Navbar />
       
-      <Container className="py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 animate-fade-in">
-          {/* Product Images */}
-          <div className="space-y-4 animate-slide-in-left">
-            <div className="aspect-square bg-muted rounded-xl overflow-hidden group">
-              <img
-                src={product.images[selectedImage] || '/placeholder-product.jpg'}
-                alt={product.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-            </div>
-            
-            {product.images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto">
-                {product.images.map((image, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedImage(index)}
-                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
-                      selectedImage === index ? 'border-primary' : 'border-transparent'
-                    } hover:border-primary/50`}
-                  >
-                    <img
-                      src={image}
-                      alt={`${product.name} ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
+      <Container>
+        <div className="py-8">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8 animate-fade-in">
+            <Link to="/" className="hover:text-primary transition-colors">Home</Link>
+            <span>/</span>
+            <Link to="/shop" className="hover:text-primary transition-colors">Shop</Link>
+            {product.categories && (
+              <>
+                <span>/</span>
+                <Link to={`/category/${product.categories.slug}`} className="hover:text-primary transition-colors">
+                  {product.categories.name}
+                </Link>
+              </>
             )}
+            <span>/</span>
+            <span className="text-foreground font-medium">{product.name}</span>
           </div>
 
-          {/* Product Details */}
-          <div className="space-y-6 animate-slide-in-right">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="text-3xl font-bold text-primary">${product.price}</div>
-                {product.is_featured && (
-                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                    Featured
-                  </Badge>
-                )}
-                {product.is_new && (
-                  <Badge variant="secondary" className="bg-green-100 text-green-800">
-                    New
-                  </Badge>
+          <div className="grid lg:grid-cols-2 gap-12">
+            {/* Product Images */}
+            <div className="space-y-4 animate-slide-in-left">
+              <div className="aspect-square rounded-2xl overflow-hidden bg-white dark:bg-gray-900 shadow-2xl">
+                {Array.isArray(product.images) && product.images.length > 0 ? (
+                  <img
+                    src={product.images[selectedImage]}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-purple-200 to-pink-200 dark:from-purple-900 to-pink-900 flex items-center justify-center">
+                    <Package className="h-24 w-24 text-purple-600 dark:text-purple-300" />
+                  </div>
                 )}
               </div>
-              
-              {product.rating && product.review_count && (
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="flex items-center">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`h-4 w-4 ${
-                          i < Math.floor(product.rating!) ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                        }`}
+
+              {/* Image Thumbnails */}
+              {Array.isArray(product.images) && product.images.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {product.images.map((image: string, index: number) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedImage(index)}
+                      className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all duration-300 hover:scale-110 ${
+                        selectedImage === index
+                          ? 'border-purple-500 shadow-lg'
+                          : 'border-gray-200 dark:border-gray-700'
+                      }`}
+                    >
+                      <img
+                        src={image}
+                        alt={`${product.name} ${index + 1}`}
+                        className="w-full h-full object-cover"
                       />
-                    ))}
-                  </div>
-                  <span className="text-sm text-muted-foreground">
-                    {product.rating} ({product.review_count} reviews)
-                  </span>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
 
-            {product.short_description && (
-              <p className="text-lg text-muted-foreground">{product.short_description}</p>
-            )}
-
-            {/* Customization Options */}
-            {product.is_customizable && (
-              <Card className="animate-scale-in">
-                <CardContent className="p-6">
-                  <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <Palette className="h-5 w-5" />
-                    Customize Your Product
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="custom-text" className="flex items-center gap-2">
-                        <Type className="h-4 w-4" />
-                        Custom Text
-                      </Label>
-                      <Input
-                        id="custom-text"
-                        value={customization.text}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, text: e.target.value }))}
-                        placeholder="Enter your custom text"
-                        className="mt-1"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="custom-color">Color</Label>
-                      <Input
-                        id="custom-color"
-                        type="color"
-                        value={customization.color}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, color: e.target.value }))}
-                        className="mt-1 h-12"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="custom-image" className="flex items-center gap-2">
-                        <Upload className="h-4 w-4" />
-                        Upload Custom Image
-                      </Label>
-                      <Input
-                        id="custom-image"
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setCustomization(prev => ({ 
-                          ...prev, 
-                          image: e.target.files ? e.target.files[0] : null 
-                        }))}
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Quantity Selector */}
-            <div className="flex items-center gap-4">
-              <Label htmlFor="quantity">Quantity:</Label>
-              <div className="flex items-center border rounded-lg">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={quantity <= 1}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <span className="px-4 py-2 font-semibold">{quantity}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setQuantity(quantity + 1)}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="space-y-4">
-              <div className="flex gap-4">
-                <Button
-                  onClick={handleAddToCart}
-                  className="flex-1 h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-                >
-                  <ShoppingCart className="h-5 w-5 mr-2" />
-                  Add to Cart
-                </Button>
+            {/* Product Info */}
+            <div className="space-y-6 animate-slide-in-right">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Link to="/shop" className="text-purple-600 hover:text-purple-700 transition-colors">
+                    <ArrowLeft className="h-4 w-4" />
+                  </Link>
+                  {product.categories && (
+                    <Badge variant="secondary" className="animate-fade-in">
+                      {product.categories.name}
+                    </Badge>
+                  )}
+                </div>
                 
-                <Button
-                  variant="outline"
-                  onClick={handleWishlistToggle}
-                  className={`h-12 px-6 ${
-                    isInWishlist(product.id) 
-                      ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
-                      : 'hover:bg-gray-50'
-                  } transform hover:scale-105 transition-all duration-300`}
-                >
-                  <Heart className={`h-5 w-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
-                </Button>
-              </div>
-            </div>
+                <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  {product.name}
+                </h1>
 
-            {/* Product Features */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6">
-              <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                <Truck className="h-5 w-5 text-primary" />
-                <div>
-                  <div className="font-semibold text-sm">Free Shipping</div>
-                  <div className="text-xs text-muted-foreground">On orders over $50</div>
+                {product.rating && product.rating > 0 && (
+                  <div className="flex items-center gap-2 mb-4 animate-fade-in">
+                    <div className="flex items-center">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-4 w-4 ${
+                            i < Math.floor(product.rating)
+                              ? 'fill-yellow-400 text-yellow-400'
+                              : 'text-gray-300'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      {product.rating.toFixed(1)} ({product.review_count || 0} reviews)
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="text-4xl font-bold text-purple-600 animate-pulse">
+                    ${product.price}
+                  </div>
+                  {product.compare_at_price && product.compare_at_price > product.price && (
+                    <div className="text-xl text-muted-foreground line-through">
+                      ${product.compare_at_price}
+                    </div>
+                  )}
+                </div>
+
+                {product.description && (
+                  <p className="text-muted-foreground text-lg leading-relaxed mb-6">
+                    {product.description}
+                  </p>
+                )}
+              </div>
+
+              {/* Stock Status */}
+              <div className="space-y-3">
+                {product.stock_quantity > 0 ? (
+                  <div className="flex items-center gap-2 text-green-600 animate-fade-in">
+                    <CheckCircle className="h-5 w-5" />
+                    <span className="font-medium">
+                      {product.stock_quantity > 10 
+                        ? 'In Stock' 
+                        : `Only ${product.stock_quantity} left in stock`
+                      }
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-red-600 animate-fade-in">
+                    <Package className="h-5 w-5" />
+                    <span className="font-medium">Out of Stock</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center border rounded-xl p-1 bg-background">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="h-10 w-10"
+                    >
+                      -
+                    </Button>
+                    <span className="font-semibold px-4 min-w-[3rem] text-center">{quantity}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setQuantity(quantity + 1)}
+                      className="h-10 w-10"
+                    >
+                      +
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleAddToCart}
+                    disabled={product.stock_quantity <= 0}
+                    className="flex-1 h-14 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-lg rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+                  >
+                    <ShoppingCart className="h-5 w-5 mr-2" />
+                    Add to Cart
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleWishlistToggle}
+                    className={`h-14 w-14 rounded-2xl border-2 transition-all duration-300 hover:scale-110 ${
+                      isInWishlist(product.id)
+                        ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    <Heart 
+                      className={`h-6 w-6 ${
+                        isInWishlist(product.id) ? 'fill-current' : ''
+                      }`} 
+                    />
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-14 w-14 rounded-2xl border-2 hover:scale-110 transition-all duration-300"
+                  >
+                    <Share2 className="h-6 w-6" />
+                  </Button>
                 </div>
               </div>
-              
-              <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                <Shield className="h-5 w-5 text-primary" />
-                <div>
-                  <div className="font-semibold text-sm">Secure Payment</div>
-                  <div className="text-xs text-muted-foreground">100% protected</div>
+
+              {/* Features */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm animate-fade-in">
+                  <Truck className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="font-medium text-sm">Free Shipping</p>
+                    <p className="text-xs text-muted-foreground">UAE wide</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm animate-fade-in" style={{ animationDelay: '100ms' }}>
+                  <Shield className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <p className="font-medium text-sm">Secure Payment</p>
+                    <p className="text-xs text-muted-foreground">Ziina protected</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm animate-fade-in" style={{ animationDelay: '200ms' }}>
+                  <CheckCircle className="h-5 w-5 text-purple-600" />
+                  <div>
+                    <p className="font-medium text-sm">Quality Guaranteed</p>
+                    <p className="text-xs text-muted-foreground">Premium materials</p>
+                  </div>
                 </div>
               </div>
-              
-              <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                <RefreshCw className="h-5 w-5 text-primary" />
-                <div>
-                  <div className="font-semibold text-sm">Easy Returns</div>
-                  <div className="text-xs text-muted-foreground">30-day policy</div>
+
+              {/* Product Tags */}
+              {product.tags && product.tags.length > 0 && (
+                <div className="space-y-2 animate-fade-in">
+                  <p className="font-medium text-sm text-muted-foreground">Tags:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {product.tags.map((tag: string, index: number) => (
+                      <Badge 
+                        key={index} 
+                        variant="secondary" 
+                        className="animate-scale-in hover:scale-105 transition-transform duration-300"
+                        style={{ animationDelay: `${index * 100}ms` }}
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
-
-        {/* Product Description */}
-        {product.description && (
-          <>
-            <Separator className="my-12" />
-            <div className="max-w-4xl animate-fade-in">
-              <h2 className="text-2xl font-bold mb-6">Product Description</h2>
-              <div className="prose prose-gray max-w-none">
-                <p className="text-muted-foreground leading-relaxed">{product.description}</p>
-              </div>
-            </div>
-          </>
-        )}
       </Container>
       
       <Footer />
