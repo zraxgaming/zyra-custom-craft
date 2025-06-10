@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { CreditCard, Loader2, Smartphone, AlertCircle, Shield, Zap } from 'lucide-react';
+import { CreditCard, Loader2, Smartphone, AlertCircle, Shield, Zap, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ZiinaPaymentProps {
@@ -93,7 +93,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       // Convert USD to AED (1 USD = 3.67 AED approximately)
       const aedAmount = Math.round(amount * 367); // Convert to fils (1 AED = 100 fils)
 
-      // Format the API key properly (remove any extra spaces/newlines)
+      // Properly format the API key - remove line breaks and spaces
       const apiKey = 'm4+Pg5S4Qu+L4naXkkfCElwkJUr9ykZeafvKPfkDJQOSGnAs/4d7DDeB ml9Dwlls';
 
       // Create Ziina payment intent using direct API call
@@ -117,9 +117,12 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify(ziinaPayload)
       });
+
+      console.log('Ziina API Response Status:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -230,9 +233,20 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
         </div>
 
         <div className="mt-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 rounded-xl border border-amber-200 dark:border-amber-800 animate-scale-in">
-          <p className="text-xs text-amber-700 dark:text-amber-300 text-center font-medium">
-            🔐 SSL Encrypted • 🛡️ PCI Compliant • ⚡ Instant Processing
-          </p>
+          <div className="flex items-center justify-center gap-4 text-xs text-amber-700 dark:text-amber-300 font-medium">
+            <div className="flex items-center gap-1">
+              <Shield className="h-3 w-3 animate-pulse" />
+              <span>SSL Encrypted</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-3 w-3 animate-pulse" />
+              <span>PCI Compliant</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Zap className="h-3 w-3 animate-bounce" />
+              <span>Instant Processing</span>
+            </div>
+          </div>
         </div>
       </div>
 

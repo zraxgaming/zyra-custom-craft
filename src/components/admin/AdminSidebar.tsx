@@ -21,7 +21,9 @@ import {
   FileText,
   Shield,
   Database,
-  Wrench
+  Wrench,
+  Percent,
+  QrCode
 } from "lucide-react";
 
 const AdminSidebar = () => {
@@ -33,7 +35,7 @@ const AdminSidebar = () => {
       items: [
         {
           title: "Dashboard",
-          href: "/admin",
+          href: "/admin/dashboard",
           icon: LayoutDashboard,
         },
         {
@@ -62,6 +64,11 @@ const AdminSidebar = () => {
           icon: Database,
         },
         {
+          title: "Barcodes",
+          href: "/admin/barcodes",
+          icon: QrCode,
+        },
+        {
           title: "Scanner",
           href: "/admin/scanner",
           icon: Scan,
@@ -80,6 +87,11 @@ const AdminSidebar = () => {
           title: "Gift Cards",
           href: "/admin/gift-cards",
           icon: Gift,
+        },
+        {
+          title: "Coupons",
+          href: "/admin/coupons",
+          icon: Percent,
         },
       ]
     },
@@ -109,8 +121,13 @@ const AdminSidebar = () => {
       ]
     },
     {
-      title: "Content & Design",
+      title: "Marketing & Content",
       items: [
+        {
+          title: "Newsletter",
+          href: "/admin/newsletter",
+          icon: MessageSquare,
+        },
         {
           title: "Banners",
           href: "/admin/banners",
@@ -153,7 +170,7 @@ const AdminSidebar = () => {
   return (
     <div className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 h-screen overflow-hidden animate-slide-in-right">
       <div className="p-6 border-b border-gray-200 dark:border-gray-800">
-        <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+        <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent animate-text-shimmer">
           Admin Panel
         </h2>
       </div>
@@ -175,13 +192,13 @@ const AdminSidebar = () => {
                       variant={isActive ? "secondary" : "ghost"}
                       className={cn(
                         "w-full justify-start h-10 px-3 font-medium transition-all duration-300 animate-slide-in-right hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 dark:hover:from-purple-950/20 dark:hover:to-pink-950/20",
-                        isActive && "bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 text-purple-700 dark:text-purple-300 shadow-sm"
+                        isActive && "bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 text-purple-700 dark:text-purple-300 shadow-sm hover:scale-105"
                       )}
                       style={{animationDelay: `${(sectionIndex * 100) + (itemIndex * 50)}ms`}}
                     >
                       <Link to={item.href} className="flex items-center gap-3 w-full">
                         <item.icon className={cn(
-                          "h-4 w-4 transition-colors",
+                          "h-4 w-4 transition-colors animate-pulse",
                           isActive ? "text-purple-600 dark:text-purple-400" : "text-gray-500 dark:text-gray-400"
                         )} />
                         <span className="truncate">{item.title}</span>

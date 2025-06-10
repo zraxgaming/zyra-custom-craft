@@ -37,12 +37,14 @@ import AdminProducts from "@/pages/admin/AdminProducts";
 import ProductNew from "@/pages/admin/ProductNew";
 import ProductEdit from "@/pages/admin/ProductEdit";
 import AdminCategories from "@/pages/admin/AdminCategories";
+import AdminCoupons from "@/pages/admin/AdminCoupons";
 import AdminInventory from "@/pages/admin/AdminInventory";
 import AdminOrders from "@/pages/admin/AdminOrders";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminGiftCards from "@/pages/admin/AdminGiftCards";
 import AdminZiina from "@/pages/admin/AdminZiina";
 import AdminScanner from "@/pages/admin/AdminScanner";
+import AdminBarcodeScanner from "@/pages/admin/AdminBarcodeScanner";
 import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminNewsletter from "@/pages/admin/AdminNewsletter";
@@ -80,7 +82,7 @@ function App() {
                     {/* Auth Pages */}
                     <Route path="/auth" element={<Auth />} />
                     
-                    {/* User Dashboard */}
+                    {/* User Dashboard - Fixed routing */}
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/account" element={<Navigate to="/dashboard" replace />} />
                     <Route path="/wishlist" element={<Wishlist />} />
@@ -92,8 +94,13 @@ function App() {
                     <Route path="/order-success/:orderId" element={<OrderSuccess />} />
                     <Route path="/order-failed" element={<OrderFailed />} />
                     
-                    {/* Admin Routes */}
+                    {/* Admin Routes - Fixed and comprehensive */}
                     <Route path="/admin" element={
+                      <AdminRoute>
+                        <AdminDashboard />
+                      </AdminRoute>
+                    } />
+                    <Route path="/admin/dashboard" element={
                       <AdminRoute>
                         <AdminDashboard />
                       </AdminRoute>
@@ -116,6 +123,11 @@ function App() {
                     <Route path="/admin/categories" element={
                       <AdminRoute>
                         <AdminCategories />
+                      </AdminRoute>
+                    } />
+                    <Route path="/admin/coupons" element={
+                      <AdminRoute>
+                        <AdminCoupons />
                       </AdminRoute>
                     } />
                     <Route path="/admin/inventory" element={
@@ -146,6 +158,11 @@ function App() {
                     <Route path="/admin/scanner" element={
                       <AdminRoute>
                         <AdminScanner />
+                      </AdminRoute>
+                    } />
+                    <Route path="/admin/barcode-scanner" element={
+                      <AdminRoute>
+                        <AdminBarcodeScanner />
                       </AdminRoute>
                     } />
                     <Route path="/admin/analytics" element={
