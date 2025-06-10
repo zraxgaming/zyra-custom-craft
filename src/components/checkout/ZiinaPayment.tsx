@@ -54,6 +54,19 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
     setErrorMessage('');
     
     try {
+      // Get Ziina API key from site_config
+      const { data: configData, error: configError } = await supabase
+        .from('site_config')
+        .select('value')
+        .eq('key', 'ziina_api_key')
+        .single();
+
+      if (configError || !configData?.value) {
+        throw new Error('Ziina API key not configured in site settings');
+      }
+
+      const ziinaApiKey = configData.value;
+
       // Create order first
       const { data: order, error: orderError } = await supabase
         .from('orders')
@@ -93,10 +106,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       // Convert USD to AED (1 USD = 3.67 AED approximately)
       const aedAmount = Math.round(amount * 367); // Convert to fils (1 AED = 100 fils)
 
-      // Properly format the API key - remove line breaks and spaces
-      const apiKey = 'm4+Pg5S4Qu+L4naXkkfCElwkJUr9ykZeafvKPfkDJQOSGnAs/4d7DDeB ml9Dwlls';
-
-      // Create Ziina payment intent using direct API call
+      // Create Ziina payment intent using API key from site_config
       const ziinaPayload = {
         amount: aedAmount,
         currency_code: 'AED',
@@ -115,7 +125,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       const response = await fetch('https://api-v2.ziina.com/api/payment_intent', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${ziinaApiKey}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },

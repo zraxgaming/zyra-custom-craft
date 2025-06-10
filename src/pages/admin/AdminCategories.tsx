@@ -1,41 +1,41 @@
 
 import React, { useState, useEffect } from "react";
-import AdminLayout from "@/components/admin/AdminLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Edit, Trash2, Tag, Image, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Edit, Trash2, Tag, Eye, EyeOff, Sparkles } from "lucide-react";
-import SEOHead from "@/components/seo/SEOHead";
+import { useToast } from "@/hooks/use-toast";
+import AdminLayout from "@/components/admin/AdminLayout";
 
 interface Category {
   id: string;
   name: string;
-  slug: string;
-  description?: string;
+  description: string;
   image_url?: string;
-  icon?: string;
   is_active: boolean;
   sort_order: number;
   created_at: string;
+  updated_at: string;
 }
 
 const AdminCategories = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const { toast } = useToast();
-
   const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    image_url: "",
-    icon: ""
+    name: '',
+    description: '',
+    image_url: '',
+    is_active: true,
+    sort_order: 0
   });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchCategories();
@@ -50,7 +50,7 @@ const AdminCategories = () => {
 
       if (error) throw error;
       setCategories(data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching categories:', error);
       toast({
         title: "Error",
@@ -62,62 +62,43 @@ const AdminCategories = () => {
     }
   };
 
-  const generateSlug = (name: string) => {
-    return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name.trim()) {
-      toast({
-        title: "Error",
-        description: "Category name is required",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
-      const slug = generateSlug(formData.name);
-      const categoryData = {
-        name: formData.name.trim(),
-        slug,
-        description: formData.description.trim() || null,
-        image_url: formData.image_url.trim() || null,
-        icon: formData.icon.trim() || null,
-        is_active: true,
-        sort_order: categories.length
-      };
-
-      if (editingCategory) {
+      if (editingId) {
         const { error } = await supabase
           .from('categories')
-          .update(categoryData)
-          .eq('id', editingCategory.id);
+          .update({
+            ...formData,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingId);
 
         if (error) throw error;
-
+        
         toast({
-          title: "Success ✨",
+          title: "Success",
           description: "Category updated successfully",
         });
       } else {
         const { error } = await supabase
           .from('categories')
-          .insert(categoryData);
+          .insert([{
+            ...formData,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }]);
 
         if (error) throw error;
-
+        
         toast({
-          title: "Success ✨",
+          title: "Success",
           description: "Category created successfully",
         });
       }
 
-      setFormData({ name: "", description: "", image_url: "", icon: "" });
-      setIsCreating(false);
-      setEditingCategory(null);
+      resetForm();
       fetchCategories();
     } catch (error: any) {
       console.error('Error saving category:', error);
@@ -129,79 +110,88 @@ const AdminCategories = () => {
     }
   };
 
-  const handleToggleActive = async (category: Category) => {
-    try {
-      const { error } = await supabase
-        .from('categories')
-        .update({ is_active: !category.is_active })
-        .eq('id', category.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: `Category ${category.is_active ? 'deactivated' : 'activated'}`,
-      });
-
-      fetchCategories();
-    } catch (error: any) {
-      console.error('Error toggling category:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update category",
-        variant: "destructive",
-      });
-    }
+  const handleEdit = (category: Category) => {
+    setFormData({
+      name: category.name,
+      description: category.description,
+      image_url: category.image_url || '',
+      is_active: category.is_active,
+      sort_order: category.sort_order
+    });
+    setEditingId(category.id);
+    setShowForm(true);
   };
 
-  const handleDelete = async (category: Category) => {
-    if (!confirm(`Are you sure you want to delete "${category.name}"?`)) return;
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this category?')) return;
 
     try {
       const { error } = await supabase
         .from('categories')
         .delete()
-        .eq('id', category.id);
+        .eq('id', id);
 
       if (error) throw error;
-
+      
       toast({
         title: "Success",
         description: "Category deleted successfully",
       });
-
+      
       fetchCategories();
     } catch (error: any) {
       console.error('Error deleting category:', error);
       toast({
         title: "Error",
-        description: "Failed to delete category",
+        description: error.message || "Failed to delete category",
         variant: "destructive",
       });
     }
   };
 
-  const handleEdit = (category: Category) => {
-    setEditingCategory(category);
+  const resetForm = () => {
     setFormData({
-      name: category.name,
-      description: category.description || "",
-      image_url: category.image_url || "",
-      icon: category.icon || ""
+      name: '',
+      description: '',
+      image_url: '',
+      is_active: true,
+      sort_order: 0
     });
-    setIsCreating(true);
+    setEditingId(null);
+    setShowForm(false);
   };
 
-  const handleCancel = () => {
-    setIsCreating(false);
-    setEditingCategory(null);
-    setFormData({ name: "", description: "", image_url: "", icon: "" });
+  const toggleCategoryStatus = async (id: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .update({ 
+          is_active: !currentStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      fetchCategories();
+      toast({
+        title: "Success",
+        description: `Category ${!currentStatus ? 'activated' : 'deactivated'} successfully`,
+      });
+    } catch (error: any) {
+      console.error('Error updating category status:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update category status",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center p-8">
+        <div className="flex items-center justify-center min-h-screen">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       </AdminLayout>
@@ -209,180 +199,205 @@ const AdminCategories = () => {
   }
 
   return (
-    <>
-      <SEOHead 
-        title="Categories Management - Admin Dashboard"
-        description="Manage product categories, organize your inventory, and control category visibility."
-      />
-      <AdminLayout>
-        <div className="space-y-6 animate-fade-in">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent animate-scale-in">
-                Categories Management
-              </h1>
-              <p className="text-muted-foreground mt-2 animate-slide-in-right">
-                Organize your products with categories
-              </p>
+    <AdminLayout>
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg animate-pulse">
+              <Tag className="h-6 w-6 text-primary" />
             </div>
-            <Button 
-              onClick={() => setIsCreating(true)}
-              className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 transform hover:scale-105 transition-all duration-300 animate-pulse-glow"
-            >
-              <Plus className="h-4 w-4 mr-2 animate-bounce" />
-              Add Category
-            </Button>
+            <h1 className="text-3xl font-bold animate-slide-in-left">Categories Management</h1>
           </div>
-
-          {isCreating && (
-            <Card className="animate-scale-in border-primary/20 shadow-lg hover:shadow-xl transition-all duration-500">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <Sparkles className="h-5 w-5 text-primary animate-pulse" />
-                  {editingCategory ? 'Edit Category' : 'Create New Category'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="animate-slide-in-left">
-                      <label className="text-sm font-medium mb-2 block">Category Name *</label>
-                      <Input
-                        value={formData.name}
-                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="e.g., Custom T-Shirts"
-                        required
-                        className="transition-all duration-300 focus:ring-2 focus:ring-primary/30"
-                      />
-                    </div>
-                    <div className="animate-slide-in-right">
-                      <label className="text-sm font-medium mb-2 block">Icon (Lucide name)</label>
-                      <Input
-                        value={formData.icon}
-                        onChange={(e) => setFormData(prev => ({ ...prev, icon: e.target.value }))}
-                        placeholder="e.g., shirt, package, star"
-                        className="transition-all duration-300 focus:ring-2 focus:ring-primary/30"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="animate-fade-in">
-                    <label className="text-sm font-medium mb-2 block">Description</label>
-                    <Textarea
-                      value={formData.description}
-                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                      placeholder="Brief description of this category..."
-                      className="transition-all duration-300 focus:ring-2 focus:ring-primary/30"
-                    />
-                  </div>
-                  
-                  <div className="animate-slide-in-up">
-                    <label className="text-sm font-medium mb-2 block">Image URL</label>
-                    <Input
-                      value={formData.image_url}
-                      onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
-                      placeholder="https://example.com/category-image.jpg"
-                      className="transition-all duration-300 focus:ring-2 focus:ring-primary/30"
-                    />
-                  </div>
-
-                  <div className="flex gap-3 pt-4">
-                    <Button 
-                      type="submit" 
-                      className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 transform hover:scale-105 transition-all duration-300"
-                    >
-                      <Sparkles className="h-4 w-4 mr-2 animate-pulse" />
-                      {editingCategory ? 'Update' : 'Create'} Category
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={handleCancel}
-                      className="hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          )}
-
-          <div className="grid gap-4">
-            {categories.map((category, index) => (
-              <Card key={category.id} className="hover:shadow-lg transition-all duration-500 animate-slide-in-up border border-border/50 bg-card/60 backdrop-blur-sm" style={{animationDelay: `${index * 100}ms`}}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      {category.image_url && (
-                        <img
-                          src={category.image_url}
-                          alt={category.name}
-                          className="w-16 h-16 object-cover rounded-lg animate-scale-in"
-                        />
-                      )}
-                      <div>
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-lg animate-text-shimmer">{category.name}</h3>
-                          <Badge variant={category.is_active ? 'default' : 'secondary'} className="animate-pulse">
-                            {category.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-1">{category.description}</p>
-                        <p className="text-xs text-muted-foreground">Slug: {category.slug}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleToggleActive(category)}
-                        className="hover:scale-105 transition-all duration-300"
-                      >
-                        {category.is_active ? (
-                          <EyeOff className="h-4 w-4 animate-pulse" />
-                        ) : (
-                          <Eye className="h-4 w-4 animate-pulse" />
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(category)}
-                        className="hover:scale-105 transition-all duration-300"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDelete(category)}
-                        className="hover:scale-105 transition-all duration-300"
-                      >
-                        <Trash2 className="h-4 w-4 animate-pulse" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-            
-            {categories.length === 0 && (
-              <Card className="p-12 text-center animate-bounce-in">
-                <Tag className="h-16 w-16 mx-auto text-muted-foreground mb-4 animate-float" />
-                <h3 className="text-lg font-semibold mb-2">No Categories Yet</h3>
-                <p className="text-muted-foreground mb-4">Create your first category to organize your products</p>
-                <Button onClick={() => setIsCreating(true)} className="hover:scale-105 transition-all duration-300">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Category
-                </Button>
-              </Card>
-            )}
-          </div>
+          <Button 
+            onClick={() => setShowForm(!showForm)}
+            className="animate-slide-in-right hover:scale-105 transition-transform"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Category
+          </Button>
         </div>
-      </AdminLayout>
-    </>
+
+        {showForm && (
+          <Card className="animate-scale-in border-primary/20 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Tag className="h-5 w-5" />
+                {editingId ? 'Edit Category' : 'Add New Category'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name">Category Name</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      placeholder="Enter category name"
+                      required
+                      className="transition-all duration-300 focus:ring-2 focus:ring-primary/30"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="sort_order">Sort Order</Label>
+                    <Input
+                      id="sort_order"
+                      type="number"
+                      value={formData.sort_order}
+                      onChange={(e) => setFormData({...formData, sort_order: parseInt(e.target.value) || 0})}
+                      placeholder="0"
+                      className="transition-all duration-300 focus:ring-2 focus:ring-primary/30"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    placeholder="Enter category description"
+                    rows={3}
+                    className="transition-all duration-300 focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="image_url">Image URL</Label>
+                  <Input
+                    id="image_url"
+                    value={formData.image_url}
+                    onChange={(e) => setFormData({...formData, image_url: e.target.value})}
+                    placeholder="https://example.com/category-image.jpg"
+                    className="transition-all duration-300 focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="is_active"
+                    checked={formData.is_active}
+                    onCheckedChange={(checked) => setFormData({...formData, is_active: checked})}
+                  />
+                  <Label htmlFor="is_active">Active Category</Label>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button type="submit" className="hover:scale-105 transition-transform">
+                    {editingId ? 'Update Category' : 'Create Category'}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={resetForm} className="hover:scale-105 transition-transform">
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="animate-slide-in-up">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Tag className="h-5 w-5" />
+              All Categories ({categories.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4">
+              {categories.length === 0 ? (
+                <div className="text-center py-8 animate-fade-in">
+                  <Tag className="h-12 w-12 mx-auto text-gray-400 mb-4 animate-float" />
+                  <h3 className="text-lg font-medium mb-2">No Categories Found</h3>
+                  <p className="text-muted-foreground">Create your first category to organize products.</p>
+                </div>
+              ) : (
+                categories.map((category, index) => (
+                  <Card 
+                    key={category.id} 
+                    className="animate-slide-in-up hover:shadow-lg transition-all duration-300 hover:scale-105 border-l-4 border-l-primary/50"
+                    style={{animationDelay: `${index * 100}ms`}}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          {category.image_url && (
+                            <img
+                              src={category.image_url}
+                              alt={category.name}
+                              className="w-16 h-16 object-cover rounded-lg animate-scale-in shadow-md"
+                            />
+                          )}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-lg animate-text-shimmer">{category.name}</h3>
+                              <Badge 
+                                variant={category.is_active ? "default" : "secondary"}
+                                className="animate-pulse"
+                              >
+                                {category.is_active ? (
+                                  <><Eye className="h-3 w-3 mr-1" /> Active</>
+                                ) : (
+                                  <><EyeOff className="h-3 w-3 mr-1" /> Inactive</>
+                                )}
+                              </Badge>
+                              <Badge variant="outline" className="animate-pulse">
+                                Order: {category.sort_order}
+                              </Badge>
+                            </div>
+                            {category.description && (
+                              <p className="text-muted-foreground text-sm line-clamp-2">
+                                {category.description}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Created: {new Date(category.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => toggleCategoryStatus(category.id, category.is_active)}
+                            className="hover:scale-110 transition-transform"
+                          >
+                            {category.is_active ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleEdit(category)}
+                            className="hover:scale-110 transition-transform"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleDelete(category.id)}
+                            className="hover:scale-110 transition-transform hover:bg-red-50 hover:border-red-300"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </AdminLayout>
   );
 };
 
