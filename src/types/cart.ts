@@ -1,13 +1,16 @@
 
 export interface CartItem {
   id: string;
-  productId: string;
+  product_id: string;
   name: string;
   price: number;
-  image: string;
   quantity: number;
-  customization?: {
-    text?: string;
-    color?: string;
-  };
+  image_url?: string;
+  images?: string[];
+}
+
+export interface CartState {
+  items: CartItem[];
+  total: number;
+  itemCount: number;
 }
