@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -125,10 +124,10 @@ const FAQ = () => {
   return (
     <>
       <SEOHead 
-        title="FAQ - Frequently Asked Questions | Zyra"
-        description="Find answers to common questions about Zyra's custom products, shipping, returns, and more. Get help with your order today."
-        keywords="faq, help, support, questions, shipping, returns, customization"
+        title="FAQ - Zyra Custom Craft"
+        description="Frequently asked questions about Zyra Custom Craft. Find answers about orders, shipping, returns, customization, and more."
         url="https://shopzyra.vercel.app/faq"
+        keywords="faq, questions, help, zyra, custom craft, shipping, returns, support"
       />
       <div className="min-h-screen bg-background">
         <Navbar />

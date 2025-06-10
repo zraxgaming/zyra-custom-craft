@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Container } from "@/components/ui/container";
 import Navbar from "@/components/layout/Navbar";
@@ -8,10 +7,17 @@ import { Button } from "@/components/ui/button";
 
 // Import the updated Categories component that fetches from the database
 import Categories from "@/components/home/Categories";
+import SEOHead from '@/components/seo/SEOHead';
 
 const CategoryPage = () => {
   return (
     <>
+      <SEOHead 
+        title="Categories - Zyra Custom Craft"
+        description="Browse all product categories at Zyra Custom Craft. Discover curated collections and find your next favorite item."
+        url="https://shopzyra.vercel.app/categories"
+        keywords="categories, shop, zyra, custom craft, collections"
+      />
       <Navbar />
       <Container className="py-12">
         <h1 className="text-4xl font-bold mb-8">Browse Categories</h1>

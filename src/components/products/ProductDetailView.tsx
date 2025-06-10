@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Container } from '@/components/ui/container';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Star, Heart, ShoppingCart, Zap, Shield, Truck, RotateCcw, Sparkles } from 'lucide-react';
 import AddToCartButton from '@/components/cart/AddToCartButton';
-import { WishlistButton } from '@/components/wishlist/WishlistButton';
+import WishlistButton from '@/components/wishlist/WishlistButton';
 
 interface ProductDetailViewProps {
   product: any;
