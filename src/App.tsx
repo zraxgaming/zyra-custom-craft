@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -5,12 +6,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/components/cart/CartProvider";
-import { WishlistProvider } from "@/hooks/use-wishlist.tsx";
+import { WishlistProvider } from "@/hooks/use-wishlist";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 
 // Public Pages
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import AuthCallback from "./pages/auth/callback";
 import Shop from "./pages/Shop";
 import Product from "./pages/Product";
 import ProductDetail from "./pages/ProductDetail";
@@ -24,6 +26,8 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import OrderSuccess from "./pages/OrderSuccess";
 import OrderFailed from "./pages/OrderFailed";
+import CategoryPage from "./pages/CategoryPage";
+import NotFound from "./pages/404";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -53,6 +57,7 @@ const App = () => (
                   {/* Public Routes */}
                   <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
                   <Route path="/shop" element={<Shop />} />
                   <Route path="/product/:id" element={<Product />} />
                   <Route path="/product-detail/:id" element={<ProductDetail />} />
@@ -60,10 +65,12 @@ const App = () => (
                   <Route path="/wishlist" element={<Wishlist />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/profile" element={<Profile />} />
+                  <Route path="/dashboard" element={<Profile />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/privacy" element={<Privacy />} />
                   <Route path="/terms" element={<Terms />} />
+                  <Route path="/categories" element={<CategoryPage />} />
                   <Route path="/order-success/:orderId" element={<OrderSuccess />} />
                   <Route path="/order-failed" element={<OrderFailed />} />
 
@@ -79,6 +86,9 @@ const App = () => (
                   <Route path="/admin/ziina" element={<AdminZiina />} />
                   <Route path="/admin/gift-cards" element={<AdminGiftCards />} />
                   <Route path="/admin/newsletter" element={<AdminNewsletter />} />
+
+                  {/* 404 */}
+                  <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>
             </TooltipProvider>
