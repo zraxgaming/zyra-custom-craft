@@ -59,6 +59,7 @@ const App = () => (
               <Sonner />
               <MaintenanceBanner />
               <PWAInstallPrompt />
+              <PushNotificationSetup />
               <BrowserRouter>
                 <Routes>
                   {/* Public Routes */}

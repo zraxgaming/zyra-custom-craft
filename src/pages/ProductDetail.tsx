@@ -1,134 +1,195 @@
 
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Star, Heart, Share2, ShoppingCart, Palette, Type } from "lucide-react";
-import { useCart } from "@/components/cart/CartProvider";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import { Product } from "@/types/product";
-import { CartItem } from "@/types/cart";
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Heart, ShoppingCart, Star, Upload, Loader2 } from 'lucide-react';
+import { useWishlist } from '@/hooks/use-wishlist';
+import { useCart } from '@/components/cart/CartProvider';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
+import SEOHead from '@/components/seo/SEOHead';
+
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  short_description: string;
+  price: number;
+  images: string[];
+  rating: number;
+  review_count: number;
+  in_stock: boolean;
+  is_customizable: boolean;
+  slug: string;
+  discount_percentage: number;
+}
 
 const ProductDetail = () => {
-  const { slug } = useParams();
-  const navigate = useNavigate();
-  const { addItem } = useCart();
+  const { id } = useParams<{ id: string }>();
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const { addToCart } = useCart();
   const { toast } = useToast();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [customization, setCustomization] = useState({
     text: '',
-    color: '#000000'
+    images: [] as File[]
   });
 
   useEffect(() => {
-    if (slug) {
+    // Show fake loading for 1 second
+    setLoading(true);
+    setTimeout(() => {
       fetchProduct();
-    }
-  }, [slug]);
+      setLoading(false);
+    }, 1000);
+  }, [id]);
 
   const fetchProduct = async () => {
+    if (!id) return;
+
     try {
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('slug', slug)
-        .eq('status', 'published')
+        .or(`id.eq.${id},slug.eq.${id}`)
         .single();
 
       if (error) throw error;
-
-      const transformedProduct: Product = {
-        ...data,
-        images: Array.isArray(data.images) 
-          ? data.images.filter(img => typeof img === 'string') as string[]
-          : []
-      };
-
-      setProduct(transformedProduct);
+      setProduct(data);
     } catch (error) {
       console.error('Error fetching product:', error);
       toast({
         title: "Error",
-        description: "Product not found",
-        variant: "destructive",
+        description: "Failed to load product details",
+        variant: "destructive"
       });
-      navigate('/shop');
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleAddToCart = () => {
     if (!product) return;
 
-    const cartItem: Omit<CartItem, "id"> = {
-      productId: product.id,
+    addToCart({
+      product_id: product.id,
       name: product.name,
       price: product.price,
-      image: product.images[0] || '/placeholder-product.jpg',
-      quantity: quantity,
-      customization: product.is_customizable ? customization : undefined
-    };
-
-    addItem(cartItem);
+      quantity,
+      images: product.images,
+      slug: product.slug,
+      customization: product.is_customizable ? {
+        text: customization.text,
+        images: customization.images.map(file => file.name)
+      } : undefined
+    });
+    
     toast({
       title: "Added to Cart",
-      description: `${quantity} ${product.name} added to your cart`,
+      description: `${product.name} has been added to your cart`,
     });
+  };
+
+  const handleWishlistToggle = () => {
+    if (!product) return;
+    
+    if (isInWishlist(product.id)) {
+      removeFromWishlist(product.id);
+    } else {
+      addToWishlist(product.id);
+    }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setCustomization(prev => ({
+      ...prev,
+      images: [...prev.images, ...files].slice(0, 3) // Max 3 images
+    }));
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
+      <>
+        <Navbar />
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+            <p className="text-muted-foreground">Loading product details...</p>
+          </div>
+        </div>
+        <Footer />
+      </>
     );
   }
 
   if (!product) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Product not found</h2>
-          <Button onClick={() => navigate('/shop')}>Back to Shop</Button>
+      <>
+        <Navbar />
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <Card className="w-full max-w-md animate-fade-in-elegant">
+            <CardContent className="p-6 text-center">
+              <h2 className="text-2xl font-bold mb-4">Product Not Found</h2>
+              <p className="text-muted-foreground mb-6">
+                The product you're looking for doesn't exist.
+              </p>
+              <Button asChild className="btn-professional">
+                <a href="/shop">Back to Shop</a>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
-      </div>
+        <Footer />
+      </>
     );
   }
 
+  const discountedPrice = product.discount_percentage 
+    ? product.price * (1 - product.discount_percentage / 100)
+    : product.price;
+
   return (
     <>
+      <SEOHead 
+        title={`${product.name} - Zyra Custom Craft`}
+        description={product.short_description || product.description}
+        keywords={`${product.name}, custom products, personalization`}
+        image={product.images[0]}
+      />
       <Navbar />
-      <div className="min-h-screen bg-background py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-purple-500/10 py-12">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fade-in-elegant">
             {/* Product Images */}
-            <div className="space-y-4 animate-slide-in-left">
-              <div className="aspect-square overflow-hidden rounded-2xl bg-gray-100 hover-3d-lift">
+            <div className="space-y-4">
+              <div className="aspect-square overflow-hidden rounded-lg border card-professional">
                 <img
-                  src={product.images[selectedImageIndex] || '/placeholder-product.jpg'}
+                  src={product.images[selectedImage] || '/placeholder-product.jpg'}
                   alt={product.name}
-                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                  className="w-full h-full object-cover"
                 />
               </div>
               
               {product.images.length > 1 && (
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-4 gap-2">
                   {product.images.map((image, index) => (
                     <button
                       key={index}
-                      onClick={() => setSelectedImageIndex(index)}
-                      className={`aspect-square overflow-hidden rounded-lg border-2 transition-all hover-magnetic ${
-                        selectedImageIndex === index ? 'border-primary' : 'border-gray-200'
+                      onClick={() => setSelectedImage(index)}
+                      className={`aspect-square overflow-hidden rounded border transition-all ${
+                        selectedImage === index 
+                          ? 'border-primary ring-2 ring-primary ring-offset-2' 
+                          : 'border-border hover:border-primary/50'
                       }`}
                     >
                       <img
@@ -142,124 +203,132 @@ const ProductDetail = () => {
               )}
             </div>
 
-            {/* Product Info */}
-            <div className="space-y-6 animate-slide-in-right">
+            {/* Product Details */}
+            <div className="space-y-6">
               <div>
-                <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                  {product.name}
-                </h1>
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="flex items-center gap-1">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`h-5 w-5 ${
-                          i < (product.rating || 0) ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                        }`}
-                      />
-                    ))}
-                    <span className="text-sm text-muted-foreground ml-2">
-                      ({product.review_count || 0} reviews)
-                    </span>
-                  </div>
-                  {product.is_new && <Badge className="bg-green-100 text-green-800">New</Badge>}
-                  {product.is_customizable && <Badge className="bg-blue-100 text-blue-800">Customizable</Badge>}
+                <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
+                <p className="text-muted-foreground">{product.short_description}</p>
+              </div>
+
+              {/* Rating */}
+              <div className="flex items-center gap-2">
+                <div className="flex">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-4 w-4 ${
+                        i < Math.floor(product.rating) 
+                          ? 'fill-yellow-400 text-yellow-400' 
+                          : 'text-gray-300'
+                      }`}
+                    />
+                  ))}
                 </div>
-                <p className="text-3xl font-bold text-primary mb-4">${product.price.toFixed(2)}</p>
-                <p className="text-muted-foreground text-lg leading-relaxed">{product.description}</p>
+                <span className="text-sm text-muted-foreground">
+                  {product.rating.toFixed(1)} ({product.review_count} reviews)
+                </span>
+              </div>
+
+              {/* Price */}
+              <div className="flex items-center gap-3">
+                <span className="text-3xl font-bold text-primary">
+                  ${discountedPrice.toFixed(2)}
+                </span>
+                {product.discount_percentage > 0 && (
+                  <>
+                    <span className="text-xl text-muted-foreground line-through">
+                      ${product.price.toFixed(2)}
+                    </span>
+                    <Badge className="bg-red-500">
+                      -{product.discount_percentage}% OFF
+                    </Badge>
+                  </>
+                )}
+              </div>
+
+              {/* Stock Status */}
+              <div>
+                <Badge variant={product.in_stock ? "default" : "destructive"}>
+                  {product.in_stock ? "In Stock" : "Out of Stock"}
+                </Badge>
               </div>
 
               {/* Customization Options */}
               {product.is_customizable && (
-                <Card className="border-2 border-dashed border-primary/30 animate-scale-in">
-                  <CardContent className="p-6">
-                    <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                      <Palette className="h-5 w-5 text-primary" />
-                      Customize Your Product
-                    </h3>
-                    <div className="space-y-6">
+                <Card className="card-professional">
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold mb-4">Customize Your Product</h3>
+                    
+                    <div className="space-y-4">
                       <div>
-                        <Label htmlFor="custom-text" className="flex items-center gap-2">
-                          <Type className="h-4 w-4" />
+                        <label className="block text-sm font-medium mb-2">
                           Custom Text
-                        </Label>
-                        <Input
-                          id="custom-text"
+                        </label>
+                        <Textarea
+                          placeholder="Enter your custom text..."
                           value={customization.text}
-                          onChange={(e) => setCustomization(prev => ({ ...prev, text: e.target.value }))}
-                          placeholder="Enter your custom text"
-                          className="mt-2 form-field"
-                          maxLength={50}
+                          onChange={(e) => setCustomization(prev => ({ 
+                            ...prev, 
+                            text: e.target.value 
+                          }))}
+                          className="focus-professional"
                         />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {customization.text.length}/50 characters
-                        </p>
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="custom-color" className="flex items-center gap-2">
-                          <Palette className="h-4 w-4" />
-                          Text Color
-                        </Label>
-                        <div className="flex items-center gap-4 mt-2">
-                          <input
-                            id="custom-color"
-                            type="color"
-                            value={customization.color}
-                            onChange={(e) => setCustomization(prev => ({ ...prev, color: e.target.value }))}
-                            className="w-12 h-12 rounded-lg border border-gray-300 cursor-pointer hover-magnetic"
-                          />
-                          <div className="flex-1">
-                            <Input
-                              value={customization.color}
-                              onChange={(e) => setCustomization(prev => ({ ...prev, color: e.target.value }))}
-                              placeholder="#000000"
-                              className="form-field"
-                            />
-                          </div>
-                        </div>
                       </div>
 
-                      {customization.text && (
-                        <div className="p-4 bg-muted rounded-lg animate-fade-in">
-                          <p className="text-sm text-muted-foreground mb-2">Preview:</p>
-                          <p 
-                            style={{ color: customization.color }}
-                            className="text-lg font-medium"
-                          >
-                            {customization.text}
-                          </p>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Upload Images (Max 3)
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={handleImageUpload}
+                            className="focus-professional"
+                          />
+                          <Button variant="outline" size="sm">
+                            <Upload className="h-4 w-4" />
+                          </Button>
                         </div>
-                      )}
+                        {customization.images.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-sm text-muted-foreground">
+                              {customization.images.length} image(s) selected
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
 
-              {/* Quantity and Add to Cart */}
+              {/* Quantity and Actions */}
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="quantity">Quantity</Label>
-                  <div className="flex items-center gap-4 mt-2">
+                <div className="flex items-center gap-4">
+                  <label className="font-medium">Quantity:</label>
+                  <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
+                      size="sm"
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="w-12 h-12 hover-magnetic"
+                      className="interactive-element"
                     >
                       -
                     </Button>
                     <Input
-                      id="quantity"
                       type="number"
-                      min="1"
                       value={quantity}
                       onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-20 text-center form-field"
+                      className="w-20 text-center focus-professional"
+                      min="1"
                     />
                     <Button
                       variant="outline"
+                      size="sm"
                       onClick={() => setQuantity(quantity + 1)}
-                      className="w-12 h-12 hover-magnetic"
+                      className="interactive-element"
                     >
                       +
                     </Button>
@@ -269,47 +338,61 @@ const ProductDetail = () => {
                 <div className="flex gap-4">
                   <Button
                     onClick={handleAddToCart}
-                    className="flex-1 btn-premium h-14 text-lg hover-ripple"
-                    size="lg"
+                    disabled={!product.in_stock}
+                    className="flex-1 btn-professional"
                   >
-                    <ShoppingCart className="h-5 w-5 mr-2" />
-                    Add to Cart - ${(product.price * quantity).toFixed(2)}
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    Add to Cart
                   </Button>
-                  <Button variant="outline" size="lg" className="h-14 hover-magnetic">
-                    <Heart className="h-5 w-5" />
-                  </Button>
-                  <Button variant="outline" size="lg" className="h-14 hover-magnetic">
-                    <Share2 className="h-5 w-5" />
+                  
+                  <Button
+                    variant="outline"
+                    onClick={handleWishlistToggle}
+                    className="interactive-element"
+                  >
+                    <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} />
                   </Button>
                 </div>
               </div>
-
-              {/* Product Details */}
-              <Card className="animate-fade-in">
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold mb-4">Product Details</h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">SKU:</span>
-                      <span>{product.sku || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Category:</span>
-                      <span>{product.category || 'General'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Stock:</span>
-                      <span className={product.in_stock ? 'text-green-600' : 'text-red-600'}>
-                        {product.in_stock ? 'In Stock' : 'Out of Stock'}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
+          </div>
+
+          {/* Product Description and Reviews */}
+          <div className="mt-12 animate-slide-in-smooth">
+            <Tabs defaultValue="description" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="description">Description</TabsTrigger>
+                <TabsTrigger value="reviews">Reviews ({product.review_count})</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="description">
+                <Card className="card-professional">
+                  <CardContent className="p-6">
+                    <div className="prose max-w-none">
+                      <p>{product.description}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="reviews">
+                <Card className="card-professional">
+                  <CardContent className="p-6">
+                    <div className="text-center py-8">
+                      <Star className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No Reviews Yet</h3>
+                      <p className="text-muted-foreground">
+                        Be the first to review this product!
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>
+      
       <Footer />
     </>
   );

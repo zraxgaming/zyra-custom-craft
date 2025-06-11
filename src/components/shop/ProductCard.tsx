@@ -1,138 +1,179 @@
 
-import React from "react";
-import { Link } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Star, Heart, Settings } from "lucide-react";
-import AddToCartButton from "@/components/cart/AddToCartButton";
-import ProductCustomizer from "@/components/products/ProductCustomizer";
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Heart, ShoppingCart, Star, Eye } from 'lucide-react';
+import { useWishlist } from '@/hooks/use-wishlist';
+import { useCart } from '@/components/cart/CartProvider';
+import { useToast } from '@/hooks/use-toast';
+import { Link } from 'react-router-dom';
 
 interface ProductCardProps {
   product: {
     id: string;
     name: string;
-    slug: string;
     price: number;
-    images: string[];
-    description?: string;
+    images?: string[];
+    image_url?: string;
+    slug?: string;
     rating?: number;
     review_count?: number;
-    is_featured?: boolean;
-    is_customizable?: boolean;
-    stock_quantity?: number;
+    discount_percentage?: number;
+    is_new?: boolean;
+    featured?: boolean;
     in_stock?: boolean;
+    short_description?: string;
   };
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const inStock = product.in_stock ?? (product.stock_quantity || 0) > 0;
-  const imageUrl = Array.isArray(product.images) && product.images.length > 0 
-    ? product.images[0] 
-    : '/placeholder-product.jpg';
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const { addToCart } = useCart();
+  const { toast } = useToast();
+
+  const handleWishlistToggle = () => {
+    if (isInWishlist(product.id)) {
+      removeFromWishlist(product.id);
+    } else {
+      addToWishlist(product.id);
+    }
+  };
+
+  const handleAddToCart = () => {
+    addToCart({
+      product_id: product.id,
+      name: product.name,
+      price: product.price,
+      quantity: 1,
+      images: product.images,
+      image_url: product.image_url,
+      slug: product.slug
+    });
+    
+    toast({
+      title: "Added to Cart",
+      description: `${product.name} has been added to your cart`,
+    });
+  };
+
+  const imageUrl = product.images?.[0] || product.image_url || '/placeholder-product.jpg';
+  const productUrl = `/product-detail/${product.slug || product.id}`;
+  const discountedPrice = product.discount_percentage 
+    ? product.price * (1 - product.discount_percentage / 100)
+    : product.price;
 
   return (
-    <Card className="group hover:shadow-lg transition-all duration-300 hover:scale-105 overflow-hidden bg-gradient-to-br from-card/80 to-card border-border/50">
+    <Card className="group overflow-hidden card-professional animate-fade-in-elegant">
       <div className="relative overflow-hidden">
-        <Link to={`/product/${product.slug}`}>
+        <Link to={productUrl}>
           <img
             src={imageUrl}
             alt={product.name}
-            className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-110"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.src = '/placeholder-product.jpg';
-            }}
+            className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
           />
         </Link>
         
-        {product.is_featured && (
-          <Badge className="absolute top-2 left-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
-            Featured
-          </Badge>
-        )}
-        
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-2 right-2 bg-white/80 hover:bg-white transition-colors"
-        >
-          <Heart className="h-4 w-4" />
-        </Button>
+        {/* Badges */}
+        <div className="absolute top-2 left-2 flex flex-col gap-1">
+          {product.is_new && (
+            <Badge className="bg-green-500 text-white">New</Badge>
+          )}
+          {product.featured && (
+            <Badge className="bg-yellow-500 text-white">Featured</Badge>
+          )}
+          {product.discount_percentage && product.discount_percentage > 0 && (
+            <Badge className="bg-red-500 text-white">
+              -{product.discount_percentage}%
+            </Badge>
+          )}
+        </div>
 
-        {!inStock && (
+        {/* Actions */}
+        <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 w-8 p-0 bg-white/90 hover:bg-white interactive-element"
+            onClick={handleWishlistToggle}
+          >
+            <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 w-8 p-0 bg-white/90 hover:bg-white interactive-element"
+            asChild
+          >
+            <Link to={productUrl}>
+              <Eye className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+
+        {!product.in_stock && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-            <Badge variant="destructive" className="text-lg">Out of Stock</Badge>
+            <Badge variant="destructive">Out of Stock</Badge>
           </div>
         )}
       </div>
 
-      <CardContent className="p-4 space-y-3">
-        <div>
-          <Link to={`/product/${product.slug}`}>
-            <h3 className="font-semibold text-lg hover:text-primary transition-colors line-clamp-2">
+      <CardContent className="p-4">
+        <div className="space-y-2">
+          <Link to={productUrl} className="block">
+            <h3 className="font-semibold text-sm line-clamp-2 hover:text-primary transition-colors">
               {product.name}
             </h3>
           </Link>
-          
-          {product.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-              {product.description}
+
+          {product.short_description && (
+            <p className="text-xs text-muted-foreground line-clamp-2">
+              {product.short_description}
             </p>
           )}
-        </div>
 
-        {(product.rating || product.review_count) && (
-          <div className="flex items-center gap-2">
-            <div className="flex items-center">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star
-                  key={star}
-                  className={`h-4 w-4 ${
-                    star <= (product.rating || 0)
-                      ? "fill-yellow-400 text-yellow-400"
-                      : "text-gray-300"
-                  }`}
-                />
-              ))}
+          {/* Rating */}
+          {product.rating && (
+            <div className="flex items-center gap-1">
+              <div className="flex">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`h-3 w-3 ${
+                      i < Math.floor(product.rating!) 
+                        ? 'fill-yellow-400 text-yellow-400' 
+                        : 'text-gray-300'
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="text-xs text-muted-foreground">
+                ({product.review_count || 0})
+              </span>
             </div>
-            <span className="text-sm text-muted-foreground">
-              {product.rating?.toFixed(1)} ({product.review_count || 0} reviews)
-            </span>
-          </div>
-        )}
+          )}
 
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-2xl font-bold text-primary">
-              ${product.price.toFixed(2)}
-            </p>
-            {!inStock && (
-              <p className="text-sm text-red-500 font-medium">Out of Stock</p>
+          {/* Price */}
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-primary">
+              ${discountedPrice.toFixed(2)}
+            </span>
+            {product.discount_percentage && product.discount_percentage > 0 && (
+              <span className="text-sm text-muted-foreground line-through">
+                ${product.price.toFixed(2)}
+              </span>
             )}
           </div>
-        </div>
 
-        <div className="flex gap-2">
-          <AddToCartButton
-            product={{
-              id: product.id,
-              name: product.name,
-              slug: product.slug,
-              price: product.price,
-              images: product.images
-            }}
-            disabled={!inStock}
-            className="flex-1"
-          />
-          
-          {product.is_customizable && (
-            <ProductCustomizer productId={product.id}>
-              <Button variant="outline" size="icon" disabled={!inStock}>
-                <Settings className="h-4 w-4" />
-              </Button>
-            </ProductCustomizer>
-          )}
+          {/* Add to Cart Button */}
+          <Button 
+            onClick={handleAddToCart}
+            className="w-full btn-professional"
+            disabled={!product.in_stock}
+          >
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            {product.in_stock ? 'Add to Cart' : 'Out of Stock'}
+          </Button>
         </div>
       </CardContent>
     </Card>

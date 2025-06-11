@@ -1,17 +1,19 @@
 
-import React from "react";
-import { Navigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import EnhancedAuthPage from "@/components/auth/EnhancedAuthPage";
+import React from 'react';
+import AuthPage from '@/components/auth/AuthPage';
+import SEOHead from '@/components/seo/SEOHead';
 
 const Auth = () => {
-  const { user } = useAuth();
-
-  if (user) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  return <EnhancedAuthPage />;
+  return (
+    <>
+      <SEOHead 
+        title="Sign In - Zyra Custom Craft"
+        description="Sign in to your Zyra account to access your orders, wishlist, and custom products."
+        keywords="sign in, login, account, authentication"
+      />
+      <AuthPage />
+    </>
+  );
 };
 
 export default Auth;

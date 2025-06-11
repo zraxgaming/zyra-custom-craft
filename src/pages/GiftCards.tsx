@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Gift, CreditCard, Send, User, Calendar, DollarSign } from 'lucide-react';
+import { Gift, CreditCard, Send, User, Calendar, DollarSign, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,7 +44,12 @@ const GiftCards = () => {
 
   useEffect(() => {
     if (user) {
-      fetchGiftCards();
+      // Show fake loading for 1 second
+      setLoading(true);
+      setTimeout(() => {
+        fetchGiftCards();
+        setLoading(false);
+      }, 1000);
     } else {
       setLoading(false);
     }
@@ -69,8 +74,6 @@ const GiftCards = () => {
         description: "Failed to load your gift cards",
         variant: "destructive"
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -150,14 +153,14 @@ const GiftCards = () => {
       <>
         <Navbar />
         <div className="min-h-screen bg-background flex items-center justify-center">
-          <Card className="w-full max-w-md animate-scale-in">
+          <Card className="w-full max-w-md animate-fade-in-elegant">
             <CardContent className="p-6 text-center">
-              <Gift className="h-12 w-12 mx-auto mb-4 text-primary animate-pulse" />
+              <Gift className="h-12 w-12 mx-auto mb-4 text-primary" />
               <h2 className="text-2xl font-bold mb-4">Sign In Required</h2>
               <p className="text-muted-foreground mb-6">
                 Please sign in to purchase and manage gift cards
               </p>
-              <Button asChild className="w-full">
+              <Button asChild className="w-full btn-professional">
                 <a href="/auth">Sign In</a>
               </Button>
             </CardContent>
@@ -179,7 +182,7 @@ const GiftCards = () => {
       
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-purple-500/10 py-12">
         <div className="container mx-auto px-4 max-w-6xl">
-          <div className="text-center mb-8 animate-fade-in">
+          <div className="text-center mb-8 animate-fade-in-elegant">
             <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
               Gift Cards
             </h1>
@@ -189,8 +192,8 @@ const GiftCards = () => {
           </div>
 
           {/* Purchase New Gift Card */}
-          <div className="mb-8 animate-slide-in-up">
-            <Card className="border-2 border-primary/20 shadow-xl">
+          <div className="mb-8 animate-slide-in-smooth">
+            <Card className="border border-primary/20 shadow-lg card-professional">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Gift className="h-5 w-5 text-primary" />
@@ -200,14 +203,14 @@ const GiftCards = () => {
               <CardContent>
                 {!showPurchaseForm ? (
                   <div className="text-center py-8">
-                    <Gift className="h-16 w-16 mx-auto mb-4 text-primary animate-pulse" />
+                    <Gift className="h-16 w-16 mx-auto mb-4 text-primary" />
                     <h3 className="text-xl font-semibold mb-2">Create a New Gift Card</h3>
                     <p className="text-muted-foreground mb-6">
                       Perfect for birthdays, holidays, or any special occasion
                     </p>
                     <Button 
                       onClick={() => setShowPurchaseForm(true)}
-                      className="bg-gradient-to-r from-primary to-purple-600 hover:scale-105 transition-transform"
+                      className="bg-gradient-to-r from-primary to-purple-600 hover:scale-105 transition-transform btn-professional"
                     >
                       <Gift className="h-4 w-4 mr-2" />
                       Purchase Gift Card
@@ -242,7 +245,7 @@ const GiftCards = () => {
                     <Button 
                       variant="outline" 
                       onClick={() => setShowPayment(false)}
-                      className="w-full"
+                      className="w-full interactive-element"
                     >
                       Back to Form
                     </Button>
@@ -260,6 +263,7 @@ const GiftCards = () => {
                           placeholder="50.00"
                           value={formData.amount}
                           onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+                          className="focus-professional"
                         />
                       </div>
                       
@@ -271,6 +275,7 @@ const GiftCards = () => {
                           placeholder="recipient@example.com"
                           value={formData.recipientEmail}
                           onChange={(e) => setFormData(prev => ({ ...prev, recipientEmail: e.target.value }))}
+                          className="focus-professional"
                         />
                       </div>
                     </div>
@@ -282,13 +287,14 @@ const GiftCards = () => {
                         placeholder="Happy Birthday! Enjoy shopping..."
                         value={formData.message}
                         onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
+                        className="focus-professional"
                       />
                     </div>
                     
                     <div className="flex gap-4">
                       <Button 
                         onClick={handleProceedToPayment}
-                        className="flex-1 bg-gradient-to-r from-primary to-purple-600"
+                        className="flex-1 bg-gradient-to-r from-primary to-purple-600 btn-professional"
                         disabled={!formData.amount || purchasing}
                       >
                         <CreditCard className="h-4 w-4 mr-2" />
@@ -297,6 +303,7 @@ const GiftCards = () => {
                       <Button 
                         variant="outline" 
                         onClick={() => setShowPurchaseForm(false)}
+                        className="interactive-element"
                       >
                         Cancel
                       </Button>
@@ -308,7 +315,7 @@ const GiftCards = () => {
           </div>
 
           {/* Your Gift Cards */}
-          <div className="animate-slide-in-up" style={{ animationDelay: '0.2s' }}>
+          <div className="animate-slide-in-smooth" style={{ animationDelay: '0.2s' }}>
             <h2 className="text-2xl font-bold mb-6">Your Gift Cards</h2>
             
             {loading ? (
@@ -324,7 +331,7 @@ const GiftCards = () => {
                 ))}
               </div>
             ) : giftCards.length === 0 ? (
-              <Card className="text-center py-12">
+              <Card className="text-center py-12 card-professional">
                 <CardContent>
                   <Gift className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-xl font-semibold mb-2">No Gift Cards Yet</h3>
@@ -338,7 +345,7 @@ const GiftCards = () => {
                 {giftCards.map((giftCard, index) => (
                   <Card 
                     key={giftCard.id} 
-                    className="hover:shadow-lg transition-all duration-300 hover:scale-105 animate-scale-in"
+                    className="hover:shadow-lg transition-all duration-300 card-professional animate-fade-in-elegant"
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
                     <CardHeader className="pb-3">
