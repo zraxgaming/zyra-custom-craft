@@ -31,7 +31,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, onSuccess, onError,
       const { data, error } = await supabase
         .from('site_config')
         .select('key, value')
-        .in('key', ['ziina_api_key', 'ziina_merchant_id']);
+        .in('key', ['ziina_enabled', 'ziina_api_key', 'ziina_merchant_id']);
 
       if (error) throw error;
 
@@ -78,7 +78,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, onSuccess, onError,
 
       console.log('Processing Ziina payment:', ziinaPayload);
 
-      // Simulate successful payment for demo
+      // For demo purposes, simulate successful payment
       const mockTransactionId = `ZN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       // Simulate API delay
@@ -106,7 +106,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, onSuccess, onError,
 
   if (loading) {
     return (
-      <Card className="border-2 border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 animate-scale-in">
+      <Card className="border-2 border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 animate-fade-in">
         <CardContent className="p-6 text-center">
           <Loader2 className="h-12 w-12 mx-auto mb-4 animate-spin text-blue-500" />
           <p className="text-blue-600 dark:text-blue-400">Loading payment options...</p>
@@ -115,8 +115,9 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, onSuccess, onError,
     );
   }
 
+  // Ziina is always enabled now
   return (
-    <Card className="border-2 border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 animate-scale-in">
+    <Card className="border-2 border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 animate-fade-in">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
           <Smartphone className="h-5 w-5 animate-bounce" />

@@ -3,11 +3,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { WishlistProvider } from "@/hooks/use-wishlist";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import PWAInstallPrompt from "@/components/layout/PWAInstallPrompt";
+import PushNotificationSetup from "@/components/layout/PushNotificationSetup";
+import MaintenanceBanner from "@/components/layout/MaintenanceBanner";
 
 // Public Pages
 import Index from "./pages/Index";
@@ -27,6 +30,7 @@ import Terms from "./pages/Terms";
 import OrderSuccess from "./pages/OrderSuccess";
 import OrderFailed from "./pages/OrderFailed";
 import CategoryPage from "./pages/CategoryPage";
+import GiftCards from "./pages/GiftCards";
 import NotFound from "./pages/404";
 
 // Admin Pages
@@ -40,6 +44,7 @@ import AdminSettings from "./pages/admin/Settings";
 import AdminZiina from "./pages/admin/AdminZiina";
 import AdminGiftCards from "./pages/admin/GiftCards";
 import AdminNewsletter from "./pages/admin/AdminNewsletter";
+import Scanner from "./pages/admin/Scanner";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +57,8 @@ const App = () => (
             <TooltipProvider>
               <Toaster />
               <Sonner />
+              <MaintenanceBanner />
+              <PWAInstallPrompt />
               <BrowserRouter>
                 <Routes>
                   {/* Public Routes */}
@@ -65,12 +72,13 @@ const App = () => (
                   <Route path="/wishlist" element={<Wishlist />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/profile" element={<Profile />} />
-                  <Route path="/dashboard" element={<Profile />} />
+                  <Route path="/dashboard" element={<Navigate to="/profile" replace />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/privacy" element={<Privacy />} />
                   <Route path="/terms" element={<Terms />} />
                   <Route path="/categories" element={<CategoryPage />} />
+                  <Route path="/gift-cards" element={<GiftCards />} />
                   <Route path="/order-success/:orderId" element={<OrderSuccess />} />
                   <Route path="/order-failed" element={<OrderFailed />} />
 
@@ -86,6 +94,7 @@ const App = () => (
                   <Route path="/admin/ziina" element={<AdminZiina />} />
                   <Route path="/admin/gift-cards" element={<AdminGiftCards />} />
                   <Route path="/admin/newsletter" element={<AdminNewsletter />} />
+                  <Route path="/admin/scanner" element={<Scanner />} />
 
                   {/* 404 */}
                   <Route path="*" element={<NotFound />} />
