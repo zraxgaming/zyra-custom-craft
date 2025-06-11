@@ -18,10 +18,10 @@ export const WishlistProvider: React.FC<WishlistProviderProps> = ({ children }) 
   );
 };
 
-export const useWishlist = () => {
+export const useWishlistContext = () => {
   const context = useContext(WishlistContext);
   if (context === undefined) {
-    throw new Error('useWishlist must be used within a WishlistProvider');
+    throw new Error('useWishlistContext must be used within a WishlistProvider');
   }
   return context;
 };

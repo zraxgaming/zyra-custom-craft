@@ -1,60 +1,38 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
-import { Truck, MapPin, CreditCard, Banknote, Loader2 } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { CartItem } from '@/types/cart';
 import ZiinaPayment from './ZiinaPayment';
 import OrderSummary from './OrderSummary';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { CreditCard, Banknote, Package } from 'lucide-react';
 
 interface CheckoutFormProps {
-  cartItems: any[];
+  items: CartItem[];
   subtotal: number;
-  onOrderComplete: (orderId: string) => void;
+  onPaymentSuccess: (orderId: string) => void;
 }
 
-interface ShippingMethod {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  estimated_days: string;
-}
-
-const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, subtotal, onOrderComplete }) => {
+const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentSuccess }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([]);
-  const [selectedShipping, setSelectedShipping] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<string>('ziina');
-  const [shippingCost, setShippingCost] = useState(0);
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    country: 'UAE'
-  });
+  const [paymentMethod, setPaymentMethod] = useState('ziina');
+  const [deliveryMethod, setDeliveryMethod] = useState('pickup');
+  const [shippingMethods, setShippingMethods] = useState<any[]>([]);
+
+  const shippingCost = deliveryMethod === 'pickup' ? 0 : 
+    shippingMethods.find(method => method.id === deliveryMethod)?.price || 0;
+  const total = subtotal + shippingCost;
 
   useEffect(() => {
-    // Show fake loading for 1 second
-    setLoading(true);
-    setTimeout(() => {
-      fetchShippingMethods();
-      setLoading(false);
-    }, 1000);
+    fetchShippingMethods();
   }, []);
 
   const fetchShippingMethods = async () => {
@@ -63,351 +41,181 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, subtotal, onOrde
         .from('shipping_methods')
         .select('*')
         .eq('active', true)
-        .order('price', { ascending: true });
+        .order('price');
 
       if (error) throw error;
-
-      const methods = data || [];
-      // Add default Store Pickup option
-      const defaultMethods = [
-        {
-          id: 'store-pickup',
-          name: 'Store Pickup',
-          description: 'Pick up from our store in International City, Dubai',
-          price: 0,
-          estimated_days: '1-2'
-        },
-        ...methods
-      ];
-
-      setShippingMethods(defaultMethods);
-      if (defaultMethods.length > 0) {
-        setSelectedShipping(defaultMethods[0].id);
-        setShippingCost(defaultMethods[0].price);
-      }
+      setShippingMethods(data || []);
     } catch (error) {
       console.error('Error fetching shipping methods:', error);
-      // Fallback to default methods
-      const fallbackMethods = [
-        {
-          id: 'store-pickup',
-          name: 'Store Pickup',
-          description: 'Pick up from our store in International City, Dubai',
-          price: 0,
-          estimated_days: '1-2'
-        }
-      ];
-      setShippingMethods(fallbackMethods);
-      setSelectedShipping('store-pickup');
-      setShippingCost(0);
     }
   };
 
-  const handleShippingChange = (methodId: string) => {
-    setSelectedShipping(methodId);
-    const method = shippingMethods.find(m => m.id === methodId);
-    setShippingCost(method?.price || 0);
-  };
-
-  const handleOrderSuccess = async (transactionId: string) => {
+  const createOrder = async (paymentData: any) => {
     try {
-      const orderId = `ORD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      const { error } = await supabase
+      const orderData = {
+        user_id: user?.id,
+        total_amount: total,
+        status: 'pending',
+        payment_method: paymentMethod,
+        payment_status: 'completed',
+        delivery_type: deliveryMethod,
+        currency: 'USD'
+      };
+
+      const { data: order, error: orderError } = await supabase
         .from('orders')
-        .insert({
-          id: orderId,
-          user_id: user?.id,
-          total_amount: subtotal + shippingCost,
-          status: 'pending',
-          payment_method: paymentMethod,
-          payment_status: 'completed',
-          delivery_type: selectedShipping,
-          shipping_address: {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            address: formData.address,
-            city: formData.city,
-            state: formData.state,
-            zipCode: formData.zipCode,
-            country: formData.country
-          },
-          billing_address: {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            email: formData.email,
-            phone: formData.phone
-          }
-        });
+        .insert(orderData)
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (orderError) throw orderError;
 
-      // Add order items
-      for (const item of cartItems) {
-        await supabase
-          .from('order_items')
-          .insert({
-            order_id: orderId,
-            product_id: item.product_id,
-            quantity: item.quantity,
-            price: item.price,
-            customization: item.customization
-          });
-      }
+      const orderItems = items.map(item => ({
+        order_id: order.id,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        price: item.price,
+        customization: item.customization
+      }));
 
-      onOrderComplete(orderId);
-    } catch (error: any) {
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      return order.id;
+    } catch (error) {
       console.error('Error creating order:', error);
-      throw new Error(error.message || 'Failed to create order');
+      throw error;
     }
   };
 
-  const handleCashOnPickupOrder = async () => {
-    if (selectedShipping !== 'store-pickup') {
-      toast({
-        title: "Invalid Payment Method",
-        description: "Cash on pickup is only available for store pickup orders",
-        variant: "destructive"
-      });
-      return;
-    }
-
+  const handlePaymentSuccess = async (transactionId: string) => {
     try {
-      await handleOrderSuccess('CASH_ON_PICKUP');
+      const orderId = await createOrder({ transactionId });
+      onPaymentSuccess(orderId);
+    } catch (error) {
+      console.error('Error processing payment:', error);
       toast({
-        title: "Order Placed Successfully! 🎉",
-        description: "Your order has been placed. Please visit our store to complete payment.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Order Failed",
-        description: error.message || "Failed to place order",
+        title: "Error",
+        description: "Failed to process payment",
         variant: "destructive"
       });
     }
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl animate-fade-in-elegant">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column - Forms */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Shipping Information */}
-          <Card className="card-professional">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                Shipping Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input
-                    id="firstName"
-                    value={formData.firstName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                    className="focus-professional"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input
-                    id="lastName"
-                    value={formData.lastName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                    className="focus-professional"
-                  />
-                </div>
+    <div className="grid lg:grid-cols-2 gap-8">
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Delivery Method
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RadioGroup value={deliveryMethod} onValueChange={setDeliveryMethod}>
+              <div className="flex items-center space-x-2 p-3 border rounded-lg">
+                <RadioGroupItem value="pickup" id="pickup" />
+                <Label htmlFor="pickup" className="flex-1">
+                  <div>
+                    <p className="font-medium">Store Pickup</p>
+                    <p className="text-sm text-muted-foreground">Free - Pick up from our store</p>
+                  </div>
+                </Label>
+                <span className="font-medium">Free</span>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    className="focus-professional"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                    className="focus-professional"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                  className="focus-professional"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    value={formData.city}
-                    onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                    className="focus-professional"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="state">State</Label>
-                  <Input
-                    id="state"
-                    value={formData.state}
-                    onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
-                    className="focus-professional"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="zipCode">ZIP Code</Label>
-                  <Input
-                    id="zipCode"
-                    value={formData.zipCode}
-                    onChange={(e) => setFormData(prev => ({ ...prev, zipCode: e.target.value }))}
-                    className="focus-professional"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Shipping Method */}
-          <Card className="card-professional">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Truck className="h-5 w-5" />
-                Shipping Method
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <RadioGroup value={selectedShipping} onValueChange={handleShippingChange}>
-                {shippingMethods.map((method) => (
-                  <div key={method.id} className="flex items-center space-x-3 p-3 border rounded-lg hover-lift-subtle">
-                    <RadioGroupItem value={method.id} id={method.id} />
-                    <Label htmlFor={method.id} className="flex-1 cursor-pointer">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-medium">{method.name}</p>
-                          <p className="text-sm text-muted-foreground">{method.description}</p>
-                          <p className="text-sm text-muted-foreground">Estimated: {method.estimated_days} days</p>
-                        </div>
-                        <span className="font-semibold">
-                          {method.price === 0 ? 'Free' : `$${method.price.toFixed(2)}`}
-                        </span>
-                      </div>
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </CardContent>
-          </Card>
-
-          {/* Payment Method */}
-          <Card className="card-professional">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Payment Method
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-                <div className="flex items-center space-x-3 p-3 border rounded-lg hover-lift-subtle">
-                  <RadioGroupItem value="ziina" id="ziina" />
-                  <Label htmlFor="ziina" className="flex-1 cursor-pointer">
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="h-4 w-4" />
-                      <span>Pay with Ziina</span>
+              {shippingMethods.map((method) => (
+                <div key={method.id} className="flex items-center space-x-2 p-3 border rounded-lg">
+                  <RadioGroupItem value={method.id} id={method.id} />
+                  <Label htmlFor={method.id} className="flex-1">
+                    <div>
+                      <p className="font-medium">{method.name}</p>
+                      <p className="text-sm text-muted-foreground">{method.description}</p>
+                      {method.estimated_days && (
+                        <p className="text-sm text-muted-foreground">Estimated: {method.estimated_days}</p>
+                      )}
                     </div>
                   </Label>
+                  <span className="font-medium">${method.price}</span>
                 </div>
-                
-                {selectedShipping === 'store-pickup' && (
-                  <div className="flex items-center space-x-3 p-3 border rounded-lg hover-lift-subtle">
-                    <RadioGroupItem value="cash" id="cash" />
-                    <Label htmlFor="cash" className="flex-1 cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <Banknote className="h-4 w-4" />
-                        <span>Cash on Pickup</span>
-                      </div>
-                    </Label>
-                  </div>
-                )}
-              </RadioGroup>
+              ))}
+            </RadioGroup>
+          </CardContent>
+        </Card>
 
-              {paymentMethod === 'ziina' && (
-                <div className="mt-4">
-                  <ZiinaPayment
-                    amount={subtotal + shippingCost}
-                    onSuccess={handleOrderSuccess}
-                    onError={(error) => {
-                      toast({
-                        title: "Payment Failed",
-                        description: error,
-                        variant: "destructive"
-                      });
-                    }}
-                    orderData={{ firstName: formData.firstName }}
-                  />
-                </div>
-              )}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Payment Method
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+              <div className="flex items-center space-x-2 p-3 border rounded-lg">
+                <RadioGroupItem value="ziina" id="ziina" />
+                <Label htmlFor="ziina" className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-blue-600" />
+                  Pay with Ziina
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2 p-3 border rounded-lg">
+                <RadioGroupItem value="cash" id="cash" />
+                <Label htmlFor="cash" className="flex items-center gap-2">
+                  <Banknote className="h-4 w-4 text-green-600" />
+                  Cash on Pickup
+                </Label>
+              </div>
+            </RadioGroup>
+          </CardContent>
+        </Card>
 
-              {paymentMethod === 'cash' && selectedShipping === 'store-pickup' && (
-                <div className="mt-4">
-                  <Card className="border border-green-200 bg-green-50">
-                    <CardContent className="p-4">
-                      <h4 className="font-semibold text-green-700 mb-2">Cash on Pickup</h4>
-                      <p className="text-sm text-green-600 mb-4">
-                        You will pay ${(subtotal + shippingCost).toFixed(2)} when you pick up your order from our store.
-                      </p>
-                      <Button 
-                        onClick={handleCashOnPickupOrder}
-                        className="w-full bg-green-600 hover:bg-green-700 btn-professional"
-                      >
-                        <Banknote className="h-4 w-4 mr-2" />
-                        Place Order (Cash on Pickup)
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
+        {paymentMethod === 'ziina' && (
+          <ZiinaPayment
+            amount={total}
+            onSuccess={handlePaymentSuccess}
+            onError={(error) => {
+              toast({
+                title: "Payment Failed",
+                description: error,
+                variant: "destructive"
+              });
+            }}
+          />
+        )}
+
+        {paymentMethod === 'cash' && (
+          <Card>
+            <CardContent className="p-6">
+              <div className="text-center space-y-4">
+                <Banknote className="h-12 w-12 mx-auto text-green-600" />
+                <h3 className="text-lg font-semibold">Cash on Pickup</h3>
+                <p className="text-muted-foreground">
+                  Pay ${total.toFixed(2)} when you pick up your order from our store.
+                </p>
+                <Button 
+                  onClick={() => handlePaymentSuccess('cash_on_pickup')}
+                  className="w-full"
+                  disabled={loading}
+                >
+                  Confirm Order
+                </Button>
+              </div>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Right Column - Order Summary */}
-        <div className="lg:col-span-1">
-          <OrderSummary
-            cartItems={cartItems}
-            subtotal={subtotal}
-            shippingCost={shippingCost}
-            total={subtotal + shippingCost}
-          />
-        </div>
+        )}
       </div>
+
+      <OrderSummary
+        items={items}
+        subtotal={subtotal}
+        shippingCost={shippingCost}
+        total={total}
+      />
     </div>
   );
 };

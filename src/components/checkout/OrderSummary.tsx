@@ -1,9 +1,10 @@
 
-import React from "react";
-import { Separator } from "@/components/ui/separator";
-import { CartItem } from "@/types/cart";
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { CartItem } from '@/types/cart';
 
-export interface OrderSummaryProps {
+interface OrderSummaryProps {
   items: CartItem[];
   subtotal: number;
   shippingCost: number;
@@ -14,49 +15,52 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
   items,
   subtotal,
   shippingCost,
-  total,
+  total
 }) => {
   return (
-    <div className="space-y-4">
-      <div className="space-y-3">
-        {items.map((item) => (
-          <div key={`${item.product_id}-${JSON.stringify(item.customization)}`} 
-               className="flex justify-between items-center">
-            <div className="flex-1">
-              <h4 className="font-medium text-foreground">{item.name}</h4>
-              <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
-              {item.customization && (
-                <p className="text-xs text-muted-foreground">Customized</p>
-              )}
+    <Card>
+      <CardHeader>
+        <CardTitle>Order Summary</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-3">
+          {items.map((item) => (
+            <div key={item.id} className="flex justify-between items-center">
+              <div className="flex items-center space-x-3">
+                <img
+                  src={item.images?.[0] || item.image_url || '/placeholder-product.jpg'}
+                  alt={item.name}
+                  className="w-12 h-12 object-cover rounded"
+                />
+                <div>
+                  <p className="font-medium text-sm">{item.name}</p>
+                  <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+                </div>
+              </div>
+              <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
             </div>
-            <div className="font-medium text-foreground">
-              ${(item.price * item.quantity).toFixed(2)}
-            </div>
+          ))}
+        </div>
+
+        <Separator />
+
+        <div className="space-y-2">
+          <div className="flex justify-between">
+            <span>Subtotal</span>
+            <span>${subtotal.toFixed(2)}</span>
           </div>
-        ))}
-      </div>
-      
-      <Separator className="border-border" />
-      
-      <div className="space-y-2">
-        <div className="flex justify-between text-foreground">
-          <span>Subtotal</span>
-          <span>${subtotal.toFixed(2)}</span>
+          <div className="flex justify-between">
+            <span>Shipping</span>
+            <span>${shippingCost.toFixed(2)}</span>
+          </div>
+          <Separator />
+          <div className="flex justify-between font-bold text-lg">
+            <span>Total</span>
+            <span>${total.toFixed(2)}</span>
+          </div>
         </div>
-        
-        <div className="flex justify-between text-foreground">
-          <span>Shipping</span>
-          <span>${shippingCost.toFixed(2)}</span>
-        </div>
-        
-        <Separator className="border-border" />
-        
-        <div className="flex justify-between font-bold text-lg text-foreground">
-          <span>Total</span>
-          <span>${total.toFixed(2)}</span>
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

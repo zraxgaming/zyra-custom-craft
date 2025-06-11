@@ -46,8 +46,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       name: product.name,
       price: product.price,
       quantity: 1,
-      images: product.images,
       image_url: product.image_url,
+      images: product.images,
       slug: product.slug
     });
     
@@ -64,7 +64,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     : product.price;
 
   return (
-    <Card className="group overflow-hidden card-professional animate-fade-in-elegant">
+    <Card className="group overflow-hidden">
       <div className="relative overflow-hidden">
         <Link to={productUrl}>
           <img
@@ -74,7 +74,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           />
         </Link>
         
-        {/* Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1">
           {product.is_new && (
             <Badge className="bg-green-500 text-white">New</Badge>
@@ -89,12 +88,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           )}
         </div>
 
-        {/* Actions */}
         <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <Button
             size="sm"
             variant="outline"
-            className="h-8 w-8 p-0 bg-white/90 hover:bg-white interactive-element"
+            className="h-8 w-8 p-0 bg-white/90 hover:bg-white"
             onClick={handleWishlistToggle}
           >
             <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} />
@@ -102,7 +100,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <Button
             size="sm"
             variant="outline"
-            className="h-8 w-8 p-0 bg-white/90 hover:bg-white interactive-element"
+            className="h-8 w-8 p-0 bg-white/90 hover:bg-white"
             asChild
           >
             <Link to={productUrl}>
@@ -132,7 +130,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             </p>
           )}
 
-          {/* Rating */}
           {product.rating && (
             <div className="flex items-center gap-1">
               <div className="flex">
@@ -153,7 +150,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             </div>
           )}
 
-          {/* Price */}
           <div className="flex items-center gap-2">
             <span className="font-bold text-primary">
               ${discountedPrice.toFixed(2)}
@@ -165,10 +161,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             )}
           </div>
 
-          {/* Add to Cart Button */}
           <Button 
             onClick={handleAddToCart}
-            className="w-full btn-professional"
+            className="w-full"
             disabled={!product.in_stock}
           >
             <ShoppingCart className="h-4 w-4 mr-2" />

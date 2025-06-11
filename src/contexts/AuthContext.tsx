@@ -29,7 +29,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      checkAdminStatus(session?.user ?? null);
+      if (session?.user) {
+        checkAdminStatus(session.user);
+      }
       setLoading(false);
       setIsLoading(false);
     });
@@ -40,7 +42,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      checkAdminStatus(session?.user ?? null);
+      if (session?.user) {
+        checkAdminStatus(session.user);
+      } else {
+        setIsAdmin(false);
+      }
       setLoading(false);
       setIsLoading(false);
     });
@@ -48,12 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const checkAdminStatus = async (user: User | null) => {
-    if (!user) {
-      setIsAdmin(false);
-      return;
-    }
-
+  const checkAdminStatus = async (user: User) => {
     try {
       const { data, error } = await supabase
         .from('profiles')

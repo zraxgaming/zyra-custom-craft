@@ -1,5 +1,5 @@
 
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -17,35 +17,25 @@ export interface WishlistItem {
   review_count?: number;
 }
 
-interface WishlistContextType {
-  items: WishlistItem[];
-  addToWishlist: (productId: string) => void;
-  removeFromWishlist: (productId: string) => void;
-  isInWishlist: (productId: string) => boolean;
-  loading: boolean;
-}
-
-const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
-
 export const useWishlist = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [items, setItems] = useState<WishlistItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
       fetchWishlistItems();
     } else {
       setItems([]);
-      setIsLoading(false);
+      setLoading(false);
     }
   }, [user]);
 
   const fetchWishlistItems = async () => {
     if (!user) {
       setItems([]);
-      setIsLoading(false);
+      setLoading(false);
       return;
     }
 
@@ -89,7 +79,7 @@ export const useWishlist = () => {
     } catch (error) {
       console.error('Error fetching wishlist:', error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -156,6 +146,6 @@ export const useWishlist = () => {
     addToWishlist,
     removeFromWishlist,
     isInWishlist,
-    loading: isLoading
+    loading
   };
 };
