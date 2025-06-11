@@ -14,6 +14,12 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
 }
 
+declare global {
+  interface Navigator {
+    standalone?: boolean;
+  }
+}
+
 const PWAInstallPrompt = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
@@ -103,7 +109,7 @@ const PWAInstallPrompt = () => {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3 flex-1">
               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                <Smartphone className="h-6 w-6 animate-bounce" />
+                <Smartphone className="h-6 w-6 animate-pulse" />
               </div>
               <div>
                 <h3 className="font-semibold text-lg">Install Zyra App</h3>

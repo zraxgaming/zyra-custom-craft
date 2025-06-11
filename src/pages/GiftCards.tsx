@@ -1,36 +1,52 @@
 
-import React, { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import { Container } from "@/components/ui/container";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { Gift, CreditCard, Check, Sparkles, Heart, Star, Smartphone } from "lucide-react";
-import ZiinaPayment from "@/components/checkout/ZiinaPayment";
-import SEOHead from "@/components/seo/SEOHead";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Gift, CreditCard, Send, User, Calendar, DollarSign } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
+import ZiinaPayment from '@/components/checkout/ZiinaPayment';
+import SEOHead from '@/components/seo/SEOHead';
+
+interface GiftCard {
+  id: string;
+  code: string;
+  amount: number;
+  initial_amount: number;
+  recipient_email?: string;
+  message?: string;
+  created_at: string;
+  expires_at?: string;
+  is_active: boolean;
+}
 
 const GiftCards = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [giftCards, setGiftCards] = useState([]);
-  const [purchaseAmount, setPurchaseAmount] = useState('50');
-  const [recipientEmail, setRecipientEmail] = useState('');
-  const [message, setMessage] = useState('');
-  const [showZiinaPayment, setShowZiinaPayment] = useState(false);
-
-  const presetAmounts = [25, 50, 100, 200];
+  const [giftCards, setGiftCards] = useState<GiftCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState(false);
+  const [showPurchaseForm, setShowPurchaseForm] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const [formData, setFormData] = useState({
+    amount: '',
+    recipientEmail: '',
+    message: '',
+    recipientName: ''
+  });
 
   useEffect(() => {
     if (user) {
       fetchGiftCards();
+    } else {
+      setLoading(false);
     }
   }, [user]);
 
@@ -46,262 +62,344 @@ const GiftCards = () => {
 
       if (error) throw error;
       setGiftCards(data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching gift cards:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load your gift cards",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleZiinaSuccess = async (transactionId: string) => {
-    try {
-      const amount = parseFloat(purchaseAmount);
-      const code = `GC${Date.now()}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+  const generateGiftCardCode = () => {
+    return 'GC' + Math.random().toString(36).substr(2, 10).toUpperCase();
+  };
 
+  const handleCreateGiftCard = async (transactionId: string) => {
+    if (!user) return;
+
+    setPurchasing(true);
+    try {
+      const code = generateGiftCardCode();
+      const amount = parseFloat(formData.amount);
+      
       const { error } = await supabase
         .from('gift_cards')
         .insert({
-          code: code,
-          amount: amount,
+          code,
+          amount,
           initial_amount: amount,
           created_by: user.id,
-          recipient_email: recipientEmail || null,
-          message: message || null,
-          is_active: true,
-          expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+          recipient_email: formData.recipientEmail || null,
+          message: formData.message || null,
+          expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
+          is_active: true
         });
 
       if (error) throw error;
 
       toast({
-        title: "Success! 🎉",
-        description: "Gift card purchased successfully!",
+        title: "Gift Card Created! 🎁",
+        description: `Gift card ${code} has been created successfully`,
       });
 
-      setPurchaseAmount('50');
-      setRecipientEmail('');
-      setMessage('');
-      setShowZiinaPayment(false);
-      fetchGiftCards();
+      // Reset form and fetch updated list
+      setFormData({ amount: '', recipientEmail: '', message: '', recipientName: '' });
+      setShowPurchaseForm(false);
+      setShowPayment(false);
+      await fetchGiftCards();
+
     } catch (error: any) {
       console.error('Error creating gift card:', error);
       toast({
-        title: "Error",
+        title: "Creation Failed",
         description: error.message || "Failed to create gift card",
-        variant: "destructive",
+        variant: "destructive"
       });
+    } finally {
+      setPurchasing(false);
     }
   };
 
+  const handlePaymentError = (error: string) => {
+    toast({
+      title: "Payment Failed",
+      description: error,
+      variant: "destructive"
+    });
+    setShowPayment(false);
+  };
+
+  const handleProceedToPayment = () => {
+    if (!formData.amount || parseFloat(formData.amount) < 10) {
+      toast({
+        title: "Invalid Amount",
+        description: "Gift card amount must be at least $10",
+        variant: "destructive"
+      });
+      return;
+    }
+    setShowPayment(true);
+  };
+
+  if (!user) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <Card className="w-full max-w-md animate-scale-in">
+            <CardContent className="p-6 text-center">
+              <Gift className="h-12 w-12 mx-auto mb-4 text-primary animate-pulse" />
+              <h2 className="text-2xl font-bold mb-4">Sign In Required</h2>
+              <p className="text-muted-foreground mb-6">
+                Please sign in to purchase and manage gift cards
+              </p>
+              <Button asChild className="w-full">
+                <a href="/auth">Sign In</a>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-gray-900 dark:via-purple-900 dark:to-pink-900">
+    <>
       <SEOHead 
         title="Gift Cards - Zyra Custom Craft"
-        description="Purchase digital gift cards for Zyra Custom Craft. The perfect gift for anyone who loves personalized products."
-        keywords="gift cards, digital gifts, personalized gifts, custom products"
+        description="Purchase and manage gift cards for Zyra Custom Craft. Perfect gifts for customization enthusiasts."
+        keywords="gift cards, gifts, custom products, personalization"
       />
       <Navbar />
       
-      <div className="py-16 animate-fade-in">
-        <Container>
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-16 animate-slide-in-up">
-              <div className="flex items-center justify-center gap-3 mb-6">
-                <Gift className="h-12 w-12 text-purple-600 animate-bounce" />
-                <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent animate-text-shimmer">
-                  Gift Cards
-                </h1>
-                <Sparkles className="h-12 w-12 text-pink-500 animate-pulse" />
-              </div>
-              <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto animate-fade-in-delay">
-                Give the gift of creativity! Purchase digital gift cards for your loved ones to explore our custom craft collection.
-              </p>
-            </div>
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-purple-500/10 py-12">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="text-center mb-8 animate-fade-in">
+            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+              Gift Cards
+            </h1>
+            <p className="text-muted-foreground text-lg">
+              Give the perfect gift of customization
+            </p>
+          </div>
 
-            <div className="grid lg:grid-cols-2 gap-12 items-start">
-              {/* Purchase Form */}
-              <Card className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-0 shadow-2xl animate-slide-in-left">
-                <CardHeader className="text-center pb-2">
-                  <CardTitle className="text-2xl font-bold text-purple-700 dark:text-purple-300 flex items-center justify-center gap-2">
-                    <CreditCard className="h-6 w-6 animate-bounce" />
-                    Purchase Gift Card
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {!showZiinaPayment ? (
-                    <>
-                      <div className="space-y-3">
-                        <Label className="text-lg font-semibold text-purple-700 dark:text-purple-300">Choose Amount</Label>
-                        <div className="grid grid-cols-2 gap-3">
-                          {presetAmounts.map((amount, index) => (
-                            <Button
-                              key={amount}
-                              variant={purchaseAmount === amount.toString() ? "default" : "outline"}
-                              onClick={() => setPurchaseAmount(amount.toString())}
-                              className={`h-16 text-lg font-semibold transition-all duration-300 animate-fade-in ${
-                                purchaseAmount === amount.toString() 
-                                  ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white scale-105 shadow-lg" 
-                                  : "hover:scale-105 hover:shadow-md"
-                              }`}
-                              style={{animationDelay: `${index * 100}ms`}}
-                            >
-                              ${amount}
-                            </Button>
-                          ))}
+          {/* Purchase New Gift Card */}
+          <div className="mb-8 animate-slide-in-up">
+            <Card className="border-2 border-primary/20 shadow-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Gift className="h-5 w-5 text-primary" />
+                  Purchase Gift Card
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {!showPurchaseForm ? (
+                  <div className="text-center py-8">
+                    <Gift className="h-16 w-16 mx-auto mb-4 text-primary animate-pulse" />
+                    <h3 className="text-xl font-semibold mb-2">Create a New Gift Card</h3>
+                    <p className="text-muted-foreground mb-6">
+                      Perfect for birthdays, holidays, or any special occasion
+                    </p>
+                    <Button 
+                      onClick={() => setShowPurchaseForm(true)}
+                      className="bg-gradient-to-r from-primary to-purple-600 hover:scale-105 transition-transform"
+                    >
+                      <Gift className="h-4 w-4 mr-2" />
+                      Purchase Gift Card
+                    </Button>
+                  </div>
+                ) : showPayment ? (
+                  <div className="space-y-6">
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <h3 className="font-semibold mb-2">Gift Card Details</h3>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Amount:</span>
+                          <span className="ml-2 font-semibold">${formData.amount}</span>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="custom-amount">Or enter custom amount</Label>
-                          <Input
-                            id="custom-amount"
-                            type="number"
-                            min="10"
-                            max="1000"
-                            value={purchaseAmount}
-                            onChange={(e) => setPurchaseAmount(e.target.value)}
-                            className="text-lg h-12 transition-all duration-300 focus:scale-105"
-                          />
+                        <div>
+                          <span className="text-muted-foreground">Recipient:</span>
+                          <span className="ml-2">{formData.recipientEmail || 'None'}</span>
                         </div>
                       </div>
-
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="recipient-email">Recipient Email (Optional)</Label>
-                          <Input
-                            id="recipient-email"
-                            type="email"
-                            value={recipientEmail}
-                            onChange={(e) => setRecipientEmail(e.target.value)}
-                            placeholder="recipient@example.com"
-                            className="h-12 transition-all duration-300 focus:scale-105"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="message">Personal Message (Optional)</Label>
-                          <Textarea
-                            id="message"
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            placeholder="Write a personal message..."
-                            rows={3}
-                            className="transition-all duration-300 focus:scale-105"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 p-6 rounded-xl border border-purple-200 dark:border-purple-700 animate-pulse-slow">
-                        <div className="flex items-center justify-between mb-4">
-                          <span className="text-lg font-semibold text-purple-700 dark:text-purple-300">Total Amount:</span>
-                          <span className="text-3xl font-bold text-purple-800 dark:text-purple-200">${parseFloat(purchaseAmount || '0').toFixed(2)}</span>
-                        </div>
-                        <p className="text-sm text-purple-600 dark:text-purple-400">
-                          ≈ {(parseFloat(purchaseAmount || '0') * 3.67).toFixed(2)} AED
-                        </p>
-                      </div>
-
-                      <Button
-                        onClick={() => setShowZiinaPayment(true)}
-                        disabled={!user || parseFloat(purchaseAmount) < 10}
-                        className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 animate-bounce-in"
-                      >
-                        <Smartphone className="h-5 w-5 mr-2" />
-                        Pay with Ziina
-                      </Button>
-                    </>
-                  ) : (
+                    </div>
+                    
                     <ZiinaPayment
-                      amount={parseFloat(purchaseAmount)}
-                      onSuccess={handleZiinaSuccess}
-                      onError={(error) => {
-                        toast({
-                          title: "Payment Error",
-                          description: error,
-                          variant: "destructive"
-                        });
-                        setShowZiinaPayment(false);
+                      amount={parseFloat(formData.amount)}
+                      onSuccess={handleCreateGiftCard}
+                      onError={handlePaymentError}
+                      orderData={{
+                        firstName: user.user_metadata?.first_name || 'Customer',
+                        type: 'Gift Card Purchase'
                       }}
                     />
-                  )}
-
-                  {!user && (
-                    <div className="text-center p-4 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg border border-yellow-300 dark:border-yellow-700 animate-shake">
-                      <p className="text-yellow-800 dark:text-yellow-200 font-medium">
-                        Please sign in to purchase gift cards
-                      </p>
+                    
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowPayment(false)}
+                      className="w-full"
+                    >
+                      Back to Form
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="amount">Amount (USD)</Label>
+                        <Input
+                          id="amount"
+                          type="number"
+                          min="10"
+                          step="0.01"
+                          placeholder="50.00"
+                          value={formData.amount}
+                          onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="recipientEmail">Recipient Email (Optional)</Label>
+                        <Input
+                          id="recipientEmail"
+                          type="email"
+                          placeholder="recipient@example.com"
+                          value={formData.recipientEmail}
+                          onChange={(e) => setFormData(prev => ({ ...prev, recipientEmail: e.target.value }))}
+                        />
+                      </div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Gift Card Features */}
-              <div className="space-y-8 animate-slide-in-right">
-                <Card className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 border-purple-200 dark:border-purple-700 shadow-xl">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
-                      <Star className="h-5 w-5 animate-spin-slow" />
-                      Why Choose Our Gift Cards?
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {[
-                      { icon: Check, text: "Valid for 1 year from purchase", delay: "0ms" },
-                      { icon: Gift, text: "Perfect for any occasion", delay: "100ms" },
-                      { icon: Heart, text: "Personal message included", delay: "200ms" },
-                      { icon: Sparkles, text: "Instant digital delivery", delay: "300ms" }
-                    ].map((feature, index) => (
-                      <div 
-                        key={index}
-                        className="flex items-center gap-3 p-3 bg-white/60 dark:bg-gray-800/60 rounded-lg backdrop-blur-sm animate-fade-in"
-                        style={{animationDelay: feature.delay}}
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="message">Personal Message (Optional)</Label>
+                      <Textarea
+                        id="message"
+                        placeholder="Happy Birthday! Enjoy shopping..."
+                        value={formData.message}
+                        onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
+                      />
+                    </div>
+                    
+                    <div className="flex gap-4">
+                      <Button 
+                        onClick={handleProceedToPayment}
+                        className="flex-1 bg-gradient-to-r from-primary to-purple-600"
+                        disabled={!formData.amount || purchasing}
                       >
-                        <feature.icon className="h-5 w-5 text-purple-600 animate-pulse" />
-                        <span className="text-gray-700 dark:text-gray-300">{feature.text}</span>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
+                        <CreditCard className="h-4 w-4 mr-2" />
+                        Proceed to Payment
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setShowPurchaseForm(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-                {/* Your Gift Cards */}
-                {user && giftCards.length > 0 && (
-                  <Card className="bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-950 dark:to-blue-950 border-green-200 dark:border-green-700 shadow-xl animate-scale-in">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-300">
-                        <Gift className="h-5 w-5 animate-bounce" />
-                        Your Gift Cards
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {giftCards.slice(0, 3).map((card: any, index) => (
-                          <div 
-                            key={card.id} 
-                            className="flex items-center justify-between p-4 bg-white/60 dark:bg-gray-800/60 rounded-lg backdrop-blur-sm animate-slide-in-up"
-                            style={{animationDelay: `${index * 100}ms`}}
-                          >
-                            <div>
-                              <p className="font-semibold text-gray-800 dark:text-gray-200">{card.code}</p>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">
-                                Created: {new Date(card.created_at).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-lg font-bold text-green-600">${card.amount}</p>
-                              <Badge variant={card.is_active ? "default" : "secondary"} className="animate-pulse">
-                                {card.is_active ? "Active" : "Used"}
-                              </Badge>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+          {/* Your Gift Cards */}
+          <div className="animate-slide-in-up" style={{ animationDelay: '0.2s' }}>
+            <h2 className="text-2xl font-bold mb-6">Your Gift Cards</h2>
+            
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i} className="animate-pulse">
+                    <CardContent className="p-6">
+                      <div className="h-4 bg-muted rounded mb-4"></div>
+                      <div className="h-8 bg-muted rounded mb-2"></div>
+                      <div className="h-4 bg-muted rounded"></div>
                     </CardContent>
                   </Card>
-                )}
+                ))}
               </div>
-            </div>
+            ) : giftCards.length === 0 ? (
+              <Card className="text-center py-12">
+                <CardContent>
+                  <Gift className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-xl font-semibold mb-2">No Gift Cards Yet</h3>
+                  <p className="text-muted-foreground">
+                    Purchase your first gift card to get started
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {giftCards.map((giftCard, index) => (
+                  <Card 
+                    key={giftCard.id} 
+                    className="hover:shadow-lg transition-all duration-300 hover:scale-105 animate-scale-in"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">Gift Card</CardTitle>
+                        <Badge variant={giftCard.is_active ? "default" : "secondary"}>
+                          {giftCard.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="text-center p-4 bg-gradient-to-r from-primary/10 to-purple-600/10 rounded-lg">
+                        <p className="text-sm text-muted-foreground mb-1">Gift Card Code</p>
+                        <p className="text-xl font-mono font-bold">{giftCard.code}</p>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Balance:</span>
+                          <span className="font-semibold">${giftCard.amount}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Original:</span>
+                          <span className="text-sm">${giftCard.initial_amount}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Created:</span>
+                          <span className="text-sm">{new Date(giftCard.created_at).toLocaleDateString()}</span>
+                        </div>
+                        {giftCard.expires_at && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">Expires:</span>
+                            <span className="text-sm">{new Date(giftCard.expires_at).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {giftCard.recipient_email && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <p className="text-sm text-muted-foreground mb-1">Recipient:</p>
+                          <p className="text-sm font-medium">{giftCard.recipient_email}</p>
+                        </div>
+                      )}
+                      
+                      {giftCard.message && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <p className="text-sm text-muted-foreground mb-1">Message:</p>
+                          <p className="text-sm">{giftCard.message}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
-        </Container>
+        </div>
       </div>
       
       <Footer />
-    </div>
+    </>
   );
 };
 
