@@ -10,6 +10,7 @@ interface CartProviderProps {
 
 export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     const savedCart = localStorage.getItem('cart');
@@ -46,6 +47,10 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     setItems(prevItems => prevItems.filter(item => item.product_id !== productId));
   };
 
+  const removeItem = (productId: string) => {
+    removeFromCart(productId);
+  };
+
   const updateQuantity = (productId: string, quantity: number) => {
     if (quantity <= 0) {
       removeFromCart(productId);
@@ -73,14 +78,30 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     return items.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
+  const toggleCart = () => {
+    setIsOpen(!isOpen);
+  };
+
+  const subtotal = getTotalPrice();
+  const itemCount = getItemCount();
+  const totalItems = itemCount;
+  const totalPrice = subtotal;
+
   const value: CartContextType = {
     items,
     addToCart,
     removeFromCart,
+    removeItem,
     updateQuantity,
     clearCart,
     getItemCount,
-    getTotalPrice
+    getTotalPrice,
+    subtotal,
+    itemCount,
+    isOpen,
+    toggleCart,
+    totalItems,
+    totalPrice
   };
 
   return (

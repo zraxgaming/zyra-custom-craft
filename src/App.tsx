@@ -8,9 +8,6 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { WishlistProvider } from "@/hooks/use-wishlist";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
-import PWAInstallPrompt from "@/components/layout/PWAInstallPrompt";
-import PushNotificationSetup from "@/components/layout/PushNotificationSetup";
-import MaintenanceBanner from "@/components/layout/MaintenanceBanner";
 
 // Public Pages
 import Index from "./pages/Index";
@@ -42,7 +39,7 @@ import AdminOrders from "./pages/admin/Orders";
 import AdminUsers from "./pages/admin/Users";
 import AdminSettings from "./pages/admin/Settings";
 import AdminZiina from "./pages/admin/AdminZiina";
-import AdminGiftCards from "./pages/admin/GiftCards";
+import AdminGiftCards from "./pages/admin/AdminGiftCards";
 import AdminNewsletter from "./pages/admin/AdminNewsletter";
 import Scanner from "./pages/admin/Scanner";
 
@@ -57,11 +54,11 @@ const App = () => (
             <TooltipProvider>
               <Toaster />
               <Sonner />
-              <MaintenanceBanner />
-              <PWAInstallPrompt />
-              <PushNotificationSetup />
               <BrowserRouter>
                 <Routes>
+                  {/* Redirect /home to / */}
+                  <Route path="/home" element={<Navigate to="/" replace />} />
+                  
                   {/* Public Routes */}
                   <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />
