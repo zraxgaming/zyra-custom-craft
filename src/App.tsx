@@ -29,6 +29,7 @@ import OrderFailed from "./pages/OrderFailed";
 import CategoryPage from "./pages/CategoryPage";
 import GiftCards from "./pages/GiftCards";
 import NotFound from "./pages/404";
+import Dashboard from "./pages/Dashboard";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -70,7 +71,7 @@ const App = () => (
                   <Route path="/wishlist" element={<Wishlist />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/profile" element={<Profile />} />
-                  <Route path="/dashboard" element={<Navigate to="/profile" replace />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/privacy" element={<Privacy />} />

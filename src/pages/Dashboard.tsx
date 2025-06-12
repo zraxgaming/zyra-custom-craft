@@ -24,7 +24,10 @@ import {
   Bell,
   Gift,
   Users,
-  LogOut
+  LogOut,
+  Eye,
+  ShoppingBag,
+  Loader2
 } from "lucide-react";
 
 const Dashboard = () => {
@@ -32,7 +35,9 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
   const [orders, setOrders] = useState([]);
+  const [wishlistCount, setWishlistCount] = useState(0);
   const [profile, setProfile] = useState({
     display_name: '',
     first_name: '',
@@ -53,6 +58,8 @@ const Dashboard = () => {
     if (!user) return;
     
     try {
+      setDataLoading(true);
+      
       // Fetch profile
       const { data: profileData } = await supabase
         .from('profiles')
@@ -79,8 +86,23 @@ const Dashboard = () => {
         .limit(5);
 
       setOrders(ordersData || []);
+
+      // Fetch wishlist count
+      const { data: wishlistData } = await supabase
+        .from('wishlists')
+        .select('id')
+        .eq('user_id', user.id);
+
+      setWishlistCount(wishlistData?.length || 0);
     } catch (error) {
       console.error('Error fetching user data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive"
+      });
+    } finally {
+      setDataLoading(false);
     }
   };
 
@@ -117,25 +139,50 @@ const Dashboard = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
       case 'processing':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
       case 'shipped':
-        return 'bg-purple-100 text-purple-800';
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
       case 'cancelled':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
     }
   };
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/home');
+    navigate('/');
   };
 
   if (!user) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (dataLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SEOHead 
+          title="Dashboard - Zyra Custom Craft"
+          description="Manage your account, orders, and preferences"
+        />
+        <Navbar />
+        <Container className="py-12">
+          <div className="flex items-center justify-center py-16">
+            <div className="text-center">
+              <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+              <p className="text-muted-foreground">Loading your dashboard...</p>
+            </div>
+          </div>
+        </Container>
+        <Footer />
+      </div>
+    );
   }
 
   return (
@@ -151,20 +198,20 @@ const Dashboard = () => {
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-4">My Dashboard</h1>
             <p className="text-lg text-muted-foreground">
-              Welcome back, {profile.display_name || profile.first_name || 'User'}!
+              Welcome back, {profile.display_name || profile.first_name || user.email}!
             </p>
           </div>
 
           <div className="flex justify-between items-center mb-6">
             <div className="flex gap-4">
               {isAdmin && (
-                <Button onClick={() => navigate('/admin')}>
+                <Button onClick={() => navigate('/admin')} className="bg-gradient-to-r from-purple-600 to-pink-600">
                   <Settings className="mr-2 h-4 w-4" />
                   Admin Panel
                 </Button>
               )}
               <Button variant="outline" onClick={() => navigate('/shop')}>
-                <Package className="mr-2 h-4 w-4" />
+                <ShoppingBag className="mr-2 h-4 w-4" />
                 Continue Shopping
               </Button>
             </div>
@@ -184,8 +231,8 @@ const Dashboard = () => {
             </TabsList>
 
             <TabsContent value="overview">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <Card className="hover:shadow-lg transition-shadow duration-300">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
                     <Package className="h-4 w-4 text-muted-foreground" />
@@ -196,30 +243,30 @@ const Dashboard = () => {
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="hover:shadow-lg transition-shadow duration-300">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Wishlist Items</CardTitle>
                     <Heart className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">0</div>
+                    <div className="text-2xl font-bold">{wishlistCount}</div>
                     <p className="text-xs text-muted-foreground">Saved items</p>
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="hover:shadow-lg transition-shadow duration-300">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Referrals</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-sm font-medium">Account Status</CardTitle>
+                    <Eye className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">0</div>
-                    <p className="text-xs text-muted-foreground">Friends referred</p>
+                    <div className="text-2xl font-bold">Active</div>
+                    <p className="text-xs text-muted-foreground">Member since {new Date(user.created_at).toLocaleDateString()}</p>
                   </CardContent>
                 </Card>
               </div>
 
-              <Card className="mt-6">
+              <Card>
                 <CardHeader>
                   <CardTitle>Recent Orders</CardTitle>
                 </CardHeader>
@@ -227,7 +274,7 @@ const Dashboard = () => {
                   {orders.length > 0 ? (
                     <div className="space-y-4">
                       {orders.map((order: any) => (
-                        <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                           <div>
                             <p className="font-medium">Order #{order.id.slice(0, 8)}</p>
                             <p className="text-sm text-muted-foreground">
@@ -244,10 +291,12 @@ const Dashboard = () => {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-8">
-                      <Package className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                      <p className="text-muted-foreground">No orders yet</p>
-                      <Button className="mt-4" onClick={() => navigate('/shop')}>
+                    <div className="text-center py-12">
+                      <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                      <h3 className="text-xl font-semibold mb-2">No orders yet</h3>
+                      <p className="text-muted-foreground mb-4">Start shopping to see your orders here</p>
+                      <Button onClick={() => navigate('/shop')}>
+                        <ShoppingBag className="mr-2 h-4 w-4" />
                         Start Shopping
                       </Button>
                     </div>
@@ -265,23 +314,23 @@ const Dashboard = () => {
                   {orders.length > 0 ? (
                     <div className="space-y-4">
                       {orders.map((order: any) => (
-                        <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                           <div className="space-y-1">
                             <p className="font-medium">Order #{order.id.slice(0, 8)}</p>
                             <p className="text-sm text-muted-foreground">
-                              {new Date(order.created_at).toLocaleDateString()} • {order.payment_method}
+                              {new Date(order.created_at).toLocaleDateString()} • {order.payment_method || 'Online Payment'}
                             </p>
                             <p className="text-sm text-muted-foreground">
-                              Delivery: {order.delivery_type}
+                              Delivery: {order.delivery_type || 'Standard'}
                             </p>
                           </div>
                           <div className="text-right space-y-1">
-                            <p className="font-medium">${order.total_amount} {order.currency}</p>
+                            <p className="font-medium">${order.total_amount} {order.currency || 'USD'}</p>
                             <Badge className={getStatusColor(order.status)}>
                               {order.status}
                             </Badge>
                             <div>
-                              <Button variant="outline" size="sm">
+                              <Button variant="outline" size="sm" onClick={() => navigate(`/order/${order.id}`)}>
                                 View Details
                               </Button>
                             </div>
@@ -290,9 +339,14 @@ const Dashboard = () => {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-8">
-                      <Package className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                      <p className="text-muted-foreground">No orders found</p>
+                    <div className="text-center py-12">
+                      <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                      <h3 className="text-xl font-semibold mb-2">No orders found</h3>
+                      <p className="text-muted-foreground mb-4">Your order history will appear here</p>
+                      <Button onClick={() => navigate('/shop')}>
+                        <ShoppingBag className="mr-2 h-4 w-4" />
+                        Start Shopping
+                      </Button>
                     </div>
                   )}
                 </CardContent>
@@ -411,7 +465,7 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-center py-8">
-                    <Gift className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                    <Gift className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
                     <h3 className="text-lg font-medium mb-2">Refer Friends & Earn Rewards</h3>
                     <p className="text-muted-foreground mb-6">
                       Share your unique referral code and earn credits when your friends make their first purchase.

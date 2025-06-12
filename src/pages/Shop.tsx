@@ -73,95 +73,104 @@ const Shop = () => {
   return (
     <>
       <SEOHead 
-        title="Shop - Zyra Custom Craft"
-        description="Discover our premium collection of customizable products. Shop the latest designs and create something unique."
+        title="Shop - Zyra Custom Craft | Premium Custom Products"
+        description="Discover our premium collection of customizable products. Shop the latest designs and create something unique with professional customization tools."
         url="https://shopzyra.vercel.app/shop"
-        keywords="shop, custom products, personalized gifts, crafts, design"
+        keywords="shop, custom products, personalized gifts, crafts, design, UAE, premium quality"
       />
       <Navbar />
       
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-purple-500/10">
         {/* Hero Section */}
-        <section className="py-16">
-          <Container>
-            <div className="text-center mb-12">
-              <Badge className="mb-6 bg-gradient-to-r from-primary via-purple-600 to-pink-600 text-white text-lg px-6 py-2" variant="outline">
-                <Sparkles className="h-5 w-5 mr-2" />
-                Premium Collection
-                <Star className="h-5 w-5 ml-2" />
-              </Badge>
+        <section className="py-16 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-blue-500/10 animate-gradient-x"></div>
+          <Container className="relative">
+            <div className="text-center mb-12 space-y-6">
+              <div className="animate-fade-in-up">
+                <Badge className="mb-6 bg-gradient-to-r from-primary via-purple-600 to-pink-600 text-white text-lg px-6 py-2 shadow-lg hover:shadow-xl transition-shadow duration-300" variant="outline">
+                  <Sparkles className="h-5 w-5 mr-2" />
+                  Premium Collection
+                  <Star className="h-5 w-5 ml-2" />
+                </Badge>
+              </div>
               
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                Shop Collection
-              </h1>
+              <div className="animate-fade-in-up animation-delay-200">
+                <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  Shop Collection
+                </h1>
+              </div>
               
-              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                Discover our curated selection of premium products. Customize, personalize, and make it yours.
-              </p>
+              <div className="animate-fade-in-up animation-delay-400">
+                <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                  Discover our curated selection of premium products. Customize, personalize, and make it yours.
+                </p>
+              </div>
             </div>
           </Container>
         </section>
 
         {/* Search and Filters */}
         <Container className="pb-12">
-          <div className="flex flex-col lg:flex-row gap-6 mb-8">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
-                <Input
-                  placeholder="Search products..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-12 h-12 text-lg border-2 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm"
-                />
+          <div className="animate-slide-in-up animation-delay-600">
+            <div className="flex flex-col lg:flex-row gap-6 mb-8">
+              <div className="flex-1">
+                <div className="relative group">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5 transition-colors group-focus-within:text-primary" />
+                  <Input
+                    placeholder="Search products..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-12 h-12 text-lg border-2 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm hover:border-primary/50 focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md"
+                  />
+                </div>
               </div>
-            </div>
 
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full lg:w-56 h-12 text-lg border-2 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm">
-                <SelectItem value="featured">Featured</SelectItem>
-                <SelectItem value="price-low">Price: Low to High</SelectItem>
-                <SelectItem value="price-high">Price: High to Low</SelectItem>
-                <SelectItem value="rating">Highest Rated</SelectItem>
-                <SelectItem value="newest">Newest</SelectItem>
-                <SelectItem value="name">Name A-Z</SelectItem>
-              </SelectContent>
-            </Select>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-full lg:w-56 h-12 text-lg border-2 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm hover:border-primary/50 focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-2">
+                  <SelectItem value="featured">Featured</SelectItem>
+                  <SelectItem value="price-low">Price: Low to High</SelectItem>
+                  <SelectItem value="price-high">Price: High to Low</SelectItem>
+                  <SelectItem value="rating">Highest Rated</SelectItem>
+                  <SelectItem value="newest">Newest</SelectItem>
+                  <SelectItem value="name">Name A-Z</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <div className="flex gap-3">
+              <div className="flex gap-3">
+                <Button
+                  variant={viewMode === "grid" ? "default" : "outline"}
+                  size="lg"
+                  onClick={() => setViewMode("grid")}
+                  className="h-12 px-4 transition-all duration-300 hover:scale-105"
+                >
+                  <Grid className="h-5 w-5" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "default" : "outline"}
+                  size="lg"
+                  onClick={() => setViewMode("list")}
+                  className="h-12 px-4 transition-all duration-300 hover:scale-105"
+                >
+                  <List className="h-5 w-5" />
+                </Button>
+              </div>
+
               <Button
-                variant={viewMode === "grid" ? "default" : "outline"}
-                size="lg"
-                onClick={() => setViewMode("grid")}
-                className="h-12 px-4"
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className="lg:hidden h-12 px-6 transition-all duration-300 hover:scale-105"
               >
-                <Grid className="h-5 w-5" />
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "default" : "outline"}
-                size="lg"
-                onClick={() => setViewMode("list")}
-                className="h-12 px-4"
-              >
-                <List className="h-5 w-5" />
+                <Filter className="h-5 w-5 mr-2" />
+                Filters
               </Button>
             </div>
-
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters(!showFilters)}
-              className="lg:hidden h-12 px-6"
-            >
-              <Filter className="h-5 w-5 mr-2" />
-              Filters
-            </Button>
           </div>
 
           <div className="flex gap-8">
-            <div className={`${showFilters ? 'block' : 'hidden'} lg:block w-full lg:w-80`}>
+            <div className={`${showFilters ? 'block' : 'hidden'} lg:block w-full lg:w-80 animate-slide-in-left`}>
               <ProductFilters 
                 categories={categories}
                 selectedCategories={selectedCategories}
@@ -177,7 +186,7 @@ const Shop = () => {
               />
             </div>
 
-            <div className="flex-1">
+            <div className="flex-1 animate-fade-in animation-delay-800">
               <ProductGrid products={sortedProducts} isLoading={isLoading} />
             </div>
           </div>
