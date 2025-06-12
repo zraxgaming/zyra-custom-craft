@@ -21,7 +21,7 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
-import AdminLayout from '@/components/layout/AdminLayout';
+import AdminLayout from '@/components/admin/AdminLayout';
 import {
   Dialog,
   DialogContent,
@@ -268,151 +268,165 @@ const AdminProducts = () => {
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Products Management</h1>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Package className="h-5 w-5 text-primary" />
+            </div>
+            <h1 className="text-3xl font-bold">Products Management</h1>
+          </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => {
                 setEditingProduct(null);
                 resetForm();
-              }}>
+              }} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Product
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-card/90 backdrop-blur-sm">
               <DialogHeader>
                 <DialogTitle>
                   {editingProduct ? 'Edit Product' : 'Add New Product'}
                 </DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
                     <Label htmlFor="name">Product Name *</Label>
                     <Input
                       id="name"
                       value={formData.name}
                       onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                       required
+                      className="bg-background/50"
                     />
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="slug">Slug</Label>
                     <Input
                       id="slug"
                       value={formData.slug}
                       onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
                       placeholder="Auto-generated if empty"
+                      className="bg-background/50"
                     />
                   </div>
                 </div>
 
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="short_description">Short Description</Label>
                   <Input
                     id="short_description"
                     value={formData.short_description}
                     onChange={(e) => setFormData(prev => ({ ...prev, short_description: e.target.value }))}
+                    className="bg-background/50"
                   />
                 </div>
 
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
                   <Textarea
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    rows={3}
+                    rows={4}
+                    className="bg-background/50"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
                     <Label htmlFor="price">Price ($) *</Label>
                     <Input
                       id="price"
                       type="number"
                       step="0.01"
+                      min="0"
                       value={formData.price}
                       onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
                       required
+                      className="bg-background/50"
                     />
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="stock_quantity">Stock Quantity</Label>
                     <Input
                       id="stock_quantity"
                       type="number"
+                      min="0"
                       value={formData.stock_quantity}
                       onChange={(e) => setFormData(prev => ({ ...prev, stock_quantity: parseInt(e.target.value) || 0 }))}
+                      className="bg-background/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Category</Label>
+                    <Input
+                      id="category"
+                      value={formData.category}
+                      onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                      className="bg-background/50"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="category">Category</Label>
-                  <Input
-                    id="category"
-                    value={formData.category}
-                    onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                  />
+                <div className="space-y-3">
+                  <Label>Product Images</Label>
+                  {formData.images.map((image, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        value={image}
+                        onChange={(e) => updateImageField(index, e.target.value)}
+                        placeholder="Image URL"
+                        className="bg-background/50"
+                      />
+                      {formData.images.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => removeImageField(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addImageField}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Image
+                  </Button>
                 </div>
 
-                <div>
-                  <Label>Product Images</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    {formData.images.map((image, index) => (
-                      <div key={index} className="flex gap-2">
-                        <Input
-                          value={image}
-                          onChange={(e) => updateImageField(index, e.target.value)}
-                          placeholder="Image URL"
-                        />
-                        {formData.images.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            onClick={() => removeImageField(index)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={addImageField}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Image
-                    </Button>
+                    <Label htmlFor="status">Status</Label>
+                    <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}>
+                      <SelectTrigger className="bg-background/50">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="published">Published</SelectItem>
+                        <SelectItem value="archived">Archived</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="published">Published</SelectItem>
-                      <SelectItem value="archived">Archived</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="flex items-center space-x-2">
                     <Switch
                       id="featured"
                       checked={formData.featured}
                       onCheckedChange={(checked) => setFormData(prev => ({ ...prev, featured: checked }))}
                     />
-                    <Label htmlFor="featured">Featured</Label>
+                    <Label htmlFor="featured">Featured Product</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Switch
@@ -420,7 +434,7 @@ const AdminProducts = () => {
                       checked={formData.is_new}
                       onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_new: checked }))}
                     />
-                    <Label htmlFor="is_new">New</Label>
+                    <Label htmlFor="is_new">New Product</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Switch
@@ -432,19 +446,11 @@ const AdminProducts = () => {
                   </div>
                 </div>
 
-                <div className="flex justify-end space-x-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setIsDialogOpen(false);
-                      setEditingProduct(null);
-                      resetForm();
-                    }}
-                  >
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit">
+                  <Button type="submit" className="bg-gradient-to-r from-green-600 to-blue-600">
                     <Save className="h-4 w-4 mr-2" />
                     {editingProduct ? 'Update' : 'Create'} Product
                   </Button>
@@ -454,89 +460,82 @@ const AdminProducts = () => {
           </Dialog>
         </div>
 
-        <div className="grid gap-6">
-          {products.length === 0 ? (
-            <Card className="text-center py-12">
-              <CardContent>
-                <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No products found</h3>
-                <p className="text-muted-foreground mb-4">
-                  Start by creating your first product.
-                </p>
-                <Button onClick={() => setIsDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Product
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            products.map((product) => (
-              <Card key={product.id}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      {product.images.length > 0 && (
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="w-16 h-16 object-cover rounded"
-                        />
-                      )}
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
-                          {product.name}
-                          <div className="flex gap-1">
-                            {product.status === 'published' ? (
-                              <Eye className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <EyeOff className="h-4 w-4 text-gray-400" />
-                            )}
-                            {product.featured && (
-                              <Badge variant="secondary">Featured</Badge>
-                            )}
-                            {product.is_new && (
-                              <Badge className="bg-green-500">New</Badge>
-                            )}
-                          </div>
-                        </CardTitle>
-                        <p className="text-muted-foreground">
-                          ${product.price.toFixed(2)} • Stock: {product.stock_quantity} • {product.category || 'Uncategorized'}
-                        </p>
+        {/* Products List */}
+        <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+          <CardHeader>
+            <CardTitle>Products ({products.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {products.length === 0 ? (
+              <div className="text-center py-12">
+                <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">No products yet</h3>
+                <p className="text-muted-foreground">Create your first product to get started</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {products.map((product) => (
+                  <Card key={product.id} className="group hover:shadow-lg transition-all duration-300 bg-background/50">
+                    <div className="aspect-square overflow-hidden rounded-t-lg">
+                      <img
+                        src={product.images[0] || '/placeholder-product.jpg'}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <h3 className="font-semibold line-clamp-2">{product.name}</h3>
+                        <div className="flex gap-1">
+                          {product.featured && <Badge className="bg-yellow-500">Featured</Badge>}
+                          {product.is_new && <Badge className="bg-green-500">New</Badge>}
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant={product.status === 'published' ? 'default' : 'secondary'}>
-                        {product.status}
-                      </Badge>
-                      <Badge variant={product.in_stock ? 'default' : 'destructive'}>
-                        {product.in_stock ? 'In Stock' : 'Out of Stock'}
-                      </Badge>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(product)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(product.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                {product.short_description && (
-                  <CardContent>
-                    <p className="text-muted-foreground">{product.short_description}</p>
-                  </CardContent>
-                )}
-              </Card>
-            ))
-          )}
-        </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg font-bold">${product.price}</span>
+                        <Badge variant={product.status === 'published' ? 'default' : 'secondary'}>
+                          {product.status}
+                        </Badge>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <span>Stock: {product.stock_quantity}</span>
+                        <div className="flex items-center gap-1">
+                          {product.in_stock ? (
+                            <Eye className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <EyeOff className="h-4 w-4 text-red-500" />
+                          )}
+                          <span>{product.in_stock ? 'In Stock' : 'Out of Stock'}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(product)}
+                          className="flex-1"
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(product.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </AdminLayout>
   );

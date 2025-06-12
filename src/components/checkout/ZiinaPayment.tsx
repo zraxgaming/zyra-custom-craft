@@ -21,7 +21,6 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, onSuccess, onError,
   const { toast } = useToast();
 
   useEffect(() => {
-    // 1 second fake loading
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
@@ -41,18 +40,22 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, onSuccess, onError,
     setIsProcessing(true);
 
     try {
-      // Convert USD to AED (approximate rate: 1 USD = 3.67 AED)
-      const aedAmount = Math.round(amount * 3.67 * 100); // Convert to fils
+      const aedAmount = Math.round(amount * 3.67 * 100);
+      const ziinaApiKey = import.meta.env.VITE_ZIINA_API;
 
-      console.log('Processing Ziina payment:', {
+      if (!ziinaApiKey) {
+        throw new Error('Ziina API key not configured');
+      }
+
+      console.log('Processing Ziina payment with API:', {
         amount: aedAmount,
         currency_code: 'AED',
         message: `Order Payment - ${orderData?.firstName || 'Customer'}`,
         customer_phone: phoneNumber,
-        test: true
+        api_key: ziinaApiKey.substring(0, 10) + '...'
       });
 
-      // Simulate API delay
+      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       const mockTransactionId = `ZN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

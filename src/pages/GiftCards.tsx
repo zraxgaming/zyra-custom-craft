@@ -43,16 +43,14 @@ const GiftCards = () => {
   });
 
   useEffect(() => {
-    if (user) {
-      // Show fake loading for 1 second
-      setLoading(true);
-      setTimeout(() => {
+    // Always show 1 second loading
+    setLoading(true);
+    setTimeout(() => {
+      if (user) {
         fetchGiftCards();
-        setLoading(false);
-      }, 1000);
-    } else {
+      }
       setLoading(false);
-    }
+    }, 1000);
   }, [user]);
 
   const fetchGiftCards = async () => {
@@ -98,7 +96,7 @@ const GiftCards = () => {
           created_by: user.id,
           recipient_email: formData.recipientEmail || null,
           message: formData.message || null,
-          expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
+          expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
           is_active: true
         });
 
@@ -109,7 +107,6 @@ const GiftCards = () => {
         description: `Gift card ${code} has been created successfully`,
       });
 
-      // Reset form and fetch updated list
       setFormData({ amount: '', recipientEmail: '', message: '', recipientName: '' });
       setShowPurchaseForm(false);
       setShowPayment(false);
@@ -153,14 +150,14 @@ const GiftCards = () => {
       <>
         <Navbar />
         <div className="min-h-screen bg-background flex items-center justify-center">
-          <Card className="w-full max-w-md animate-fade-in-elegant">
+          <Card className="w-full max-w-md">
             <CardContent className="p-6 text-center">
               <Gift className="h-12 w-12 mx-auto mb-4 text-primary" />
               <h2 className="text-2xl font-bold mb-4">Sign In Required</h2>
               <p className="text-muted-foreground mb-6">
                 Please sign in to purchase and manage gift cards
               </p>
-              <Button asChild className="w-full btn-professional">
+              <Button asChild className="w-full">
                 <a href="/auth">Sign In</a>
               </Button>
             </CardContent>
@@ -182,7 +179,7 @@ const GiftCards = () => {
       
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-purple-500/10 py-12">
         <div className="container mx-auto px-4 max-w-6xl">
-          <div className="text-center mb-8 animate-fade-in-elegant">
+          <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
               Gift Cards
             </h1>
@@ -192,8 +189,8 @@ const GiftCards = () => {
           </div>
 
           {/* Purchase New Gift Card */}
-          <div className="mb-8 animate-slide-in-smooth">
-            <Card className="border border-primary/20 shadow-lg card-professional">
+          <div className="mb-8">
+            <Card className="border border-primary/20 shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Gift className="h-5 w-5 text-primary" />
@@ -210,7 +207,7 @@ const GiftCards = () => {
                     </p>
                     <Button 
                       onClick={() => setShowPurchaseForm(true)}
-                      className="bg-gradient-to-r from-primary to-purple-600 hover:scale-105 transition-transform btn-professional"
+                      className="bg-gradient-to-r from-primary to-purple-600 hover:scale-105 transition-transform"
                     >
                       <Gift className="h-4 w-4 mr-2" />
                       Purchase Gift Card
@@ -245,7 +242,7 @@ const GiftCards = () => {
                     <Button 
                       variant="outline" 
                       onClick={() => setShowPayment(false)}
-                      className="w-full interactive-element"
+                      className="w-full"
                     >
                       Back to Form
                     </Button>
@@ -263,7 +260,6 @@ const GiftCards = () => {
                           placeholder="50.00"
                           value={formData.amount}
                           onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
-                          className="focus-professional"
                         />
                       </div>
                       
@@ -275,7 +271,6 @@ const GiftCards = () => {
                           placeholder="recipient@example.com"
                           value={formData.recipientEmail}
                           onChange={(e) => setFormData(prev => ({ ...prev, recipientEmail: e.target.value }))}
-                          className="focus-professional"
                         />
                       </div>
                     </div>
@@ -287,14 +282,13 @@ const GiftCards = () => {
                         placeholder="Happy Birthday! Enjoy shopping..."
                         value={formData.message}
                         onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
-                        className="focus-professional"
                       />
                     </div>
                     
                     <div className="flex gap-4">
                       <Button 
                         onClick={handleProceedToPayment}
-                        className="flex-1 bg-gradient-to-r from-primary to-purple-600 btn-professional"
+                        className="flex-1 bg-gradient-to-r from-primary to-purple-600"
                         disabled={!formData.amount || purchasing}
                       >
                         <CreditCard className="h-4 w-4 mr-2" />
@@ -303,7 +297,6 @@ const GiftCards = () => {
                       <Button 
                         variant="outline" 
                         onClick={() => setShowPurchaseForm(false)}
-                        className="interactive-element"
                       >
                         Cancel
                       </Button>
@@ -315,7 +308,7 @@ const GiftCards = () => {
           </div>
 
           {/* Your Gift Cards */}
-          <div className="animate-slide-in-smooth" style={{ animationDelay: '0.2s' }}>
+          <div>
             <h2 className="text-2xl font-bold mb-6">Your Gift Cards</h2>
             
             {loading ? (
@@ -331,7 +324,7 @@ const GiftCards = () => {
                 ))}
               </div>
             ) : giftCards.length === 0 ? (
-              <Card className="text-center py-12 card-professional">
+              <Card className="text-center py-12">
                 <CardContent>
                   <Gift className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-xl font-semibold mb-2">No Gift Cards Yet</h3>
@@ -342,12 +335,8 @@ const GiftCards = () => {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {giftCards.map((giftCard, index) => (
-                  <Card 
-                    key={giftCard.id} 
-                    className="hover:shadow-lg transition-all duration-300 card-professional animate-fade-in-elegant"
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
+                {giftCards.map((giftCard) => (
+                  <Card key={giftCard.id} className="hover:shadow-lg transition-all duration-300">
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-lg">Gift Card</CardTitle>

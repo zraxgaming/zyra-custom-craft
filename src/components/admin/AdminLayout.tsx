@@ -13,7 +13,6 @@ import {
   Gift,
   Tag,
   BarChart3,
-  Warehouse,
   Mail,
   TrendingUp,
   QrCode,
@@ -41,14 +40,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     { name: 'Products', href: '/admin/products', icon: Package },
     { name: 'Categories', href: '/admin/categories', icon: Tag },
     { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
-    { name: 'Inventory', href: '/admin/inventory', icon: Warehouse },
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'Gift Cards', href: '/admin/gift-cards', icon: Gift },
     { name: 'Coupons', href: '/admin/coupons', icon: Tag },
-    { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
     { name: 'Newsletter', href: '/admin/newsletter', icon: Mail },
+    { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
     { name: 'Traffic', href: '/admin/traffic', icon: TrendingUp },
-    { name: 'Barcodes', href: '/admin/barcodes', icon: QrCode },
     { name: 'Scanner', href: '/admin/scanner', icon: ScanLine },
     { name: 'Contact', href: '/admin/contact', icon: MessageSquare },
     { name: 'Ziina', href: '/admin/ziina', icon: CreditCard },
@@ -58,7 +55,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const handleSignOut = async () => {
     try {
       await signOut();
-      navigate('/home');
+      navigate('/');
     } catch (error) {
       console.error('Error signing out:', error);
     }
@@ -125,7 +122,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           <div className="p-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
             <Button
               variant="ghost"
-              onClick={() => navigate('/home')}
+              onClick={() => navigate('/')}
               className="w-full justify-start text-gray-700 dark:text-gray-200"
             >
               <Home className="w-4 h-4 mr-2" />
@@ -136,7 +133,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               onClick={handleSignOut}
               className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
             >
-              <LogOut className="w-4 h-4 mr-2" />
+              <LogOut className="w-4 w-4 mr-2" />
               Sign Out
             </Button>
           </div>

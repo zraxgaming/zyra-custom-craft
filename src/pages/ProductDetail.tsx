@@ -12,9 +12,12 @@ import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/components/cart/CartProvider';
 import { useWishlist } from '@/hooks/use-wishlist';
 import { useToast } from '@/hooks/use-toast';
-import { ShoppingCart, Heart, Star, ArrowLeft, Loader2 } from 'lucide-react';
+import { ShoppingCart, Heart, Star, ArrowLeft, Loader2, Palette, Type } from 'lucide-react';
 import SEOHead from '@/components/seo/SEOHead';
 import ProductReviews from '@/components/reviews/ProductReviews';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -24,6 +27,13 @@ const ProductDetail = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [showCustomization, setShowCustomization] = useState(false);
+  const [customization, setCustomization] = useState({
+    text: '',
+    position: 'center',
+    fontSize: '16',
+    color: '#000000'
+  });
 
   useEffect(() => {
     if (id) {
@@ -74,7 +84,6 @@ const ProductDetail = () => {
       price: product.price,
       quantity: 1,
       image_url: product.images?.[0],
-      images: product.images,
       slug: product.slug
     });
     
@@ -251,6 +260,97 @@ const ProductDetail = () => {
               )}
             </div>
 
+            {/* Customization Section */}
+            {product.is_customizable && (
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Palette className="h-4 w-4" />
+                      Customize This Product
+                    </h3>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowCustomization(!showCustomization)}
+                    >
+                      {showCustomization ? 'Hide' : 'Show'} Options
+                    </Button>
+                  </div>
+                  
+                  {showCustomization && (
+                    <div className="space-y-4 mt-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="custom-text">Custom Text</Label>
+                        <Textarea
+                          id="custom-text"
+                          placeholder="Enter your custom text..."
+                          value={customization.text}
+                          onChange={(e) => setCustomization(prev => ({ ...prev, text: e.target.value }))}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="text-position">Text Position</Label>
+                          <select
+                            id="text-position"
+                            className="w-full p-2 border rounded"
+                            value={customization.position}
+                            onChange={(e) => setCustomization(prev => ({ ...prev, position: e.target.value }))}
+                          >
+                            <option value="center">Center</option>
+                            <option value="top">Top</option>
+                            <option value="bottom">Bottom</option>
+                            <option value="left">Left</option>
+                            <option value="right">Right</option>
+                          </select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="font-size">Font Size</Label>
+                          <Input
+                            id="font-size"
+                            type="number"
+                            min="8"
+                            max="72"
+                            value={customization.fontSize}
+                            onChange={(e) => setCustomization(prev => ({ ...prev, fontSize: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="text-color">Text Color</Label>
+                        <Input
+                          id="text-color"
+                          type="color"
+                          value={customization.color}
+                          onChange={(e) => setCustomization(prev => ({ ...prev, color: e.target.value }))}
+                        />
+                      </div>
+                      
+                      {customization.text && (
+                        <div className="p-4 border rounded-lg bg-muted/50">
+                          <p className="text-sm font-medium mb-2">Preview:</p>
+                          <div className="relative bg-white border rounded p-8 text-center">
+                            <span 
+                              style={{ 
+                                fontSize: `${customization.fontSize}px`,
+                                color: customization.color,
+                                position: 'relative'
+                              }}
+                            >
+                              {customization.text}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             <div className="flex gap-4">
               <Button
                 onClick={handleAddToCart}
@@ -271,14 +371,13 @@ const ProductDetail = () => {
               </Button>
             </div>
 
-            {product.is_customizable && (
+            {product.is_customizable && !showCustomization && (
               <Card>
                 <CardContent className="p-4">
-                  <h3 className="font-semibold mb-2">Customization Available</h3>
-                  <p className="text-sm text-muted-foreground">
-                    This product can be customized with your personal text and images. 
-                    Add it to your cart to access customization options.
-                  </p>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Type className="h-4 w-4" />
+                    <span>This product can be customized with your personal text and design.</span>
+                  </div>
                 </CardContent>
               </Card>
             )}
