@@ -64,13 +64,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     : product.price;
 
   return (
-    <Card className="group overflow-hidden">
+    <Card className="group overflow-hidden transition-all duration-200 hover:shadow-md">
       <div className="relative overflow-hidden">
         <Link to={productUrl}>
           <img
             src={imageUrl}
             alt={product.name}
-            className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
+            className="w-full h-48 object-cover transition-transform duration-200 group-hover:scale-105"
           />
         </Link>
         

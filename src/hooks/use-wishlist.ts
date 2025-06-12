@@ -40,6 +40,11 @@ export const useWishlist = () => {
     }
 
     try {
+      setLoading(true);
+      
+      // Add 1 second fake loading
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       const { data, error } = await supabase
         .from('wishlists')
         .select(`

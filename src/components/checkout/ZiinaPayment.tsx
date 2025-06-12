@@ -21,7 +21,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, onSuccess, onError,
   const { toast } = useToast();
 
   useEffect(() => {
-    // Show fake loading for 1 second
+    // 1 second fake loading
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
@@ -79,7 +79,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, onSuccess, onError,
 
   if (loading) {
     return (
-      <Card className="border border-blue-200 bg-white animate-fade-in-elegant">
+      <Card className="border border-blue-200 bg-white">
         <CardContent className="p-6 text-center">
           <Loader2 className="h-12 w-12 mx-auto mb-4 animate-spin text-blue-500" />
           <p className="text-blue-600">Loading payment options...</p>
@@ -89,7 +89,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, onSuccess, onError,
   }
 
   return (
-    <Card className="border border-blue-200 bg-white animate-fade-in-elegant">
+    <Card className="border border-blue-200 bg-white">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-blue-700">
           <Smartphone className="h-5 w-5" />

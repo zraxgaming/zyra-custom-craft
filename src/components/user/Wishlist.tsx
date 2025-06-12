@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 
 const Wishlist = () => {
-  const { items: wishlistItems, removeFromWishlist, isLoading } = useWishlist();
+  const { items: wishlistItems, removeFromWishlist, loading } = useWishlist();
   const { toast } = useToast();
 
   const handleRemoveFromWishlist = async (productId: string) => {
@@ -27,7 +27,7 @@ const Wishlist = () => {
     }
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <Card>
         <CardHeader>

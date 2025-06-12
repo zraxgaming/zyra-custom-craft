@@ -25,3 +25,6 @@ export const useWishlistContext = () => {
   }
   return context;
 };
+
+// Re-export the hook for backward compatibility
+export { useWishlist } from './use-wishlist';

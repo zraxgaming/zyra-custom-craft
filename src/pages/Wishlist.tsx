@@ -23,6 +23,7 @@ const Wishlist = () => {
       name: item.name,
       price: item.price,
       quantity: 1,
+      image_url: item.images?.[0],
       images: item.images,
       slug: item.slug
     });

@@ -14,6 +14,7 @@ import { useWishlist } from '@/hooks/use-wishlist';
 import { useToast } from '@/hooks/use-toast';
 import { ShoppingCart, Heart, Star, ArrowLeft, Loader2 } from 'lucide-react';
 import SEOHead from '@/components/seo/SEOHead';
+import ProductReviews from '@/components/reviews/ProductReviews';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -34,32 +35,32 @@ const ProductDetail = () => {
     try {
       setLoading(true);
       
-      // Simulate loading delay
-      setTimeout(async () => {
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .or(`id.eq.${id},slug.eq.${id}`)
-          .single();
+      // 1 second fake loading
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .or(`id.eq.${id},slug.eq.${id}`)
+        .single();
 
-        if (error) {
-          console.error('Error fetching product:', error);
-          return;
-        }
+      if (error) {
+        console.error('Error fetching product:', error);
+        return;
+      }
 
-        if (data) {
-          const transformedProduct: Product = {
-            ...data,
-            images: Array.isArray(data.images) 
-              ? (data.images as string[]).filter(img => typeof img === 'string')
-              : []
-          };
-          setProduct(transformedProduct);
-        }
-        setLoading(false);
-      }, 1000);
+      if (data) {
+        const transformedProduct: Product = {
+          ...data,
+          images: Array.isArray(data.images) 
+            ? (data.images as string[]).filter(img => typeof img === 'string')
+            : []
+        };
+        setProduct(transformedProduct);
+      }
     } catch (error) {
       console.error('Error fetching product:', error);
+    } finally {
       setLoading(false);
     }
   };
@@ -72,6 +73,7 @@ const ProductDetail = () => {
       name: product.name,
       price: product.price,
       quantity: 1,
+      image_url: product.images?.[0],
       images: product.images,
       slug: product.slug
     });
@@ -281,6 +283,11 @@ const ProductDetail = () => {
               </Card>
             )}
           </div>
+        </div>
+
+        {/* Reviews Section */}
+        <div className="mt-16">
+          <ProductReviews productId={product.id} />
         </div>
       </Container>
 
