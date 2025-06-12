@@ -10,7 +10,7 @@ import { WishlistProvider } from "@/hooks/use-wishlist";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 
 // Public Pages
-import Index from "./pages/Index";
+import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/auth/callback";
 import Shop from "./pages/Shop";
@@ -57,11 +57,11 @@ const App = () => (
               <Sonner />
               <BrowserRouter>
                 <Routes>
-                  {/* Redirect /home to / */}
-                  <Route path="/home" element={<Navigate to="/" replace />} />
+                  {/* Redirect / to /home */}
+                  <Route path="/" element={<Navigate to="/home" replace />} />
                   
                   {/* Public Routes */}
-                  <Route path="/" element={<Index />} />
+                  <Route path="/home" element={<Home />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/auth/callback" element={<AuthCallback />} />
                   <Route path="/shop" element={<Shop />} />

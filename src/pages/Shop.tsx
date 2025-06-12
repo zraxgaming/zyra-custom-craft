@@ -83,10 +83,10 @@ const Shop = () => {
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-purple-500/10">
         {/* Hero Section */}
         <section className="py-16 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-blue-500/10 animate-gradient-x"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-blue-500/10"></div>
           <Container className="relative">
             <div className="text-center mb-12 space-y-6">
-              <div className="animate-fade-in-up">
+              <div className="opacity-0 animate-fade-in">
                 <Badge className="mb-6 bg-gradient-to-r from-primary via-purple-600 to-pink-600 text-white text-lg px-6 py-2 shadow-lg hover:shadow-xl transition-shadow duration-300" variant="outline">
                   <Sparkles className="h-5 w-5 mr-2" />
                   Premium Collection
@@ -94,13 +94,13 @@ const Shop = () => {
                 </Badge>
               </div>
               
-              <div className="animate-fade-in-up animation-delay-200">
+              <div className="opacity-0 animate-fade-in" style={{ animationDelay: '0.2s' }}>
                 <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
                   Shop Collection
                 </h1>
               </div>
               
-              <div className="animate-fade-in-up animation-delay-400">
+              <div className="opacity-0 animate-fade-in" style={{ animationDelay: '0.4s' }}>
                 <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                   Discover our curated selection of premium products. Customize, personalize, and make it yours.
                 </p>
@@ -111,7 +111,7 @@ const Shop = () => {
 
         {/* Search and Filters */}
         <Container className="pb-12">
-          <div className="animate-slide-in-up animation-delay-600">
+          <div className="opacity-0 animate-fade-in" style={{ animationDelay: '0.6s' }}>
             <div className="flex flex-col lg:flex-row gap-6 mb-8">
               <div className="flex-1">
                 <div className="relative group">
@@ -170,7 +170,7 @@ const Shop = () => {
           </div>
 
           <div className="flex gap-8">
-            <div className={`${showFilters ? 'block' : 'hidden'} lg:block w-full lg:w-80 animate-slide-in-left`}>
+            <div className={`${showFilters ? 'block' : 'hidden'} lg:block w-full lg:w-80 opacity-0 animate-fade-in`} style={{ animationDelay: '0.7s' }}>
               <ProductFilters 
                 categories={categories}
                 selectedCategories={selectedCategories}
@@ -186,7 +186,7 @@ const Shop = () => {
               />
             </div>
 
-            <div className="flex-1 animate-fade-in animation-delay-800">
+            <div className="flex-1 opacity-0 animate-fade-in" style={{ animationDelay: '0.8s' }}>
               <ProductGrid products={sortedProducts} isLoading={isLoading} />
             </div>
           </div>
