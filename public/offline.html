@@ -84,50 +84,50 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <img src="/icon-192.png" alt="Zyra Logo" class="icon" />
-        <h1>You Are Offline</h1>
-        <p>
-            Oops! It looks like you lost your internet connection.<br>
-            Please check your connection and try again.<br>
-            <span style="font-size:2rem; display:inline-block; margin-top:1rem; animation:bounce 2s infinite;">📡</span>
-        </p>
-        <button onclick="window.location.reload()">Try Again</button>
-        <a href="/">Go Home</a>
-        <div style="margin-top:2rem;">
-            <svg width="100%" height="40" viewBox="0 0 400 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <div class="container">
+            <img src="/icon-192.png" alt="Zyra Logo" class="icon" />
+            <h1>You Are Offline</h1>
+            <p>
+                Oops! It looks like you lost your internet connection.<br>
+                Please check your connection and try again.<br>
+                <span style="font-size:2rem; display:inline-block; margin-top:1rem; animation:bounce 2s infinite;">📡</span>
+            </p>
+            <button onclick="window.location.reload()">Try Again</button>
+            <a href="/">Go Home</a>
+            <div style="margin-top:2rem;">
+                <svg width="100%" height="40" viewBox="0 0 400 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="grad1" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#7c3aed"/>
+                            <stop offset="50%" stop-color="#ff6b6b"/>
+                            <stop offset="100%" stop-color="#ee5a24"/>
+                        </linearGradient>
+                    </defs>
+                    <ellipse cx="200" cy="20" rx="180" ry="10" fill="url(#grad1)">
+                        <animate attributeName="rx" values="180;200;180" dur="2s" repeatCount="indefinite"/>
+                    </ellipse>
+                </svg>
+            </div>
+        </div>
+        <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:-1;pointer-events:none;">
+            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
                 <defs>
-                    <linearGradient id="grad1" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stop-color="#7c3aed"/>
-                        <stop offset="50%" stop-color="#ff6b6b"/>
-                        <stop offset="100%" stop-color="#ee5a24"/>
-                    </linearGradient>
+                    <radialGradient id="bg1" cx="50%" cy="30%" r="70%">
+                        <stop offset="0%" stop-color="#7c3aed22"/>
+                        <stop offset="100%" stop-color="transparent"/>
+                    </radialGradient>
+                    <radialGradient id="bg2" cx="80%" cy="80%" r="60%">
+                        <stop offset="0%" stop-color="#ff6b6b22"/>
+                        <stop offset="100%" stop-color="transparent"/>
+                    </radialGradient>
                 </defs>
-                <ellipse cx="200" cy="20" rx="180" ry="10" fill="url(#grad1)">
-                    <animate attributeName="rx" values="180;200;180" dur="2s" repeatCount="indefinite"/>
-                </ellipse>
+                <circle cx="30%" cy="30%" r="300" fill="url(#bg1)">
+                    <animate attributeName="r" values="300;350;300" dur="6s" repeatCount="indefinite"/>
+                </circle>
+                <circle cx="80%" cy="80%" r="200" fill="url(#bg2)">
+                    <animate attributeName="r" values="200;250;200" dur="7s" repeatCount="indefinite"/>
+                </circle>
             </svg>
         </div>
-    </div>
-    <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:-1;pointer-events:none;">
-        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-                <radialGradient id="bg1" cx="50%" cy="30%" r="70%">
-                    <stop offset="0%" stop-color="#7c3aed22"/>
-                    <stop offset="100%" stop-color="transparent"/>
-                </radialGradient>
-                <radialGradient id="bg2" cx="80%" cy="80%" r="60%">
-                    <stop offset="0%" stop-color="#ff6b6b22"/>
-                    <stop offset="100%" stop-color="transparent"/>
-                </radialGradient>
-            </defs>
-            <circle cx="30%" cy="30%" r="300" fill="url(#bg1)">
-                <animate attributeName="r" values="300;350;300" dur="6s" repeatCount="indefinite"/>
-            </circle>
-            <circle cx="80%" cy="80%" r="200" fill="url(#bg2)">
-                <animate attributeName="r" values="200;250;200" dur="7s" repeatCount="indefinite"/>
-            </circle>
-        </svg>
-    </div>
-</body>
+    </body>
 </html>
