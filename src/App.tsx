@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -5,11 +6,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/components/cart/CartProvider";
-import { WishlistProvider } from "@/hooks/use-wishlist.tsx";
+import { WishlistProvider } from "@/hooks/use-wishlist";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import PWAInstallPrompt from "@/components/layout/PWAInstallPrompt";
+import PushNotificationSetup from "@/components/layout/PushNotificationSetup";
+import MaintenanceBanner from "@/components/layout/MaintenanceBanner";
 
 // Public Pages
-import Home from "./pages/Home";
+import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/auth/callback";
 import Shop from "./pages/Shop";
@@ -28,7 +32,6 @@ import OrderFailed from "./pages/OrderFailed";
 import CategoryPage from "./pages/CategoryPage";
 import GiftCards from "./pages/GiftCards";
 import NotFound from "./pages/404";
-import Dashboard from "./pages/Dashboard";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -39,7 +42,7 @@ import AdminOrders from "./pages/admin/Orders";
 import AdminUsers from "./pages/admin/Users";
 import AdminSettings from "./pages/admin/Settings";
 import AdminZiina from "./pages/admin/AdminZiina";
-import AdminGiftCards from "./pages/admin/AdminGiftCards";
+import AdminGiftCards from "./pages/admin/GiftCards";
 import AdminNewsletter from "./pages/admin/AdminNewsletter";
 import Scanner from "./pages/admin/Scanner";
 
@@ -54,12 +57,13 @@ const App = () => (
             <TooltipProvider>
               <Toaster />
               <Sonner />
+              <MaintenanceBanner />
+              <PWAInstallPrompt />
+              <PushNotificationSetup />
               <BrowserRouter>
                 <Routes>
-                  {/* Redirect / to /home */}
-                  <Route path="/" element={<Navigate to="/home" replace />} />
                   {/* Public Routes */}
-                  <Route path="/home" element={<Home />} />
+                  <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/auth/callback" element={<AuthCallback />} />
                   <Route path="/shop" element={<Shop />} />
@@ -69,7 +73,7 @@ const App = () => (
                   <Route path="/wishlist" element={<Wishlist />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/profile" element={<Profile />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/dashboard" element={<Navigate to="/profile" replace />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/privacy" element={<Privacy />} />

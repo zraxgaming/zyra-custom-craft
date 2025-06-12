@@ -27,25 +27,21 @@
         }
         h1 {
             font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(90deg,#7c3aed,#ff6b6b,#ee5a24);
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #fff, #f0f0f0);
             background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         p {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             margin-bottom: 2rem;
-            color: #f3f3f3;
+            opacity: 0.9;
         }
         .icon {
             font-size: 4rem;
             margin-bottom: 1rem;
             animation: bounce 2s infinite;
-            width: 100px;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 4px 24px #fff3, 0 1.5px 8px #7c3aed44;
-            border-radius: 16px;
         }
         @keyframes bounce {
             0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
@@ -53,81 +49,27 @@
             60% { transform: translateY(-5px); }
         }
         button {
-            margin-bottom: 1rem;
-            width: 100%;
-            background: linear-gradient(90deg,#7c3aed,#ff6b6b);
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
             border: none;
-            padding: 14px 0;
-            border-radius: 30px;
+            padding: 12px 24px;
+            border-radius: 25px;
             color: white;
-            font-size: 1.1rem;
-            font-weight: 700;
+            font-size: 1rem;
+            font-weight: 600;
             cursor: pointer;
             transition: transform 0.2s;
-            box-shadow: 0 2px 8px #7c3aed33;
         }
         button:hover {
             transform: scale(1.05);
         }
-        a {
-            display: block;
-            color: #fff;
-            background: linear-gradient(90deg,#7c3aed,#ee5a24);
-            padding: 0.75rem 0;
-            border-radius: 30px;
-            text-decoration: none;
-            font-weight: bold;
-            font-size: 1.1rem;
-            margin-top: 0.5rem;
-            box-shadow: 0 2px 8px #ee5a2433;
-        }
     </style>
 </head>
 <body>
-        <div class="container">
-            <img src="/icon-192.png" alt="Zyra Logo" class="icon" />
-            <h1>You Are Offline</h1>
-            <p>
-                Oops! It looks like you lost your internet connection.<br>
-                Please check your connection and try again.<br>
-                <span style="font-size:2rem; display:inline-block; margin-top:1rem; animation:bounce 2s infinite;">📡</span>
-            </p>
-            <button onclick="window.location.reload()">Try Again</button>
-            <a href="/">Go Home</a>
-            <div style="margin-top:2rem;">
-                <svg width="100%" height="40" viewBox="0 0 400 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <linearGradient id="grad1" x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0%" stop-color="#7c3aed"/>
-                            <stop offset="50%" stop-color="#ff6b6b"/>
-                            <stop offset="100%" stop-color="#ee5a24"/>
-                        </linearGradient>
-                    </defs>
-                    <ellipse cx="200" cy="20" rx="180" ry="10" fill="url(#grad1)">
-                        <animate attributeName="rx" values="180;200;180" dur="2s" repeatCount="indefinite"/>
-                    </ellipse>
-                </svg>
-            </div>
-        </div>
-        <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:-1;pointer-events:none;">
-            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                    <radialGradient id="bg1" cx="50%" cy="30%" r="70%">
-                        <stop offset="0%" stop-color="#7c3aed22"/>
-                        <stop offset="100%" stop-color="transparent"/>
-                    </radialGradient>
-                    <radialGradient id="bg2" cx="80%" cy="80%" r="60%">
-                        <stop offset="0%" stop-color="#ff6b6b22"/>
-                        <stop offset="100%" stop-color="transparent"/>
-                    </radialGradient>
-                </defs>
-                <circle cx="30%" cy="30%" r="300" fill="url(#bg1)">
-                    <animate attributeName="r" values="300;350;300" dur="6s" repeatCount="indefinite"/>
-                </circle>
-                <circle cx="80%" cy="80%" r="200" fill="url(#bg2)">
-                    <animate attributeName="r" values="200;250;200" dur="7s" repeatCount="indefinite"/>
-                </circle>
-            </svg>
-        </div>
-    </body>
+    <div class="container">
+        <img src="/icon-192.png" alt="Zyra Logo" class="icon" style="width: 100px; margin-bottom: 1.5rem;" />
+        <h1>You are offline</h1>
+        <p>Sorry, you appear to be offline.<br />Please check your internet connection and try again.</p>
+        <a href="/" style="color: #fff; background: #8B5CF6; padding: 0.75rem 2rem; border-radius: 8px; text-decoration: none; font-weight: bold;">Go Home</a>
+    </div>
+</body>
 </html>
