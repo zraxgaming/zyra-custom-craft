@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -206,7 +205,7 @@ const ProductPage = () => {
             
             <p className="text-muted-foreground leading-relaxed">{product.short_description || "No short description available."}</p>
 
-            {product.is_customizable && product.customization_options && (
+            {product.is_customizable && (
               <ProductCustomizer productId={product.id}>
                 <Button variant="outline">Customize Product</Button>
               </ProductCustomizer>

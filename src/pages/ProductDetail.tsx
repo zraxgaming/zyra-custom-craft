@@ -18,13 +18,12 @@ import ProductReviews from "@/components/reviews/ProductReviews";
 import ReviewForm from "@/components/products/ReviewForm";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import SEOHead from "@/components/seo/SEOHead"; // Changed to default import
+import SEOHead from "@/components/seo/SEOHead";
 import { useAuth } from "@/contexts/AuthContext";
 import ProductCustomizer from "@/components/products/ProductCustomizer";
-import { CartItemCustomization } from "@/types/cart"; // This should now be available
+import { CartItemCustomization } from "@/types/cart";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { Json } from "@/integrations/supabase/types"; // For Supabase JSON types
-
+import { Json } from "@/integrations/supabase/types";
 
 const ProductDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -98,12 +97,6 @@ const ProductDetail: React.FC = () => {
       image_url: (product.images && Array.isArray(product.images) && typeof product.images[0] === 'string') ? product.images[0] : '/placeholder-product.jpg',
       customization: customization,
     });
-    // toast is handled by CartProvider's addItem
-    // toast({
-    //   title: 'Added to Cart',
-    //   description: `${product.name} (x${quantity}) has been added to your cart.`,
-    //   action: <Button variant="outline" size="sm" onClick={() => navigate('/cart')}>View Cart</Button>,
-    // });
   };
 
   const handleQuantityChange = (amount: number) => {
@@ -197,7 +190,7 @@ const ProductDetail: React.FC = () => {
       <SEOHead
         title={product.meta_title || product.name}
         description={product.meta_description || product.short_description || ''}
-        imageUrl={selectedImage || productImages[0]}
+        image={selectedImage || productImages[0]}
       />
       <Navbar />
       <div className="container mx-auto px-4 py-8">
@@ -282,11 +275,9 @@ const ProductDetail: React.FC = () => {
               <p className="text-muted-foreground leading-relaxed">{product.short_description || "Detailed information about this product is coming soon."}</p>
               
               {product.is_customizable && (
-                <ProductCustomizer
-                  productId={product.id}
-                  initialCustomization={customization}
-                  productName={product.name}
-                />
+                <ProductCustomizer productId={product.id}>
+                  <Button variant="outline">Customize Product</Button>
+                </ProductCustomizer>
               )}
 
               <div className="flex items-center gap-2">
@@ -345,7 +336,7 @@ const ProductDetail: React.FC = () => {
               </CardHeader>
               <CardContent className="space-y-6">
                 <ProductReviews 
-                  reviews={(product as any).reviews || []} 
+                  productId={product.id}
                 />
                 <Separator />
                 {user ? (
