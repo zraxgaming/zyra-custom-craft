@@ -135,8 +135,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const addToCart = async (newItem: Omit<CartItem, "id'>) => {
-    // ... keep existing code (addToCart logic)
+  const addToCart = async (newItem: Omit<CartItem, "id">) => {
     const existingItem = items.find(
       (item) =>
         item.product_id === newItem.product_id &&
@@ -210,7 +209,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const removeFromCart = async (itemId: string) => {
-    // ... keep existing code (removeFromCart logic)
     const itemToRemove = items.find(item => item.id === itemId);
     if (user) {
       try {
@@ -240,7 +238,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateQuantity = async (itemId: string, quantity: number) => {
-    // ... keep existing code (updateQuantity logic)
     const itemToUpdate = items.find(item => item.id === itemId);
     if (!itemToUpdate) return;
 
@@ -278,7 +275,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const clearCart = async () => {
-    // ... keep existing code (clearCart logic)
      if (user) {
       try {
         const { data, error } = await supabase
@@ -351,7 +347,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const giftCardAmount = appliedGiftCard?.amount || 0;
 
   const calculatedTotalPrice = Math.max(0, subtotal - discount - giftCardAmount);
-
 
   return (
     <CartContext.Provider value={{
