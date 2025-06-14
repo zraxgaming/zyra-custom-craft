@@ -1,60 +1,72 @@
 
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Product } from "@/types/product";
+import { useState, useEffect } from 'react';
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  images: string[];
+  rating?: number;
+  review_count?: number;
+  is_new?: boolean;
+  discount_percentage?: number;
+  in_stock: boolean;
+  slug: string;
+  description?: string;
+  category?: string;
+  featured?: boolean;
+  is_customizable?: boolean;
+  created_at?: string;
+}
 
 export const useProducts = () => {
-  return useQuery({
-    queryKey: ["products"],
-    queryFn: async (): Promise<Product[]> => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("status", "published")
-        .order("created_at", { ascending: false });
+  const [data, setData] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-      if (error) {
-        console.error("Error fetching products:", error);
-        throw error;
+  useEffect(() => {
+    // Mock data for initial load
+    const mockProducts: Product[] = [
+      {
+        id: '1',
+        name: 'Custom T-Shirt',
+        price: 29.99,
+        images: ['/placeholder.svg'],
+        rating: 4.5,
+        review_count: 12,
+        is_new: true,
+        discount_percentage: 0,
+        in_stock: true,
+        slug: 'custom-t-shirt',
+        description: 'High-quality custom t-shirt with personalization options',
+        category: 'Clothing',
+        featured: true,
+        is_customizable: true,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: '2',
+        name: 'Personalized Mug',
+        price: 19.99,
+        images: ['/placeholder.svg'],
+        rating: 4.8,
+        review_count: 25,
+        is_new: false,
+        discount_percentage: 10,
+        in_stock: true,
+        slug: 'personalized-mug',
+        description: 'Custom ceramic mug perfect for gifts',
+        category: 'Home',
+        featured: true,
+        is_customizable: true,
+        created_at: new Date().toISOString()
       }
+    ];
 
-      return (data || []).map(product => ({
-        id: product.id,
-        name: product.name || '',
-        description: product.description || '',
-        short_description: product.short_description || '',
-        price: Number(product.price) || 0,
-        category: product.category || '',
-        category_id: product.category_id || '',
-        sku: product.sku || '',
-        barcode: product.barcode || '',
-        stock_quantity: Number(product.stock_quantity) || 0,
-        stock_status: product.stock_status || 'in_stock',
-        status: product.status || 'draft',
-        in_stock: Boolean(product.in_stock),
-        is_featured: Boolean(product.is_featured),
-        is_customizable: Boolean(product.is_customizable),
-        is_digital: Boolean(product.is_digital),
-        is_new: Boolean(product.is_new),
-        featured: Boolean(product.featured || product.is_featured),
-        slug: product.slug || '',
-        images: Array.isArray(product.images) 
-          ? (product.images as any[]).map(img => typeof img === 'string' ? img : JSON.stringify(img))
-          : [],
-        meta_title: product.meta_title || '',
-        meta_description: product.meta_description || '',
-        weight: Number(product.weight) || 0,
-        dimensions_length: Number(product.dimensions_length) || 0,
-        dimensions_width: Number(product.dimensions_width) || 0,
-        dimensions_height: Number(product.dimensions_height) || 0,
-        cost_price: Number(product.cost_price) || 0,
-        discount_percentage: Number(product.discount_percentage) || 0,
-        manage_stock: Boolean(product.manage_stock),
-        rating: Number(product.rating) || 0,
-        review_count: Number(product.review_count) || 0,
-        created_at: product.created_at || '',
-        updated_at: product.updated_at || ''
-      }));
-    },
-  });
+    setTimeout(() => {
+      setData(mockProducts);
+      setIsLoading(false);
+    }, 500);
+  }, []);
+
+  return { data, isLoading };
 };

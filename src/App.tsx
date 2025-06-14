@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/components/cart/CartProvider";
-import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { ThemeProvider } from "next-themes";
 import PWAInstallPrompt from "@/components/layout/PWAInstallPrompt";
 import PushNotificationSetup from "@/components/layout/PushNotificationSetup";
 import MaintenanceBanner from "@/components/layout/MaintenanceBanner";
@@ -30,14 +30,13 @@ import OrderFailed from "./pages/OrderFailed";
 import CategoryPage from "./pages/CategoryPage";
 import GiftCards from "./pages/GiftCards";
 import NotFound from "./pages/404";
-// Correct WishlistProvider import from hooks/use-wishlist.tsx
-import { WishlistProvider } from "@/hooks/use-wishlist.tsx";
+import { WishlistProvider } from "@/hooks/use-wishlist";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <AuthProvider>
         <CartProvider>
           <WishlistProvider>

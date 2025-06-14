@@ -7,33 +7,32 @@ import { useCart } from "./CartProvider";
 interface CartItemProps {
   item: {
     id: string;
-    productId: string;
+    product_id: string;
     name: string;
     price: number;
     quantity: number;
-    image?: string;
+    image_url?: string;
     customization?: Record<string, any>;
   };
 }
 
 const CartItem: React.FC<CartItemProps> = ({ item }) => {
-  // Use correct CartProvider function names
   const { updateQuantity, removeFromCart } = useCart();
 
   const handleQuantityChange = (newQuantity: number) => {
     if (newQuantity < 1) {
-      removeFromCart(item.productId);
+      removeFromCart(item.product_id);
     } else {
-      updateQuantity(item.productId, newQuantity);
+      updateQuantity(item.product_id, newQuantity);
     }
   };
 
   return (
     <div className="flex items-center gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 animate-fade-in">
       <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden">
-        {item.image ? (
+        {item.image_url ? (
           <img
-            src={item.image}
+            src={item.image_url}
             alt={item.name}
             className="w-full h-full object-cover"
           />
@@ -90,7 +89,7 @@ const CartItem: React.FC<CartItemProps> = ({ item }) => {
           variant="ghost"
           size="icon"
           className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-          onClick={() => removeFromCart(item.productId)}
+          onClick={() => removeFromCart(item.product_id)}
         >
           <Trash2 className="h-4 w-4" />
         </Button>
