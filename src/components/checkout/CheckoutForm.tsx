@@ -8,16 +8,40 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useCart } from '@/components/cart/CartProvider';
-import { useAuth, AuthContextType, Profile as AuthProfile } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ShoppingBag, CreditCard, Truck, UserCircle, Gift, Smartphone } from 'lucide-react';
 import OrderSummary from './OrderSummary';
 import CouponForm from './CouponForm';
 import GiftCardForm from './GiftCardForm';
-import DeliveryOptions, { DeliveryOption as DeliveryOptionType } from './DeliveryOptions';
+import DeliveryOptionsComponent from './DeliveryOptions';
 import ZiinaPayment from './ZiinaPayment';
 import { CartItem } from '@/types/cart';
+
+// Local type definition due to DeliveryOptions.tsx not exporting its internal DeliveryOption type
+// This should match the structure of options used by DeliveryOptionsComponent
+interface DeliveryOptionType {
+  id: string;
+  name: string;
+  price: number;
+  description: string; // Or 'cost' and 'estimated_delivery' depending on actual structure
+  cost?: number; // if 'price' is not the cost field
+}
+
+// Local type definitions for AuthContext due to read-only file not exporting them
+interface LocalAuthProfile {
+  id?: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  // Add other fields from your actual profile structure if needed
+}
+interface LocalAuthContextType {
+  user: any | null; // Supabase User object
+  profile: LocalAuthProfile | null;
+  // Add other methods/properties from AuthContext if used, e.g., signIn, signOut
+}
 
 const addressSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -51,12 +75,23 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
     giftCardAmount,
     discount, 
   } = useCart();
-  const { user, profile } = useAuth() as AuthContextType & { profile: AuthProfile | null };
+  const { user, profile } = useAuth() as LocalAuthContextType; // Use local type
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'ziina' | 'cod'>('ziina');
-  const [selectedDelivery, setSelectedDelivery] = useState<DeliveryOptionType | null>(null);
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  
+  // Assuming DeliveryOptions.tsx (read-only) expects/provides string ID for selectedOption and onOptionChange
+  // and we have a list of full delivery option objects available.
+  // For simplicity, I'll mock one here. In a real app, fetch or define these.
+  const MOCK_DELIVERY_OPTIONS: DeliveryOptionType[] = [
+    { id: 'standard', name: 'Standard Delivery', price: 15, description: '5-7 days' },
+    { id: 'express', name: 'Express Delivery', price: 25, description: '2-3 days' },
+  ];
+  const [deliveryOptionsList, setDeliveryOptionsList] = useState<DeliveryOptionType[]>(MOCK_DELIVERY_OPTIONS);
+  const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | null>(null);
+  const selectedDelivery = deliveryOptionsList.find(opt => opt.id === selectedDeliveryId) || null;
+  
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false); // This state might be redundant if ZiinaPayment manages its own
 
   const { control, handleSubmit, setValue, getValues, formState: { errors }, trigger } = useForm<AddressFormData>({
     resolver: zodResolver(addressSchema),
@@ -76,7 +111,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
     if (user && profile) {
       setValue('firstName', profile.first_name || '');
       setValue('lastName', profile.last_name || '');
-      setValue('email', user.email || '');
+      setValue('email', user.email || ''); // user.email from Supabase User
       setValue('phone', profile.phone || '');
     } else if (user) {
       setValue('email', user.email || '');
@@ -97,17 +132,17 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
     onPaymentSuccess(orderId); 
   };
 
-  const handlePaymentError = (error: string) => {
+  const handlePaymentProcessError = (error: string) => { // Renamed to avoid conflict
     toast({
       title: "Payment Failed",
       description: error,
       variant: "destructive",
     });
-    setIsLoading(false);
-    setIsProcessingPayment(false);
+    setIsLoading(false); // Ensure main form loader is stopped
+    setIsProcessingPayment(false); // Ensure payment specific loader is stopped
   };
   
-  const createOrderForPaymentGateway = async (formData: AddressFormData, currentPaymentMethod: 'ziina' | 'cod') => {
+  const createOrderInDb = async (formData: AddressFormData, currentPaymentMethod: 'ziina' | 'cod', paymentDetails?: any) => {
     if (!selectedDelivery) {
       toast({ title: "Error", description: "Please select a delivery option.", variant: "destructive" });
       throw new Error("Delivery option not selected");
@@ -127,17 +162,20 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
       total_amount: finalAmountWithDelivery,
       shipping_address: formData,
       billing_address: formData, 
-      status: currentPaymentMethod === 'cod' ? 'pending' : 'pending_payment', 
+      status: currentPaymentMethod === 'cod' ? 'pending_cod_payment' : (paymentDetails?.status === 'succeeded' ? 'processing' : 'pending_payment'), 
       currency: 'AED',
       payment_method: currentPaymentMethod,
-      payment_status: 'pending',
+      payment_status: paymentDetails?.status === 'succeeded' ? 'paid' : 'pending',
       delivery_type: selectedDelivery.name,
-      notes: `Coupon: ${appliedCoupon?.code || 'None'}. Gift Card: ${appliedGiftCard?.code || 'None'}. Delivery: ${selectedDelivery.name} (+${selectedDelivery.price} AED).`,
+      notes: `Coupon: ${appliedCoupon?.code || 'None'}. Gift Card: ${appliedGiftCard?.code || 'None'}. Delivery: ${selectedDelivery.name} (+${selectedDelivery.price} AED). ${paymentDetails?.id ? `Ziina Payment ID: ${paymentDetails.id}` : ''}`,
       coupon_id: appliedCoupon?.id,
       gift_card_id: appliedGiftCard?.id,
       shipping_cost: selectedDelivery.price,
+      // Add payment_intent_id if available from Ziina
+      ...(paymentDetails?.id && { payment_intent_id: paymentDetails.id }),
     };
 
+    console.log("Creating order in DB with payload:", orderPayload);
     const { data: orderResult, error } = await supabase
       .from('orders')
       .insert(orderPayload)
@@ -145,13 +183,14 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
       .single();
 
     if (error) {
-      console.error("Error creating preliminary order:", error);
+      console.error("Error creating order in DB:", error);
       throw error;
     }
+    console.log("Order created in DB:", orderResult);
     return orderResult.id;
   };
 
-  const onSubmit = async (data: AddressFormData) => {
+  const onSubmitMainForm = async (data: AddressFormData) => { // Renamed from onSubmit
     setIsLoading(true);
     if (!selectedDelivery) {
       toast({ title: "Error", description: "Please select a delivery option.", variant: "destructive" });
@@ -161,21 +200,24 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
 
     if (paymentMethod === 'cod' || finalAmountWithDelivery === 0) {
       try {
-        const orderId = await createOrderForPaymentGateway(data, 'cod');
-         await supabase.from('orders').update({ status: 'processing', payment_status: 'pending_cod' }).eq('id', orderId);
-        await handleSuccessfulOrderPlacement(orderId, false);
+        const orderId = await createOrderInDb(data, 'cod');
+        // For COD, status is already 'pending_cod_payment', payment_status 'pending'
+        // If amount is 0, effectively paid.
+        const paymentConfirmed = finalAmountWithDelivery === 0;
+        if (paymentConfirmed) {
+             await supabase.from('orders').update({ status: 'processing', payment_status: 'paid' }).eq('id', orderId);
+        }
+        await handleSuccessfulOrderPlacement(orderId, paymentConfirmed);
       } catch (error: any) {
-        console.error("Error placing COD order:", error);
-        toast({
-          title: "Order Placement Failed",
-          description: error.message || "Could not place your order. Please try again.",
-          variant: "destructive",
-        });
+        console.error("Error placing COD/Zero amount order:", error);
+        handlePaymentProcessError(error.message || "Could not place your order.");
       } finally {
         setIsLoading(false);
       }
     } else if (paymentMethod === 'ziina') {
-      toast({ title: "Proceeding to Ziina", description: "Please complete your shipping details and click 'Pay with Ziina'."});
+      // For Ziina, the primary action is now within the ZiinaPayment component.
+      // This submit might just validate and confirm details before user clicks "Pay with Ziina"
+      toast({ title: "Proceed to Payment", description: "Please verify your details and click 'Pay with Ziina' in the payment section."});
       setIsLoading(false); 
     }
   };
@@ -193,58 +235,39 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
     );
   }
 
-  const handleZiinaPaymentInitiation = async () => {
+  // Called by ZiinaPayment component on successful payment intent creation (before redirect)
+  const handleZiinaPaymentSuccess = async (paymentIntentData: any) => {
+    console.log("Ziina Payment Intent Success (from CheckoutForm):", paymentIntentData);
+    setIsProcessingPayment(true); // Keep UI in processing state
     const formData = getValues();
-    if (!selectedDelivery) {
-      toast({ title: "Error", description: "Please select a delivery option before paying.", variant: "destructive" });
-      return;
-    }
-    
-    const isValid = await trigger();
-    if (!isValid) {
-        toast({ title: "Form Invalid", description: "Please fill in all required shipping details.", variant: "destructive" });
-        return;
-    }
-
-    setIsProcessingPayment(true);
     try {
-      const orderId = await createOrderForPaymentGateway(formData, 'ziina');
-      const amountInFils = Math.round(finalAmountWithDelivery * 100);
+      // Order should ideally be created *before* Ziina redirect, or use webhook to confirm.
+      // For now, creating/updating order after Ziina intent is made, before redirect.
+      // If Ziina redirects immediately, this DB operation might not complete client-side.
+      // A more robust flow uses webhooks.
+      // Here, we assume we can create the order, then Ziina redirects.
+      // If paymentIntentData.id exists, it's the Ziina payment_intent_id.
+      // If paymentIntentData.status is 'succeeded', payment is already done.
+      
+      const orderId = await createOrderInDb(formData, 'ziina', paymentIntentData);
+      console.log(`Order ${orderId} linked with Ziina payment ${paymentIntentData.id}`);
+      
+      // The actual redirect to Ziina is handled by ZiinaPayment component after this callback.
+      // No need to call onPaymentSuccess here, as that's for after returning from Ziina.
+      // Toasting here might be premature if redirect happens.
+      toast({ title: "Redirecting to Ziina...", description: "You will be redirected to complete your payment." });
 
-      console.log("Attempting to invoke Ziina payment function for order:", orderId);
-      const paymentIntentData: any = { error: "Ziina Edge Function to be removed." }; 
-      const paymentIntentError: any = true;
-
-      if (paymentIntentError) {
-        console.error("Ziina payment intent error (function to be removed):", paymentIntentData?.error || "Unknown error");
-        throw new Error(paymentIntentData?.error || 'Failed to initiate Ziina payment (function pending removal).');
-      }
-
-      if (paymentIntentData.payment_url) {
-        if (paymentIntentData.payment_id) {
-            await supabase
-            .from('orders')
-            .update({ 
-                notes: `Coupon: ${appliedCoupon?.code || 'None'}. Gift Card: ${appliedGiftCard?.code || 'None'}. Delivery: ${selectedDelivery.name}. Ziina Payment ID: ${paymentIntentData.payment_id}`
-            })
-            .eq('id', orderId);
-        }
-        window.location.href = paymentIntentData.payment_url;
-      } else {
-        throw new Error(paymentIntentData.error || 'Failed to get Ziina payment URL (function pending removal).');
-      }
     } catch (error: any) {
-      console.error('Ziina payment initiation error:', error);
-      handlePaymentError(error.message || 'Could not initiate Ziina payment.');
-    } finally {
-      setIsProcessingPayment(false);
+      console.error('Error processing Ziina success callback:', error);
+      handlePaymentProcessError(error.message || 'Failed to finalize order before Ziina redirect.');
     }
+    // setIsProcessingPayment(false); // ZiinaPayment component will handle its own processing state
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8 text-center">Checkout</h1>
-      <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <form onSubmit={handleSubmit(onSubmitMainForm)} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
           <Accordion type="single" collapsible defaultValue="shipping" className="w-full">
             <AccordionItem value="shipping">
@@ -283,9 +306,11 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
                 </div>
               </AccordionTrigger>
               <AccordionContent className="pt-4">
-                <DeliveryOptions 
-                  selectedOption={selectedDelivery} 
-                  onSelectOption={setSelectedDelivery} // Corrected prop name to onSelectOption
+                {/* Assuming DeliveryOptionsComponent expects selectedOption as string ID and onOptionChange callback */}
+                <DeliveryOptionsComponent 
+                  deliveryOptions={deliveryOptionsList} // Pass the full list for rendering
+                  selectedOption={selectedDeliveryId} 
+                  onOptionChange={setSelectedDeliveryId}
                 />
                 {!selectedDelivery && (errors as any)?.delivery && <p className="text-red-500 text-sm mt-1">Please select a delivery option.</p>}
               </AccordionContent>
@@ -302,17 +327,19 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
                 <Card>
                   <CardContent className="pt-6 space-y-4">
                     <div className="flex gap-4">
-                      <Button variant={paymentMethod === 'ziina' ? 'default' : 'outline'} onClick={() => setPaymentMethod('ziina')} className="flex-1">
+                      <Button type="button" variant={paymentMethod === 'ziina' ? 'default' : 'outline'} onClick={() => setPaymentMethod('ziina')} className="flex-1">
                         <Smartphone className="mr-2 h-4 w-4"/> Ziina
                       </Button>
-                      <Button variant={paymentMethod === 'cod' ? 'default' : 'outline'} onClick={() => setPaymentMethod('cod')} className="flex-1">Cash on Delivery</Button>
+                      <Button type="button" variant={paymentMethod === 'cod' ? 'default' : 'outline'} onClick={() => setPaymentMethod('cod')} className="flex-1">Cash on Delivery</Button>
                     </div>
                     
                     {paymentMethod === 'ziina' && finalAmountWithDelivery > 0 && (
                       <ZiinaPayment
                         amount={finalAmountWithDelivery}
-                        onInitiatePayment={handleZiinaPaymentInitiation}
-                        isProcessing={isProcessingPayment}
+                        orderPayload={{ orderId: "TEMP_ORDER_ID_BEFORE_DB", metadata: { customerEmail: getValues("email") } }} // Pass necessary payload
+                        onSuccess={handleZiinaPaymentSuccess} // Called when intent created, before redirect
+                        onError={handlePaymentProcessError} // Called on error during intent creation
+                        // isProcessing is now internal to ZiinaPayment
                       />
                     )}
                     {paymentMethod === 'cod' && (
@@ -335,13 +362,13 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
                 <CouponForm 
                   onCouponApply={applyCoupon}
                   onCouponRemove={removeCoupon}
-                  orderTotal={subtotal}
+                  orderTotal={subtotal} // subtotal before delivery
                   appliedCoupon={appliedCoupon}
                 />
                 <GiftCardForm 
                   onGiftCardApply={applyGiftCard}
                   onGiftCardRemove={removeGiftCard}
-                  orderTotal={totalPrice}
+                  orderTotal={totalPrice} // totalPrice includes coupon, before gift card & delivery
                   appliedGiftCard={appliedGiftCard}
                 />
               </AccordionContent>
@@ -354,14 +381,16 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
           <Button 
             type="submit" 
             className="w-full py-3 text-lg" 
-            disabled={isLoading || (paymentMethod === 'ziina' && finalAmountWithDelivery > 0 && !isProcessingPayment)} 
+            // Submit button is for COD/Zero Amount or to "confirm details" before Ziina.
+            // Ziina payment is initiated by its own button.
+            disabled={isLoading || (paymentMethod === 'ziina' && finalAmountWithDelivery > 0 && isProcessingPayment)} 
           >
             {isLoading ? (
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
             ) : (
               <ShoppingBag className="mr-2 h-5 w-5" />
             )}
-            {paymentMethod === 'cod' || finalAmountWithDelivery === 0 ? 'Place Order' : `Proceed with Order`}
+            {paymentMethod === 'cod' || finalAmountWithDelivery === 0 ? 'Place Order' : `Confirm Details`}
           </Button>
           {paymentMethod === 'ziina' && finalAmountWithDelivery > 0 && !isLoading && (
              <p className="text-center text-sm text-muted-foreground">

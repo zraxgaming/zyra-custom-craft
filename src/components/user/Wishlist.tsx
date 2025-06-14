@@ -3,11 +3,12 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Heart, ShoppingCart, Star, Trash2 } from "lucide-react";
-import { useWishlist } from "@/hooks/use-wishlist";
+import { useWishlist } from "@/hooks/use-wishlist"; // Assuming useWishlist provides items of type WishlistItem from types/wishlist.ts
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { WishlistItem } from "@/types/wishlist"; // Explicitly import for clarity
 
-const Wishlist = () => {
+const UserWishlist = () => { // Renamed component to avoid conflict if there's another Wishlist page/component
   const { items: wishlistItems, removeFromWishlist, isLoading } = useWishlist();
   const { toast } = useToast();
 
@@ -90,8 +91,9 @@ const Wishlist = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {wishlistItems.map((item) => (
+          {wishlistItems.map((item: WishlistItem) => ( // Ensure item is typed as WishlistItem
             <div key={item.id} className="flex space-x-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+              {/* item.slug is mandatory in WishlistItem type, direct access is fine. */}
               <Link to={`/product/${item.slug}`} className="block">
                 <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden">
                   {item.images && item.images.length > 0 ? (
@@ -114,11 +116,12 @@ const Wishlist = () => {
                 </Link>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-lg font-bold">${item.price.toFixed(2)}</span>
-                  {item.rating && (
+                  {/* item.rating and item.review_count are optional, check for existence */}
+                  {typeof item.rating === 'number' && (
                     <div className="flex items-center gap-1">
                       <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                       <span className="text-sm">{item.rating}</span>
-                      {item.review_count && (
+                      {typeof item.review_count === 'number' && (
                         <span className="text-sm text-muted-foreground">
                           ({item.review_count})
                         </span>
@@ -129,7 +132,7 @@ const Wishlist = () => {
               </div>
               
               <div className="flex flex-col gap-2">
-                <Button size="sm" variant="outline">
+                <Button size="sm" variant="outline"> {/* TODO: Implement Add to Cart from Wishlist */}
                   <ShoppingCart className="h-4 w-4 mr-2" />
                   Add to Cart
                 </Button>
@@ -150,4 +153,4 @@ const Wishlist = () => {
   );
 };
 
-export default Wishlist;
+export default UserWishlist;
