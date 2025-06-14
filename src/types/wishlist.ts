@@ -5,9 +5,10 @@ export interface WishlistItem {
   product_id: string;
   created_at: string;
   name: string;
-  slug: string;
+  slug: string; // Added
   price: number;
   images: string[];
-  rating?: number;
-  review_count?: number;
+  rating?: number; // Added
+  review_count?: number; // Added
 }
+

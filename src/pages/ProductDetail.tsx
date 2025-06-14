@@ -18,11 +18,13 @@ import ProductReviews from "@/components/reviews/ProductReviews";
 import ReviewForm from "@/components/products/ReviewForm";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { SEOHead } from "@/components/seo/SEOHead";
+import SEOHead from "@/components/seo/SEOHead"; // Changed to default import
 import { useAuth } from "@/contexts/AuthContext";
 import ProductCustomizer from "@/components/products/ProductCustomizer";
-import { CartItemCustomization } from "@/types/cart";
+import { CartItemCustomization } from "@/types/cart"; // This should now be available
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { Json } from "@/integrations/supabase/types"; // For Supabase JSON types
+
 
 const ProductDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -54,15 +56,18 @@ const ProductDetail: React.FC = () => {
           .single();
 
         if (error) {
-          if (error.code === 'PGRST116') { // Not found
+          if (error.code === 'PGRST116') { 
             setProduct(null);
           } else {
             throw error;
           }
         } else {
-          setProduct(data as ProductType); // Cast to ProductType
+          setProduct(data as ProductType); 
           if (data?.images && Array.isArray(data.images) && data.images.length > 0) {
-            setSelectedImage(data.images[0] as string);
+            const firstImage = data.images[0];
+            if (typeof firstImage === 'string') {
+                 setSelectedImage(firstImage);
+            }
           }
         }
       } catch (error: any) {
@@ -83,7 +88,6 @@ const ProductDetail: React.FC = () => {
             description: "Please customize the product before adding to cart.",
             variant: "default"
         });
-        // Consider programmatically opening a customization modal/section if one exists
         return;
     }
     addItem({
@@ -91,14 +95,15 @@ const ProductDetail: React.FC = () => {
       name: product.name,
       price: product.price,
       quantity: quantity,
-      image_url: product.images?.[0] || '/placeholder-product.jpg',
+      image_url: (product.images && Array.isArray(product.images) && typeof product.images[0] === 'string') ? product.images[0] : '/placeholder-product.jpg',
       customization: customization,
     });
-    toast({
-      title: 'Added to Cart',
-      description: `${product.name} (x${quantity}) has been added to your cart.`,
-      action: <Button variant="outline" size="sm" onClick={() => navigate('/cart')}>View Cart</Button>,
-    });
+    // toast is handled by CartProvider's addItem
+    // toast({
+    //   title: 'Added to Cart',
+    //   description: `${product.name} (x${quantity}) has been added to your cart.`,
+    //   action: <Button variant="outline" size="sm" onClick={() => navigate('/cart')}>View Cart</Button>,
+    // });
   };
 
   const handleQuantityChange = (amount: number) => {
@@ -180,6 +185,8 @@ const ProductDetail: React.FC = () => {
       </>
     );
   }
+  
+  const productImages = (Array.isArray(product.images) ? product.images.filter(img => typeof img === 'string') : []) as string[];
 
   const category = product.category_id && typeof product.category_id === 'object' 
     ? product.category_id as { id: string; name: string; slug: string } 
@@ -190,7 +197,7 @@ const ProductDetail: React.FC = () => {
       <SEOHead
         title={product.meta_title || product.name}
         description={product.meta_description || product.short_description || ''}
-        imageUrl={selectedImage || product.images?.[0]}
+        imageUrl={selectedImage || productImages[0]}
       />
       <Navbar />
       <div className="container mx-auto px-4 py-8">
@@ -217,37 +224,36 @@ const ProductDetail: React.FC = () => {
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
-
         <div className="grid md:grid-cols-2 gap-8 lg:gap-12 animate-fade-in">
           {/* Image Gallery */}
           <div className="space-y-4">
              <Card className="overflow-hidden shadow-lg rounded-lg">
                 <AspectRatio ratio={1}>
                   <img
-                    src={selectedImage || product.images?.[0] || '/placeholder-product.jpg'}
+                    src={selectedImage || productImages[0] || '/placeholder-product.jpg'}
                     alt={product.name}
                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                   />
                 </AspectRatio>
              </Card>
-            {product.images && Array.isArray(product.images) && product.images.length > 1 && (
-              <Carousel opts={{ align: "start", loop: product.images.length > 5 }} className="w-full">
+            {productImages && productImages.length > 1 && (
+              <Carousel opts={{ align: "start", loop: productImages.length > 5 }} className="w-full">
                 <CarouselContent className="-ml-2">
-                  {product.images.map((image, index) => (
+                  {productImages.map((image, index) => (
                     <CarouselItem key={index} className="pl-2 basis-1/4 sm:basis-1/5">
                       <Card 
-                        onClick={() => setSelectedImage(image as string)} 
+                        onClick={() => setSelectedImage(image)} 
                         className={`overflow-hidden cursor-pointer transition-all rounded-md border-2 ${selectedImage === image ? 'border-primary' : 'border-transparent hover:border-muted-foreground/50'}`}
                       >
                         <AspectRatio ratio={1}>
-                          <img src={image as string} alt={`${product.name} thumbnail ${index + 1}`} className="w-full h-full object-cover" />
+                          <img src={image} alt={`${product.name} thumbnail ${index + 1}`} className="w-full h-full object-cover" />
                         </AspectRatio>
                       </Card>
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                {product.images.length > 5 && <CarouselPrevious className="left-[-10px] hidden sm:flex" />}
-                {product.images.length > 5 && <CarouselNext className="right-[-10px] hidden sm:flex" />}
+                {productImages.length > 5 && <CarouselPrevious className="left-[-10px] hidden sm:flex" />}
+                {productImages.length > 5 && <CarouselNext className="right-[-10px] hidden sm:flex" />}
               </Carousel>
             )}
           </div>
@@ -262,7 +268,7 @@ const ProductDetail: React.FC = () => {
               )}
               <CardTitle className="text-3xl lg:text-4xl font-bold tracking-tight">{product.name}</CardTitle>
               <div className="mt-2 flex items-center space-x-2">
-                {renderStars(product.rating, product.review_count)}
+                {renderStars(product.rating, (product as any).review_count)}
               </div>
                <div className="mt-3 flex items-baseline gap-2">
                 <p className="text-3xl font-bold text-primary">AED {product.price.toFixed(2)}</p>
@@ -278,7 +284,6 @@ const ProductDetail: React.FC = () => {
               {product.is_customizable && (
                 <ProductCustomizer
                   productId={product.id}
-                  onSave={onCustomizationSave}
                   initialCustomization={customization}
                   productName={product.name}
                 />
@@ -319,7 +324,7 @@ const ProductDetail: React.FC = () => {
         <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="mt-12" id="reviews">
           <TabsList className="grid w-full grid-cols-2 md:w-auto md:inline-flex bg-muted p-1 rounded-lg">
             <TabsTrigger value="description" className="data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm">Description</TabsTrigger>
-            <TabsTrigger value="reviews" className="data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm">Reviews ({product.reviews?.length || 0})</TabsTrigger>
+            <TabsTrigger value="reviews" className="data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm">Reviews ({(product as any).reviews?.length || 0})</TabsTrigger>
           </TabsList>
           <TabsContent value="description">
             <Card className="mt-4 shadow-sm rounded-lg">
@@ -339,11 +344,12 @@ const ProductDetail: React.FC = () => {
                 <CardDescription>Honest opinions from our valued customers.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <ProductReviews reviews={product.reviews || []} />
+                <ProductReviews 
+                  reviews={(product as any).reviews || []} 
+                />
                 <Separator />
                 {user ? (
                   <ReviewForm productId={product.id} onReviewSubmitted={() => { 
-                    // Consider refetching product to update reviews inline
                     toast({title: "Review Submitted!", description: "Thank you for your feedback."})
                    }} 
                   />

@@ -7,11 +7,11 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Container } from "@/components/ui/container";
 import CheckoutForm from "@/components/checkout/CheckoutForm";
-import SEOHead from "@/components/seo/SEOHead";
+import SEOHead from "@/components/seo/SEOHead"; // Assuming default export
 
 const Checkout = () => {
   const { user } = useAuth();
-  const { items, subtotal, clearCart } = useCart();
+  const { items, clearCart } = useCart(); // subtotal removed, will be from useCart in CheckoutForm
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,19 +20,23 @@ const Checkout = () => {
       return;
     }
 
-    if (items.length === 0) {
+    // It's possible items might be an empty array briefly while loading
+    // This check could be deferred or made more robust if items load async for logged-in users
+    if (items.length === 0 && !useCart().loading) { 
       navigate('/shop');
       return;
     }
-  }, [user, items, navigate]);
+  }, [user, items, navigate, useCart().loading]);
 
   const handlePaymentSuccess = (orderId: string) => {
-    clearCart();
+    clearCart(); // This should also clear coupon/gift card from context if applicable
     navigate(`/order-success/${orderId}`);
   };
 
-  if (!user || items.length === 0) {
-    return null;
+  // Render a loader or minimal UI if user or items are not ready
+  if (!user || (items.length === 0 && !useCart().loading) ) {
+    // You might want a loading spinner here if useCart().loading is true
+    return null; 
   }
 
   return (
@@ -53,9 +57,7 @@ const Checkout = () => {
           </div>
           
           <CheckoutForm
-            items={items}
-            subtotal={subtotal}
-            onPaymentSuccess={handlePaymentSuccess}
+            onPaymentSuccess={handlePaymentSuccess} // Pass only this prop
           />
         </Container>
       </div>
@@ -66,3 +68,4 @@ const Checkout = () => {
 };
 
 export default Checkout;
+

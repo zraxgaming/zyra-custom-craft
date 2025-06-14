@@ -2,10 +2,10 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { CartItem } from '@/types/cart'; // Make sure CartItem type is correctly imported
+import { CartItem } from '@/types/cart'; 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Link } from 'react-router-dom';
-import { useCart } from '@/components/cart/CartProvider'; // Import useCart
+import { useCart } from '@/components/cart/CartProvider'; 
 
 interface OrderSummaryProps {
   items: CartItem[];
@@ -13,7 +13,10 @@ interface OrderSummaryProps {
 }
 
 const OrderSummary: React.FC<OrderSummaryProps> = ({ items, deliveryCost = 0 }) => {
-  const { subtotal, discount, giftCardAmount, totalPrice } = useCart(); // Use values from useCart
+  const { subtotal, discount, giftCardAmount, totalPrice: cartTotalPrice } = useCart(); // totalPrice from cart is after discounts
+
+  // The total displayed in footer should be cartTotalPrice (subtotal - discounts) + deliveryCost
+  const finalOrderTotal = cartTotalPrice + deliveryCost;
 
   return (
     <Card>
@@ -23,11 +26,11 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({ items, deliveryCost = 0 }) 
       <CardContent className="space-y-4">
         <ScrollArea className="h-[200px] pr-3">
           {items.map((item) => (
-            <div key={item.id} className="flex justify-between items-start py-2 border-b last:border-b-0">
+            <div key={item.product_id + (item.customization?.text || '')} className="flex justify-between items-start py-2 border-b last:border-b-0"> {/* Ensure key is unique, item.id from CartItem should be used */}
               <div className="flex items-start space-x-3">
                 <img src={item.image_url || '/placeholder-product.jpg'} alt={item.name} className="w-12 h-12 object-cover rounded" />
                 <div>
-                  <Link to={`/product/${item.product_id}`} className="font-medium hover:text-primary text-sm line-clamp-1">
+                  <Link to={`/product/${item.product_id}`} className="font-medium hover:text-primary text-sm line-clamp-1"> {/* Use product_id for product link, slug might not be on CartItem */}
                     {item.name}
                   </Link>
                   <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
@@ -67,10 +70,11 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({ items, deliveryCost = 0 }) 
       </CardContent>
       <CardFooter className="flex justify-between font-bold text-lg">
         <span>Total</span>
-        <span>AED {(totalPrice + deliveryCost).toFixed(2)}</span>
+        <span>AED {finalOrderTotal.toFixed(2)}</span>
       </CardFooter>
     </Card>
   );
 };
 
 export default OrderSummary;
+
