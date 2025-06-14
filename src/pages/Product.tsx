@@ -166,7 +166,7 @@ const ProductPage = () => {
       <SEOHead
         title={product.meta_title || product.name}
         description={product.meta_description || product.short_description || ''}
-        imageUrl={productImages[0]}
+        image={productImages[0]}
       />
       <Navbar />
       <div className="container mx-auto px-4 py-8">
@@ -227,7 +227,7 @@ const ProductPage = () => {
             {product.is_customizable && (
               <ProductCustomizer
                 productId={product.id}
-                initialCustomization={customization}
+                customization={customization}
                 productName={product.name}
               />
             )}
@@ -282,6 +282,7 @@ const ProductPage = () => {
               </CardHeader>
               <CardContent className="space-y-6">
                 <ProductReviews 
+                  productId={product.id}
                   // reviews prop removed due to TS2322 error
                   // reviews={(product as any).reviews || []} 
                 />

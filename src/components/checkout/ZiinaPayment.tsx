@@ -1,53 +1,20 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Smartphone, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 
 interface ZiinaPaymentProps {
-  amount: number;
-  onSuccess: (transactionId: string) => void;
-  onError: (error: string) => void;
+  amount: number; // Total amount in AED
+  onInitiatePayment: () => Promise<void>; // Callback to start the payment process
+  isProcessing: boolean; // Loading state from parent
 }
 
 const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
   amount,
-  onSuccess,
-  onError
+  onInitiatePayment,
+  isProcessing
 }) => {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const { toast } = useToast();
-
-  const handlePayment = async () => {
-    setIsProcessing(true);
-    
-    try {
-      // Simulate Ziina payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Simulate successful payment
-      const transactionId = `ziina_${Date.now()}`;
-      
-      toast({
-        title: "Payment Successful!",
-        description: "Your payment has been processed successfully.",
-      });
-      
-      onSuccess(transactionId);
-    } catch (error) {
-      const errorMessage = "Payment failed. Please try again.";
-      toast({
-        title: "Payment Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      onError(errorMessage);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   return (
     <Card className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 border-blue-200 dark:border-blue-800">
       <CardContent className="p-6">
@@ -58,7 +25,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
           </div>
           
           <p className="text-gray-600 dark:text-gray-300">
-            Pay securely with Ziina - UAE's leading digital wallet
+            Pay securely with Ziina - UAE's leading digital wallet. You will be redirected.
           </p>
           
           <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
@@ -66,14 +33,14 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
           </div>
           
           <Button
-            onClick={handlePayment}
-            disabled={isProcessing}
+            onClick={onInitiatePayment}
+            disabled={isProcessing || amount <= 0}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg"
           >
             {isProcessing ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Processing Payment...
+                Processing...
               </>
             ) : (
               <>
