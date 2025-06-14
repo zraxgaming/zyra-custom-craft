@@ -5,7 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/components/cart/CartProvider";
-import { WishlistProvider } from "@/hooks/use-wishlist";
+// Removed the incorrect WishlistProvider import and usage
+
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 
 // Public Pages
