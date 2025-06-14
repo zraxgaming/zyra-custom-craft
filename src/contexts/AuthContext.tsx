@@ -1,6 +1,9 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
-// Defensive: log which React version is used, and where it's loaded from
-console.log('[AuthContext] React version:', React.version, 'loaded from', require?.resolve?.('react') || 'unknown');
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
+// Defensive: log React version (do not use require in browser)
+console.log('[AuthContext] React version:', React.version);
 
 interface AuthContextType {
   user: User | null;
@@ -45,7 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
