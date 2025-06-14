@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -29,7 +30,6 @@ import OrderFailed from "./pages/OrderFailed";
 import CategoryPage from "./pages/CategoryPage";
 import GiftCards from "./pages/GiftCards";
 import NotFound from "./pages/404";
-
 // Correct WishlistProvider import from hooks/use-wishlist.tsx
 import { WishlistProvider } from "@/hooks/use-wishlist.tsx";
 
@@ -49,8 +49,9 @@ const App = () => (
               <PushNotificationSetup />
               <BrowserRouter>
                 <Routes>
-                  {/* Redirect "/" to "/home" */}
+                  {/* Always redirect "/" to "/home" */}
                   <Route path="/" element={<Navigate to="/home" replace />} />
+                  {/* Home page uses Index.tsx for actual homepage content */}
                   <Route path="/home" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/auth/callback" element={<AuthCallback />} />
