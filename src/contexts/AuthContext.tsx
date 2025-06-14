@@ -1,11 +1,25 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+interface Profile {
+  id: string;
+  display_name?: string;
+  email?: string;
+  phone?: string;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+  avatar_url?: string;
+  role?: string;
+  preferred_currency?: string;
+  preferred_language?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  profile: Profile | null;
   loading: boolean;
   isLoading: boolean;
   isAdmin: boolean;
@@ -20,17 +34,39 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // Helper to load profile from Supabase
+  const fetchProfile = async (uid: string) => {
+    if (!uid) {
+      setProfile(null);
+      return;
+    }
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', uid)
+      .single();
+    if (error || !data) {
+      setProfile(null);
+      return;
+    }
+    setProfile(data);
+  };
+
   useEffect(() => {
+    let ignore = false;
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (ignore) return;
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         checkAdminStatus(session.user);
+        fetchProfile(session.user.id);
       }
       setLoading(false);
       setIsLoading(false);
@@ -44,14 +80,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       if (session?.user) {
         checkAdminStatus(session.user);
+        fetchProfile(session.user.id);
       } else {
         setIsAdmin(false);
+        setProfile(null);
       }
       setLoading(false);
       setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      ignore = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const checkAdminStatus = async (user: User) => {
@@ -98,6 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    setProfile(null);
   };
 
   const resetPassword = async (email: string) => {
@@ -107,9 +149,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw error;
   };
 
-  const value = {
+  const value: AuthContextType = {
     user,
     session,
+    profile,
     loading,
     isLoading,
     isAdmin,
