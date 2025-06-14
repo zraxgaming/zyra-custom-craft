@@ -6,7 +6,7 @@ import { Container } from "@/components/ui/container";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, Grid, List, Sparkles, Star, ShoppingBag } from "lucide-react";
+import { Search, Filter, Grid, List, Sparkles } from "lucide-react";
 import SEOHead from "@/components/seo/SEOHead";
 import { Badge } from "@/components/ui/badge";
 import ProductGrid from "@/components/shop/ProductGrid";
@@ -73,104 +73,97 @@ const Shop = () => {
   return (
     <>
       <SEOHead 
-        title="Shop - Zyra Custom Craft | Premium Custom Products"
-        description="Discover our premium collection of customizable products. Shop the latest designs and create something unique with professional customization tools."
+        title="Shop - Zyra"
+        description="Discover our premium collection of customizable products. Shop the latest designs and create something unique."
         url="https://shopzyra.vercel.app/shop"
-        keywords="shop, custom products, personalized gifts, crafts, design, UAE, premium quality"
       />
       <Navbar />
       
-      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-purple-500/10">
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-purple-500/10 relative overflow-hidden">
+        {/* Animated Background */}
+        <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.05] pointer-events-none">
+          <div className="absolute top-20 left-20 w-96 h-96 bg-gradient-to-br from-primary to-purple-500 rounded-full blur-3xl animate-float"></div>
+          <div className="absolute bottom-40 right-10 w-80 h-80 bg-gradient-to-br from-pink-500 to-orange-500 rounded-full blur-3xl animate-float-reverse"></div>
+        </div>
+
         {/* Hero Section */}
-        <section className="py-16 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-blue-500/10"></div>
-          <Container className="relative">
-            <div className="text-center mb-12 space-y-6">
-              <div className="opacity-0 animate-fade-in">
-                <Badge className="mb-6 bg-gradient-to-r from-primary via-purple-600 to-pink-600 text-white text-lg px-6 py-2 shadow-lg hover:shadow-xl transition-shadow duration-300" variant="outline">
-                  <Sparkles className="h-5 w-5 mr-2" />
-                  Premium Collection
-                  <Star className="h-5 w-5 ml-2" />
-                </Badge>
-              </div>
-              
-              <div className="opacity-0 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-                <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  Shop Collection
-                </h1>
-              </div>
-              
-              <div className="opacity-0 animate-fade-in" style={{ animationDelay: '0.4s' }}>
-                <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                  Discover our curated selection of premium products. Customize, personalize, and make it yours.
-                </p>
-              </div>
+        <section className="relative py-16 overflow-hidden">
+          <Container className="relative z-10">
+            <div className="text-center mb-12 animate-fade-in">
+              <Badge className="mb-6 bg-gradient-to-r from-primary to-purple-600 hover:scale-110 transition-transform duration-300 text-lg px-6 py-3" variant="outline">
+                <Sparkles className="h-5 w-5 mr-3" />
+                Premium Collection
+              </Badge>
+              <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent animate-scale-in">
+                Shop Collection
+              </h1>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto animate-slide-in-right">
+                Discover our curated selection of premium products. Customize, personalize, and make it yours.
+              </p>
             </div>
           </Container>
         </section>
 
         {/* Search and Filters */}
-        <Container className="pb-12">
-          <div className="opacity-0 animate-fade-in" style={{ animationDelay: '0.6s' }}>
-            <div className="flex flex-col lg:flex-row gap-6 mb-8">
-              <div className="flex-1">
-                <div className="relative group">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5 transition-colors group-focus-within:text-primary" />
-                  <Input
-                    placeholder="Search products..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-12 h-12 text-lg border-2 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm hover:border-primary/50 focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md"
-                  />
-                </div>
+        <Container className="py-8 relative z-10">
+          <div className="flex flex-col lg:flex-row gap-6 mb-8 animate-fade-in">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search products..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 hover:scale-105 transition-transform duration-200"
+                />
               </div>
+            </div>
 
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-full lg:w-56 h-12 text-lg border-2 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm hover:border-primary/50 focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-2">
-                  <SelectItem value="featured">Featured</SelectItem>
-                  <SelectItem value="price-low">Price: Low to High</SelectItem>
-                  <SelectItem value="price-high">Price: High to Low</SelectItem>
-                  <SelectItem value="rating">Highest Rated</SelectItem>
-                  <SelectItem value="newest">Newest</SelectItem>
-                  <SelectItem value="name">Name A-Z</SelectItem>
-                </SelectContent>
-              </Select>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-full lg:w-48 hover:scale-105 transition-transform duration-200">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="featured">Featured</SelectItem>
+                <SelectItem value="price-low">Price: Low to High</SelectItem>
+                <SelectItem value="price-high">Price: High to Low</SelectItem>
+                <SelectItem value="rating">Highest Rated</SelectItem>
+                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="name">Name A-Z</SelectItem>
+              </SelectContent>
+            </Select>
 
-              <div className="flex gap-3">
-                <Button
-                  variant={viewMode === "grid" ? "default" : "outline"}
-                  size="lg"
-                  onClick={() => setViewMode("grid")}
-                  className="h-12 px-4 transition-all duration-300 hover:scale-105"
-                >
-                  <Grid className="h-5 w-5" />
-                </Button>
-                <Button
-                  variant={viewMode === "list" ? "default" : "outline"}
-                  size="lg"
-                  onClick={() => setViewMode("list")}
-                  className="h-12 px-4 transition-all duration-300 hover:scale-105"
-                >
-                  <List className="h-5 w-5" />
-                </Button>
-              </div>
-
+            <div className="flex gap-2">
               <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className="lg:hidden h-12 px-6 transition-all duration-300 hover:scale-105"
+                variant={viewMode === "grid" ? "default" : "outline"}
+                size="icon"
+                onClick={() => setViewMode("grid")}
+                className="hover:scale-110 transition-transform duration-200"
               >
-                <Filter className="h-5 w-5 mr-2" />
-                Filters
+                <Grid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "outline"}
+                size="icon"
+                onClick={() => setViewMode("list")}
+                className="hover:scale-110 transition-transform duration-200"
+              >
+                <List className="h-4 w-4" />
               </Button>
             </div>
+
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className="lg:hidden hover:scale-110 transition-transform duration-200"
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filters
+            </Button>
           </div>
 
           <div className="flex gap-8">
-            <div className={`${showFilters ? 'block' : 'hidden'} lg:block w-full lg:w-80 opacity-0 animate-fade-in`} style={{ animationDelay: '0.7s' }}>
+            <div className={`${showFilters ? 'block' : 'hidden'} lg:block w-full lg:w-64 animate-slide-in-left`}>
               <ProductFilters 
                 categories={categories}
                 selectedCategories={selectedCategories}
@@ -186,7 +179,7 @@ const Shop = () => {
               />
             </div>
 
-            <div className="flex-1 opacity-0 animate-fade-in" style={{ animationDelay: '0.8s' }}>
+            <div className="flex-1 animate-fade-in">
               <ProductGrid products={sortedProducts} isLoading={isLoading} />
             </div>
           </div>

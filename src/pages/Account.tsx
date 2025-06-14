@@ -1,18 +1,12 @@
+
 import React from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Container } from "@/components/ui/container";
-import SEOHead from '@/components/seo/SEOHead';
 
 const Account = () => {
   return (
     <div className="min-h-screen bg-background">
-      <SEOHead 
-        title="My Account - Zyra Custom Craft"
-        description="Manage your Zyra Custom Craft account, view order history, and update your profile preferences."
-        url="https://shopzyra.vercel.app/account"
-        keywords="account, profile, orders, zyra, custom craft"
-      />
       <Navbar />
       <Container className="py-12">
         <div className="max-w-4xl mx-auto">

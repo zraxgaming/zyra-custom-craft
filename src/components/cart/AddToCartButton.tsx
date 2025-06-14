@@ -1,81 +1,92 @@
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { ShoppingCart, Plus, Loader2 } from 'lucide-react';
-import { useCart } from './CartProvider';
-import { useToast } from '@/hooks/use-toast';
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { ShoppingCart, Plus, Minus } from "lucide-react";
+import { useCart } from "./CartProvider";
+import { useToast } from "@/hooks/use-toast";
 
 interface AddToCartButtonProps {
   product: {
     id: string;
     name: string;
+    slug: string;
     price: number;
-    image_url?: string;
-    images?: string[];
+    images: string[];
   };
-  quantity?: number;
-  customization?: any;
-  className?: string;
   disabled?: boolean;
+  className?: string;
 }
 
-const AddToCartButton: React.FC<AddToCartButtonProps> = ({
-  product,
-  quantity = 1,
-  customization,
-  className = "",
-  disabled = false
+const AddToCartButton: React.FC<AddToCartButtonProps> = ({ 
+  product, 
+  disabled = false,
+  className = ""
 }) => {
-  const [loading, setLoading] = useState(false);
-  const { addToCart, items } = useCart();
+  const { addItem, items } = useCart();
   const { toast } = useToast();
+  const [quantity, setQuantity] = useState(1);
 
-  const isInCart = items.some(item => item.product_id === product.id);
+  const existingItem = items.find(item => item.productId === product.id);
 
-  const handleAddToCart = async () => {
-    setLoading(true);
-    try {
-      await addToCart({
-        product_id: product.id,
-        name: product.name,
-        price: product.price,
-        quantity,
-        image_url: product.image_url || (Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : undefined),
-        customization
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add item to cart",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleAddToCart = () => {
+    if (disabled) return;
+    
+    addItem({
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      quantity: quantity,
+      image: product.images[0] || '/placeholder-product.jpg'
+    });
+
+    toast({
+      title: "Added to cart",
+      description: `${quantity} ${product.name} added to your cart`,
+    });
+
+    setQuantity(1);
   };
+
+  if (existingItem) {
+    return (
+      <div className={`flex items-center gap-2 ${className}`}>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setQuantity(Math.max(1, quantity - 1))}
+          className="h-8 w-8"
+        >
+          <Minus className="h-4 w-4" />
+        </Button>
+        <span className="w-8 text-center font-medium">{quantity}</span>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setQuantity(quantity + 1)}
+          className="h-8 w-8"
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
+        <Button
+          onClick={handleAddToCart}
+          disabled={disabled}
+          className="flex-1"
+        >
+          <ShoppingCart className="h-4 w-4 mr-2" />
+          Add More
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <Button
       onClick={handleAddToCart}
-      disabled={disabled || loading}
-      className={`animate-scale-in hover:scale-105 transition-all duration-300 ${className}`}
+      disabled={disabled}
+      className={`w-full ${className}`}
     >
-      {loading ? (
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Adding...
-        </div>
-      ) : isInCart ? (
-        <div className="flex items-center gap-2">
-          <ShoppingCart className="h-4 w-4 animate-bounce" />
-          In Cart
-        </div>
-      ) : (
-        <div className="flex items-center gap-2">
-          <Plus className="h-4 w-4 animate-bounce" />
-          Add to Cart
-        </div>
-      )}
+      <ShoppingCart className="h-4 w-4 mr-2" />
+      Add to Cart
     </Button>
   );
 };

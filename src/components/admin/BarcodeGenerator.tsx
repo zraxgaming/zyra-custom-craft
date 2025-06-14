@@ -1,232 +1,209 @@
 
-import React, { useState, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Printer, QrCode, Package, Camera, ScanLine } from 'lucide-react';
-import JsBarcode from 'jsbarcode';
+import { supabase } from '@/integrations/supabase/client';
+import { QrCode, Download } from 'lucide-react';
 import ProductSearchSelect from './ProductSearchSelect';
 
-interface BarcodeGeneratorProps {
-  onScanComplete?: (barcode: string) => void;
-}
-
-const BarcodeGenerator: React.FC<BarcodeGeneratorProps> = ({ onScanComplete }) => {
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanResult, setScanResult] = useState<string>('');
+const BarcodeGenerator = () => {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedBarcode, setGeneratedBarcode] = useState<any>(null);
   const { toast } = useToast();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
-  const generateBarcode = () => {
-    if (!selectedProduct || !canvasRef.current) return;
+  const [formData, setFormData] = useState({
+    barcodeType: "qr",
+    selectedProduct: null as any,
+    customData: "",
+  });
 
-    try {
-      JsBarcode(canvasRef.current, selectedProduct.barcode, {
-        format: "CODE128",
-        width: 2,
-        height: 100,
-        displayValue: true
-      });
-      
+  const handleGenerate = async () => {
+    if (!formData.selectedProduct && !formData.customData) {
       toast({
-        title: "Barcode Generated! 📊",
-        description: `Barcode created for ${selectedProduct.name}`,
+        title: "Missing data",
+        description: "Please select a product or enter custom data.",
+        variant: "destructive",
       });
-    } catch (error) {
-      toast({
-        title: "Generation Failed",
-        description: "Unable to generate barcode",
-        variant: "destructive"
-      });
+      return;
     }
-  };
 
-  const printBarcode = () => {
-    if (!canvasRef.current) return;
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const canvas = canvasRef.current;
-    const dataURL = canvas.toDataURL();
-    
-    printWindow.document.write(`
-      <html>
-        <head><title>Print Barcode</title></head>
-        <body style="margin: 0; padding: 20px; text-align: center;">
-          <h3>${selectedProduct?.name || 'Product Barcode'}</h3>
-          <img src="${dataURL}" style="max-width: 100%;" />
-          <p>${selectedProduct?.barcode || ''}</p>
-        </body>
-      </html>
-    `);
-    
-    printWindow.document.close();
-    printWindow.print();
-  };
-
-  const startScanning = async () => {
-    setIsScanning(true);
+    setIsGenerating(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
-      });
+      let barcodeData = formData.customData;
       
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
+      if (formData.selectedProduct && !barcodeData) {
+        barcodeData = formData.selectedProduct.sku || formData.selectedProduct.name || formData.selectedProduct.id;
       }
+
+      const { data, error } = await supabase
+        .from("barcode_generations")
+        .insert({
+          barcode_type: formData.barcodeType,
+          barcode_data: barcodeData,
+          product_id: formData.selectedProduct?.id || null,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setGeneratedBarcode(data);
       
       toast({
-        title: "Camera Active 📷",
-        description: "Point camera at barcode to scan",
+        title: "Barcode generated",
+        description: "Barcode has been generated successfully.",
       });
-    } catch (error) {
+
+    } catch (error: any) {
       toast({
-        title: "Camera Access Denied",
-        description: "Please allow camera permission to scan barcodes",
-        variant: "destructive"
+        title: "Error generating barcode",
+        description: error.message,
+        variant: "destructive",
       });
-      setIsScanning(false);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
-  const stopScanning = () => {
-    setIsScanning(false);
-    if (videoRef.current?.srcObject) {
-      const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-      tracks.forEach(track => track.stop());
-    }
-  };
-
-  const simulateScan = () => {
-    // Simulate a scan for demo purposes
-    const demoBarcode = selectedProduct?.barcode || '1234567890123';
-    setScanResult(demoBarcode);
-    if (onScanComplete) {
-      onScanComplete(demoBarcode);
-    }
+  const downloadBarcode = () => {
+    if (!generatedBarcode) return;
+    
+    // Create a canvas element to generate the barcode
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) return;
+    
+    canvas.width = 300;
+    canvas.height = 150;
+    
+    // Draw a simple barcode representation
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.fillStyle = '#fff';
+    ctx.font = '16px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(generatedBarcode.barcode_data, canvas.width / 2, canvas.height / 2);
+    
+    // Download the image
+    const link = document.createElement('a');
+    link.download = `barcode-${generatedBarcode.id}.png`;
+    link.href = canvas.toDataURL();
+    link.click();
+    
     toast({
-      title: "Barcode Scanned! ✅",
-      description: `Scanned: ${demoBarcode}`,
+      title: "Downloaded",
+      description: "Barcode image has been downloaded.",
     });
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <Card className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 border-2 border-purple-200 dark:border-purple-800 animate-scale-in">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-3 text-purple-700 dark:text-purple-300">
-            <div className="p-2 bg-purple-600 rounded-lg">
-              <QrCode className="h-5 w-5 text-white animate-pulse" />
-            </div>
-            Barcode Generator & Scanner
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
+    <Card className="animate-scale-in">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-3">
+          <QrCode className="h-6 w-6 text-primary" />
+          Generate Barcode
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
-            <h3 className="font-semibold flex items-center gap-2">
-              <Package className="h-4 w-4 animate-bounce" />
-              Select Product
-            </h3>
-            <ProductSearchSelect
-              onSelect={setSelectedProduct}
-              selectedProduct={selectedProduct}
-              placeholder="Search product to generate barcode..."
-            />
-          </div>
+            <div>
+              <Label htmlFor="barcodeType">Barcode Type</Label>
+              <Select value={formData.barcodeType} onValueChange={(value) => setFormData({...formData, barcodeType: value})}>
+                <SelectTrigger className="animate-fade-in">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent className="animate-scale-in">
+                  <SelectItem value="qr">QR Code</SelectItem>
+                  <SelectItem value="code128">Code 128</SelectItem>
+                  <SelectItem value="ean13">EAN-13</SelectItem>
+                  <SelectItem value="upc">UPC</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          {selectedProduct && (
-            <div className="space-y-4 animate-slide-in-up">
-              <div className="flex gap-2">
-                <Button
-                  onClick={generateBarcode}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
-                >
+            <ProductSearchSelect
+              onProductSelect={(product) => setFormData({...formData, selectedProduct: product})}
+              selectedProduct={formData.selectedProduct}
+              placeholder="Search for a product..."
+            />
+
+            <div>
+              <Label htmlFor="customData">Custom Data (Optional)</Label>
+              <Input
+                id="customData"
+                value={formData.customData}
+                onChange={(e) => setFormData({...formData, customData: e.target.value})}
+                placeholder="Enter custom barcode data"
+                className="animate-fade-in"
+              />
+            </div>
+
+            <Button 
+              onClick={handleGenerate} 
+              disabled={isGenerating}
+              className="w-full hover:scale-105 transition-transform"
+            >
+              {isGenerating ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Generating...
+                </>
+              ) : (
+                <>
                   <QrCode className="h-4 w-4 mr-2" />
                   Generate Barcode
-                </Button>
-                <Button
-                  onClick={printBarcode}
-                  variant="outline"
-                  className="hover:scale-105 transition-transform duration-300"
-                >
-                  <Printer className="h-4 w-4 mr-2" />
-                  Print
-                </Button>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 text-center">
-                <canvas
-                  ref={canvasRef}
-                  className="max-w-full h-auto animate-fade-in"
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-4 border-t pt-4">
-            <h3 className="font-semibold flex items-center gap-2">
-              <Camera className="h-4 w-4 animate-pulse" />
-              Barcode Scanner
-            </h3>
-            
-            <div className="flex gap-2">
-              {!isScanning ? (
-                <Button
-                  onClick={startScanning}
-                  className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
-                >
-                  <Camera className="h-4 w-4 mr-2" />
-                  Start Scanning
-                </Button>
-              ) : (
-                <Button
-                  onClick={stopScanning}
-                  variant="destructive"
-                >
-                  <ScanLine className="h-4 w-4 mr-2" />
-                  Stop Scanning
-                </Button>
+                </>
               )}
-              
-              <Button
-                onClick={simulateScan}
-                variant="outline"
-                className="hover:scale-105 transition-transform duration-300"
-              >
-                <ScanLine className="h-4 w-4 mr-2" />
-                Simulate Scan
-              </Button>
-            </div>
+            </Button>
+          </div>
 
-            {isScanning && (
-              <div className="bg-black rounded-lg overflow-hidden animate-scale-in">
-                <video
-                  ref={videoRef}
-                  className="w-full h-64 object-cover"
-                  autoPlay
-                  playsInline
-                />
-                <div className="absolute inset-0 border-2 border-red-500 pointer-events-none animate-pulse">
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-1 bg-red-500 animate-pulse"></div>
-                </div>
-              </div>
-            )}
-
-            {scanResult && (
-              <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4 animate-bounce-in">
-                <p className="font-semibold text-green-700 dark:text-green-300">
-                  Scanned: {scanResult}
-                </p>
-              </div>
+          <div className="space-y-4">
+            {generatedBarcode ? (
+              <Card className="bg-primary/5 border-primary/20 animate-scale-in">
+                <CardHeader>
+                  <CardTitle className="text-sm">Generated Barcode</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="text-center p-6 bg-white rounded border">
+                    <div className="w-32 h-32 mx-auto bg-gradient-to-br from-gray-100 to-gray-200 rounded flex items-center justify-center">
+                      <QrCode className="h-16 w-16 text-gray-600" />
+                    </div>
+                    <p className="mt-2 text-sm font-mono">{generatedBarcode.barcode_data}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {generatedBarcode.barcode_type.toUpperCase()}
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={downloadBarcode} 
+                    variant="outline" 
+                    className="w-full hover:scale-105 transition-transform"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="bg-muted/50 animate-fade-in">
+                <CardContent className="p-8 text-center">
+                  <QrCode className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                  <p className="text-muted-foreground">
+                    Generated barcode will appear here
+                  </p>
+                </CardContent>
+              </Card>
             )}
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

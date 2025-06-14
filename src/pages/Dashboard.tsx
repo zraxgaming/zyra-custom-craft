@@ -2,72 +2,111 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Container } from "@/components/ui/container";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import SEOHead from "@/components/seo/SEOHead";
 import { 
   User, 
-  ShoppingBag, 
+  Package, 
   Heart, 
   Settings, 
-  Package, 
   CreditCard, 
-  Gift,
-  Shield,
+  MapPin, 
   Bell,
-  Mail
+  Gift,
+  Users,
+  LogOut
 } from "lucide-react";
-import SEOHead from "@/components/seo/SEOHead";
 
 const Dashboard = () => {
-  const { user, profile, isAdmin } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
   const [orders, setOrders] = useState([]);
-  const [wishlistCount, setWishlistCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState({
+    display_name: '',
+    first_name: '',
+    last_name: '',
+    phone: '',
+    email: user?.email || ''
+  });
 
   useEffect(() => {
     if (!user) {
-      navigate('/auth?redirect=/dashboard');
+      navigate('/auth');
       return;
     }
-    
-    fetchDashboardData();
+    fetchUserData();
   }, [user, navigate]);
 
-  const fetchDashboardData = async () => {
+  const fetchUserData = async () => {
+    if (!user) return;
+    
     try {
-      // Fetch user orders
-      const { data: ordersData, error: ordersError } = await supabase
+      // Fetch profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (profileData) {
+        setProfile({
+          display_name: profileData.display_name || '',
+          first_name: profileData.first_name || '',
+          last_name: profileData.last_name || '',
+          phone: profileData.phone || '',
+          email: profileData.email || user.email || ''
+        });
+      }
+
+      // Fetch recent orders
+      const { data: ordersData } = await supabase
         .from('orders')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(5);
 
-      if (ordersError) throw ordersError;
       setOrders(ordersData || []);
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
 
-      // Fetch wishlist count
-      const { data: wishlistData, error: wishlistError } = await supabase
-        .from('wishlists')
-        .select('id')
-        .eq('user_id', user?.id);
+  const updateProfile = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          ...profile,
+          updated_at: new Date().toISOString()
+        });
 
-      if (wishlistError) throw wishlistError;
-      setWishlistCount(wishlistData?.length || 0);
+      if (error) throw error;
 
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully.",
+      });
     } catch (error: any) {
-      console.error('Error fetching dashboard data:', error);
       toast({
         title: "Error",
-        description: "Failed to load dashboard data",
+        description: "Failed to update profile",
         variant: "destructive",
       });
     } finally {
@@ -75,132 +114,117 @@ const Dashboard = () => {
     }
   };
 
-  const handlePasswordReset = async () => {
-    if (!user?.email) return;
-    
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Password Reset Sent",
-        description: "Check your email for password reset instructions",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send password reset email",
-        variant: "destructive",
-      });
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'processing':
+        return 'bg-blue-100 text-blue-800';
+      case 'shipped':
+        return 'bg-purple-100 text-purple-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  if (!user) return null;
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/home');
+  };
+
+  if (!user) {
+    return null;
+  }
 
   return (
-    <>
+    <div className="min-h-screen bg-background">
       <SEOHead 
         title="Dashboard - Zyra Custom Craft"
-        description="Manage your account, orders, and preferences."
-        url="https://shopzyra.vercel.app/dashboard"
+        description="Manage your account, orders, and preferences"
       />
       <Navbar />
       
-      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-purple-500/10">
-        <Container className="py-8">
-          <div className="max-w-6xl mx-auto">
-            {/* Header */}
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold mb-2">
-                Welcome back, {profile?.first_name || user.email}!
-              </h1>
-              <p className="text-muted-foreground">
-                Manage your account and track your orders
-              </p>
+      <div className="py-12">
+        <Container>
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold mb-4">My Dashboard</h1>
+            <p className="text-lg text-muted-foreground">
+              Welcome back, {profile.display_name || profile.first_name || 'User'}!
+            </p>
+          </div>
+
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex gap-4">
+              {isAdmin && (
+                <Button onClick={() => navigate('/admin')}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Admin Panel
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => navigate('/shop')}>
+                <Package className="mr-2 h-4 w-4" />
+                Continue Shopping
+              </Button>
             </div>
+            <Button variant="outline" onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
 
-            {/* Admin Panel Access */}
-            {isAdmin && (
-              <Card className="mb-8 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Shield className="h-6 w-6 text-purple-600" />
-                      <div>
-                        <h3 className="font-semibold text-purple-900">Admin Panel</h3>
-                        <p className="text-sm text-purple-700">Manage your store and products</p>
-                      </div>
-                    </div>
-                    <Button 
-                      onClick={() => navigate('/admin')}
-                      className="bg-purple-600 hover:bg-purple-700"
-                    >
-                      Access Admin Panel
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+          <Tabs defaultValue="overview" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="orders">Orders</TabsTrigger>
+              <TabsTrigger value="profile">Profile</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
+              <TabsTrigger value="referrals">Referrals</TabsTrigger>
+            </TabsList>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <Card className="bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3">
-                    <ShoppingBag className="h-8 w-8 text-blue-600" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total Orders</p>
-                      <p className="text-2xl font-bold">{orders.length}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            <TabsContent value="overview">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{orders.length}</div>
+                    <p className="text-xs text-muted-foreground">All time</p>
+                  </CardContent>
+                </Card>
 
-              <Card className="bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3">
-                    <Heart className="h-8 w-8 text-red-600" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Wishlist Items</p>
-                      <p className="text-2xl font-bold">{wishlistCount}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Wishlist Items</CardTitle>
+                    <Heart className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">0</div>
+                    <p className="text-xs text-muted-foreground">Saved items</p>
+                  </CardContent>
+                </Card>
 
-              <Card className="bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3">
-                    <User className="h-8 w-8 text-green-600" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Account Status</p>
-                      <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Referrals</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">0</div>
+                    <p className="text-xs text-muted-foreground">Friends referred</p>
+                  </CardContent>
+                </Card>
+              </div>
 
-            <div className="grid lg:grid-cols-2 gap-8">
-              {/* Recent Orders */}
-              <Card className="bg-white/80 backdrop-blur-sm">
+              <Card className="mt-6">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Package className="h-5 w-5" />
-                    Recent Orders
-                  </CardTitle>
+                  <CardTitle>Recent Orders</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {loading ? (
-                    <div className="space-y-4">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="h-16 bg-muted/50 rounded animate-pulse"></div>
-                      ))}
-                    </div>
-                  ) : orders.length > 0 ? (
+                  {orders.length > 0 ? (
                     <div className="space-y-4">
                       {orders.map((order: any) => (
                         <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
@@ -211,8 +235,8 @@ const Dashboard = () => {
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold">${order.total_amount}</p>
-                            <Badge variant="outline" className="text-xs">
+                            <p className="font-medium">${order.total_amount}</p>
+                            <Badge className={getStatusColor(order.status)}>
                               {order.status}
                             </Badge>
                           </div>
@@ -221,82 +245,197 @@ const Dashboard = () => {
                     </div>
                   ) : (
                     <div className="text-center py-8">
-                      <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <Package className="h-16 w-16 mx-auto text-gray-400 mb-4" />
                       <p className="text-muted-foreground">No orders yet</p>
-                      <Button 
-                        onClick={() => navigate('/shop')}
-                        className="mt-4"
-                        variant="outline"
-                      >
+                      <Button className="mt-4" onClick={() => navigate('/shop')}>
                         Start Shopping
                       </Button>
                     </div>
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
 
-              {/* Account Actions */}
-              <Card className="bg-white/80 backdrop-blur-sm">
+            <TabsContent value="orders">
+              <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings className="h-5 w-5" />
-                    Account Actions
-                  </CardTitle>
+                  <CardTitle>Order History</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {orders.length > 0 ? (
+                    <div className="space-y-4">
+                      {orders.map((order: any) => (
+                        <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="space-y-1">
+                            <p className="font-medium">Order #{order.id.slice(0, 8)}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(order.created_at).toLocaleDateString()} • {order.payment_method}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Delivery: {order.delivery_type}
+                            </p>
+                          </div>
+                          <div className="text-right space-y-1">
+                            <p className="font-medium">${order.total_amount} {order.currency}</p>
+                            <Badge className={getStatusColor(order.status)}>
+                              {order.status}
+                            </Badge>
+                            <div>
+                              <Button variant="outline" size="sm">
+                                View Details
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Package className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                      <p className="text-muted-foreground">No orders found</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="profile">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Profile Information</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={() => navigate('/profile')}
-                  >
-                    <User className="h-4 w-4 mr-2" />
-                    Edit Profile
-                  </Button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="first_name">First Name</Label>
+                      <Input
+                        id="first_name"
+                        value={profile.first_name}
+                        onChange={(e) => setProfile(prev => ({ ...prev, first_name: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="last_name">Last Name</Label>
+                      <Input
+                        id="last_name"
+                        value={profile.last_name}
+                        onChange={(e) => setProfile(prev => ({ ...prev, last_name: e.target.value }))}
+                      />
+                    </div>
+                  </div>
 
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={() => navigate('/wishlist')}
-                  >
-                    <Heart className="h-4 w-4 mr-2" />
-                    View Wishlist
-                  </Button>
+                  <div>
+                    <Label htmlFor="display_name">Display Name</Label>
+                    <Input
+                      id="display_name"
+                      value={profile.display_name}
+                      onChange={(e) => setProfile(prev => ({ ...prev, display_name: e.target.value }))}
+                    />
+                  </div>
 
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={() => navigate('/gift-cards')}
-                  >
-                    <Gift className="h-4 w-4 mr-2" />
-                    Gift Cards
-                  </Button>
+                  <div>
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={profile.email}
+                      onChange={(e) => setProfile(prev => ({ ...prev, email: e.target.value }))}
+                    />
+                  </div>
 
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={handlePasswordReset}
-                  >
-                    <Mail className="h-4 w-4 mr-2" />
-                    Reset Password
-                  </Button>
+                  <div>
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      value={profile.phone}
+                      onChange={(e) => setProfile(prev => ({ ...prev, phone: e.target.value }))}
+                    />
+                  </div>
 
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={() => navigate('/cart')}
-                  >
-                    <ShoppingBag className="h-4 w-4 mr-2" />
-                    View Cart
+                  <Button onClick={updateProfile} disabled={loading}>
+                    <User className="mr-2 h-4 w-4" />
+                    {loading ? "Updating..." : "Update Profile"}
                   </Button>
                 </CardContent>
               </Card>
-            </div>
-          </div>
+            </TabsContent>
+
+            <TabsContent value="settings">
+              <div className="grid gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Account Settings</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium">Email Notifications</h4>
+                        <p className="text-sm text-muted-foreground">Receive updates about your orders</p>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        <Bell className="mr-2 h-4 w-4" />
+                        Configure
+                      </Button>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium">Shipping Addresses</h4>
+                        <p className="text-sm text-muted-foreground">Manage your delivery addresses</p>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        <MapPin className="mr-2 h-4 w-4" />
+                        Manage
+                      </Button>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium">Payment Methods</h4>
+                        <p className="text-sm text-muted-foreground">Manage your payment options</p>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        <CreditCard className="mr-2 h-4 w-4" />
+                        Manage
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="referrals">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Referral Program</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8">
+                    <Gift className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Refer Friends & Earn Rewards</h3>
+                    <p className="text-muted-foreground mb-6">
+                      Share your unique referral code and earn credits when your friends make their first purchase.
+                    </p>
+                    <div className="max-w-md mx-auto space-y-4">
+                      <div className="p-4 bg-muted rounded-lg">
+                        <p className="text-sm text-muted-foreground mb-2">Your Referral Code</p>
+                        <p className="font-mono text-lg font-bold">USER{user.id.slice(0, 8).toUpperCase()}</p>
+                      </div>
+                      <Button className="w-full">
+                        <Users className="mr-2 h-4 w-4" />
+                        Share Referral Code
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </Container>
       </div>
-
+      
       <Footer />
-    </>
+    </div>
   );
 };
 

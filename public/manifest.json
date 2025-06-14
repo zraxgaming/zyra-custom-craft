@@ -1,40 +1,68 @@
 
 {
-  "name": "Zyra Custom Craft",
-  "short_name": "Zyra",
-  "description": "Premium custom craft and personalized products",
+  "name": "Zyra Custom Craft - Premium Custom Products",
+  "short_name": "Zyra Craft",
+  "description": "Premium custom products and personalized gifts with exceptional quality and fast delivery",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#7c3aed",
-  "theme_color": "#7c3aed",
+  "background_color": "#ffffff",
+  "theme_color": "#9333ea",
   "orientation": "portrait-primary",
+  "scope": "/",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "maskable any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "maskable any"
     }
   ],
   "categories": ["shopping", "lifestyle", "business"],
-  "screenshots": [
+  "lang": "en",
+  "dir": "ltr",
+  "shortcuts": [
     {
-      "src": "/screenshot-mobile.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "form_factor": "narrow"
+      "name": "Shop Products",
+      "short_name": "Shop",
+      "description": "Browse our premium custom products",
+      "url": "/shop",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
     },
     {
-      "src": "/screenshot-desktop.png",
+      "name": "My Account",
+      "short_name": "Account",
+      "description": "Access your account and orders",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Wishlist",
+      "short_name": "Wishlist",
+      "description": "View your saved items",
+      "url": "/wishlist",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-wide.png",
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide"
+    },
+    {
+      "src": "/screenshot-narrow.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow"
     }
-  ]
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
 }

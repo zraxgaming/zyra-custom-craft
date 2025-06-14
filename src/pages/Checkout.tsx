@@ -39,22 +39,27 @@ const Checkout = () => {
     <div className="min-h-screen bg-background">
       <SEOHead 
         title="Checkout - Zyra Custom Craft"
-        description="Complete your purchase securely at Zyra Custom Craft."
+        description="Complete your purchase securely at Zyra Custom Craft. We accept multiple payment methods and offer secure checkout."
       />
       <Navbar />
       
-      <Container className="py-8">
-        <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8">Checkout</h1>
+      <div className="py-12">
+        <Container>
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold mb-4">Checkout</h1>
+            <p className="text-lg text-muted-foreground">
+              Complete your purchase securely
+            </p>
+          </div>
           
           <CheckoutForm
             items={items}
             subtotal={subtotal}
             onPaymentSuccess={handlePaymentSuccess}
           />
-        </div>
-      </Container>
-
+        </Container>
+      </div>
+      
       <Footer />
     </div>
   );

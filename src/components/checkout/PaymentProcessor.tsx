@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +31,23 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
   const processZiinaPayment = async () => {
     setIsProcessing(true);
     try {
+      // Get Ziina configuration
+      const { data: configData, error: configError } = await supabase
+        .from('site_config')
+        .select('*')
+        .in('key', ['ziina_api_key', 'ziina_merchant_id'])
+
+      if (configError) throw new Error('Failed to load payment configuration');
+
+      const config = configData?.reduce((acc, item) => {
+        acc[item.key] = typeof item.value === 'string' ? item.value : String(item.value);
+        return acc;
+      }, {} as Record<string, string>) || {};
+
+      if (!config.ziina_api_key) {
+        throw new Error('Payment system not configured');
+      }
+
       // Create order first
       const { data: order, error: orderError } = await supabase
         .from('orders')
@@ -78,7 +96,7 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
           .eq('id', appliedGiftCard.id);
       }
 
-      // Create Ziina payment intent via Supabase Edge Function
+      // Create Ziina payment intent
       const aedAmount = Math.round(finalAmount * 3.67 * 100); // Convert to fils
 
       const ziinaPayload = {
@@ -87,15 +105,13 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
         message: `Order #${order.id.slice(-8)}`,
         success_url: `${window.location.origin}/order-success/${order.id}`,
         cancel_url: `${window.location.origin}/checkout`,
-        failure_url: `${window.location.origin}/checkout`,
-        customer_phone: orderData.phoneNumber || '',
-        order_id: order.id
+        failure_url: `${window.location.origin}/checkout`
       };
 
-      // Call Supabase Edge Function instead of direct Ziina API
-      const response = await fetch('/functions/v1/ziina-payment', {
+      const response = await fetch('https://api-v2.ziina.com/api/payment_intent', {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${config.ziina_api_key}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(ziinaPayload)
@@ -103,7 +119,7 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Payment failed: ${response.status} - ${errorText}`);
+        throw new Error(`Payment failed: ${response.status}`);
       }
 
       const ziinaData = await response.json();
@@ -113,7 +129,7 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
         await supabase
           .from('orders')
           .update({
-            notes: JSON.stringify({ ziina_payment_id: ziinaData.payment_id })
+            notes: JSON.stringify({ ziina_payment_id: ziinaData.id })
           })
           .eq('id', order.id);
 

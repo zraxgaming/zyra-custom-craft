@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -14,10 +15,9 @@ const OrderFailed = () => {
   return (
     <>
       <SEOHead 
-        title="Payment Failed - Zyra Custom Craft"
+        title="Payment Failed - Zyra"
         description="Your payment could not be processed. Please try again or contact our support team for assistance."
         url="https://shopzyra.vercel.app/order-failed"
-        keywords="payment failed, error, checkout, zyra, custom craft"
       />
       <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-pink-50 dark:from-gray-900 dark:via-red-900/20 dark:to-orange-900/20 animate-fade-in">
         <Navbar />

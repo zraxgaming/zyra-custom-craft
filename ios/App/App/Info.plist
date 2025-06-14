@@ -47,10 +47,10 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>This app uses the camera to scan barcodes and take product photos.</string>
+	<string>This app uses the camera to capture photos for customization.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>This app needs access to your photo library to upload product images.</string>
+	<string>This app accesses the photo library to select images for customization.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>This app uses location to provide better shopping experience and delivery options.</string>
+	<string>This app uses location for delivery and pickup services.</string>
 </dict>
 </plist>

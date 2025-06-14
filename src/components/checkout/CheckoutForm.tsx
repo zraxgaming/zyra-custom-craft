@@ -1,17 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { CartItem } from '@/types/cart';
-import ZiinaPayment from './ZiinaPayment';
-import OrderSummary from './OrderSummary';
-import { CreditCard, Banknote, Package } from 'lucide-react';
+
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, CreditCard, ShoppingBag, Lock, Smartphone, Gift, Star } from "lucide-react";
+import ZiinaPayment from "./ZiinaPayment";
+import type { CartItem } from "@/components/cart/CartProvider";
 
 interface CheckoutFormProps {
   items: CartItem[];
@@ -19,203 +18,258 @@ interface CheckoutFormProps {
   onPaymentSuccess: (orderId: string) => void;
 }
 
-const CheckoutForm: React.FC<CheckoutFormProps> = ({ items, subtotal, onPaymentSuccess }) => {
+const CheckoutForm: React.FC<CheckoutFormProps> = ({
+  items,
+  subtotal,
+  onPaymentSuccess
+}) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('ziina');
-  const [deliveryMethod, setDeliveryMethod] = useState('pickup');
-  const [shippingMethods, setShippingMethods] = useState<any[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("ziina");
+  const [formData, setFormData] = useState({
+    firstName: user?.user_metadata?.first_name || "",
+    lastName: user?.user_metadata?.last_name || "",
+    email: user?.email || "",
+    phone: "",
+    address: "",
+    city: "",
+    zipCode: "",
+    country: "UAE"
+  });
 
-  const shippingCost = deliveryMethod === 'pickup' ? 0 : 
-    shippingMethods.find(method => method.id === deliveryMethod)?.price || 0;
-  const total = subtotal + shippingCost;
-
-  useEffect(() => {
-    fetchShippingMethods();
-  }, []);
-
-  const fetchShippingMethods = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('shipping_methods')
-        .select('*')
-        .eq('active', true)
-        .order('price');
-
-      if (error) throw error;
-      setShippingMethods(data || []);
-    } catch (error) {
-      console.error('Error fetching shipping methods:', error);
-    }
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const createOrder = async (paymentData: any) => {
-    try {
-      const orderData = {
-        user_id: user?.id,
-        total_amount: total,
-        status: 'pending',
-        payment_method: paymentMethod,
-        payment_status: 'completed',
-        delivery_type: deliveryMethod,
-        currency: 'USD'
-      };
-
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert(orderData)
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        product_id: item.product_id,
-        quantity: item.quantity,
-        price: item.price,
-        customization: item.customization
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
-
-      return order.id;
-    } catch (error) {
-      console.error('Error creating order:', error);
-      throw error;
-    }
+  const handlePaymentSuccess = async (orderId: string) => {
+    toast({
+      title: "Payment Successful! ✨",
+      description: "Your order has been placed successfully",
+    });
+    onPaymentSuccess(orderId);
   };
 
-  const handlePaymentSuccess = async (transactionId: string) => {
-    try {
-      const orderId = await createOrder({ transactionId });
-      onPaymentSuccess(orderId);
-    } catch (error) {
-      console.error('Error processing payment:', error);
-      toast({
-        title: "Error",
-        description: "Failed to process payment",
-        variant: "destructive"
-      });
-    }
+  const handlePaymentError = (error: string) => {
+    toast({
+      title: "Payment Failed",
+      description: error,
+      variant: "destructive"
+    });
+  };
+
+  const shippingData = {
+    ...formData,
+    user_id: user?.id
   };
 
   return (
-    <div className="grid lg:grid-cols-2 gap-8">
+    <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-8 animate-fade-in">
+      {/* Order Summary */}
+      <Card className="h-fit bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border-purple-200 dark:border-purple-800 animate-slide-in-right shadow-xl">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-3 text-purple-700 dark:text-purple-300">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-full animate-pulse">
+              <ShoppingBag className="h-5 w-5" />
+            </div>
+            Order Summary
+            <div className="ml-auto flex items-center gap-1">
+              <Star className="h-4 w-4 text-yellow-500 animate-spin" />
+              <span className="text-sm">Premium</span>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="max-h-64 overflow-y-auto space-y-3">
+            {items.map((item, index) => (
+              <div 
+                key={`${item.id}-${index}`} 
+                className="flex items-center gap-3 p-4 bg-white/70 dark:bg-gray-800/70 rounded-xl backdrop-blur-sm animate-slide-in-up hover:scale-105 transition-transform duration-300 shadow-md" 
+                style={{animationDelay: `${index * 100}ms`}}
+              >
+                <div className="w-14 h-14 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 rounded-xl flex items-center justify-center overflow-hidden animate-bounce">
+                  {item.image_url ? (
+                    <img
+                      src={item.image_url}
+                      alt={item.name}
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                  ) : (
+                    <Gift className="h-7 w-7 text-purple-400" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-sm text-purple-800 dark:text-purple-200">{item.name}</h4>
+                  <p className="text-xs text-purple-600 dark:text-purple-400">Qty: {item.quantity}</p>
+                </div>
+                <p className="font-bold text-purple-700 dark:text-purple-300 animate-pulse">${(item.price * item.quantity).toFixed(2)}</p>
+              </div>
+            ))}
+          </div>
+          
+          <Separator className="bg-purple-200 dark:bg-purple-800" />
+          
+          <div className="space-y-3 p-4 bg-white/50 dark:bg-gray-800/50 rounded-xl backdrop-blur-sm">
+            <div className="flex justify-between text-purple-700 dark:text-purple-300">
+              <span>Subtotal</span>
+              <span className="animate-pulse">${subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-purple-700 dark:text-purple-300">
+              <span>Shipping</span>
+              <span className="text-green-600 font-semibold animate-bounce">Free ✨</span>
+            </div>
+            <div className="flex justify-between text-purple-700 dark:text-purple-300">
+              <span>Taxes</span>
+              <span className="text-green-600 font-semibold">Included</span>
+            </div>
+            <Separator className="bg-purple-200 dark:bg-purple-800" />
+            <div className="flex justify-between text-xl font-bold text-purple-800 dark:text-purple-200 p-3 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 rounded-lg animate-pulse">
+              <span>Total</span>
+              <span>${subtotal.toFixed(2)}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Checkout Form */}
       <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Delivery Method
+        <Card className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 border-purple-200 dark:border-purple-800 animate-slide-in-left shadow-xl">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-3 text-purple-700 dark:text-purple-300">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-full animate-spin">
+                <Lock className="h-5 w-5" />
+              </div>
+              Shipping Information
+              <div className="ml-auto text-sm bg-purple-100 dark:bg-purple-900/50 px-3 py-1 rounded-full animate-bounce">
+                Secure 🔒
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <RadioGroup value={deliveryMethod} onValueChange={setDeliveryMethod}>
-              <div className="flex items-center space-x-2 p-3 border rounded-lg">
-                <RadioGroupItem value="pickup" id="pickup" />
-                <Label htmlFor="pickup" className="flex-1">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="animate-slide-in-up" style={{animationDelay: '100ms'}}>
+                  <Label htmlFor="firstName" className="text-purple-700 dark:text-purple-300">First Name *</Label>
+                  <Input
+                    id="firstName"
+                    value={formData.firstName}
+                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    required
+                    className="border-purple-200 focus:border-purple-500 focus:ring-purple-200 transition-all duration-300"
+                  />
+                </div>
+                <div className="animate-slide-in-up" style={{animationDelay: '200ms'}}>
+                  <Label htmlFor="lastName" className="text-purple-700 dark:text-purple-300">Last Name *</Label>
+                  <Input
+                    id="lastName"
+                    value={formData.lastName}
+                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    required
+                    className="border-purple-200 focus:border-purple-500 focus:ring-purple-200 transition-all duration-300"
+                  />
+                </div>
+              </div>
+
+              <div className="animate-slide-in-up" style={{animationDelay: '300ms'}}>
+                <Label htmlFor="email" className="text-purple-700 dark:text-purple-300">Email *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  required
+                  className="border-purple-200 focus:border-purple-500 focus:ring-purple-200 transition-all duration-300"
+                />
+              </div>
+
+              <div className="animate-slide-in-up" style={{animationDelay: '400ms'}}>
+                <Label htmlFor="phone" className="text-purple-700 dark:text-purple-300">Phone *</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  placeholder="+971 50 123 4567"
+                  required
+                  className="border-purple-200 focus:border-purple-500 focus:ring-purple-200 transition-all duration-300"
+                />
+              </div>
+
+              <div className="animate-slide-in-up" style={{animationDelay: '500ms'}}>
+                <Label htmlFor="address" className="text-purple-700 dark:text-purple-300">Address</Label>
+                <Input
+                  id="address"
+                  value={formData.address}
+                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  className="border-purple-200 focus:border-purple-500 focus:ring-purple-200 transition-all duration-300"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="animate-slide-in-up" style={{animationDelay: '600ms'}}>
+                  <Label htmlFor="city" className="text-purple-700 dark:text-purple-300">City</Label>
+                  <Input
+                    id="city"
+                    value={formData.city}
+                    onChange={(e) => handleInputChange('city', e.target.value)}
+                    className="border-purple-200 focus:border-purple-500 focus:ring-purple-200 transition-all duration-300"
+                  />
+                </div>
+                <div className="animate-slide-in-up" style={{animationDelay: '700ms'}}>
+                  <Label htmlFor="zipCode" className="text-purple-700 dark:text-purple-300">ZIP Code</Label>
+                  <Input
+                    id="zipCode"
+                    value={formData.zipCode}
+                    onChange={(e) => handleInputChange('zipCode', e.target.value)}
+                    className="border-purple-200 focus:border-purple-500 focus:ring-purple-200 transition-all duration-300"
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 border-purple-200 dark:border-purple-800 animate-scale-in shadow-xl">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-3 text-purple-700 dark:text-purple-300">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-full animate-pulse">
+                <CreditCard className="h-5 w-5" />
+              </div>
+              Payment Method
+              <div className="ml-auto text-sm bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-3 py-1 rounded-full animate-bounce">
+                Secure Payment ✓
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="animate-fade-in">
+              <div className="flex items-center space-x-3 p-4 border-2 border-purple-200 dark:border-purple-800 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 hover:scale-105 transition-transform duration-300 animate-bounce">
+                <RadioGroupItem value="ziina" id="ziina" className="border-purple-500" />
+                <Label htmlFor="ziina" className="flex items-center gap-3 cursor-pointer flex-1">
+                  <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-full animate-spin">
+                    <Smartphone className="h-5 w-5 text-purple-600" />
+                  </div>
                   <div>
-                    <p className="font-medium">Store Pickup</p>
-                    <p className="text-sm text-muted-foreground">Free - Pick up from our store</p>
+                    <span className="text-purple-700 dark:text-purple-300 font-semibold">Ziina (UAE)</span>
+                    <p className="text-xs text-purple-600 dark:text-purple-400">Secure payment gateway for UAE</p>
                   </div>
                 </Label>
-                <span className="font-medium">Free</span>
-              </div>
-              
-              {shippingMethods.map((method) => (
-                <div key={method.id} className="flex items-center space-x-2 p-3 border rounded-lg">
-                  <RadioGroupItem value={method.id} id={method.id} />
-                  <Label htmlFor={method.id} className="flex-1">
-                    <div>
-                      <p className="font-medium">{method.name}</p>
-                      <p className="text-sm text-muted-foreground">{method.description}</p>
-                      {method.estimated_days && (
-                        <p className="text-sm text-muted-foreground">Estimated: {method.estimated_days}</p>
-                      )}
-                    </div>
-                  </Label>
-                  <span className="font-medium">${method.price}</span>
-                </div>
-              ))}
-            </RadioGroup>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Payment Method
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-              <div className="flex items-center space-x-2 p-3 border rounded-lg">
-                <RadioGroupItem value="ziina" id="ziina" />
-                <Label htmlFor="ziina" className="flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-blue-600" />
-                  Pay with Ziina
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2 p-3 border rounded-lg">
-                <RadioGroupItem value="cash" id="cash" />
-                <Label htmlFor="cash" className="flex items-center gap-2">
-                  <Banknote className="h-4 w-4 text-green-600" />
-                  Cash on Pickup
-                </Label>
               </div>
             </RadioGroup>
+
+            {paymentMethod === "ziina" && (
+              <div className="animate-slide-in-up">
+                <ZiinaPayment
+                  amount={subtotal}
+                  items={items}
+                  shippingData={shippingData}
+                  onSuccess={handlePaymentSuccess}
+                  onError={handlePaymentError}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
-
-        {paymentMethod === 'ziina' && (
-          <ZiinaPayment
-            amount={total}
-            onSuccess={handlePaymentSuccess}
-            onError={(error) => {
-              toast({
-                title: "Payment Failed",
-                description: error,
-                variant: "destructive"
-              });
-            }}
-          />
-        )}
-
-        {paymentMethod === 'cash' && (
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-center space-y-4">
-                <Banknote className="h-12 w-12 mx-auto text-green-600" />
-                <h3 className="text-lg font-semibold">Cash on Pickup</h3>
-                <p className="text-muted-foreground">
-                  Pay ${total.toFixed(2)} when you pick up your order from our store.
-                </p>
-                <Button 
-                  onClick={() => handlePaymentSuccess('cash_on_pickup')}
-                  className="w-full"
-                  disabled={loading}
-                >
-                  Confirm Order
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
-
-      <OrderSummary
-        items={items}
-        subtotal={subtotal}
-        shippingCost={shippingCost}
-        total={total}
-      />
     </div>
   );
 };

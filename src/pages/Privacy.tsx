@@ -1,243 +1,369 @@
 
-import React from 'react';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
-import { Container } from '@/components/ui/container';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Shield, Eye, Lock, Database, Mail, Phone, MapPin, Calendar, AlertTriangle, CheckCircle } from 'lucide-react';
-import SEOHead from '@/components/seo/SEOHead';
+import React from "react";
+import { Helmet } from "react-helmet-async";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import { Container } from "@/components/ui/container";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Shield, 
+  Eye, 
+  Lock, 
+  Database, 
+  UserCheck, 
+  Mail, 
+  Phone, 
+  Globe, 
+  AlertTriangle,
+  CheckCircle,
+  Info,
+  Heart,
+  Smartphone,
+  CreditCard,
+  FileText,
+  Clock,
+  MapPin
+} from "lucide-react";
 
 const Privacy = () => {
+  const sections = [
+    {
+      id: "information-collection",
+      title: "Information We Collect",
+      icon: Database,
+      color: "blue",
+      content: [
+        {
+          title: "Personal Information",
+          items: [
+            "Name, email address, and phone number",
+            "Billing and shipping addresses",
+            "Payment information (processed securely)",
+            "Account preferences and settings"
+          ]
+        },
+        {
+          title: "Usage Information",
+          items: [
+            "Pages visited and time spent on our site",
+            "Products viewed and purchased",
+            "Device and browser information",
+            "IP address and location data"
+          ]
+        }
+      ]
+    },
+    {
+      id: "information-use",
+      title: "How We Use Your Information",
+      icon: Eye,
+      color: "green",
+      content: [
+        {
+          title: "Service Provision",
+          items: [
+            "Process and fulfill your orders",
+            "Provide customer support",
+            "Send order confirmations and updates",
+            "Manage your account and preferences"
+          ]
+        },
+        {
+          title: "Improvement & Communication",
+          items: [
+            "Improve our website and services",
+            "Send promotional emails (with your consent)",
+            "Analyze usage patterns and trends",
+            "Prevent fraud and ensure security"
+          ]
+        }
+      ]
+    },
+    {
+      id: "information-sharing",
+      title: "Information Sharing",
+      icon: UserCheck,
+      color: "purple",
+      content: [
+        {
+          title: "We Never Sell Your Data",
+          items: [
+            "Your personal information is never sold to third parties",
+            "We only share data as described in this policy",
+            "All sharing is done with your consent or for service provision"
+          ]
+        },
+        {
+          title: "Limited Sharing With",
+          items: [
+            "Payment processors (Ziina) for transaction processing",
+            "Shipping partners for order delivery",
+            "Service providers who help operate our website",
+            "Legal authorities when required by law"
+          ]
+        }
+      ]
+    },
+    {
+      id: "data-protection",
+      title: "Data Protection & Security",
+      icon: Lock,
+      color: "red",
+      content: [
+        {
+          title: "Security Measures",
+          items: [
+            "SSL encryption for all data transmission",
+            "Secure payment processing through Ziina",
+            "Regular security audits and updates",
+            "Limited access to personal information"
+          ]
+        },
+        {
+          title: "Data Retention",
+          items: [
+            "Account data retained while account is active",
+            "Order history kept for legal and business purposes",
+            "Marketing data removed upon unsubscribe",
+            "Data deleted upon account closure request"
+          ]
+        }
+      ]
+    },
+    {
+      id: "your-rights",
+      title: "Your Privacy Rights",
+      icon: Shield,
+      color: "indigo",
+      content: [
+        {
+          title: "Access & Control",
+          items: [
+            "Access your personal information",
+            "Update or correct your data",
+            "Delete your account and data",
+            "Opt-out of marketing communications"
+          ]
+        },
+        {
+          title: "Data Portability",
+          items: [
+            "Export your account data",
+            "Receive data in a portable format",
+            "Transfer data to another service",
+            "Request data correction or deletion"
+          ]
+        }
+      ]
+    },
+    {
+      id: "cookies",
+      title: "Cookies & Tracking",
+      icon: Globe,
+      color: "orange",
+      content: [
+        {
+          title: "Essential Cookies",
+          items: [
+            "Authentication and security",
+            "Shopping cart functionality",
+            "User preferences and settings",
+            "Basic site functionality"
+          ]
+        },
+        {
+          title: "Analytics & Performance",
+          items: [
+            "Website usage statistics",
+            "Performance monitoring",
+            "Error tracking and debugging",
+            "User experience improvements"
+          ]
+        }
+      ]
+    }
+  ];
+
+  const getColorClasses = (color: string) => {
+    const colors: { [key: string]: string } = {
+      blue: "from-blue-500 to-blue-600 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20",
+      green: "from-green-500 to-green-600 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/20",
+      purple: "from-purple-500 to-purple-600 border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/20",
+      red: "from-red-500 to-red-600 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20",
+      indigo: "from-indigo-500 to-indigo-600 border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/20",
+      orange: "from-orange-500 to-orange-600 border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/20"
+    };
+    return colors[color] || colors.blue;
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-blue-950/30 dark:via-purple-950/30 dark:to-pink-950/30">
-      <SEOHead 
-        title="Privacy Policy - Zyra Custom Craft"
-        description="Learn about how Zyra Custom Craft protects your privacy and handles your personal information."
-      />
+    <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Privacy Policy - Zyra Custom Craft</title>
+        <meta name="description" content="Learn how Zyra Custom Craft protects your privacy and handles your personal information." />
+      </Helmet>
+      
       <Navbar />
       
-      <div className="py-16">
+      <div className="py-12 animate-fade-in">
         <Container>
-          <div className="max-w-4xl mx-auto">
-            {/* Header */}
-            <div className="text-center mb-12 animate-fade-in">
-              <div className="flex items-center justify-center gap-3 mb-6">
-                <div className="p-3 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl shadow-lg animate-pulse-glow">
-                  <Shield className="h-8 w-8 text-white animate-float" />
+          {/* Header Section */}
+          <div className="text-center mb-12 animate-scale-in">
+            <div className="flex justify-center mb-6">
+              <div className="p-4 bg-gradient-to-br from-primary to-primary/80 rounded-2xl shadow-lg animate-pulse-glow">
+                <Shield className="h-12 w-12 text-white animate-float" />
+              </div>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent animate-text-shimmer">
+              Privacy Policy
+            </h1>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+              Your privacy is important to us. This policy explains how we collect, use, and protect your personal information.
+            </p>
+            <div className="flex items-center justify-center gap-4 mt-6">
+              <Badge variant="outline" className="px-4 py-2 animate-bounce-in">
+                <Clock className="h-4 w-4 mr-2" />
+                Last Updated: January 2024
+              </Badge>
+              <Badge variant="outline" className="px-4 py-2 animate-bounce-in" style={{animationDelay: '200ms'}}>
+                <MapPin className="h-4 w-4 mr-2" />
+                UAE Jurisdiction
+              </Badge>
+            </div>
+          </div>
+
+          {/* Quick Summary */}
+          <Card className="mb-12 animate-slide-in-up border-primary/20 shadow-xl">
+            <CardContent className="p-8">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold mb-4 flex items-center justify-center gap-2">
+                  <Info className="h-6 w-6 text-primary animate-pulse" />
+                  Privacy at a Glance
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center p-6 bg-green-50 dark:bg-green-950/20 rounded-xl border border-green-200 dark:border-green-800 animate-scale-in">
+                  <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-3 animate-pulse" />
+                  <h3 className="font-semibold text-green-800 dark:text-green-200 mb-2">We Never Sell Your Data</h3>
+                  <p className="text-sm text-green-600 dark:text-green-400">Your personal information is never sold to third parties</p>
                 </div>
-                <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  Privacy Policy
-                </h1>
+                <div className="text-center p-6 bg-blue-50 dark:bg-blue-950/20 rounded-xl border border-blue-200 dark:border-blue-800 animate-scale-in" style={{animationDelay: '100ms'}}>
+                  <Lock className="h-8 w-8 text-blue-600 mx-auto mb-3 animate-pulse" />
+                  <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">Secure & Encrypted</h3>
+                  <p className="text-sm text-blue-600 dark:text-blue-400">All data is protected with industry-standard encryption</p>
+                </div>
+                <div className="text-center p-6 bg-purple-50 dark:bg-purple-950/20 rounded-xl border border-purple-200 dark:border-purple-800 animate-scale-in" style={{animationDelay: '200ms'}}>
+                  <Heart className="h-8 w-8 text-purple-600 mx-auto mb-3 animate-pulse" />
+                  <h3 className="font-semibold text-purple-800 dark:text-purple-200 mb-2">You Have Control</h3>
+                  <p className="text-sm text-purple-600 dark:text-purple-400">Access, update, or delete your data anytime</p>
+                </div>
               </div>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Your privacy is important to us. This policy explains how we collect, use, and protect your information.
+            </CardContent>
+          </Card>
+
+          {/* Detailed Sections */}
+          <div className="space-y-8">
+            {sections.map((section, index) => (
+              <Card 
+                key={section.id} 
+                className={`animate-slide-in-up hover:shadow-xl transition-all duration-500 border-2 ${getColorClasses(section.color)}`}
+                style={{animationDelay: `${index * 150}ms`}}
+              >
+                <CardContent className="p-8">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className={`p-3 bg-gradient-to-br ${getColorClasses(section.color)} rounded-xl shadow-lg animate-pulse-glow`}>
+                      <section.icon className="h-6 w-6 text-white animate-float" />
+                    </div>
+                    <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent animate-text-shimmer">
+                      {section.title}
+                    </h2>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {section.content.map((subsection, subIndex) => (
+                      <div 
+                        key={subIndex} 
+                        className="animate-fade-in"
+                        style={{animationDelay: `${(index * 150) + (subIndex * 100)}ms`}}
+                      >
+                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                          <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                          {subsection.title}
+                        </h3>
+                        <ul className="space-y-3">
+                          {subsection.items.map((item, itemIndex) => (
+                            <li 
+                              key={itemIndex} 
+                              className="flex items-start gap-3 text-muted-foreground animate-slide-in-right hover:text-foreground transition-colors"
+                              style={{animationDelay: `${(index * 150) + (subIndex * 100) + (itemIndex * 50)}ms`}}
+                            >
+                              <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0 animate-pulse" />
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Contact Section */}
+          <Card className="mt-12 animate-bounce-in bg-gradient-to-br from-primary/5 via-purple-500/5 to-pink-500/5 border-primary/20 shadow-xl">
+            <CardContent className="p-8 text-center">
+              <div className="flex justify-center mb-6">
+                <div className="p-4 bg-gradient-to-br from-primary to-purple-600 rounded-2xl shadow-lg animate-pulse-glow">
+                  <Mail className="h-8 w-8 text-white animate-float" />
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold mb-4 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent animate-text-shimmer">
+                Questions About Your Privacy?
+              </h2>
+              <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
+                If you have any questions about this Privacy Policy or how we handle your personal information, 
+                please don't hesitate to contact us.
               </p>
-              <div className="flex items-center justify-center gap-2 mt-4">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Last updated: January 2024</span>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <div className="flex items-center gap-2 p-3 bg-white/70 dark:bg-gray-800/70 rounded-xl backdrop-blur-sm border border-primary/20 animate-scale-in">
+                  <Mail className="h-4 w-4 text-primary animate-pulse" />
+                  <span className="font-medium">zainabusal113@gmail.com</span>
+                </div>
+                <div className="flex items-center gap-2 p-3 bg-white/70 dark:bg-gray-800/70 rounded-xl backdrop-blur-sm border border-primary/20 animate-scale-in" style={{animationDelay: '100ms'}}>
+                  <Phone className="h-4 w-4 text-primary animate-pulse" />
+                  <span className="font-medium">Support Available 24/7</span>
+                </div>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <div className="space-y-8">
-              {/* Information We Collect */}
-              <Card className="border-0 shadow-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm animate-slide-in-up">
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/50 dark:to-purple-950/50 rounded-t-lg">
-                  <CardTitle className="flex items-center gap-3 text-2xl text-blue-700 dark:text-blue-300">
-                    <div className="p-2 bg-blue-600 rounded-lg shadow-lg">
-                      <Database className="h-5 w-5 text-white animate-pulse" />
-                    </div>
-                    Information We Collect
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-8 space-y-6">
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <h3 className="font-semibold text-lg flex items-center gap-2">
-                        <Eye className="h-5 w-5 text-purple-600 animate-bounce" />
-                        Personal Information
-                      </h3>
-                      <ul className="space-y-3 text-muted-foreground">
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-500 mt-1 animate-pulse" />
-                          <span>Name and contact information</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-500 mt-1 animate-pulse" />
-                          <span>Email address and phone number</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-500 mt-1 animate-pulse" />
-                          <span>Shipping and billing addresses</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-500 mt-1 animate-pulse" />
-                          <span>Account credentials and preferences</span>
-                        </li>
-                      </ul>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <h3 className="font-semibold text-lg flex items-center gap-2">
-                        <Database className="h-5 w-5 text-blue-600 animate-bounce" />
-                        Usage Information
-                      </h3>
-                      <ul className="space-y-3 text-muted-foreground">
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-500 mt-1 animate-pulse" />
-                          <span>Device and browser information</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-500 mt-1 animate-pulse" />
-                          <span>IP address and location data</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-500 mt-1 animate-pulse" />
-                          <span>Website usage and navigation patterns</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-500 mt-1 animate-pulse" />
-                          <span>Purchase history and preferences</span>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* How We Use Information */}
-              <Card className="border-0 shadow-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm animate-slide-in-up">
-                <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50 rounded-t-lg">
-                  <CardTitle className="flex items-center gap-3 text-2xl text-purple-700 dark:text-purple-300">
-                    <div className="p-2 bg-purple-600 rounded-lg shadow-lg">
-                      <Lock className="h-5 w-5 text-white animate-pulse" />
-                    </div>
-                    How We Use Your Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-8">
-                  <div className="grid md:grid-cols-3 gap-6">
-                    <div className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-800 animate-scale-in">
-                      <h4 className="font-semibold text-blue-700 dark:text-blue-300 mb-3 flex items-center gap-2">
-                        <Mail className="h-4 w-4 animate-bounce" />
-                        Service Delivery
-                      </h4>
-                      <p className="text-sm text-muted-foreground">
-                        Process orders, manage accounts, provide customer support, and deliver personalized services.
-                      </p>
-                    </div>
-                    
-                    <div className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/30 rounded-xl border border-purple-200 dark:border-purple-800 animate-scale-in" style={{animationDelay: '200ms'}}>
-                      <h4 className="font-semibold text-purple-700 dark:text-purple-300 mb-3 flex items-center gap-2">
-                        <Phone className="h-4 w-4 animate-bounce" />
-                        Communication
-                      </h4>
-                      <p className="text-sm text-muted-foreground">
-                        Send order updates, promotional offers, newsletters, and respond to your inquiries.
-                      </p>
-                    </div>
-                    
-                    <div className="p-6 bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-950/30 dark:to-pink-900/30 rounded-xl border border-pink-200 dark:border-pink-800 animate-scale-in" style={{animationDelay: '400ms'}}>
-                      <h4 className="font-semibold text-pink-700 dark:text-pink-300 mb-3 flex items-center gap-2">
-                        <MapPin className="h-4 w-4 animate-bounce" />
-                        Improvement
-                      </h4>
-                      <p className="text-sm text-muted-foreground">
-                        Analyze usage patterns, improve our services, and develop new features based on user feedback.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Data Protection */}
-              <Card className="border-0 shadow-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm animate-slide-in-up">
-                <CardHeader className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/50 dark:to-blue-950/50 rounded-t-lg">
-                  <CardTitle className="flex items-center gap-3 text-2xl text-green-700 dark:text-green-300">
-                    <div className="p-2 bg-green-600 rounded-lg shadow-lg">
-                      <Shield className="h-5 w-5 text-white animate-pulse" />
-                    </div>
-                    Data Protection & Security
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-8">
-                  <div className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <h3 className="font-semibold text-lg">Security Measures</h3>
-                        <ul className="space-y-2 text-muted-foreground">
-                          <li className="flex items-center gap-2">
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                              <Lock className="h-3 w-3 mr-1" />
-                              SSL Encryption
-                            </Badge>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                              <Shield className="h-3 w-3 mr-1" />
-                              Secure Payment Processing
-                            </Badge>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                              <Database className="h-3 w-3 mr-1" />
-                              Encrypted Data Storage
-                            </Badge>
-                          </li>
-                        </ul>
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <h3 className="font-semibold text-lg">Your Rights</h3>
-                        <ul className="space-y-2 text-muted-foreground">
-                          <li className="flex items-start gap-2">
-                            <CheckCircle className="h-4 w-4 text-green-500 mt-1 animate-pulse" />
-                            <span>Access and review your personal data</span>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <CheckCircle className="h-4 w-4 text-green-500 mt-1 animate-pulse" />
-                            <span>Request corrections or updates</span>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <CheckCircle className="h-4 w-4 text-green-500 mt-1 animate-pulse" />
-                            <span>Delete your account and data</span>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <CheckCircle className="h-4 w-4 text-green-500 mt-1 animate-pulse" />
-                            <span>Opt-out of marketing communications</span>
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Contact Information */}
-              <Card className="border-0 shadow-2xl bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/30 dark:to-red-950/30 backdrop-blur-sm animate-bounce-in">
-                <CardContent className="p-8">
-                  <div className="flex items-center gap-3 mb-4">
-                    <AlertTriangle className="h-6 w-6 text-orange-600 animate-bounce" />
-                    <h3 className="text-xl font-bold text-orange-700 dark:text-orange-300">
-                      Questions About Privacy?
-                    </h3>
-                  </div>
-                  <p className="text-muted-foreground mb-4">
-                    If you have any questions about this Privacy Policy or how we handle your data, please contact us:
-                  </p>
-                  <div className="flex flex-wrap gap-4">
-                    <Badge variant="outline" className="bg-white/80 dark:bg-gray-800/80 border-orange-200 dark:border-orange-700 px-4 py-2 hover:scale-105 transition-transform duration-300">
-                      <Mail className="h-4 w-4 mr-2 text-orange-600" />
-                      zainabusal113@gmail.com
-                    </Badge>
-                    <Badge variant="outline" className="bg-white/80 dark:bg-gray-800/80 border-blue-200 dark:border-blue-700 px-4 py-2 hover:scale-105 transition-transform duration-300">
-                      <MapPin className="h-4 w-4 mr-2 text-blue-600" />
-                      UAE, Dubai
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+          {/* Additional Info */}
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="animate-slide-in-left bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-blue-200 dark:border-blue-800 hover:shadow-lg transition-all duration-300">
+              <CardContent className="p-6 text-center">
+                <Smartphone className="h-8 w-8 text-blue-600 mx-auto mb-3 animate-bounce" />
+                <h3 className="font-semibold mb-2">Mobile App</h3>
+                <p className="text-sm text-muted-foreground">This policy applies to our mobile app as well</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="animate-scale-in bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800 hover:shadow-lg transition-all duration-300">
+              <CardContent className="p-6 text-center">
+                <CreditCard className="h-8 w-8 text-green-600 mx-auto mb-3 animate-bounce" />
+                <h3 className="font-semibold mb-2">Payment Security</h3>
+                <p className="text-sm text-muted-foreground">Powered by Ziina's secure payment processing</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="animate-slide-in-right bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-purple-200 dark:border-purple-800 hover:shadow-lg transition-all duration-300">
+              <CardContent className="p-6 text-center">
+                <FileText className="h-8 w-8 text-purple-600 mx-auto mb-3 animate-bounce" />
+                <h3 className="font-semibold mb-2">Regular Updates</h3>
+                <p className="text-sm text-muted-foreground">We update this policy as needed to reflect changes</p>
+              </CardContent>
+            </Card>
           </div>
         </Container>
       </div>

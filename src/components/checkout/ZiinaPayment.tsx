@@ -1,303 +1,295 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CreditCard, Shield, Zap, CheckCircle, Smartphone, Banknote, Loader2, Clock, Store } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { CreditCard, Loader2, Smartphone, AlertCircle, Shield, Zap, CheckCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ZiinaPaymentProps {
   amount: number;
-  onSuccess: (transactionId: string) => Promise<void>;
+  onSuccess: (orderId: string) => void;
   onError: (error: string) => void;
-  orderData?: any;
+  items: any[];
+  shippingData: any;
+  disabled?: boolean;
 }
 
-const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({ amount, onSuccess, onError, orderData }) => {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('ziina');
-  const [shippingMethod, setShippingMethod] = useState('store_pickup');
+const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
+  amount,
+  onSuccess,
+  onError,
+  items,
+  shippingData,
+  disabled = false
+}) => {
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const { toast } = useToast();
 
-  useEffect(() => {
-    setLoading(true);
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handlePayment = async () => {
-    if (paymentMethod === 'ziina' && !phoneNumber.trim()) {
+  const handleZiinaPayment = async () => {
+    if (amount <= 0) {
+      const error = "Please enter a valid amount";
+      setErrorMessage(error);
       toast({
-        title: "Invalid Phone Number",
-        description: "Please enter a valid phone number for Ziina payment",
-        variant: "destructive"
+        title: "Invalid Amount ⚠️",
+        description: error,
+        variant: "destructive",
       });
       return;
     }
 
-    setIsProcessing(true);
+    if (!shippingData?.phone) {
+      const error = "Phone number is required for Ziina payments";
+      setErrorMessage(error);
+      toast({
+        title: "Missing Information 📞",
+        description: error,
+        variant: "destructive",
+      });
+      return;
+    }
 
+    setLoading(true);
+    setErrorMessage('');
+    
     try {
-      if (paymentMethod === 'cash_on_pickup') {
-        // Cash on Store Pickup - no payment processing needed
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const mockTransactionId = `CASH_PICKUP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
-        await onSuccess(mockTransactionId);
+      // Get Ziina API key from site_config
+      const { data: configData, error: configError } = await supabase
+        .from('site_config')
+        .select('value')
+        .eq('key', 'ziina_api_key')
+        .single();
 
-        toast({
-          title: "Order Confirmed! 📦",
-          description: `Your order is ready for pickup. Total: $${amount.toFixed(2)}`,
-        });
-        return;
+      if (configError || !configData?.value) {
+        throw new Error('Ziina API key not configured in site settings');
       }
 
-      // Ziina Payment Processing
-      const aedAmount = Math.round(amount * 3.67 * 100);
-      const ziinaApiKey = import.meta.env.VITE_ZIINA_API;
+      const ziinaApiKey = configData.value;
 
-      if (!ziinaApiKey) {
-        console.warn('Ziina API key not configured, using demo mode');
-        // Demo mode - simulate successful payment
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        const mockTransactionId = `ZN_DEMO_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
-        await onSuccess(mockTransactionId);
+      // Create order first
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          user_id: shippingData.user_id,
+          total_amount: amount,
+          status: 'pending',
+          payment_status: 'pending',
+          payment_method: 'ziina',
+          currency: 'AED',
+          shipping_address: shippingData,
+          billing_address: shippingData,
+          delivery_type: 'standard'
+        })
+        .select()
+        .single();
 
-        toast({
-          title: "Payment Successful! 🎉",
-          description: `Demo payment of ${(amount * 3.67).toFixed(2)} AED processed successfully`,
-        });
-        return;
+      if (orderError) throw orderError;
+
+      // Insert order items if provided
+      if (items && items.length > 0) {
+        const { error: itemsError } = await supabase
+          .from('order_items')
+          .insert(
+            items.map((item: any) => ({
+              order_id: order.id,
+              product_id: item.product_id,
+              quantity: item.quantity,
+              price: item.price,
+              customization: item.customization || null
+            }))
+          );
+
+        if (itemsError) throw itemsError;
       }
 
-      console.log('Processing Ziina payment:', {
+      // Convert USD to AED (1 USD = 3.67 AED approximately)
+      const aedAmount = Math.round(amount * 367); // Convert to fils (1 AED = 100 fils)
+
+      // Create Ziina payment intent using API key from site_config
+      const ziinaPayload = {
         amount: aedAmount,
         currency_code: 'AED',
-        message: `Order Payment - ${orderData?.firstName || 'Customer'}`,
-        customer_phone: phoneNumber,
-        api_key: ziinaApiKey.substring(0, 10) + '...'
-      });
+        message: `Order #${order.id.slice(-8)} - Zyra Custom Craft`,
+        success_url: `${window.location.origin}/order-success/${order.id}`,
+        cancel_url: `${window.location.origin}/checkout`,
+        failure_url: `${window.location.origin}/order-failed?order=${order.id}`,
+        customer_phone: shippingData.phone,
+        test: true, // Set to false for production
+        transaction_source: "directApi",
+        allow_tips: false
+      };
 
-      // Real Ziina API call
-      const response = await fetch('https://api.ziina.com/v1/payments', {
+      console.log('Ziina Payment Payload:', ziinaPayload);
+
+      const response = await fetch('https://api-v2.ziina.com/api/payment_intent', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${ziinaApiKey}`,
-          'Accept': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
-        body: JSON.stringify({
-          amount: aedAmount,
-          currency_code: 'AED',
-          message: `Order Payment - ${orderData?.firstName || 'Customer'}`,
-          customer_phone: phoneNumber,
-          redirect_url: `${window.location.origin}/order-success`,
-          webhook_url: `${window.location.origin}/api/ziina-webhook`
-        })
+        body: JSON.stringify(ziinaPayload)
       });
+
+      console.log('Ziina API Response Status:', response.status);
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Payment failed with status ${response.status}`);
+        const errorText = await response.text();
+        console.error('Ziina API error:', response.status, errorText);
+        throw new Error(`Payment processing failed: ${response.status} - ${errorText}`);
       }
 
-      const data = await response.json();
-      const transactionId = data.id || data.transaction_id || `ZN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      await onSuccess(transactionId);
+      const ziinaData = await response.json();
+      console.log('Ziina Response:', ziinaData);
 
-      toast({
-        title: "Payment Successful! 🎉",
-        description: `Payment of ${(amount * 3.67).toFixed(2)} AED processed successfully`,
-      });
+      if (ziinaData.payment_url || ziinaData.checkout_url) {
+        // Store order ID for later reference
+        localStorage.setItem('pending_order_id', order.id);
+        
+        // Update order with payment details
+        await supabase
+          .from('orders')
+          .update({
+            notes: JSON.stringify({ 
+              ziina_payment_id: ziinaData.id || ziinaData.payment_intent_id,
+              payment_url: ziinaData.payment_url || ziinaData.checkout_url
+            })
+          })
+          .eq('id', order.id);
 
+        toast({
+          title: "Redirecting to Payment 🚀",
+          description: "You will be redirected to Ziina to complete your payment...",
+        });
+
+        // Redirect to Ziina payment page
+        window.location.href = ziinaData.payment_url || ziinaData.checkout_url;
+      } else {
+        throw new Error('No payment URL received from Ziina');
+      }
     } catch (error: any) {
-      console.error('Payment error:', error);
+      console.error('Ziina payment error:', error);
+      const errorMsg = error.message || 'Payment processing failed. Please try again.';
+      setErrorMessage(errorMsg);
+      
       toast({
-        title: "Payment Failed",
-        description: error.message || "Failed to process payment. Please try again.",
-        variant: "destructive"
+        title: "Payment Error 💥",
+        description: errorMsg,
+        variant: "destructive",
       });
-      onError(error.message || "Payment failed");
+      
+      onError(errorMsg);
     } finally {
-      setIsProcessing(false);
+      setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <Card className="border border-blue-200 bg-white/80 backdrop-blur-sm shadow-lg">
-        <CardContent className="p-6 text-center">
-          <Loader2 className="h-12 w-12 mx-auto mb-4 animate-spin text-blue-500" />
-          <p className="text-blue-600 font-medium">Loading payment options...</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <Card className="border border-blue-200 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-shadow duration-300">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-blue-700">
-          <CreditCard className="h-5 w-5" />
-          Payment & Delivery
-          <div className="flex items-center gap-1 ml-auto">
-            <Clock className="h-4 w-4 text-green-600" />
-            <span className="text-sm text-green-600 font-medium">Available 24/7</span>
+    <div className="space-y-6 animate-fade-in">
+      {errorMessage && (
+        <Alert variant="destructive" className="animate-shake border-red-300 dark:border-red-700">
+          <AlertCircle className="h-4 w-4 animate-pulse" />
+          <AlertDescription className="font-medium">{errorMessage}</AlertDescription>
+        </Alert>
+      )}
+      
+      <div className="p-8 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-blue-950/30 dark:via-purple-950/30 dark:to-pink-950/30 rounded-2xl border-2 border-blue-200 dark:border-blue-800 animate-scale-in shadow-xl hover:shadow-2xl transition-all duration-500">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="p-4 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl animate-pulse-glow shadow-lg">
+            <Smartphone className="h-8 w-8 text-white animate-float" />
           </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Payment Method Selection */}
-        <div className="space-y-3">
-          <Label className="text-blue-700 font-medium">Payment Method</Label>
-          <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-            <SelectTrigger className="border border-blue-200 focus:border-blue-500">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ziina">
-                <div className="flex items-center gap-2">
-                  <Smartphone className="h-4 w-4" />
-                  Ziina Digital Payment
-                </div>
-              </SelectItem>
-              <SelectItem value="cash_on_pickup">
-                <div className="flex items-center gap-2">
-                  <Store className="h-4 w-4" />
-                  Cash on Store Pickup
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Shipping Method */}
-        <div className="space-y-3">
-          <Label className="text-blue-700 font-medium">Delivery Method</Label>
-          <Select value={shippingMethod} onValueChange={setShippingMethod}>
-            <SelectTrigger className="border border-blue-200 focus:border-blue-500">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="store_pickup">
-                <div className="flex items-center gap-2">
-                  <Store className="h-4 w-4" />
-                  Store Pickup (Free)
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border border-blue-100">
-          <div className="flex items-center gap-2">
-            <Banknote className="h-5 w-5 text-blue-600" />
-            <span className="font-semibold text-blue-700">Amount to Pay</span>
+          <div className="flex-1">
+            <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent animate-text-shimmer">
+              Ziina Payment Gateway
+            </h3>
+            <div className="flex items-center gap-2 mt-1">
+              <Shield className="h-4 w-4 text-green-500 animate-pulse" />
+              <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                Secure & Trusted Payment in UAE
+              </p>
+            </div>
           </div>
           <div className="text-right">
-            <span className="text-2xl font-bold text-blue-600">${amount.toFixed(2)}</span>
-            {paymentMethod === 'ziina' && (
-              <p className="text-sm text-blue-500">≈ {(amount * 3.67).toFixed(2)} AED</p>
-            )}
+            <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+              <Zap className="h-4 w-4 animate-bounce" />
+              <span className="text-xs font-semibold">Instant</span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-white/70 dark:bg-gray-800/70 rounded-xl backdrop-blur-sm border border-blue-200/50 dark:border-blue-700/50 animate-slide-in-left">
+              <div className="flex justify-between items-center">
+                <span className="text-blue-700 dark:text-blue-300 font-medium">Amount (USD):</span>
+                <span className="font-bold text-lg animate-pulse">${amount.toFixed(2)}</span>
+              </div>
+            </div>
+            <div className="p-4 bg-white/70 dark:bg-gray-800/70 rounded-xl backdrop-blur-sm border border-purple-200/50 dark:border-purple-700/50 animate-slide-in-right">
+              <div className="flex justify-between items-center">
+                <span className="text-purple-700 dark:text-purple-300 font-medium">Amount (AED):</span>
+                <span className="font-bold text-lg animate-pulse">{(amount * 3.67).toFixed(2)} AED</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="p-3 bg-gradient-to-r from-green-100 to-blue-100 dark:from-green-900/30 dark:to-blue-900/30 rounded-lg border border-green-200 dark:border-green-700 animate-bounce-in">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-green-700 dark:text-green-300 font-medium">Exchange Rate:</span>
+              <span className="font-semibold animate-text-glow">1 USD = 3.67 AED</span>
+            </div>
           </div>
         </div>
 
-        {paymentMethod === 'ziina' && (
-          <div className="space-y-2">
-            <Label htmlFor="ziina-phone" className="text-blue-700 font-medium">
-              Phone Number (Ziina Account)
-            </Label>
-            <Input
-              id="ziina-phone"
-              type="tel"
-              placeholder="+971 50 123 4567"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              className="border border-blue-200 focus:border-blue-500 text-lg transition-colors"
-            />
-            <p className="text-sm text-blue-600">
-              Enter the phone number linked to your Ziina account
-            </p>
+        <div className="mt-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 rounded-xl border border-amber-200 dark:border-amber-800 animate-scale-in">
+          <div className="flex items-center justify-center gap-4 text-xs text-amber-700 dark:text-amber-300 font-medium">
+            <div className="flex items-center gap-1">
+              <Shield className="h-3 w-3 animate-pulse" />
+              <span>SSL Encrypted</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-3 w-3 animate-pulse" />
+              <span>PCI Compliant</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Zap className="h-3 w-3 animate-bounce" />
+              <span>Instant Processing</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Button 
+        onClick={handleZiinaPayment}
+        disabled={disabled || loading || !shippingData?.phone}
+        className="w-full h-16 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white font-bold text-lg rounded-2xl transform hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl hover:shadow-blue-500/25 animate-pulse-glow disabled:opacity-50 disabled:cursor-not-allowed"
+        size="lg"
+      >
+        {loading ? (
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span className="animate-pulse">Processing Payment...</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <CreditCard className="h-6 w-6 animate-bounce" />
+            <span className="animate-text-shimmer">
+              Pay {(amount * 3.67).toFixed(2)} AED with Ziina
+            </span>
           </div>
         )}
+      </Button>
 
-        <div className="grid grid-cols-3 gap-2 mt-4">
-          <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg transition-colors hover:bg-green-100">
-            <Shield className="h-4 w-4 text-green-600" />
-            <span className="text-sm text-green-700 font-medium">Secure</span>
-          </div>
-          <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg transition-colors hover:bg-orange-100">
-            <Zap className="h-4 w-4 text-orange-600" />
-            <span className="text-sm text-orange-700 font-medium">
-              {paymentMethod === 'ziina' ? 'Instant' : 'Quick'}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg transition-colors hover:bg-purple-100">
-            <CheckCircle className="h-4 w-4 text-purple-600" />
-            <span className="text-sm text-purple-700 font-medium">
-              {paymentMethod === 'ziina' ? '24/7' : 'Flexible'}
-            </span>
-          </div>
-        </div>
-
-        <Button
-          onClick={handlePayment}
-          disabled={(paymentMethod === 'ziina' && !phoneNumber.trim()) || isProcessing}
-          className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
-        >
-          {isProcessing ? (
-            <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Processing...
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              {paymentMethod === 'ziina' ? (
-                <>
-                  <CreditCard className="h-4 w-4" />
-                  Pay {(amount * 3.67).toFixed(2)} AED with Ziina
-                </>
-              ) : (
-                <>
-                  <Store className="h-4 w-4" />
-                  Confirm Order - Pay ${amount.toFixed(2)} on Pickup
-                </>
-              )}
-            </div>
-          )}
-        </Button>
-
-        <div className="text-center text-xs text-blue-600 mt-2 space-y-1">
-          {paymentMethod === 'ziina' ? (
-            <>
-              <p className="flex items-center justify-center gap-1">
-                🔒 <span>Secure payment processed through Ziina</span>
-              </p>
-              <p className="flex items-center justify-center gap-1">
-                💳 <span>Available 24/7 - Supports all major UAE banks</span>
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="flex items-center justify-center gap-1">
-                🏪 <span>Pay with cash when you pick up your order</span>
-              </p>
-              <p className="flex items-center justify-center gap-1">
-                📍 <span>Store pickup available during business hours</span>
-              </p>
-            </>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      <div className="text-center space-y-2 animate-fade-in">
+        <p className="text-xs text-muted-foreground">
+          🔒 You will be redirected to Ziina's secure payment page
+        </p>
+        <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+          ✅ Supported: Credit/Debit Cards • Apple Pay • Google Pay • Bank Transfer
+        </p>
+      </div>
+    </div>
   );
 };
 
