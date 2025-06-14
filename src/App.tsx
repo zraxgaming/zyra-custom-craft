@@ -30,7 +30,7 @@ import OrderFailed from "./pages/OrderFailed";
 import CategoryPage from "./pages/CategoryPage";
 import GiftCards from "./pages/GiftCards";
 import NotFound from "./pages/404";
-import { WishlistProvider } from "@/hooks/use-wishlist";
+// REMOVED: import { WishlistProvider } from "@/hooks/use-wishlist";
 
 const queryClient = new QueryClient();
 
@@ -39,7 +39,7 @@ const App = () => (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <AuthProvider>
         <CartProvider>
-          <WishlistProvider>
+          {/* REMOVED: <WishlistProvider> */}
             <TooltipProvider>
               <Toaster />
               <Sonner />
@@ -75,7 +75,7 @@ const App = () => (
                 </Routes>
               </BrowserRouter>
             </TooltipProvider>
-          </WishlistProvider>
+          {/* REMOVED: </WishlistProvider> */}
         </CartProvider>
       </AuthProvider>
     </ThemeProvider>
@@ -83,3 +83,4 @@ const App = () => (
 );
 
 export default App;
+
