@@ -130,7 +130,6 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
 
   return (
     <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-8">
-      {/* Order Summary */}
       <Card className="h-fit bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border-purple-200 dark:border-purple-800 animate-fade-in">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
@@ -180,7 +179,6 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
         </CardContent>
       </Card>
 
-      {/* Checkout Form */}
       <div className="space-y-6">
         <Card className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 border-purple-200 dark:border-purple-800 animate-slide-in-right">
           <CardHeader>
@@ -288,6 +286,7 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
             {paymentMethod === "ziina" && (
               <ZiinaPayment
                 amount={subtotal}
+                orderPayload={{ orderId: "temp", metadata: { customerEmail: formData.email } }}
                 onSuccess={handlePaymentSuccess}
                 onError={handlePaymentError}
               />

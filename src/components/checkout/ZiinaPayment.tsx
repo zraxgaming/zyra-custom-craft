@@ -3,24 +3,19 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Smartphone, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast"; // Added for error toasts
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ZiinaPaymentProps {
   amount: number;
-  orderPayload: any; // Payload to describe the order for Ziina if needed (e.g. referenceId, customer info)
-  onSuccess: (paymentIntentData: any) => void; // Callback on successful payment intent creation
-  onError: (error: string) => void; // Callback on error
-  // isProcessing is managed by this component now
+  orderPayload: any;
+  onSuccess: (paymentIntentData: any) => void;
+  onError: (error: string) => void;
 }
-
-// IMPORTANT: Hardcoding API keys in client-side code is a major security risk.
-// This key will be visible in network requests and bundled JavaScript.
-// For production, use server-side processing (like Supabase Edge Functions) to protect your API key.
-const ZIINA_API_KEY = "m4+Pg5S4Qu+L4naXkkfClwkJUr9ykZeafvKPfkDJQOSGnAs/4d7DDeBml9Dwlls";
 
 const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
   amount,
-  orderPayload, // You might use this to pass order_id or other references
+  orderPayload,
   onSuccess,
   onError
 }) => {
@@ -36,29 +31,35 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 
     setIsProcessing(true);
     try {
-      // Ziina expects amount in the smallest currency unit (e.g., fils for AED, cents for USD)
-      // Assuming AED, so amount * 100
+      // Get Ziina API key from site_config
+      const { data: configData, error: configError } = await supabase
+        .from('site_config')
+        .select('value')
+        .eq('key', 'ziina_api_key')
+        .single();
+
+      if (configError || !configData?.value) {
+        throw new Error('Ziina API key not configured in site settings');
+      }
+
+      const ziinaApiKey = configData.value as string;
       const amountInFils = Math.round(amount * 100);
 
       const body = {
         amount: amountInFils,
-        currency_code: "AED", // Or make this configurable
-        // You can add more details like reference_id, customer, items as per Ziina docs
-        // e.g., reference_id: orderPayload.orderId,
+        currency_code: "AED",
         metadata: orderPayload.metadata || { order_id: orderPayload.orderId || "N/A" },
-        success_url: `${window.location.origin}/order-success?source=ziina`, // Adjust as needed
-        cancel_url: `${window.location.origin}/checkout?source=ziina&status=cancelled`, // Adjust as needed
-        failure_url: `${window.location.origin}/checkout?source=ziina&status=failed`, // Adjust as needed
+        success_url: `${window.location.origin}/order-success?source=ziina`,
+        cancel_url: `${window.location.origin}/checkout?source=ziina&status=cancelled`,
+        failure_url: `${window.location.origin}/checkout?source=ziina&status=failed`,
       };
 
       console.log("Initiating Ziina Payment with payload:", body);
-      console.log("Using API Key (first 5 chars):", ZIINA_API_KEY.substring(0,5));
-
 
       const response = await fetch('https://api-v2.ziina.com/api/payment_intent', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${ZIINA_API_KEY}`,
+          'Authorization': `Bearer ${ziinaApiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body)
@@ -75,14 +76,11 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       console.log("Ziina Payment Intent Created:", responseData);
 
       if (responseData.next_action_url) {
-        onSuccess(responseData); // Pass the full response data
-        // Redirecting to Ziina's payment page
+        onSuccess(responseData);
         window.location.href = responseData.next_action_url;
       } else if (responseData.id && responseData.status === 'succeeded') {
-        // This case might happen for very quick confirmations or specific scenarios
         onSuccess(responseData);
-      }
-       else {
+      } else {
         console.error("Ziina response missing next_action_url or success status:", responseData);
         throw new Error(responseData.message || "Failed to get payment redirection URL from Ziina.");
       }
@@ -137,9 +135,6 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
           
           <p className="text-xs text-gray-500 dark:text-gray-400">
             Secure payment powered by Ziina
-          </p>
-          <p className="text-xs text-red-500 dark:text-red-400 font-semibold mt-2">
-            Warning: API Key is currently client-side. For production, use server-side processing.
           </p>
         </div>
       </CardContent>
