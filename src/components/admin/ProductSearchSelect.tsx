@@ -1,11 +1,13 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
+import { Check, ChevronsUpDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area"; // Added import for ScrollArea
+import { Json } from "@/integrations/supabase/types"; // Assuming Json type is defined here
 
 interface Product {
   id: string;
@@ -19,149 +21,125 @@ interface ProductSearchSelectProps {
   selectedProduct: Product | null;
   onProductSelect: (product: Product | null) => void;
   placeholder?: string;
+  className?: string;
 }
 
 const ProductSearchSelect: React.FC<ProductSearchSelectProps> = ({
   selectedProduct,
   onProductSelect,
-  placeholder = "Search products..."
+  placeholder = "Select a product...",
+  className,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchProducts = useCallback(async (search: string) => {
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from("products")
+      .select("id, name, sku, price, images")
+      .or(`name.ilike.%${search}%,sku.ilike.%${search}%`)
+      .limit(10);
+
+    if (error) {
+      console.error("Error fetching products:", error);
+      setProducts([]);
+    } else {
+      const transformedProducts = (data || []).map(item => ({
+        ...item,
+        sku: item.sku || undefined,
+        images: Array.isArray(item.images)
+          ? item.images.filter((img): img is string => typeof img === 'string')
+          : [],
+      }));
+      setProducts(transformedProducts);
+    }
+    setIsLoading(false);
+  }, []);
 
   useEffect(() => {
-    if (searchTerm.length > 2) {
-      searchProducts();
-    } else {
-      setProducts([]);
+    if (searchTerm.length > 1 || products.length === 0) {
+      const timer = setTimeout(() => {
+        fetchProducts(searchTerm);
+      }, 300);
+      return () => clearTimeout(timer);
     }
-  }, [searchTerm]);
+  }, [searchTerm, fetchProducts]);
 
-  const searchProducts = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, sku, price, images')
-        .or(`name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%`)
-        .eq('status', 'published')
-        .limit(10);
-
-      if (error) throw error;
-      setProducts(data || []);
-    } catch (error) {
-      console.error('Error searching products:', error);
-    } finally {
-      setLoading(false);
-    }
+  const handleSelect = (product: Product) => {
+    onProductSelect(product);
+    setOpen(false);
+    setSearchTerm(""); 
   };
 
-  const handleProductSelect = (product: Product) => {
-    onProductSelect(product);
-    setIsOpen(false);
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onProductSelect(null);
     setSearchTerm("");
   };
 
-  const clearSelection = () => {
-    onProductSelect(null);
-  };
-
   return (
-    <div className="relative">
-      {selectedProduct ? (
-        <div className="flex items-center justify-between p-3 border rounded-lg bg-background">
-          <div className="flex items-center gap-3">
-            {selectedProduct.images?.[0] && (
-              <img
-                src={selectedProduct.images[0]}
-                alt={selectedProduct.name}
-                className="w-10 h-10 object-cover rounded"
-              />
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn("w-full justify-between", className)}
+        >
+          <span className="truncate">
+            {selectedProduct ? selectedProduct.name : placeholder}
+          </span>
+          <div className="flex items-center">
+            {selectedProduct && (
+              <Button variant="ghost" size="sm" onClick={handleClear} className="mr-1 p-1 h-auto">
+                <X className="h-3 w-3" />
+              </Button>
             )}
-            <div>
-              <p className="font-medium">{selectedProduct.name}</p>
-              {selectedProduct.sku && (
-                <p className="text-sm text-muted-foreground">SKU: {selectedProduct.sku}</p>
-              )}
-            </div>
+            <ChevronsUpDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={clearSelection}
-            className="h-8 w-8"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      ) : (
-        <div className="relative">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setIsOpen(true);
-              }}
-              onFocus={() => setIsOpen(true)}
-              placeholder={placeholder}
-              className="pl-10"
-            />
-          </div>
-
-          {isOpen && (searchTerm.length > 2 || products.length > 0) && (
-            <Card className="absolute top-full left-0 right-0 z-50 mt-1 max-h-64 overflow-hidden">
-              <ScrollArea className="max-h-64">
-                <CardContent className="p-0">
-                  {loading ? (
-                    <div className="p-4 text-center text-muted-foreground">
-                      Searching...
-                    </div>
-                  ) : products.length > 0 ? (
-                    products.map((product) => (
-                      <button
-                        key={product.id}
-                        onClick={() => handleProductSelect(product)}
-                        className="w-full p-3 text-left hover:bg-muted flex items-center gap-3 border-b last:border-b-0"
-                      >
-                        {product.images?.[0] && (
-                          <img
-                            src={product.images[0]}
-                            alt={product.name}
-                            className="w-10 h-10 object-cover rounded"
-                          />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Search product..."
+            value={searchTerm}
+            onValueChange={setSearchTerm}
+            className="h-9"
+          />
+          <CommandList>
+            {isLoading && <CommandItem>Loading...</CommandItem>}
+            {!isLoading && products.length === 0 && searchTerm.length > 1 && (
+              <CommandEmpty>No product found.</CommandEmpty>
+            )}
+            {!isLoading && products.length > 0 && (
+              <CommandGroup>
+                <ScrollArea className="h-[200px]">
+                  {products.map((product) => (
+                    <CommandItem
+                      key={product.id}
+                      value={product.name}
+                      onSelect={() => handleSelect(product)}
+                    >
+                      {product.name}
+                      <Check
+                        className={cn(
+                          "ml-auto h-4 w-4",
+                          selectedProduct?.id === product.id ? "opacity-100" : "opacity-0"
                         )}
-                        <div>
-                          <p className="font-medium">{product.name}</p>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            {product.sku && <span>SKU: {product.sku}</span>}
-                            <span>${product.price}</span>
-                          </div>
-                        </div>
-                      </button>
-                    ))
-                  ) : searchTerm.length > 2 ? (
-                    <div className="p-4 text-center text-muted-foreground">
-                      No products found
-                    </div>
-                  ) : null}
-                </CardContent>
-              </ScrollArea>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-    </div>
+                      />
+                    </CommandItem>
+                  ))}
+                </ScrollArea>
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 };
 

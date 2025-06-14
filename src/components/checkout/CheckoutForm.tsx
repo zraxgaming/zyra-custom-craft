@@ -1,275 +1,377 @@
+import React, { useState, useEffect } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { useCart } from '@/components/cart/CartProvider';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
+import { Loader2, ShoppingBag, CreditCard, Truck, UserCircle, Gift } from 'lucide-react';
+import OrderSummary from './OrderSummary';
+import CouponForm from './CouponForm';
+import GiftCardForm from './GiftCardForm';
+import DeliveryOptions, { DeliveryOption } from './DeliveryOptions';
+import PayPalPayment from './PayPalPayment';
+import ZiinaPayment from './ZiinaPayment'; // Ensure this path is correct
+import { CartItem } from '@/types/cart';
 
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Separator } from "@/components/ui/separator";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, CreditCard, ShoppingBag, Lock, Smartphone, Gift, Star } from "lucide-react";
-import ZiinaPayment from "./ZiinaPayment";
-import type { CartItem } from "@/components/cart/CartProvider";
+const addressSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().min(1, "Phone number is required"),
+  address: z.string().min(1, "Address is required"),
+  city: z.string().min(1, "City is required"),
+  zipCode: z.string().min(1, "Zip code is required"),
+  country: z.string().min(1, "Country is required"),
+});
 
-interface CheckoutFormProps {
-  items: CartItem[];
-  subtotal: number;
-  onPaymentSuccess: (orderId: string) => void;
-}
+type AddressFormData = z.infer<typeof addressSchema>;
 
-const CheckoutForm: React.FC<CheckoutFormProps> = ({
-  items,
-  subtotal,
-  onPaymentSuccess
-}) => {
-  const { user } = useAuth();
+const CheckoutForm: React.FC = () => {
+  const { items, clearCart, totalPrice, applyCoupon, appliedCoupon, removeCoupon, applyGiftCard, appliedGiftCard, removeGiftCard } = useCart();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("ziina");
-  const [formData, setFormData] = useState({
-    firstName: user?.user_metadata?.first_name || "",
-    lastName: user?.user_metadata?.last_name || "",
-    email: user?.email || "",
-    phone: "",
-    address: "",
-    city: "",
-    zipCode: "",
-    country: "UAE"
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'paypal' | 'ziina' | 'cod'>('paypal');
+  const [selectedDelivery, setSelectedDelivery] = useState<DeliveryOption | null>(null);
+
+  const { control, handleSubmit, setValue, formState: { errors } } = useForm<AddressFormData>({
+    resolver: zodResolver(addressSchema),
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      address: '',
+      city: '',
+      zipCode: '',
+      country: 'UAE', // Default country
+    },
   });
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  useEffect(() => {
+    if (user && profile) {
+      setValue('firstName', profile.first_name || '');
+      setValue('lastName', profile.last_name || '');
+      setValue('email', user.email || '');
+      setValue('phone', profile.phone || '');
+      // Potentially load address from profile if available
+    } else if (user) {
+      setValue('email', user.email || '');
+    }
+  }, [user, profile, setValue]);
+
+  const finalAmount = appliedGiftCard 
+    ? Math.max(0, totalPrice - (appliedGiftCard.amount || 0))
+    : totalPrice;
 
   const handlePaymentSuccess = async (orderId: string) => {
     toast({
-      title: "Payment Successful! ✨",
-      description: "Your order has been placed successfully",
+      title: "Order Placed!",
+      description: `Your order #${orderId} has been placed successfully.`,
     });
-    onPaymentSuccess(orderId);
+    await clearCart();
+    navigate(`/order-success/${orderId}`);
   };
 
   const handlePaymentError = (error: string) => {
     toast({
       title: "Payment Failed",
       description: error,
-      variant: "destructive"
+      variant: "destructive",
     });
+    setIsLoading(false);
+  };
+  
+  const onSubmit = async (data: AddressFormData) => {
+    setIsLoading(true);
+    if (!selectedDelivery) {
+      toast({ title: "Error", description: "Please select a delivery option.", variant: "destructive" });
+      setIsLoading(false);
+      return;
+    }
+
+    if (paymentMethod !== 'cod' && finalAmount > 0) {
+      // For PayPal or Ziina, payment is handled by their respective components.
+      // This function will be called by those components on success.
+      // We just need to ensure data is ready for them.
+      // If payment is handled client-side completely by PayPal/Ziina components,
+      // then the actual order creation logic might move into `handlePaymentSuccess`.
+      // For now, let's assume order creation happens after client-side payment success.
+      // This might need adjustment based on how PayPal/Ziina components trigger success.
+       toast({
+        title: `Proceeding with ${paymentMethod}`,
+        description: "Please complete the payment.",
+      });
+      // The actual submission to backend will happen in handlePaymentSuccess after PayPal/Ziina confirms
+      setIsLoading(false); 
+      return;
+    }
+    
+    // For COD or if finalAmount is 0 after gift card
+    try {
+      const orderData = {
+        user_id: user?.id,
+        profile_id: profile?.id,
+        items: items.map(item => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+          price: item.price,
+          customization: item.customization,
+          name: item.name, // Include name for better order details
+          image_url: item.image_url // Include image_url
+        })),
+        total_amount: finalAmount + (selectedDelivery?.price || 0),
+        shipping_address: data,
+        billing_address: data, // Assuming same as shipping for now
+        status: 'pending',
+        currency: 'AED', // Assuming AED
+        payment_method: paymentMethod,
+        payment_status: paymentMethod === 'cod' ? 'pending' : 'paid', // This might change based on actual payment flow
+        delivery_type: selectedDelivery.name,
+        tracking_number: null,
+        notes: `Selected delivery: ${selectedDelivery.name} (+${selectedDelivery.price} AED). Coupon: ${appliedCoupon?.code || 'None'}. Gift Card: ${appliedGiftCard?.code || 'None'}`,
+        coupon_id: appliedCoupon?.id,
+        gift_card_id: appliedGiftCard?.id,
+        shipping_cost: selectedDelivery.price,
+      };
+
+      const { data: orderResult, error } = await supabase
+        .from('orders')
+        .insert(orderData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      // For COD, we call handlePaymentSuccess directly as no external payment step
+      if (paymentMethod === 'cod' || finalAmount === 0) {
+         await handlePaymentSuccess(orderResult.id);
+      }
+
+    } catch (error: any) {
+      console.error("Error placing order:", error);
+      toast({
+        title: "Order Placement Failed",
+        description: error.message || "Could not place your order. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const shippingData = {
-    ...formData,
-    user_id: user?.id
+
+  if (items.length === 0 && !isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <ShoppingBag className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+        <h1 className="text-2xl font-bold mb-4">Your Cart is Empty</h1>
+        <p className="text-muted-foreground mb-6">
+          Looks like you haven't added anything to your cart yet.
+        </p>
+        <Button onClick={() => navigate('/shop')}>Continue Shopping</Button>
+      </div>
+    );
+  }
+  
+  const createOrderForPaymentGateway = async (formData: AddressFormData) => {
+    if (!selectedDelivery) {
+      toast({ title: "Error", description: "Please select a delivery option.", variant: "destructive" });
+      throw new Error("Delivery option not selected");
+    }
+
+    const orderPayload = {
+      user_id: user?.id,
+      profile_id: profile?.id,
+      items: items.map(item => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+        price: item.price,
+        customization: item.customization,
+        name: item.name,
+        image_url: item.image_url
+      })),
+      total_amount: finalAmount + (selectedDelivery.price || 0),
+      shipping_address: formData,
+      billing_address: formData, 
+      status: 'pending_payment', // Special status for gateway payments
+      currency: 'AED',
+      payment_method: paymentMethod,
+      payment_status: 'pending',
+      delivery_type: selectedDelivery.name,
+      notes: `Coupon: ${appliedCoupon?.code || 'None'}. Gift Card: ${appliedGiftCard?.code || 'None'}`,
+      coupon_id: appliedCoupon?.id,
+      gift_card_id: appliedGiftCard?.id,
+      shipping_cost: selectedDelivery.price,
+    };
+
+    const { data: orderResult, error } = await supabase
+      .from('orders')
+      .insert(orderPayload)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating preliminary order:", error);
+      throw error;
+    }
+    return orderResult.id; // Return the preliminary order ID
   };
+
 
   return (
-    <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-8 animate-fade-in">
-      {/* Order Summary */}
-      <Card className="h-fit bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border-purple-200 dark:border-purple-800 animate-slide-in-right shadow-xl">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-3 text-purple-700 dark:text-purple-300">
-            <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-full animate-pulse">
-              <ShoppingBag className="h-5 w-5" />
-            </div>
-            Order Summary
-            <div className="ml-auto flex items-center gap-1">
-              <Star className="h-4 w-4 text-yellow-500 animate-spin" />
-              <span className="text-sm">Premium</span>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="max-h-64 overflow-y-auto space-y-3">
-            {items.map((item, index) => (
-              <div 
-                key={`${item.id}-${index}`} 
-                className="flex items-center gap-3 p-4 bg-white/70 dark:bg-gray-800/70 rounded-xl backdrop-blur-sm animate-slide-in-up hover:scale-105 transition-transform duration-300 shadow-md" 
-                style={{animationDelay: `${index * 100}ms`}}
-              >
-                <div className="w-14 h-14 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 rounded-xl flex items-center justify-center overflow-hidden animate-bounce">
-                  {item.image_url ? (
-                    <img
-                      src={item.image_url}
-                      alt={item.name}
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                  ) : (
-                    <Gift className="h-7 w-7 text-purple-400" />
-                  )}
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-8 text-center">Checkout</h1>
+      <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6">
+          <Accordion type="single" collapsible defaultValue="shipping" className="w-full">
+            <AccordionItem value="shipping">
+              <AccordionTrigger className="text-xl font-semibold">
+                <div className="flex items-center gap-2">
+                  <UserCircle className="h-6 w-6 text-primary" />
+                  Shipping Information
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-sm text-purple-800 dark:text-purple-200">{item.name}</h4>
-                  <p className="text-xs text-purple-600 dark:text-purple-400">Qty: {item.quantity}</p>
-                </div>
-                <p className="font-bold text-purple-700 dark:text-purple-300 animate-pulse">${(item.price * item.quantity).toFixed(2)}</p>
-              </div>
-            ))}
-          </div>
-          
-          <Separator className="bg-purple-200 dark:bg-purple-800" />
-          
-          <div className="space-y-3 p-4 bg-white/50 dark:bg-gray-800/50 rounded-xl backdrop-blur-sm">
-            <div className="flex justify-between text-purple-700 dark:text-purple-300">
-              <span>Subtotal</span>
-              <span className="animate-pulse">${subtotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-purple-700 dark:text-purple-300">
-              <span>Shipping</span>
-              <span className="text-green-600 font-semibold animate-bounce">Free ✨</span>
-            </div>
-            <div className="flex justify-between text-purple-700 dark:text-purple-300">
-              <span>Taxes</span>
-              <span className="text-green-600 font-semibold">Included</span>
-            </div>
-            <Separator className="bg-purple-200 dark:bg-purple-800" />
-            <div className="flex justify-between text-xl font-bold text-purple-800 dark:text-purple-200 p-3 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 rounded-lg animate-pulse">
-              <span>Total</span>
-              <span>${subtotal.toFixed(2)}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              </AccordionTrigger>
+              <AccordionContent className="pt-4">
+                <Card>
+                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
+                    {/* Form Fields */}
+                    {(Object.keys(addressSchema.shape) as Array<keyof AddressFormData>).map((key) => (
+                      <div key={key} className={key === 'address' || key === 'country' ? 'md:col-span-2' : ''}>
+                        <Label htmlFor={key} className="capitalize">{key.replace(/([A-Z])/g, ' $1')}</Label>
+                        <Controller
+                          name={key}
+                          control={control}
+                          render={({ field }) => (
+                            <Input id={key} {...field} placeholder={`Enter your ${key.toLowerCase()}`} />
+                          )}
+                        />
+                        {errors[key] && <p className="text-red-500 text-sm mt-1">{errors[key]?.message}</p>}
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </AccordionContent>
+            </AccordionItem>
 
-      {/* Checkout Form */}
-      <div className="space-y-6">
-        <Card className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 border-purple-200 dark:border-purple-800 animate-slide-in-left shadow-xl">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-3 text-purple-700 dark:text-purple-300">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-full animate-spin">
-                <Lock className="h-5 w-5" />
-              </div>
-              Shipping Information
-              <div className="ml-auto text-sm bg-purple-100 dark:bg-purple-900/50 px-3 py-1 rounded-full animate-bounce">
-                Secure 🔒
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="animate-slide-in-up" style={{animationDelay: '100ms'}}>
-                  <Label htmlFor="firstName" className="text-purple-700 dark:text-purple-300">First Name *</Label>
-                  <Input
-                    id="firstName"
-                    value={formData.firstName}
-                    onChange={(e) => handleInputChange('firstName', e.target.value)}
-                    required
-                    className="border-purple-200 focus:border-purple-500 focus:ring-purple-200 transition-all duration-300"
-                  />
+            <AccordionItem value="delivery">
+              <AccordionTrigger className="text-xl font-semibold">
+                <div className="flex items-center gap-2">
+                  <Truck className="h-6 w-6 text-primary" />
+                  Delivery Options
                 </div>
-                <div className="animate-slide-in-up" style={{animationDelay: '200ms'}}>
-                  <Label htmlFor="lastName" className="text-purple-700 dark:text-purple-300">Last Name *</Label>
-                  <Input
-                    id="lastName"
-                    value={formData.lastName}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
-                    required
-                    className="border-purple-200 focus:border-purple-500 focus:ring-purple-200 transition-all duration-300"
-                  />
-                </div>
-              </div>
+              </AccordionTrigger>
+              <AccordionContent className="pt-4">
+                <DeliveryOptions selectedOption={selectedDelivery} onSelectOption={setSelectedDelivery} />
+                {!selectedDelivery && <p className="text-red-500 text-sm mt-1">Please select a delivery option.</p>}
+              </AccordionContent>
+            </AccordionItem>
 
-              <div className="animate-slide-in-up" style={{animationDelay: '300ms'}}>
-                <Label htmlFor="email" className="text-purple-700 dark:text-purple-300">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  required
-                  className="border-purple-200 focus:border-purple-500 focus:ring-purple-200 transition-all duration-300"
+            <AccordionItem value="payment">
+              <AccordionTrigger className="text-xl font-semibold">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-6 w-6 text-primary" />
+                  Payment Method
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pt-4">
+                <Card>
+                  <CardContent className="pt-6 space-y-4">
+                    <div className="flex gap-4">
+                      <Button variant={paymentMethod === 'paypal' ? 'default' : 'outline'} onClick={() => setPaymentMethod('paypal')} className="flex-1">PayPal</Button>
+                      <Button variant={paymentMethod === 'ziina' ? 'default' : 'outline'} onClick={() => setPaymentMethod('ziina')} className="flex-1">Ziina</Button>
+                      <Button variant={paymentMethod === 'cod' ? 'default' : 'outline'} onClick={() => setPaymentMethod('cod')} className="flex-1">Cash on Delivery</Button>
+                    </div>
+                    {paymentMethod === 'paypal' && finalAmount > 0 && (
+                      <PayPalPayment 
+                        amount={finalAmount + (selectedDelivery?.price || 0)}
+                        currency="AED"
+                        onSuccess={async () => {
+                          // This assumes form data is valid by the time PayPal is clicked.
+                          // A better UX might validate and create preliminary order *before* showing PayPal button.
+                          const formData = control._formValues;
+                          const orderId = await createOrderForPaymentGateway(formData);
+                          // Update order status to 'paid'
+                           await supabase.from('orders').update({ payment_status: 'paid', status: 'processing' }).eq('id', orderId);
+                          await handlePaymentSuccess(orderId);
+                        }}
+                        onError={handlePaymentError}
+                      />
+                    )}
+                    {paymentMethod === 'ziina' && finalAmount > 0 && (
+                       <ZiinaPayment
+                        amount={finalAmount + (selectedDelivery?.price || 0)}
+                        onSuccess={async (transactionId) => {
+                          const formData = control._formValues;
+                          const orderId = await createOrderForPaymentGateway(formData);
+                           // Update order status to 'paid' and include transactionId
+                           await supabase.from('orders').update({ 
+                            payment_status: 'paid', 
+                            status: 'processing',
+                            notes: `${control._formValues.notes || ''} Ziina TxID: ${transactionId}`.trim()
+                           }).eq('id', orderId);
+                          await handlePaymentSuccess(orderId);
+                        }}
+                        onError={handlePaymentError}
+                      />
+                    )}
+                    {paymentMethod === 'cod' && (
+                      <p className="text-sm text-muted-foreground">You will pay upon delivery.</p>
+                    )}
+                     {finalAmount === 0 && <p className="text-sm text-green-600">Your order total is 0 AED. No payment required.</p>}
+                  </CardContent>
+                </Card>
+              </AccordionContent>
+            </AccordionItem>
+            
+            <AccordionItem value="promo">
+              <AccordionTrigger className="text-xl font-semibold">
+                <div className="flex items-center gap-2">
+                  <Gift className="h-6 w-6 text-primary" />
+                  Promotions & Gift Cards
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pt-4 space-y-4">
+                <CouponForm 
+                  onApplyCoupon={applyCoupon} 
+                  onRemoveCoupon={removeCoupon}
+                  appliedCouponCode={appliedCoupon?.code} 
                 />
-              </div>
-
-              <div className="animate-slide-in-up" style={{animationDelay: '400ms'}}>
-                <Label htmlFor="phone" className="text-purple-700 dark:text-purple-300">Phone *</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  placeholder="+971 50 123 4567"
-                  required
-                  className="border-purple-200 focus:border-purple-500 focus:ring-purple-200 transition-all duration-300"
+                <GiftCardForm 
+                  onApplyGiftCard={applyGiftCard}
+                  onRemoveGiftCard={removeGiftCard}
+                  appliedGiftCardCode={appliedGiftCard?.code}
                 />
-              </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
 
-              <div className="animate-slide-in-up" style={{animationDelay: '500ms'}}>
-                <Label htmlFor="address" className="text-purple-700 dark:text-purple-300">Address</Label>
-                <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
-                  className="border-purple-200 focus:border-purple-500 focus:ring-purple-200 transition-all duration-300"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="animate-slide-in-up" style={{animationDelay: '600ms'}}>
-                  <Label htmlFor="city" className="text-purple-700 dark:text-purple-300">City</Label>
-                  <Input
-                    id="city"
-                    value={formData.city}
-                    onChange={(e) => handleInputChange('city', e.target.value)}
-                    className="border-purple-200 focus:border-purple-500 focus:ring-purple-200 transition-all duration-300"
-                  />
-                </div>
-                <div className="animate-slide-in-up" style={{animationDelay: '700ms'}}>
-                  <Label htmlFor="zipCode" className="text-purple-700 dark:text-purple-300">ZIP Code</Label>
-                  <Input
-                    id="zipCode"
-                    value={formData.zipCode}
-                    onChange={(e) => handleInputChange('zipCode', e.target.value)}
-                    className="border-purple-200 focus:border-purple-500 focus:ring-purple-200 transition-all duration-300"
-                  />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950 border-purple-200 dark:border-purple-800 animate-scale-in shadow-xl">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-3 text-purple-700 dark:text-purple-300">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-full animate-pulse">
-                <CreditCard className="h-5 w-5" />
-              </div>
-              Payment Method
-              <div className="ml-auto text-sm bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-3 py-1 rounded-full animate-bounce">
-                Secure Payment ✓
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="animate-fade-in">
-              <div className="flex items-center space-x-3 p-4 border-2 border-purple-200 dark:border-purple-800 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 hover:scale-105 transition-transform duration-300 animate-bounce">
-                <RadioGroupItem value="ziina" id="ziina" className="border-purple-500" />
-                <Label htmlFor="ziina" className="flex items-center gap-3 cursor-pointer flex-1">
-                  <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-full animate-spin">
-                    <Smartphone className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <span className="text-purple-700 dark:text-purple-300 font-semibold">Ziina (UAE)</span>
-                    <p className="text-xs text-purple-600 dark:text-purple-400">Secure payment gateway for UAE</p>
-                  </div>
-                </Label>
-              </div>
-            </RadioGroup>
-
-            {paymentMethod === "ziina" && (
-              <div className="animate-slide-in-up">
-                <ZiinaPayment
-                  amount={subtotal}
-                  items={items}
-                  shippingData={shippingData}
-                  onSuccess={handlePaymentSuccess}
-                  onError={handlePaymentError}
-                />
-              </div>
+        <div className="lg:col-span-1 space-y-6">
+          <OrderSummary items={items} deliveryCost={selectedDelivery?.price || 0} />
+          <Button 
+            type="submit" 
+            className="w-full py-3 text-lg" 
+            disabled={isLoading || (paymentMethod !== 'cod' && finalAmount > 0)} // Disable if payment handled by gateway
+          >
+            {isLoading ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <ShoppingBag className="mr-2 h-5 w-5" />
             )}
-          </CardContent>
-        </Card>
-      </div>
+            {paymentMethod === 'cod' || finalAmount === 0 ? 'Place Order' : `Proceed to ${paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1)}`}
+          </Button>
+        </div>
+      </form>
     </div>
   );
 };
