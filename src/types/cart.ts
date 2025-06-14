@@ -8,7 +8,13 @@ export interface CartItem {
   image_url?: string;
   images?: string[];
   slug?: string;
-  customization?: any; // <-- make customization optional & allow any
+  customization?: {
+    text?: string;
+    position?: string;
+    fontSize?: string;
+    color?: string;
+    imageUrl?: string;
+  };
 }
 
 export interface CartContextType {
@@ -19,6 +25,11 @@ export interface CartContextType {
   clearCart: () => void;
   getItemCount: () => number;
   getTotalPrice: () => number;
-  subtotal?: number;
-  itemCount?: number;
+  subtotal: number;
+  itemCount: number;
+  isOpen: boolean;
+  toggleCart: () => void;
+  totalItems: number;
+  totalPrice: number;
+  removeItem: (productId: string) => void;
 }

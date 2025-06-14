@@ -1,78 +1,80 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 interface WishlistItem {
   id: string;
-  product_id: string;
   name: string;
   price: number;
   image_url?: string;
+  slug?: string;
 }
 
 interface WishlistContextType {
   items: WishlistItem[];
-  addToWishlist: (item: Omit<WishlistItem, "id">) => void;
-  removeFromWishlist: (productId: string) => void;
-  isInWishlist: (productId: string) => boolean;
+  addToWishlist: (item: WishlistItem) => void;
+  removeFromWishlist: (id: string) => void;
+  isInWishlist: (id: string) => boolean;
   clearWishlist: () => void;
 }
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
-interface WishlistProviderProps {
-  children: ReactNode;
-}
-
-export const WishlistProvider: React.FC<WishlistProviderProps> = ({ children }) => {
+export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<WishlistItem[]>([]);
+  const { toast } = useToast();
 
-  useEffect(() => {
-    const savedWishlist = localStorage.getItem('wishlist');
-    if (savedWishlist) {
-      try {
-        setItems(JSON.parse(savedWishlist));
-      } catch (error) {
-        console.error('Error loading wishlist from localStorage:', error);
+  const addToWishlist = (item: WishlistItem) => {
+    setItems(prev => {
+      if (prev.find(i => i.id === item.id)) {
+        toast({
+          title: "Already in wishlist",
+          description: `${item.name} is already in your wishlist`,
+          variant: "destructive",
+        });
+        return prev;
       }
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('wishlist', JSON.stringify(items));
-  }, [items]);
-
-  const addToWishlist = (item: Omit<WishlistItem, "id">) => {
-    setItems(prevItems => {
-      const existingItem = prevItems.find(i => i.product_id === item.product_id);
-      if (existingItem) {
-        return prevItems;
-      }
-      return [...prevItems, { ...item, id: Date.now().toString() }];
+      toast({
+        title: "Added to wishlist",
+        description: `${item.name} has been added to your wishlist`,
+      });
+      return [...prev, item];
     });
   };
 
-  const removeFromWishlist = (productId: string) => {
-    setItems(prevItems => prevItems.filter(item => item.product_id !== productId));
+  const removeFromWishlist = (id: string) => {
+    setItems(prev => {
+      const item = prev.find(i => i.id === id);
+      if (item) {
+        toast({
+          title: "Removed from wishlist",
+          description: `${item.name} has been removed from your wishlist`,
+        });
+      }
+      return prev.filter(i => i.id !== id);
+    });
   };
 
-  const isInWishlist = (productId: string) => {
-    return items.some(item => item.product_id === productId);
+  const isInWishlist = (id: string) => {
+    return items.some(item => item.id === id);
   };
 
   const clearWishlist = () => {
     setItems([]);
-  };
-
-  const value: WishlistContextType = {
-    items,
-    addToWishlist,
-    removeFromWishlist,
-    isInWishlist,
-    clearWishlist
+    toast({
+      title: "Wishlist cleared",
+      description: "All items have been removed from your wishlist",
+    });
   };
 
   return (
-    <WishlistContext.Provider value={value}>
+    <WishlistContext.Provider value={{
+      items,
+      addToWishlist,
+      removeFromWishlist,
+      isInWishlist,
+      clearWishlist
+    }}>
       {children}
     </WishlistContext.Provider>
   );

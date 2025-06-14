@@ -30,26 +30,18 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
   const { addToCart, items } = useCart();
   const { toast } = useToast();
 
-  const isInCart = items.some(item => 
-    item.product_id === product.id && 
-    JSON.stringify(item.customization) === JSON.stringify(customization)
-  );
+  const isInCart = items.some(item => item.product_id === product.id);
 
   const handleAddToCart = async () => {
     setLoading(true);
     try {
-      addToCart({
+      await addToCart({
         product_id: product.id,
         name: product.name,
         price: product.price,
         quantity,
         image_url: product.image_url || (Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : undefined),
         customization
-      });
-      
-      toast({
-        title: "Added to cart",
-        description: `${product.name} has been added to your cart.`,
       });
     } catch (error) {
       toast({

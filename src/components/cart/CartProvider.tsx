@@ -10,6 +10,7 @@ interface CartProviderProps {
 
 export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     const savedCart = localStorage.getItem('cart');
@@ -28,11 +29,11 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
   const addToCart = (item: Omit<CartItem, "id">) => {
     setItems(prevItems => {
-      const existingItem = prevItems.find(i => i.product_id === item.product_id && JSON.stringify(i.customization) === JSON.stringify(item.customization));
+      const existingItem = prevItems.find(i => i.product_id === item.product_id);
       
       if (existingItem) {
         return prevItems.map(i => 
-          i.product_id === item.product_id && JSON.stringify(i.customization) === JSON.stringify(item.customization)
+          i.product_id === item.product_id 
             ? { ...i, quantity: i.quantity + item.quantity }
             : i
         );
@@ -44,6 +45,10 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
   const removeFromCart = (productId: string) => {
     setItems(prevItems => prevItems.filter(item => item.product_id !== productId));
+  };
+
+  const removeItem = (productId: string) => {
+    removeFromCart(productId);
   };
 
   const updateQuantity = (productId: string, quantity: number) => {
@@ -73,20 +78,30 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     return items.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
-  // Provide these for convenience
+  const toggleCart = () => {
+    setIsOpen(!isOpen);
+  };
+
   const subtotal = getTotalPrice();
   const itemCount = getItemCount();
+  const totalItems = itemCount;
+  const totalPrice = subtotal;
 
   const value: CartContextType = {
     items,
     addToCart,
     removeFromCart,
+    removeItem,
     updateQuantity,
     clearCart,
     getItemCount,
     getTotalPrice,
     subtotal,
-    itemCount
+    itemCount,
+    isOpen,
+    toggleCart,
+    totalItems,
+    totalPrice
   };
 
   return (
