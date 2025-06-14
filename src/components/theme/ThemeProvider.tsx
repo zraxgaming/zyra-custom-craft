@@ -29,6 +29,11 @@ export function ThemeProvider({
   storageKey = "zyra-ui-theme",
   ...props
 }: ThemeProviderProps) {
+  // Add a log to check if ThemeProvider is mounting as expected
+  useEffect(() => {
+    console.log("[ThemeProvider] Mounted ThemeProvider");
+  }, []);
+
   const [theme, setTheme] = useState<Theme>(
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   );
