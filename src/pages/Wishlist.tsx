@@ -19,11 +19,11 @@ const Wishlist = () => {
   const handleAddToCart = async (item: any) => {
     try {
       await addToCart({
-        productId: item.product_id,
+        product_id: item.product_id,
         name: item.name,
         price: item.price,
         quantity: 1,
-        image: item.images?.[0] || '/placeholder-product.jpg'
+        image_url: item.images?.[0] || '/placeholder-product.jpg'
       });
     } catch (error) {
       console.error('Error adding to cart:', error);

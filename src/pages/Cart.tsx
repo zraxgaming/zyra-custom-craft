@@ -66,9 +66,9 @@ const Cart = () => {
                   className="flex items-center gap-4 p-6 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 animate-fade-in"
                 >
                   <div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden">
-                    {item.image ? (
+                    {item.image_url ? (
                       <img
-                        src={item.image}
+                        src={item.image_url}
                         alt={item.name}
                         className="w-full h-full object-cover"
                       />

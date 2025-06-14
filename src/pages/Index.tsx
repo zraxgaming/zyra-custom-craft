@@ -56,7 +56,6 @@ const Index = () => {
 
   const handleAddToCart = (product: Product) => {
     addToCart({
-      id: `${product.id}-${Date.now()}`,
       product_id: product.id,
       name: product.name,
       price: product.price,

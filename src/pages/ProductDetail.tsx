@@ -13,7 +13,6 @@ import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Product } from "@/types/product";
-import { CartItem } from "@/types/cart";
 
 const ProductDetail = () => {
   const { slug } = useParams();
@@ -70,16 +69,15 @@ const ProductDetail = () => {
   const handleAddToCart = () => {
     if (!product) return;
 
-    const cartItem: Omit<CartItem, "id"> = {
-      productId: product.id,
+    addItem({
+      product_id: product.id,
       name: product.name,
       price: product.price,
-      image: product.images[0] || '/placeholder-product.jpg',
+      image_url: product.images[0] || '/placeholder-product.jpg',
       quantity: quantity,
       customization: product.is_customizable ? customization : undefined
-    };
+    });
 
-    addItem(cartItem);
     toast({
       title: "Added to Cart",
       description: `${quantity} ${product.name} added to your cart`,
@@ -195,42 +193,28 @@ const ProductDetail = () => {
                           {customization.text.length}/50 characters
                         </p>
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="custom-color" className="flex items-center gap-2">
                           <Palette className="h-4 w-4" />
                           Text Color
                         </Label>
-                        <div className="flex items-center gap-4 mt-2">
+                        <div className="flex items-center gap-3 mt-2">
                           <input
-                            id="custom-color"
                             type="color"
+                            id="custom-color"
                             value={customization.color}
                             onChange={(e) => setCustomization(prev => ({ ...prev, color: e.target.value }))}
-                            className="w-12 h-12 rounded-lg border border-gray-300 cursor-pointer hover-magnetic"
+                            className="w-12 h-12 border border-border rounded-lg cursor-pointer"
                           />
-                          <div className="flex-1">
-                            <Input
-                              value={customization.color}
-                              onChange={(e) => setCustomization(prev => ({ ...prev, color: e.target.value }))}
-                              placeholder="#000000"
-                              className="form-field"
-                            />
-                          </div>
+                          <Input
+                            value={customization.color}
+                            onChange={(e) => setCustomization(prev => ({ ...prev, color: e.target.value }))}
+                            placeholder="#000000"
+                            className="font-mono"
+                          />
                         </div>
                       </div>
-
-                      {customization.text && (
-                        <div className="p-4 bg-muted rounded-lg animate-fade-in">
-                          <p className="text-sm text-muted-foreground mb-2">Preview:</p>
-                          <p 
-                            style={{ color: customization.color }}
-                            className="text-lg font-medium"
-                          >
-                            {customization.text}
-                          </p>
-                        </div>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -238,15 +222,18 @@ const ProductDetail = () => {
 
               {/* Quantity and Add to Cart */}
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="quantity">Quantity</Label>
-                  <div className="flex items-center gap-4 mt-2">
+                <div className="flex items-center gap-4">
+                  <Label htmlFor="quantity" className="text-sm font-medium">
+                    Quantity:
+                  </Label>
+                  <div className="flex items-center border border-border rounded-lg">
                     <Button
-                      variant="outline"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="w-12 h-12 hover-magnetic"
+                      className="h-10 w-10"
                     >
-                      -
+                      <Minus className="h-4 w-4" />
                     </Button>
                     <Input
                       id="quantity"
@@ -254,14 +241,15 @@ const ProductDetail = () => {
                       min="1"
                       value={quantity}
                       onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-20 text-center form-field"
+                      className="w-20 text-center border-0 focus-visible:ring-0"
                     />
                     <Button
-                      variant="outline"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => setQuantity(quantity + 1)}
-                      className="w-12 h-12 hover-magnetic"
+                      className="h-10 w-10"
                     >
-                      +
+                      <Plus className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -269,40 +257,46 @@ const ProductDetail = () => {
                 <div className="flex gap-4">
                   <Button
                     onClick={handleAddToCart}
-                    className="flex-1 btn-premium h-14 text-lg hover-ripple"
-                    size="lg"
+                    className="flex-1 h-12 text-lg hover:scale-105 transition-transform"
+                    disabled={!product.in_stock}
                   >
                     <ShoppingCart className="h-5 w-5 mr-2" />
-                    Add to Cart - ${(product.price * quantity).toFixed(2)}
+                    {product.in_stock ? `Add to Cart - $${(product.price * quantity).toFixed(2)}` : 'Out of Stock'}
                   </Button>
-                  <Button variant="outline" size="lg" className="h-14 hover-magnetic">
+                  
+                  <Button variant="outline" size="icon" className="h-12 w-12 hover:scale-105 transition-transform">
                     <Heart className="h-5 w-5" />
                   </Button>
-                  <Button variant="outline" size="lg" className="h-14 hover-magnetic">
+                  
+                  <Button variant="outline" size="icon" className="h-12 w-12 hover:scale-105 transition-transform">
                     <Share2 className="h-5 w-5" />
                   </Button>
                 </div>
               </div>
 
               {/* Product Details */}
-              <Card className="animate-fade-in">
+              <Card>
                 <CardContent className="p-6">
                   <h3 className="text-lg font-semibold mb-4">Product Details</h3>
                   <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">SKU:</span>
-                      <span>{product.sku || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Category:</span>
-                      <span>{product.category || 'General'}</span>
-                    </div>
+                    {product.sku && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">SKU:</span>
+                        <span>{product.sku}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Stock:</span>
                       <span className={product.in_stock ? 'text-green-600' : 'text-red-600'}>
                         {product.in_stock ? 'In Stock' : 'Out of Stock'}
                       </span>
                     </div>
+                    {product.category && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Category:</span>
+                        <span>{product.category}</span>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

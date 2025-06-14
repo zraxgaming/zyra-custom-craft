@@ -71,7 +71,7 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
 
       const orderItems = items.map(item => ({
         order_id: order.id,
-        product_id: item.id,
+        product_id: item.product_id,
         quantity: item.quantity,
         price: item.price
       }));
@@ -128,13 +128,6 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
     });
   };
 
-  const orderData = {
-    ...formData,
-    items,
-    subtotal,
-    user_id: user?.id
-  };
-
   return (
     <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-8">
       {/* Order Summary */}
@@ -149,9 +142,9 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
           {items.map((item, index) => (
             <div key={`${item.id}-${index}`} className="flex items-center gap-3 p-3 bg-white/60 dark:bg-gray-800/60 rounded-lg backdrop-blur-sm animate-slide-in-up" style={{animationDelay: `${index * 100}ms`}}>
               <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 rounded-lg flex items-center justify-center overflow-hidden">
-                {item.image ? (
+                {item.image_url ? (
                   <img
-                    src={item.image}
+                    src={item.image_url}
                     alt={item.name}
                     className="w-full h-full object-cover"
                   />
@@ -295,7 +288,6 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({
             {paymentMethod === "ziina" && (
               <ZiinaPayment
                 amount={subtotal}
-                orderData={orderData}
                 onSuccess={handlePaymentSuccess}
                 onError={handlePaymentError}
               />

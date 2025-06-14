@@ -10,15 +10,14 @@ interface WishlistItem {
   name: string;
   price: number;
   images?: string[];
-  created_at: string;
 }
 
 interface WishlistContextType {
   items: WishlistItem[];
+  isLoading: boolean;
   addToWishlist: (productId: string) => Promise<void>;
   removeFromWishlist: (productId: string) => Promise<void>;
   isInWishlist: (productId: string) => boolean;
-  isLoading: boolean;
 }
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
@@ -43,12 +42,11 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from('wishlist')
+        .from('wishlists')
         .select(`
           id,
           product_id,
-          created_at,
-          products!wishlist_product_id_fkey (
+          products!wishlists_product_id_fkey (
             name,
             price,
             images
@@ -63,8 +61,9 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
         product_id: item.product_id,
         name: item.products?.name || 'Unknown Product',
         price: item.products?.price || 0,
-        images: Array.isArray(item.products?.images) ? item.products.images.filter(img => typeof img === 'string') as string[] : [],
-        created_at: item.created_at
+        images: Array.isArray(item.products?.images) 
+          ? item.products.images.filter((img): img is string => typeof img === 'string')
+          : []
       }));
 
       setItems(wishlistItems);
@@ -78,8 +77,8 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
   const addToWishlist = async (productId: string) => {
     if (!user) {
       toast({
-        title: "Please sign in",
-        description: "You need to be signed in to add items to wishlist",
+        title: "Sign in required",
+        description: "Please sign in to add items to your wishlist",
         variant: "destructive",
       });
       return;
@@ -87,18 +86,15 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     try {
       const { error } = await supabase
-        .from('wishlist')
-        .insert({
-          user_id: user.id,
-          product_id: productId
-        });
+        .from('wishlists')
+        .insert({ user_id: user.id, product_id: productId });
 
       if (error) throw error;
 
       await loadWishlist();
       
       toast({
-        title: "Added to wishlist ❤️",
+        title: "Added to wishlist",
         description: "Item has been added to your wishlist",
       });
     } catch (error) {
@@ -116,14 +112,14 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     try {
       const { error } = await supabase
-        .from('wishlist')
+        .from('wishlists')
         .delete()
         .eq('user_id', user.id)
         .eq('product_id', productId);
 
       if (error) throw error;
 
-      setItems(prev => prev.filter(item => item.product_id !== productId));
+      await loadWishlist();
       
       toast({
         title: "Removed from wishlist",
@@ -141,10 +137,10 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
   return (
     <WishlistContext.Provider value={{
       items,
+      isLoading,
       addToWishlist,
       removeFromWishlist,
-      isInWishlist,
-      isLoading
+      isInWishlist
     }}>
       {children}
     </WishlistContext.Provider>

@@ -40,7 +40,6 @@ const AdminProducts = () => {
         is_customizable: product.is_customizable || false,
         is_digital: product.is_digital || false,
         stock_quantity: product.stock_quantity || 0,
-        customization_options: product.customization_options || {},
         is_published: product.status === 'published'
       }));
 
