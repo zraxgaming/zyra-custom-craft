@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -133,7 +132,7 @@ const Cart = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => removeFromCart(item.id)}
+                            onClick={() => removeFromCart(item.product_id)}
                             className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-300 hover:scale-110"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -160,7 +159,7 @@ const Cart = () => {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                              onClick={() => handleQuantityChange(item.product_id, item.quantity - 1)}
                               className="h-8 w-8 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-all duration-300 hover:scale-110"
                             >
                               <Minus className="h-3 w-3" />
@@ -171,7 +170,7 @@ const Cart = () => {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                              onClick={() => handleQuantityChange(item.product_id, item.quantity + 1)}
                               className="h-8 w-8 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-all duration-300 hover:scale-110"
                             >
                               <Plus className="h-3 w-3" />
@@ -202,7 +201,7 @@ const Cart = () => {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
                       <span className="text-muted-foreground">Items ({itemCount})</span>
-                      <span className="font-semibold">${subtotal.toFixed(2)}</span>
+                      <span className="font-semibold">${subtotal?.toFixed(2)}</span>
                     </div>
                     
                     <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
@@ -218,7 +217,7 @@ const Cart = () => {
                     <div className="flex justify-between items-center py-4">
                       <span className="text-xl font-bold">Total</span>
                       <span className="text-2xl font-bold text-purple-600 animate-pulse">
-                        ${subtotal.toFixed(2)}
+                        ${subtotal?.toFixed(2)}
                       </span>
                     </div>
                   </div>

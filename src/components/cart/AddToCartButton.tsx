@@ -30,7 +30,7 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
   const { addToCart, items } = useCart();
   const { toast } = useToast();
 
-  const isInCart = items.some(item => item.product_id === product.id);
+  const isInCart = items.some(item => item.product_id === product.id && JSON.stringify(item.customization) === JSON.stringify(customization));
 
   const handleAddToCart = async () => {
     setLoading(true);

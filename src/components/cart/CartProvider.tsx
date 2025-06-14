@@ -28,11 +28,11 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
   const addToCart = (item: Omit<CartItem, "id">) => {
     setItems(prevItems => {
-      const existingItem = prevItems.find(i => i.product_id === item.product_id);
+      const existingItem = prevItems.find(i => i.product_id === item.product_id && JSON.stringify(i.customization) === JSON.stringify(item.customization));
       
       if (existingItem) {
         return prevItems.map(i => 
-          i.product_id === item.product_id 
+          i.product_id === item.product_id && JSON.stringify(i.customization) === JSON.stringify(item.customization)
             ? { ...i, quantity: i.quantity + item.quantity }
             : i
         );
@@ -73,6 +73,10 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     return items.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
+  // Provide these for convenience
+  const subtotal = getTotalPrice();
+  const itemCount = getItemCount();
+
   const value: CartContextType = {
     items,
     addToCart,
@@ -80,7 +84,9 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     updateQuantity,
     clearCart,
     getItemCount,
-    getTotalPrice
+    getTotalPrice,
+    subtotal,
+    itemCount
   };
 
   return (

@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart, Trash2, Plus, Minus } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const CartDrawer = () => {
-  const { isOpen, toggleCart, items, updateQuantity, removeFromCart, totalItems, totalPrice } = useCart();
+const CartDrawer = ({ isOpen, toggleCart }: { isOpen: boolean; toggleCart: () => void }) => {
+  const { items, updateQuantity, removeFromCart, itemCount, getTotalPrice } = useCart();
 
   return (
     <Sheet open={isOpen} onOpenChange={toggleCart}>
@@ -15,7 +15,7 @@ const CartDrawer = () => {
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <ShoppingCart className="h-5 w-5" />
-            Shopping Cart ({totalItems})
+            Shopping Cart ({itemCount})
           </SheetTitle>
         </SheetHeader>
         
@@ -39,7 +39,7 @@ const CartDrawer = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => updateQuantity(item.id, Math.max(0, item.quantity - 1))}
+                        onClick={() => updateQuantity(item.product_id, Math.max(0, item.quantity - 1))}
                       >
                         <Minus className="h-3 w-3" />
                       </Button>
@@ -47,14 +47,14 @@ const CartDrawer = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
                       >
                         <Plus className="h-3 w-3" />
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => removeFromCart(item.id)}
+                        onClick={() => removeFromCart(item.product_id)}
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -65,7 +65,7 @@ const CartDrawer = () => {
               
               <div className="border-t pt-4">
                 <div className="flex justify-between items-center mb-4">
-                  <span className="font-semibold">Total: ${totalPrice.toFixed(2)}</span>
+                  <span className="font-semibold">Total: ${getTotalPrice().toFixed(2)}</span>
                 </div>
                 <div className="space-y-2">
                   <Button asChild className="w-full">

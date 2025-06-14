@@ -5,7 +5,7 @@ const BLAND_AI_API_KEY = 'org_85d4c78a825687942dd8a681be965e93a9b8197ed045696d40
 
 interface PhoneCallData {
   phone_number: string;
-  task: string;
+  task?: string;
   voice?: string;
   max_duration?: number;
   language?: string;
@@ -31,8 +31,8 @@ export const makePhoneCall = async (callData: PhoneCallData) => {
     language: callData.language || "en",
     background_track: "none",
     endpoint: "https://api.bland.ai",
-    voicemail_action: "ignore",
-    task: callData.task
+    voicemail_action: "hangup",
+    ...(callData.task && { task: callData.task })
   };
 
   try {
