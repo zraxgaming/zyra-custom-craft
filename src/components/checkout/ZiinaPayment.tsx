@@ -5,9 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Smartphone, Loader2 } from "lucide-react";
 
 interface ZiinaPaymentProps {
-  amount: number; // Total amount in AED
-  onInitiatePayment: () => Promise<void>; // Callback to start the payment process
-  isProcessing: boolean; // Loading state from parent
+  amount: number; 
+  onInitiatePayment: () => Promise<void>; 
+  isProcessing: boolean; 
 }
 
 const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
@@ -25,7 +25,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
           </div>
           
           <p className="text-gray-600 dark:text-gray-300">
-            Pay securely with Ziina - UAE's leading digital wallet. You will be redirected.
+            Pay securely with Ziina. You will be redirected to complete the payment.
           </p>
           
           <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">

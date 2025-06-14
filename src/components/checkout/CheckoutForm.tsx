@@ -8,14 +8,14 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useCart } from '@/components/cart/CartProvider';
-import { useAuth, AuthContextType, Profile as AuthProfile } from '@/contexts/AuthContext'; // Assuming Profile is exported
+import { useAuth, AuthContextType, Profile as AuthProfile } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ShoppingBag, CreditCard, Truck, UserCircle, Gift, Smartphone } from 'lucide-react';
 import OrderSummary from './OrderSummary';
-import CouponForm from './CouponForm'; // Assuming CouponFormProps: onCouponApply, onCouponRemove, orderTotal, appliedCouponCode?
-import GiftCardForm from './GiftCardForm'; // Assuming GiftCardFormProps: onGiftCardApply, onGiftCardRemove, orderTotal, appliedGiftCardCode?
-import DeliveryOptions, { DeliveryOption as DeliveryOptionType } from './DeliveryOptions'; // Use type import if it's a type, or check export
+import CouponForm from './CouponForm';
+import GiftCardForm from './GiftCardForm';
+import DeliveryOptions, { DeliveryOption as DeliveryOptionType } from './DeliveryOptions';
 import ZiinaPayment from './ZiinaPayment';
 import { CartItem } from '@/types/cart';
 
@@ -40,25 +40,25 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
   const { 
     items, 
     clearCart, 
-    totalPrice, // This is subtotal - coupon_discount
-    subtotal, // This is raw subtotal of items
+    totalPrice, 
+    subtotal, 
     applyCoupon, 
     appliedCoupon, 
     removeCoupon, 
     applyGiftCard, 
     appliedGiftCard,
-    removeGiftCard, // Added removeGiftCard
-    giftCardAmount, // Amount of gift card applied
-    discount, // Amount of coupon discount
+    removeGiftCard,
+    giftCardAmount,
+    discount, 
   } = useCart();
   const { user, profile } = useAuth() as AuthContextType & { profile: AuthProfile | null };
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'ziina' | 'cod'>('ziina'); // Default to ziina
+  const [paymentMethod, setPaymentMethod] = useState<'ziina' | 'cod'>('ziina');
   const [selectedDelivery, setSelectedDelivery] = useState<DeliveryOptionType | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
-  const { control, handleSubmit, setValue, getValues, formState: { errors } } = useForm<AddressFormData>({
+  const { control, handleSubmit, setValue, getValues, formState: { errors }, trigger } = useForm<AddressFormData>({
     resolver: zodResolver(addressSchema),
     defaultValues: {
       firstName: '',
@@ -68,7 +68,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
       address: '',
       city: '',
       zipCode: '',
-      country: 'UAE', // Default country
+      country: 'UAE',
     },
   });
 
@@ -83,8 +83,6 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
     }
   }, [user, profile, setValue]);
 
-  // totalPrice from useCart = subtotal - coupon discount
-  // finalAmount is after gift card is also applied to totalPrice
   const orderTotalAfterDiscounts = totalPrice - giftCardAmount;
   const finalAmountWithDelivery = orderTotalAfterDiscounts + (selectedDelivery?.price || 0);
 
@@ -117,7 +115,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
 
     const orderPayload = {
       user_id: user?.id,
-      profile_id: profile?.id, // Make sure profile type matches DB
+      profile_id: profile?.id, 
       items: items.map(item => ({
         product_id: item.product_id,
         quantity: item.quantity,
@@ -164,9 +162,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
     if (paymentMethod === 'cod' || finalAmountWithDelivery === 0) {
       try {
         const orderId = await createOrderForPaymentGateway(data, 'cod');
-        // For COD, payment_status remains 'pending', status becomes 'processing' or similar after order creation
          await supabase.from('orders').update({ status: 'processing', payment_status: 'pending_cod' }).eq('id', orderId);
-        await handleSuccessfulOrderPlacement(orderId, false); // paymentConfirmed is false for COD initially
+        await handleSuccessfulOrderPlacement(orderId, false);
       } catch (error: any) {
         console.error("Error placing COD order:", error);
         toast({
@@ -178,16 +175,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
         setIsLoading(false);
       }
     } else if (paymentMethod === 'ziina') {
-      // Ziina payment will be handled by the ZiinaPayment component's trigger
-      // The button type should not be "submit" for Ziina if it's handled by a separate component interaction
-      // Or, this onSubmit can trigger the Ziina flow if the button is indeed submit.
-      // For now, let's assume the ZiinaPayment component itself will trigger the flow.
-      // So, if paymentMethod is 'ziina', the main form submission button might be disabled or say "Proceed to Payment"
-      // and actual submission to Ziina happens through the ZiinaPayment component.
-      // The form data (address etc.) needs to be valid before proceeding to Ziina.
-      toast({ title: "Proceeding to Ziina", description: "You will be redirected to complete your payment."});
-      setIsLoading(false); // Stop form loading, ZiinaPayment will handle its own loading state
-      // The ZiinaPayment component should be visible and interactive at this point.
+      toast({ title: "Proceeding to Ziina", description: "Please complete your shipping details and click 'Pay with Ziina'."});
+      setIsLoading(false); 
     }
   };
 
@@ -211,8 +200,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
       return;
     }
     
-    // Validate form before proceeding
-    const isValid = await control.trigger();
+    const isValid = await trigger();
     if (!isValid) {
         toast({ title: "Form Invalid", description: "Please fill in all required shipping details.", variant: "destructive" });
         return;
@@ -221,26 +209,18 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
     setIsProcessingPayment(true);
     try {
       const orderId = await createOrderForPaymentGateway(formData, 'ziina');
-      
-      // Amount must be in fils for Ziina (AED * 100)
       const amountInFils = Math.round(finalAmountWithDelivery * 100);
 
-      const { data: paymentIntentData, error: paymentIntentError } = await supabase.functions.invoke('ziina-payment', {
-        body: {
-          amount: amountInFils,
-          currency_code: 'AED',
-          message: `Order #${orderId}`,
-          success_url: `${window.location.origin}/order-success/${orderId}`,
-          cancel_url: `${window.location.origin}/checkout?order_id=${orderId}&status=cancelled`,
-          failure_url: `${window.location.origin}/checkout?order_id=${orderId}&status=failed`,
-          order_id: orderId,
-        }
-      });
+      console.log("Attempting to invoke Ziina payment function for order:", orderId);
+      const paymentIntentData: any = { error: "Ziina Edge Function to be removed." }; 
+      const paymentIntentError: any = true;
 
-      if (paymentIntentError) throw paymentIntentError;
+      if (paymentIntentError) {
+        console.error("Ziina payment intent error (function to be removed):", paymentIntentData?.error || "Unknown error");
+        throw new Error(paymentIntentData?.error || 'Failed to initiate Ziina payment (function pending removal).');
+      }
 
       if (paymentIntentData.payment_url) {
-        // Update order with Ziina payment ID if available
         if (paymentIntentData.payment_id) {
             await supabase
             .from('orders')
@@ -251,7 +231,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
         }
         window.location.href = paymentIntentData.payment_url;
       } else {
-        throw new Error(paymentIntentData.error || 'Failed to get Ziina payment URL.');
+        throw new Error(paymentIntentData.error || 'Failed to get Ziina payment URL (function pending removal).');
       }
     } catch (error: any) {
       console.error('Ziina payment initiation error:', error);
@@ -305,9 +285,9 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
               <AccordionContent className="pt-4">
                 <DeliveryOptions 
                   selectedOption={selectedDelivery} 
-                  onSelect={setSelectedDelivery} // Corrected prop name assuming 'onSelect'
+                  onSelectOption={setSelectedDelivery} // Corrected prop name to onSelectOption
                 />
-                {!selectedDelivery && errors && <p className="text-red-500 text-sm mt-1">Please select a delivery option.</p>}
+                {!selectedDelivery && (errors as any)?.delivery && <p className="text-red-500 text-sm mt-1">Please select a delivery option.</p>}
               </AccordionContent>
             </AccordionItem>
 
@@ -322,7 +302,6 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
                 <Card>
                   <CardContent className="pt-6 space-y-4">
                     <div className="flex gap-4">
-                      {/* Removed PayPal Button */}
                       <Button variant={paymentMethod === 'ziina' ? 'default' : 'outline'} onClick={() => setPaymentMethod('ziina')} className="flex-1">
                         <Smartphone className="mr-2 h-4 w-4"/> Ziina
                       </Button>
@@ -331,11 +310,9 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
                     
                     {paymentMethod === 'ziina' && finalAmountWithDelivery > 0 && (
                       <ZiinaPayment
-                        amount={finalAmountWithDelivery} // Pass final amount with delivery
+                        amount={finalAmountWithDelivery}
                         onInitiatePayment={handleZiinaPaymentInitiation}
                         isProcessing={isProcessingPayment}
-                        // Removed onSuccess and onError as ZiinaPayment will now trigger a redirect or show errors itself
-                        // The actual success is handled on the redirect page /order-success/:orderId
                       />
                     )}
                     {paymentMethod === 'cod' && (
@@ -358,15 +335,14 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
                 <CouponForm 
                   onCouponApply={applyCoupon}
                   onCouponRemove={removeCoupon}
-                  orderTotal={subtotal} // Pass subtotal before any discounts for coupon calculation
-                  appliedCouponCode={appliedCoupon?.code}
+                  orderTotal={subtotal}
+                  appliedCoupon={appliedCoupon}
                 />
                 <GiftCardForm 
                   onGiftCardApply={applyGiftCard}
-                  onGiftCardRemove={removeGiftCard} // Added removeGiftCard
-                  orderTotal={totalPrice} // Pass total after coupon, before gift card
-                  appliedGiftCardCode={appliedGiftCard?.code}
-                  // remainingAmountAfterGiftCard={orderTotalAfterDiscounts} // Pass if needed by GiftCardForm
+                  onGiftCardRemove={removeGiftCard}
+                  orderTotal={totalPrice}
+                  appliedGiftCard={appliedGiftCard}
                 />
               </AccordionContent>
             </AccordionItem>
@@ -378,9 +354,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
           <Button 
             type="submit" 
             className="w-full py-3 text-lg" 
-            // Button is disabled if form is loading OR if payment method is Ziina (handled by ZiinaPayment component)
-            // and amount is > 0
-            disabled={isLoading || (paymentMethod === 'ziina' && finalAmountWithDelivery > 0)} 
+            disabled={isLoading || (paymentMethod === 'ziina' && finalAmountWithDelivery > 0 && !isProcessingPayment)} 
           >
             {isLoading ? (
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -391,7 +365,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
           </Button>
           {paymentMethod === 'ziina' && finalAmountWithDelivery > 0 && !isLoading && (
              <p className="text-center text-sm text-muted-foreground">
-                After filling details, click "Pay with Ziina" above.
+                After filling details, click "Pay with Ziina" in the payment section above.
              </p>
           )}
         </div>

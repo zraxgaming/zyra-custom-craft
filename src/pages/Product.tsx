@@ -22,7 +22,7 @@ import SEOHead from '@/components/seo/SEOHead';
 import { useAuth } from '@/contexts/AuthContext';
 import ProductCustomizer from '@/components/products/ProductCustomizer';
 import { CartItemCustomization } from '@/types/cart';
-import { Json } from '@/integrations/supabase/types';
+// import { Json } from '@/integrations/supabase/types'; // Json type might not be needed here directly
 
 const ProductPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -53,12 +53,16 @@ const ProductPage = () => {
           .single();
 
         if (error) throw error;
-        setProduct(data as ProductType);
-        if (data && data.images && Array.isArray(data.images) && data.images.length > 0) {
-          const firstImage = data.images[0];
-          if (typeof firstImage === 'string') {
-            setSelectedImage(firstImage);
-          }
+        if (data) {
+            setProduct(data as ProductType);
+            if (data.images && Array.isArray(data.images) && data.images.length > 0) {
+              const firstImage = data.images[0];
+              if (typeof firstImage === 'string') {
+                setSelectedImage(firstImage);
+              }
+            }
+        } else {
+            setProduct(null);
         }
       } catch (error) {
         console.error('Error fetching product:', error);
@@ -72,7 +76,7 @@ const ProductPage = () => {
 
   const handleAddToCart = () => {
     if (!product) return;
-    if (product.is_customizable && !customization) {
+    if (product.is_customizable && product.customization_options && !customization) { // Check if customization_options exist
         toast({
             title: "Customization Required",
             description: "Please customize the product before adding to cart.",
@@ -89,11 +93,6 @@ const ProductPage = () => {
       customization: customization,
     });
     // toast is handled by CartProvider's addItem
-    // toast({
-    //   title: 'Added to cart',
-    //   description: `${product.name} (x${quantity}) added to your cart.`,
-    //   action: <Button variant="link" onClick={() => navigate('/cart')}>View Cart</Button>
-    // });
   };
 
   const handleQuantityChange = (amount: number) => {
@@ -105,12 +104,13 @@ const ProductPage = () => {
     const fullStars = Math.floor(rating);
     const halfStar = rating % 1 >= 0.5;
     const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
+    const reviewCount = (product as any)?.review_count || (product as any).reviews?.length || 0;
     return (
       <div className="flex items-center">
         {[...Array(fullStars)].map((_, i) => <Star key={`full-${i}`} className="h-5 w-5 fill-yellow-400 text-yellow-400" />)}
         {halfStar && <Star key="half" className="h-5 w-5 fill-yellow-400 text-yellow-400" style={{ clipPath: 'polygon(0 0, 50% 0, 50% 100%, 0 100%)' }} />}
         {[...Array(emptyStars)].map((_, i) => <Star key={`empty-${i}`} className="h-5 w-5 text-gray-300" />)}
-        <span className="ml-2 text-sm text-muted-foreground">({(product as any)?.review_count || 0} reviews)</span>
+        <span className="ml-2 text-sm text-muted-foreground">({reviewCount} reviews)</span>
       </div>
     );
   };
@@ -166,7 +166,7 @@ const ProductPage = () => {
       <SEOHead
         title={product.meta_title || product.name}
         description={product.meta_description || product.short_description || ''}
-        image={productImages[0]}
+        image={productImages[0]} // Assuming SEOHead expects 'image' not 'imageUrl'
       />
       <Navbar />
       <div className="container mx-auto px-4 py-8">
@@ -207,7 +207,7 @@ const ProductPage = () => {
           {/* Product Details */}
           <div className="space-y-6">
             <div>
-              {product.category_id && typeof product.category_id === 'object' && (
+              {product.category_id && typeof product.category_id === 'object' && 'slug' in product.category_id && (
                 <Link to={`/categories/${(product.category_id as any).slug}`} className="text-sm text-primary hover:underline">
                   {(product.category_id as any).name}
                 </Link>
@@ -224,11 +224,14 @@ const ProductPage = () => {
             
             <p className="text-muted-foreground leading-relaxed">{product.short_description || "No short description available."}</p>
 
-            {product.is_customizable && (
+            {product.is_customizable && product.customization_options && ( // Ensure customization_options exist before rendering
               <ProductCustomizer
                 productId={product.id}
-                customization={customization}
+                initialCustomization={customization} // Changed prop name
+                onSave={onCustomizationSave} // Added onSave prop
                 productName={product.name}
+                // Assuming ProductCustomizerProps might need customizationOptions
+                // customizationOptions={product.customization_options} 
               />
             )}
 
@@ -283,8 +286,7 @@ const ProductPage = () => {
               <CardContent className="space-y-6">
                 <ProductReviews 
                   productId={product.id}
-                  // reviews prop removed due to TS2322 error
-                  // reviews={(product as any).reviews || []} 
+                  // reviews prop removed as it's not expected by ProductReviewsProps (likely fetches its own reviews)
                 />
                 <Separator />
                 {user ? (

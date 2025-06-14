@@ -6,9 +6,8 @@ export interface WishlistItem {
   created_at: string;
   name: string;
   price: number;
-  images: string[]; // Should be string array
-  slug: string; 
-  rating?: number; 
-  review_count?: number; 
+  images: string[];
+  slug: string; // Added
+  rating?: number; // Added
+  review_count?: number; // Added
 }
-
