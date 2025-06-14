@@ -30,9 +30,8 @@ import OrderFailed from "./pages/OrderFailed";
 import CategoryPage from "./pages/CategoryPage";
 import GiftCards from "./pages/GiftCards";
 import NotFound from "./pages/404";
-// Admin pages as needed
 
-// Use direct import of WishlistProvider (fix import bug)
+// Correct WishlistProvider import
 import { WishlistProvider } from "@/hooks/use-wishlist";
 
 const queryClient = new QueryClient();
@@ -51,7 +50,7 @@ const App = () => (
               <PushNotificationSetup />
               <BrowserRouter>
                 <Routes>
-                  {/* Redirect all "/" to "/home" */}
+                  {/* Redirect "/" to "/home" */}
                   <Route path="/" element={<Navigate to="/home" replace />} />
                   <Route path="/home" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />
@@ -72,9 +71,7 @@ const App = () => (
                   <Route path="/gift-cards" element={<GiftCards />} />
                   <Route path="/order-success/:orderId" element={<OrderSuccess />} />
                   <Route path="/order-failed" element={<OrderFailed />} />
-                  {/* Admin routes ... */}
-
-                  {/* 404 */}
+                  {/* 404 fallback */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>
