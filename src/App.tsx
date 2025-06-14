@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -31,8 +30,8 @@ import CategoryPage from "./pages/CategoryPage";
 import GiftCards from "./pages/GiftCards";
 import NotFound from "./pages/404";
 
-// Correct WishlistProvider import
-import { WishlistProvider } from "@/hooks/use-wishlist";
+// Correct WishlistProvider import from hooks/use-wishlist.tsx
+import { WishlistProvider } from "@/hooks/use-wishlist.tsx";
 
 const queryClient = new QueryClient();
 
