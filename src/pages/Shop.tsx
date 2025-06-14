@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -27,27 +28,41 @@ const Shop = () => {
   const [customizable, setCustomizable] = useState(false);
 
   const handleCategoryChange = (categoryId: string) => {
-    setSelectedCategories(prev => 
-      prev.includes(categoryId) 
+    setSelectedCategories(prev =>
+      prev.includes(categoryId)
         ? prev.filter(id => id !== categoryId)
         : [...prev, categoryId]
     );
   };
 
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategories.length === 0 || 
-                           selectedCategories.some(catId => {
-                             const category = categories.find(c => c.id === catId);
-                             return category && product.category === category.name;
-                           });
+    const matchesSearch =
+      product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory =
+      selectedCategories.length === 0 ||
+      selectedCategories.some(catId => {
+        // categories: [{ id, name, ... }], product.category_id (uuid) or product.category (name)
+        const category = categories.find(c => c.id === catId);
+        // Some products use category_id, some might use category name (mock data)
+        return (
+          (category && product.category_id === category.id) ||
+          (category && product.category && product.category === category.name)
+        );
+      });
     const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
-    const matchesStock = !inStock || product.in_stock;
-    const matchesFeatured = !featured || product.featured;
-    const matchesCustomizable = !customizable || product.is_customizable;
-    
-    return matchesSearch && matchesCategory && matchesPrice && matchesStock && matchesFeatured && matchesCustomizable;
+    const matchesStock = !inStock || product.in_stock === true;
+    const matchesFeatured = !featured || product.featured === true || product.is_featured === true;
+    const matchesCustomizable = !customizable || product.is_customizable === true;
+
+    return (
+      matchesSearch &&
+      matchesCategory &&
+      matchesPrice &&
+      matchesStock &&
+      matchesFeatured &&
+      matchesCustomizable
+    );
   });
 
   const sortedProducts = [...filteredProducts].sort((a, b) => {
@@ -73,7 +88,7 @@ const Shop = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
-        <SEOHead 
+        <SEOHead
           title="Shop - Zyra Custom Craft"
           description="Browse all premium personalized products available for customization and purchase."
         />
