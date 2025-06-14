@@ -42,17 +42,14 @@ const Shop = () => {
     const matchesCategory =
       selectedCategories.length === 0 ||
       selectedCategories.some(catId => {
-        // categories: [{ id, name, ... }], product.category_id (uuid) or product.category (name)
         const category = categories.find(c => c.id === catId);
-        // Some products use category_id, some might use category name (mock data)
         return (
-          (category && product.category_id === category.id) ||
-          (category && product.category && product.category === category.name)
+          (category && product.category === category.name)
         );
       });
     const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
     const matchesStock = !inStock || product.in_stock === true;
-    const matchesFeatured = !featured || product.featured === true || product.is_featured === true;
+    const matchesFeatured = !featured || product.featured === true;
     const matchesCustomizable = !customizable || product.is_customizable === true;
 
     return (
