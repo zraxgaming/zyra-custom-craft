@@ -43,6 +43,19 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       const ziinaApiKey = configData.value as string;
       const amountInFils = Math.round(amount * 100);
 
+      // Also get environment flag
+      const { data: envData } = await supabase
+        .from('site_config')
+        .select('value')
+        .eq('key', 'ziina_env')
+        .single();
+      const ziinaEnv = envData?.value ?? 'test';
+
+      // Choose endpoint:
+      const ziinaEndpoint = ziinaEnv === "prod"
+        ? 'https://api-v2.ziina.com/api/payment_intent'
+        : 'https://sandbox-api-v2.ziina.com/api/payment_intent';
+
       const body = {
         amount: amountInFils,
         currency_code: "AED",
@@ -54,7 +67,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 
       console.log("Initiating Ziina Payment with payload:", body);
 
-      const response = await fetch('https://api-v2.ziina.com/api/payment_intent', {
+      const response = await fetch(ziinaEndpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${ziinaApiKey}`,

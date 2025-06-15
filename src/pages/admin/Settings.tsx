@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +17,7 @@ interface SiteConfig {
   paypal_client_id: string;
   maintenance_mode: boolean;
   allow_registration: boolean;
+  ziina_env: string; // 'test' or 'prod'
 }
 
 const AdminSettings = () => {
@@ -31,6 +31,7 @@ const AdminSettings = () => {
     paypal_client_id: '',
     maintenance_mode: false,
     allow_registration: true,
+    ziina_env: 'test',
   });
   const { toast } = useToast();
 
@@ -59,6 +60,7 @@ const AdminSettings = () => {
         paypal_client_id: configObj.paypal_client_id || '',
         maintenance_mode: configObj.maintenance_mode || false,
         allow_registration: configObj.allow_registration !== false,
+        ziina_env: configObj.ziina_env || 'test',
       });
     } catch (error) {
       console.error('Error fetching config:', error);
@@ -195,6 +197,18 @@ const AdminSettings = () => {
                   onChange={(e) => setConfig(prev => ({ ...prev, paypal_client_id: e.target.value }))}
                   placeholder="Enter PayPal Client ID"
                 />
+              </div>
+              <div>
+                <Label htmlFor="ziina_env">Ziina Environment</Label>
+                <select
+                  id="ziina_env"
+                  value={config.ziina_env}
+                  onChange={(e) => setConfig(prev => ({ ...prev, ziina_env: e.target.value }))}
+                  className="mt-1 border rounded px-2 py-1"
+                >
+                  <option value="test">Test</option>
+                  <option value="prod">Production</option>
+                </select>
               </div>
             </CardContent>
           </Card>

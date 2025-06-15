@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useState,
@@ -26,11 +27,11 @@ export interface CartItem {
   image_url: string;
   name?: string;
   customization?: Json;
-  // Add other properties as needed
 }
 
 interface CartContextType {
   cart: CartItem[];
+  items: CartItem[];
   addToCart: (
     product: Omit<CartItem, "id" | "quantity" | "user_id">,
     quantity: number,
@@ -59,7 +60,7 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     if (user) {
       loadCartFromDb();
     } else {
-      setCart([]); // Clear cart when user logs out
+      setCart([]);
     }
   }, [user]);
 
@@ -72,17 +73,15 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         .eq("user_id", user?.id);
 
       if (!error && dbCart) {
-        setCart(dbCart.map(item => ({
-          ...item,
-          image_url: typeof item.image_url === "string" ? item.image_url : "",
-          customization: item.customization ?? {},
-          product_id: item.product_id ?? "",
-          user_id: item.user_id ?? "",
-          id: item.id,
-          quantity: item.quantity,
-          price: item.price,
-          // ... add all needed CartItem props as per your model
-        })));
+        setCart(
+          dbCart.map(item => ({
+            ...item,
+            price: (item as any).price || 0,
+            image_url: (item as any).image_url || "",
+            name: (item as any).name || "",
+            customization: (item as any).customization ?? {},
+          }))
+        );
       }
     } catch (err) {
       console.error("Error loading cart from database:", err);
@@ -123,7 +122,16 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         return;
       }
 
-      setCart((prevCart) => [...prevCart, data]);
+      setCart((prevCart) => [
+        ...prevCart,
+        {
+          ...data,
+          price: data.price || 0,
+          image_url: data.image_url || "",
+          name: data.name || "",
+          customization: data.customization ?? {},
+        } as CartItem
+      ]);
     } catch (err) {
       console.error("Error adding to cart:", err);
     }
@@ -192,6 +200,7 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
   const value: CartContextType = {
     cart,
+    items: cart,
     addToCart,
     removeFromCart,
     updateCartItem,
@@ -213,3 +222,5 @@ const useCart = () => {
 };
 
 export { CartProvider, useCart };
+
+// ... NOTE: This file is getting long, consider refactoring if more cart logic is needed!
