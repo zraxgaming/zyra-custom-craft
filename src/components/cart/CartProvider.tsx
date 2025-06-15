@@ -43,6 +43,13 @@ interface CartContextType {
   totalItems: () => number;
   totalPrice: () => number;
   isLoading: boolean;
+  subtotal: number;
+  discount: number;
+  giftCardAmount: number;
+  setCoupon: (coupon: any) => void;
+  setGiftCard: (giftCard: any) => void;
+  coupon: any;
+  giftCard: any;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -55,6 +62,8 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [coupon, setCoupon] = useState<any>(null);
+  const [giftCard, setGiftCard] = useState<any>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -203,12 +212,17 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }
   };
 
+  const subtotal = cart.reduce((acc, item) => acc + item.quantity * item.price, 0);
+  const discount = coupon
+    ? coupon.discount_type === "percentage"
+      ? subtotal * coupon.discount_value / 100
+      : coupon.discount_value
+    : 0;
+  const giftCardAmount = giftCard ? Math.min(giftCard.amount, subtotal - discount) : 0;
+  const totalCartPrice = () => subtotal - discount - giftCardAmount;
+
   const totalItems = () => {
     return cart.reduce((acc, item) => acc + item.quantity, 0);
-  };
-
-  const totalPrice = () => {
-    return cart.reduce((acc, item) => acc + item.quantity * item.price, 0);
   };
 
   const value: CartContextType = {
@@ -219,8 +233,15 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     updateCartItem,
     clearCart,
     totalItems,
-    totalPrice,
+    totalPrice: totalCartPrice,
     isLoading,
+    subtotal,
+    discount,
+    giftCardAmount,
+    setCoupon,
+    setGiftCard,
+    coupon,
+    giftCard,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

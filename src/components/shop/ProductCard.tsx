@@ -128,7 +128,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 1
               )
             }
-            className="flex-1 bg-gradient-to-r from-primary to-purple-600 text-white"
+            className={`flex-1 bg-gradient-to-r from-primary to-purple-600 text-white ${isInCart ? "opacity-60" : ""}`}
             disabled={!inStock}
             aria-label={isInCart ? "Added to Cart" : "Add to Cart"}
           >

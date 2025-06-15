@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,11 +7,23 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Container } from "@/components/ui/container";
 import CheckoutForm from "@/components/checkout/CheckoutForm";
-import SEOHead from "@/components/seo/SEOHead"; // Assuming default export
+import CouponForm from "@/components/checkout/CouponForm";
+import GiftCardForm from "@/components/checkout/GiftCardForm";
+import SEOHead from "@/components/seo/SEOHead";
 
 const Checkout = () => {
   const { user } = useAuth();
-  const { items, clearCart } = useCart(); // subtotal removed, will be from useCart in CheckoutForm
+  const {
+    items,
+    isLoading,
+    subtotal,
+    discount,
+    giftCardAmount,
+    setCoupon,
+    setGiftCard,
+    coupon,
+    giftCard,
+  } = useCart();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -18,24 +31,19 @@ const Checkout = () => {
       navigate('/auth?redirect=/checkout');
       return;
     }
-
-    // It's possible items might be an empty array briefly while loading
-    // This check could be deferred or made more robust if items load async for logged-in users
-    if (items.length === 0 && !useCart().loading) { 
+    if (!isLoading && items.length === 0) {
       navigate('/shop');
       return;
     }
-  }, [user, items, navigate, useCart().loading]);
+  }, [user, items, isLoading, navigate]);
 
   const handlePaymentSuccess = (orderId: string) => {
-    clearCart(); // This should also clear coupon/gift card from context if applicable
+    // clearCart will be triggered in the component after payment success
     navigate(`/order-success/${orderId}`);
   };
 
-  // Render a loader or minimal UI if user or items are not ready
-  if (!user || (items.length === 0 && !useCart().loading) ) {
-    // You might want a loading spinner here if useCart().loading is true
-    return null; 
+  if (!user || (items.length === 0 && !isLoading)) {
+    return null;
   }
 
   return (
@@ -54,14 +62,39 @@ const Checkout = () => {
               Complete your purchase securely
             </p>
           </div>
-          
-          {/* Correct: pass subtotal to CheckoutForm */}
-          <CheckoutForm
-            subtotal={typeof useCart().subtotal === "number" ? useCart().subtotal : 0}
-          />
+          <div className="grid md:grid-cols-4 gap-8">
+            <div className="md:col-span-3">
+              <CheckoutForm
+                subtotal={subtotal}
+                items={items}
+                onPaymentSuccess={handlePaymentSuccess}
+                deliveryOptions={[
+                  { label: "Home Delivery", value: "delivery" },
+                  { label: "Store Pickup", value: "pickup" },
+                ]}
+                paymentMethods={[
+                  { label: "Credit Card", value: "card" },
+                  { label: "Cash on Pickup", value: "cash" },
+                ]}
+              />
+            </div>
+            <div className="md:col-span-1 space-y-4">
+              <CouponForm
+                onCouponApply={setCoupon}
+                onCouponRemove={() => setCoupon(null)}
+                appliedCoupon={coupon}
+                orderTotal={subtotal}
+              />
+              <GiftCardForm
+                onGiftCardApply={setGiftCard}
+                onGiftCardRemove={() => setGiftCard(null)}
+                appliedGiftCard={giftCard}
+                orderTotal={subtotal - discount}
+              />
+            </div>
+          </div>
         </Container>
       </div>
-      
       <Footer />
     </div>
   );
