@@ -57,24 +57,24 @@ const Shop = () => {
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = !searchTerm || 
-                         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.short_description?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.short_description?.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesCategory = selectedCategories.length === 0 || 
-                           selectedCategories.some(catId => {
-                             const category = categories.find(c => c.id === catId);
-                             return category && (
-                               product.category === category.name || 
-                               product.category_id === category.id
-                             );
-                           });
-    
+      selectedCategories.some(catId => {
+        const category = categories.find(c => c.id === catId);
+        return category && (
+          product.category === category.name || 
+          (product.category_id && product.category_id === category.id)
+        );
+      });
+
     const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
     const matchesStock = !inStock || product.in_stock;
-    const matchesFeatured = !featured || product.is_featured;
+    const matchesFeatured = !featured || product.featured;
     const matchesCustomizable = !customizable || product.is_customizable;
-    
+
     return matchesSearch && matchesCategory && matchesPrice && matchesStock && matchesFeatured && matchesCustomizable;
   });
 

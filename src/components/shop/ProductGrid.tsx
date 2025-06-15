@@ -5,19 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Container } from "@/components/ui/container";
 import { Badge } from "@/components/ui/badge";
 import { Search, Package, Sparkles } from "lucide-react";
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  images: string[];
-  rating?: number;
-  review_count?: number;
-  is_new?: boolean;
-  discount_percentage?: number;
-  in_stock: boolean;
-  slug: string;
-}
+import { Product } from "@/hooks/use-products";
 
 interface ProductGridProps {
   products: Product[];
