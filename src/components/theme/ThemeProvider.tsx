@@ -29,9 +29,12 @@ export function ThemeProvider({
   storageKey = "zyra-ui-theme",
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
-  );
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem(storageKey) as Theme) || defaultTheme;
+    }
+    return defaultTheme;
+  });
 
   const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light">("light");
 
@@ -53,7 +56,6 @@ export function ThemeProvider({
     root.classList.add(effectiveTheme);
     setResolvedTheme(effectiveTheme);
 
-    // Listen for system theme changes when theme is set to system
     if (theme === "system") {
       const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
       const handleChange = () => {

@@ -5,35 +5,38 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Camera, CameraOff, RotateCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-// Remove jsqr import since it's causing issues - use a simpler approach
-// import jsQR from 'jsqr';
-
 interface EnhancedBarcodeScannerProps {
-  onScan: (data: string) => void;
-  isActive: boolean;
-  onToggle: () => void;
+  onScan?: (data: string) => void;
+  isActive?: boolean;
+  onToggle?: () => void;
 }
 
 const EnhancedBarcodeScanner: React.FC<EnhancedBarcodeScannerProps> = ({
-  onScan,
-  isActive,
-  onToggle,
+  onScan = () => {},
+  isActive = false,
+  onToggle = () => {},
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [scanning, setScanning] = useState(false);
+  const [internalActive, setInternalActive] = useState(isActive);
   const { toast } = useToast();
 
+  const handleToggle = () => {
+    setInternalActive(!internalActive);
+    onToggle();
+  };
+
   useEffect(() => {
-    if (isActive) {
+    if (internalActive) {
       startScanning();
     } else {
       stopScanning();
     }
 
     return () => stopScanning();
-  }, [isActive]);
+  }, [internalActive]);
 
   const startScanning = async () => {
     try {
@@ -79,10 +82,6 @@ const EnhancedBarcodeScanner: React.FC<EnhancedBarcodeScannerProps> = ({
       canvas.height = video.videoHeight;
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      // Simple barcode detection - for now just simulate scanning
-      // In a real implementation, you would use a proper barcode scanning library
-      // For demo purposes, clicking on the video will simulate a scan
-      
       requestAnimationFrame(scanFrame);
     } else {
       requestAnimationFrame(scanFrame);
@@ -90,7 +89,6 @@ const EnhancedBarcodeScanner: React.FC<EnhancedBarcodeScannerProps> = ({
   };
 
   const simulateScan = () => {
-    // Simulate scanning a barcode for demo purposes
     const mockBarcode = `SCAN_${Date.now()}`;
     onScan(mockBarcode);
     toast({
@@ -107,10 +105,10 @@ const EnhancedBarcodeScanner: React.FC<EnhancedBarcodeScannerProps> = ({
           <Button
             variant="outline"
             size="sm"
-            onClick={onToggle}
+            onClick={handleToggle}
             className="flex items-center gap-2"
           >
-            {isActive ? (
+            {internalActive ? (
               <>
                 <CameraOff className="h-4 w-4" />
                 Stop
@@ -125,7 +123,7 @@ const EnhancedBarcodeScanner: React.FC<EnhancedBarcodeScannerProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {isActive && (
+        {internalActive && (
           <div className="relative">
             <video
               ref={videoRef}
@@ -145,7 +143,7 @@ const EnhancedBarcodeScanner: React.FC<EnhancedBarcodeScannerProps> = ({
           </div>
         )}
         
-        {isActive && (
+        {internalActive && (
           <div className="text-center space-y-2">
             <p className="text-sm text-muted-foreground">
               Position barcode within the red frame

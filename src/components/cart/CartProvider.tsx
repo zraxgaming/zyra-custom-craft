@@ -11,6 +11,22 @@ interface CartContextType {
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
   subtotal: number;
+  // Additional properties that components are expecting
+  isOpen: boolean;
+  toggleCart: () => void;
+  addToCart: (item: Omit<CartItem, 'id'>) => void;
+  removeFromCart: (id: string) => void;
+  totalItems: number;
+  totalPrice: number;
+  loading: boolean;
+  discount: number;
+  applyCoupon: (code: string) => void;
+  appliedCoupon: string | null;
+  removeCoupon: () => void;
+  applyGiftCard: (code: string) => void;
+  appliedGiftCard: string | null;
+  removeGiftCard: () => void;
+  giftCardAmount: number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -29,6 +45,12 @@ interface CartProviderProps {
 
 export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [discount, setDiscount] = useState(0);
+  const [appliedGiftCard, setAppliedGiftCard] = useState<string | null>(null);
+  const [giftCardAmount, setGiftCardAmount] = useState(0);
   const { toast } = useToast();
 
   // Load cart from localStorage on mount
@@ -126,7 +148,60 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     localStorage.removeItem('cart');
   };
 
+  const toggleCart = () => {
+    setIsOpen(!isOpen);
+  };
+
+  const applyCoupon = (code: string) => {
+    // Mock coupon logic
+    if (code === 'SAVE10') {
+      setAppliedCoupon(code);
+      setDiscount(10);
+      toast({
+        title: "Coupon applied",
+        description: "10% discount applied to your order.",
+      });
+    } else {
+      toast({
+        title: "Invalid coupon",
+        description: "The coupon code you entered is not valid.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setDiscount(0);
+  };
+
+  const applyGiftCard = (code: string) => {
+    // Mock gift card logic
+    if (code === 'GIFT50') {
+      setAppliedGiftCard(code);
+      setGiftCardAmount(50);
+      toast({
+        title: "Gift card applied",
+        description: "$50 gift card applied to your order.",
+      });
+    } else {
+      toast({
+        title: "Invalid gift card",
+        description: "The gift card code you entered is not valid.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const removeGiftCard = () => {
+    setAppliedGiftCard(null);
+    setGiftCardAmount(0);
+  };
+
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const discountAmount = (subtotal * discount) / 100;
+  const totalPrice = Math.max(0, subtotal - discountAmount - giftCardAmount);
 
   return (
     <CartContext.Provider
@@ -137,6 +212,21 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         updateQuantity,
         clearCart,
         subtotal,
+        isOpen,
+        toggleCart,
+        addToCart: addItem, // Alias for addItem
+        removeFromCart: removeItem, // Alias for removeItem
+        totalItems,
+        totalPrice,
+        loading,
+        discount,
+        applyCoupon,
+        appliedCoupon,
+        removeCoupon,
+        applyGiftCard,
+        appliedGiftCard,
+        removeGiftCard,
+        giftCardAmount,
       }}
     >
       {children}
