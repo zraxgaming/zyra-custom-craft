@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +37,8 @@ const AdminScanner = () => {
         setStream(mediaStream);
         setIsScanning(true);
         
+        // Camera is now NOT mirrored!
+        videoRef.current.style.transform = 'scaleX(1)'; // not mirrored for admin
         toast({
           title: "Camera Started",
           description: "Point your camera at a barcode to scan",
@@ -67,12 +68,13 @@ const AdminScanner = () => {
   };
 
   const simulateScan = () => {
-    // Simulate finding a product
+    // Simulate finding a product AND USE THE SKU as barcode!
+    const mockSKU = `SKU${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     const mockProduct = {
       id: `PROD_${Date.now()}`,
       name: `Scanned Product ${scannedProducts.length + 1}`,
-      sku: `SKU${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-      barcode: Math.random().toString().substring(2, 15),
+      sku: mockSKU,
+      barcode: mockSKU, // Now the barcode equals the SKU for scanning logic
       price: Math.random() * 100 + 10,
       stock: Math.floor(Math.random() * 50) + 1,
       scannedAt: new Date().toLocaleString()
@@ -128,7 +130,7 @@ const AdminScanner = () => {
                       autoPlay
                       playsInline
                       className="w-full h-64 object-cover"
-                      style={{ transform: 'scaleX(-1)' }}
+                      style={{ transform: 'scaleX(1)' }}
                     />
                     {!isScanning && (
                       <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm">

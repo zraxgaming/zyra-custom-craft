@@ -1,9 +1,8 @@
+
 import React, { useRef } from 'react';
 import { Button } from "@/components/ui/button";
+// only use allowed icons!
 import { Download } from "lucide-react";
-
-// REMOVE import bwip-js or comment it out as it cannot be resolved
-// import bwipjs from 'bwip-js'; // COMMENTED OUT, not available in environment
 
 interface BarcodeDownloaderProps {
   value: string;

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ interface Product {
   id: string;
   name: string;
   sku?: string;
+  barcode?: string; // FIXED: This property may exist!
   price: number;
   images?: string[];
 }
@@ -30,7 +32,13 @@ const BarcodeGenerator: React.FC<BarcodeGeneratorProps> = ({ onGenerated }) => {
   const { toast } = useToast();
 
   // Compute data for code generation
-  const barcodeData = selectedProduct?.barcode || customData || selectedProduct?.sku || selectedProduct?.name || selectedProduct?.id || "";
+  const barcodeData =
+    selectedProduct?.barcode ||
+    customData ||
+    selectedProduct?.sku ||
+    selectedProduct?.name ||
+    selectedProduct?.id ||
+    "";
 
   const handleGenerate = async () => {
     if (!barcodeData) {
@@ -130,7 +138,8 @@ const BarcodeGenerator: React.FC<BarcodeGeneratorProps> = ({ onGenerated }) => {
             <div className="p-2">
               <div className="text-xs font-mono">Barcode: {barcodeData}</div>
             </div>
-            <BarcodeDownloader data={barcodeData} type={barcodeType === 'qr' ? 'qrcode' : barcodeType} filename={barcodeData} />
+            {/* FIXED: BarcodeDownloader expects "value" not "data" */}
+            <BarcodeDownloader value={barcodeData} filename={barcodeData} />
           </div>
         )}
       </CardContent>

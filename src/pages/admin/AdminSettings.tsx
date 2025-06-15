@@ -1,13 +1,39 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, CreditCard, Mail, AlertTriangle, Globe, Users } from "lucide-react";
 import MaintenanceToggle from "@/components/admin/MaintenanceToggle";
 import PaymentMethodsSettings from "@/components/admin/settings/PaymentMethodsSettings";
+import { supabase } from "@/integrations/supabase/client";
+import { Switch } from "@/components/ui/switch";
 
 const AdminSettings = () => {
+  const [isZiinaLive, setIsZiinaLive] = useState(false);
+  const [loadingZiina, setLoadingZiina] = useState(false);
+
+  useEffect(() => {
+    // Fetch current value from site_config
+    const fetchZiinaEnv = async () => {
+      const { data, error } = await supabase
+        .from('site_config')
+        .select('value')
+        .eq('key', 'ziina_env')
+        .maybeSingle();
+      setIsZiinaLive(data?.value === "prod");
+    };
+    fetchZiinaEnv();
+  }, []);
+
+  const handleZiinaEnvToggle = async () => {
+    setLoadingZiina(true);
+    await supabase
+      .from('site_config')
+      .upsert({ key: 'ziina_env', value: isZiinaLive ? "test" : "prod" });
+    setIsZiinaLive(!isZiinaLive);
+    setLoadingZiina(false);
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -98,6 +124,11 @@ const AdminSettings = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <div className="flex items-center gap-4 mb-4">
+          <span className="font-medium">Enable Ziina <span className="ml-1">(Mode: {isZiinaLive ? "Live" : "Testing"})</span></span>
+          <Switch checked={isZiinaLive} onCheckedChange={handleZiinaEnvToggle} disabled={loadingZiina} />
+        </div>
       </div>
     </AdminLayout>
   );
