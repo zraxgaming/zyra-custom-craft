@@ -50,6 +50,9 @@ import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminNewsletter from "@/pages/admin/AdminNewsletter";
 import AdminBarcodes from "@/pages/admin/AdminBarcodes";
+import AdminOrderDetails from "@/pages/admin/AdminOrderDetails";
+import AdminOrderEdit from "@/pages/admin/ProductEdit";
+import AdminProductDetails from "@/pages/admin/AdminProductDetails";
 import OrderRefunds from "@/pages/admin/OrderRefunds";
 
 import "./index.css";

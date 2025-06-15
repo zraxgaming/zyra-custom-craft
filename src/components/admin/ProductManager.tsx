@@ -152,6 +152,13 @@ const ProductManager = () => {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => window.location.assign(`/admin/products/${product.id}`)}
+                  >
+                    View
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => handleEdit(product)}
                   >
                     Edit
