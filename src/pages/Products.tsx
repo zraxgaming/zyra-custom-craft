@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +9,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import AddToCartButton from "@/components/cart/AddToCartButton";
 import { Product } from "@/types/product";
+import SEOHead from "@/components/seo/SEOHead";
 
 const Products = () => {
   const { toast } = useToast();
@@ -56,6 +56,11 @@ const Products = () => {
   if (loading) {
     return (
       <>
+        <SEOHead
+          title="Our Products - Zyra Custom Craft"
+          description="Browse all our published premium customizable products."
+          url="https://shopzyra.vercel.app/products"
+        />
         <Navbar />
         <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -67,6 +72,11 @@ const Products = () => {
 
   return (
     <>
+      <SEOHead
+        title="Our Products - Zyra Custom Craft"
+        description="Browse all our published premium customizable products."
+        url="https://shopzyra.vercel.app/products"
+      />
       <Navbar />
       <div className="min-h-screen bg-background py-12 animate-fade-in">
         <div className="container mx-auto px-4">

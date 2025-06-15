@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Container } from "@/components/ui/container";
+import SEOHead from "@/components/seo/SEOHead";
 
 const OrderSuccess = () => {
   const { orderId } = useParams();
@@ -56,6 +56,11 @@ const OrderSuccess = () => {
   if (loading) {
     return (
       <>
+        <SEOHead
+          title="Order Confirmed - Zyra Custom Craft"
+          description="Thank you for your order at Zyra Custom Craft!"
+          url="https://shopzyra.vercel.app/order-success"
+        />
         <Navbar />
         <div className="min-h-screen bg-background py-12">
           <Container>
@@ -71,6 +76,11 @@ const OrderSuccess = () => {
 
   return (
     <>
+      <SEOHead
+        title="Order Confirmed - Zyra Custom Craft"
+        description="Thank you for your order at Zyra Custom Craft! Your payment has been processed successfully."
+        url="https://shopzyra.vercel.app/order-success"
+      />
       <Navbar />
       <div className="min-h-screen bg-background py-12">
         <Container>

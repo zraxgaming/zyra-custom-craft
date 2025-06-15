@@ -1,10 +1,15 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { WifiOff } from "lucide-react";
+import SEOHead from "@/components/seo/SEOHead";
 
 const Offline: React.FC = () => (
   <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 dark:from-purple-950 dark:via-pink-950 dark:to-blue-950 transition-all">
+    <SEOHead
+      title="Offline - Zyra Custom Craft"
+      description="You are currently offline. Please check your internet connection and try again."
+      url="https://shopzyra.vercel.app/offline"
+    />
     {/* Animated SVG icon for no connection */}
     <div className="animate-pulse-glow mb-4">
       <svg

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { User, Package, Heart } from "lucide-react";
+import SEOHead from "@/components/seo/SEOHead";
 
 const Profile = () => {
   const { user } = useAuth();
@@ -93,6 +93,11 @@ const Profile = () => {
   if (!user) {
     return (
       <>
+        <SEOHead 
+          title="Sign In - Zyra Custom Craft"
+          description="Access your profile at Zyra. Please sign in to view your account details and manage your profile, orders, and wishlist."
+          url="https://shopzyra.vercel.app/profile"
+        />
         <Navbar />
         <div className="min-h-screen bg-background flex items-center justify-center">
           <Card>
@@ -109,6 +114,11 @@ const Profile = () => {
 
   return (
     <>
+      <SEOHead 
+        title="My Profile - Zyra Custom Craft"
+        description="View and update your profile, manage your orders and wishlist at Zyra Custom Craft."
+        url="https://shopzyra.vercel.app/profile"
+      />
       <Navbar />
       <div className="min-h-screen bg-background py-12">
         <div className="container mx-auto px-4 max-w-4xl">

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Star } from "lucide-react";
@@ -9,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import SEOHead from "@/components/seo/SEOHead";
 
 interface Review {
   id: string;
@@ -183,67 +183,93 @@ const Product = () => {
     }
   };
 
-  if (loading) return <div>Loading product details...</div>;
-  if (!product) return <div>Product not found.</div>;
+  if (loading) return (
+    <>
+      <SEOHead
+        title="Loading Product - Zyra Custom Craft"
+        description="Loading product details..."
+        url={`https://shopzyra.vercel.app/product/${slug}`}
+      />
+      <div>Loading product details...</div>
+    </>
+  );
+  if (!product) return (
+    <>
+      <SEOHead
+        title="Product Not Found - Zyra Custom Craft"
+        description="The product you are looking for was not found."
+        url={`https://shopzyra.vercel.app/product/${slug}`}
+      />
+      <div>Product not found.</div>
+    </>
+  );
 
   return (
-    <div>
-      {/* ... product details ... */}
-      <section>
-        <h3 className="font-semibold text-lg mt-4">Customer Reviews</h3>
-        <div>
-          {reviews.map((review: Review) => (
-            <div key={review.id} className="p-4 border-b">
-              <div className="flex gap-2">
-                <div className="font-medium">{review.user_name}</div>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    className={`h-4 w-4 ${
-                      star <= review.rating
-                        ? "fill-yellow-400 text-yellow-400"
-                        : "text-gray-300"
-                    }`}
-                  />
-                ))}
+    <>
+      <SEOHead
+        title={`${product.name} - Zyra Custom Craft`}
+        description={product.description || "View product details, reviews and make it yours at Zyra Custom Craft."}
+        url={`https://shopzyra.vercel.app/product/${slug}`}
+        image={product.images?.[0]}
+      />
+      <div>
+        {/* ... product details ... */}
+        <section>
+          <h3 className="font-semibold text-lg mt-4">Customer Reviews</h3>
+          <div>
+            {reviews.map((review: Review) => (
+              <div key={review.id} className="p-4 border-b">
+                <div className="flex gap-2">
+                  <div className="font-medium">{review.user_name}</div>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`h-4 w-4 ${
+                        star <= review.rating
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "text-gray-300"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <div className="text-sm mt-1">{review.comment}</div>
+                {/* NO edit or delete options! */}
               </div>
-              <div className="text-sm mt-1">{review.comment}</div>
-              {/* NO edit or delete options! */}
+            ))}
+          </div>
+          {/* Always show the review form, allow adding multiple reviews */}
+          <div className="mt-4">
+            <h4 className="font-medium mb-2">Add a Review</h4>
+            <div>
+              <Label htmlFor="rating">Rating</Label>
+              <Input
+                type="number"
+                id="rating"
+                min="1"
+                max="5"
+                value={newReview.rating}
+                onChange={(e) =>
+                  setNewReview({ ...newReview, rating: parseInt(e.target.value) })
+                }
+              />
             </div>
-          ))}
-        </div>
-        {/* Always show the review form, allow adding multiple reviews */}
-        <div className="mt-4">
-          <h4 className="font-medium mb-2">Add a Review</h4>
-          <div>
-            <Label htmlFor="rating">Rating</Label>
-            <Input
-              type="number"
-              id="rating"
-              min="1"
-              max="5"
-              value={newReview.rating}
-              onChange={(e) =>
-                setNewReview({ ...newReview, rating: parseInt(e.target.value) })
-              }
-            />
+            <div>
+              <Label htmlFor="comment">Comment</Label>
+              <Textarea
+                id="comment"
+                value={newReview.comment}
+                onChange={(e) =>
+                  setNewReview({ ...newReview, comment: e.target.value })
+                }
+              />
+            </div>
+            <Button onClick={handleAddReview} disabled={isSubmitting}>
+              {isSubmitting ? "Submitting..." : "Submit Review"}
+            </Button>
           </div>
-          <div>
-            <Label htmlFor="comment">Comment</Label>
-            <Textarea
-              id="comment"
-              value={newReview.comment}
-              onChange={(e) =>
-                setNewReview({ ...newReview, comment: e.target.value })
-              }
-            />
-          </div>
-          <Button onClick={handleAddReview} disabled={isSubmitting}>
-            {isSubmitting ? "Submitting..." : "Submit Review"}
-          </Button>
-        </div>
-      </section>
-    </div>
+        </section>
+      </div>
+    </>
   );
 };
 
