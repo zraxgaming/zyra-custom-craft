@@ -50,6 +50,7 @@ import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminNewsletter from "@/pages/admin/AdminNewsletter";
 import AdminBarcodes from "@/pages/admin/AdminBarcodes";
+import OrderRefunds from "@/pages/admin/OrderRefunds";
 
 import "./index.css";
 
@@ -92,7 +93,6 @@ function App() {
                     
                     {/* Shopping & Orders */}
                     <Route path="/checkout" element={<Checkout />} />
-                    <Route path="/gift-cards" element={<GiftCards />} />
                     <Route path="/order-success/:orderId" element={<OrderSuccess />} />
                     <Route path="/order-failed" element={<OrderFailed />} />
                     
@@ -140,6 +140,11 @@ function App() {
                     <Route path="/admin/orders" element={
                       <AdminRoute>
                         <AdminOrders />
+                      </AdminRoute>
+                    } />
+                    <Route path="/admin/refunds" element={
+                      <AdminRoute>
+                        <OrderRefunds />
                       </AdminRoute>
                     } />
                     <Route path="/admin/users" element={

@@ -1,34 +1,40 @@
 
-import React, { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
+import React, { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const SearchBar = () => {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchTerm.trim()) {
-      window.location.href = `/shop?search=${encodeURIComponent(searchTerm)}`;
+      navigate(`/shop?search=${encodeURIComponent(searchTerm.trim())}`);
     }
   };
 
   return (
-    <form onSubmit={handleSearch} className="flex items-center gap-2">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+    <form onSubmit={handleSearch} className="flex w-full max-w-lg">
+      <div className="relative flex-1">
         <Input
           type="text"
           placeholder="Search products..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 w-64"
+          className="pr-10"
         />
+        <Button
+          type="submit"
+          variant="ghost"
+          size="icon"
+          className="absolute right-0 top-0 h-full px-3"
+        >
+          <Search className="h-4 w-4" />
+        </Button>
       </div>
-      <Button type="submit" size="sm">
-        Search
-      </Button>
     </form>
   );
 };

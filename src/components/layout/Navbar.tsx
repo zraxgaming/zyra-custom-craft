@@ -1,126 +1,137 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, User, Menu, X, Search, Heart, Home, Store, Phone, Info } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Menu, 
+  X, 
+  Search, 
+  ShoppingCart, 
+  User, 
+  Heart,
+  LogOut,
+  Settings,
+  Package,
+  Grid3X3
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/components/cart/CartProvider";
+import { useWishlist } from "@/hooks/use-wishlist";
 import CartDrawer from "@/components/cart/CartDrawer";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
+import SearchBar from "@/components/search/SearchBar";
+import ThemeToggle from "@/components/theme/ThemeToggle";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
-  const { user, signOut } = useAuth();
-  const { items } = useCart();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const { user, signOut, isAdmin } = useAuth();
+  const { totalItems } = useCart();
+  const { items: wishlistItems } = useWishlist();
   const navigate = useNavigate();
-
-  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery("");
-      setIsMenuOpen(false);
-    }
-  };
 
   const handleSignOut = async () => {
     try {
       await signOut();
       navigate('/');
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error('Error signing out:', error);
     }
   };
 
-  const navigationItems = [
-    { name: "Home", href: "/", icon: Home },
-    { name: "Shop", href: "/shop", icon: Store },
-    { name: "About", href: "/about", icon: Info },
-    { name: "Contact", href: "/contact", icon: Phone },
-  ];
+  const toggleMenu = () => setIsOpen(!isOpen);
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
+      <nav className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">Z</span>
-              </div>
-              <span className="font-bold text-xl bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+            <div className="flex-shrink-0">
+              <Link to="/" className="text-2xl font-bold text-primary hover:text-primary/80 transition-colors">
                 Zyra
-              </span>
-            </Link>
+              </Link>
+            </div>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-8">
-              {navigationItems.map((item) => (
+            <div className="hidden md:block">
+              <div className="ml-10 flex items-baseline space-x-4">
                 <Link
-                  key={item.name}
-                  to={item.href}
-                  className="text-foreground/80 hover:text-foreground transition-colors duration-200 flex items-center gap-2 hover:scale-105"
+                  to="/home"
+                  className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
-                  <item.icon className="h-4 w-4" />
-                  {item.name}
+                  Home
                 </Link>
-              ))}
-            </div>
-
-            {/* Search Bar - Desktop */}
-            <div className="hidden lg:block flex-1 max-w-md mx-8">
-              <form onSubmit={handleSearch} className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  type="search"
-                  placeholder="Search products..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-muted/50 border-0 focus:bg-background transition-colors"
-                />
-              </form>
-            </div>
-
-            {/* Right Side Actions */}
-            <div className="flex items-center space-x-2">
-              {/* Search - Mobile */}
-              <div className="lg:hidden">
-                <Drawer>
-                  <DrawerTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <Search className="h-5 w-5" />
-                    </Button>
-                  </DrawerTrigger>
-                  <DrawerContent>
-                    <div className="p-4">
-                      <form onSubmit={handleSearch}>
-                        <Input
-                          type="search"
-                          placeholder="Search products..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full"
-                          autoFocus
-                        />
-                      </form>
-                    </div>
-                  </DrawerContent>
-                </Drawer>
+                <Link
+                  to="/shop"
+                  className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  Shop
+                </Link>
+                <Link
+                  to="/categories"
+                  className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  Categories
+                </Link>
+                <Link
+                  to="/about"
+                  className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  About
+                </Link>
+                <Link
+                  to="/contact"
+                  className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  Contact
+                </Link>
               </div>
+            </div>
+
+            {/* Search Bar */}
+            <div className="hidden lg:block flex-1 max-w-lg mx-8">
+              <SearchBar />
+            </div>
+
+            {/* Right side buttons */}
+            <div className="flex items-center space-x-4">
+              <ThemeToggle />
+              
+              {/* Search icon for mobile */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="lg:hidden"
+                onClick={() => {/* TODO: Implement mobile search */}}
+              >
+                <Search className="h-5 w-5" />
+              </Button>
 
               {/* Wishlist */}
               {user && (
-                <Button variant="ghost" size="icon" asChild>
-                  <Link to="/account">
-                    <Heart className="h-5 w-5" />
-                  </Link>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative"
+                  onClick={() => navigate('/wishlist')}
+                >
+                  <Heart className="h-5 w-5" />
+                  {wishlistItems.length > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                    >
+                      {wishlistItems.length}
+                    </Badge>
+                  )}
                 </Button>
               )}
 
@@ -128,14 +139,14 @@ const Navbar = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setIsCartOpen(true)}
                 className="relative"
+                onClick={() => setIsCartOpen(true)}
               >
                 <ShoppingCart className="h-5 w-5" />
                 {totalItems > 0 && (
                   <Badge 
                     variant="destructive" 
-                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                    className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
                   >
                     {totalItems}
                   </Badge>
@@ -144,90 +155,101 @@ const Navbar = () => {
 
               {/* User Menu */}
               {user ? (
-                <div className="hidden md:flex items-center space-x-2">
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link to="/account">
-                      <User className="h-4 w-4 mr-2" />
-                      Account
-                    </Link>
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                    Sign Out
-                  </Button>
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <User className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                      <Package className="mr-2 h-4 w-4" />
+                      <span>Dashboard</span>
+                    </DropdownMenuItem>
+                    {isAdmin && (
+                      <DropdownMenuItem onClick={() => navigate('/admin')}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Admin Panel</span>
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Sign out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : (
-                <Button variant="default" size="sm" asChild className="hidden md:flex">
+                <Button asChild>
                   <Link to="/auth">Sign In</Link>
                 </Button>
               )}
 
-              {/* Mobile Menu Toggle */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="md:hidden"
-              >
-                {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-              </Button>
-            </div>
-          </div>
-
-          {/* Mobile Menu */}
-          {isMenuOpen && (
-            <div className="md:hidden border-t bg-background/95 backdrop-blur">
-              <div className="px-4 py-4 space-y-3">
-                {navigationItems.map((item) => (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className="flex items-center gap-3 px-3 py-2 rounded-md text-foreground/80 hover:text-foreground hover:bg-muted transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    {item.name}
-                  </Link>
-                ))}
-                
-                <div className="border-t pt-3 mt-3">
-                  {user ? (
-                    <div className="space-y-2">
-                      <Link
-                        to="/account"
-                        className="flex items-center gap-3 px-3 py-2 rounded-md text-foreground/80 hover:text-foreground hover:bg-muted transition-colors"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <User className="h-4 w-4" />
-                        Account
-                      </Link>
-                      <button
-                        onClick={() => {
-                          handleSignOut();
-                          setIsMenuOpen(false);
-                        }}
-                        className="flex items-center gap-3 px-3 py-2 rounded-md text-foreground/80 hover:text-foreground hover:bg-muted transition-colors w-full text-left"
-                      >
-                        Sign Out
-                      </button>
-                    </div>
+              {/* Mobile menu button */}
+              <div className="md:hidden">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleMenu}
+                >
+                  {isOpen ? (
+                    <X className="h-6 w-6" />
                   ) : (
-                    <Link
-                      to="/auth"
-                      className="flex items-center gap-3 px-3 py-2 rounded-md text-foreground/80 hover:text-foreground hover:bg-muted transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <User className="h-4 w-4" />
-                      Sign In
-                    </Link>
+                    <Menu className="h-6 w-6" />
                   )}
-                </div>
+                </Button>
               </div>
             </div>
-          )}
+          </div>
         </div>
+
+        {/* Mobile menu */}
+        {isOpen && (
+          <div className="md:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+              <div className="mb-4 px-3">
+                <SearchBar />
+              </div>
+              <Link
+                to="/home"
+                className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary block px-3 py-2 rounded-md text-base font-medium"
+                onClick={() => setIsOpen(false)}
+              >
+                Home
+              </Link>
+              <Link
+                to="/shop"
+                className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary block px-3 py-2 rounded-md text-base font-medium"
+                onClick={() => setIsOpen(false)}
+              >
+                Shop
+              </Link>
+              <Link
+                to="/categories"
+                className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary block px-3 py-2 rounded-md text-base font-medium"
+                onClick={() => setIsOpen(false)}
+              >
+                Categories
+              </Link>
+              <Link
+                to="/about"
+                className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary block px-3 py-2 rounded-md text-base font-medium"
+                onClick={() => setIsOpen(false)}
+              >
+                About
+              </Link>
+              <Link
+                to="/contact"
+                className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary block px-3 py-2 rounded-md text-base font-medium"
+                onClick={() => setIsOpen(false)}
+              >
+                Contact
+              </Link>
+            </div>
+          </div>
+        )}
       </nav>
 
-      {/* Cart Drawer */}
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </>
   );

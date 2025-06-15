@@ -1,59 +1,74 @@
 
-import React from "react";
-import QRCode from "qrcode";
-import { useEffect, useState } from "react";
+import React, { useRef, useEffect } from 'react';
+import JsBarcode from 'jsbarcode';
+import QRCode from 'qrcode';
 
 interface BarcodeDisplayProps {
-  type: "qr" | "code128" | "ean13";
   data: string;
+  type: string;
   width?: number;
   height?: number;
+  className?: string;
 }
 
-const BarcodeDisplay: React.FC<BarcodeDisplayProps> = ({ 
-  type, 
-  data, 
-  width = 200, 
-  height = 200 
+const BarcodeDisplay: React.FC<BarcodeDisplayProps> = ({
+  data,
+  type,
+  width = 300,
+  height = 150,
+  className = ''
 }) => {
-  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    if (type === "qr") {
-      QRCode.toDataURL(data, {
-        width: width,
-        margin: 2,
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF'
+    const generateBarcode = async () => {
+      if (!canvasRef.current || !data) return;
+
+      try {
+        if (type === 'qr') {
+          await QRCode.toCanvas(canvasRef.current, data, {
+            width: width,
+            margin: 2,
+            color: {
+              dark: '#000000',
+              light: '#FFFFFF'
+            }
+          });
+        } else {
+          JsBarcode(canvasRef.current, data, {
+            format: type.toUpperCase(),
+            width: 2,
+            height: height - 50,
+            displayValue: true,
+            fontSize: 14,
+            textMargin: 5
+          });
         }
-      })
-      .then(url => {
-        setQrDataUrl(url);
-      })
-      .catch(err => {
-        console.error(err);
-      });
-    }
-  }, [data, type, width]);
+      } catch (error) {
+        console.error('Error generating barcode:', error);
+        // Display error on canvas
+        const ctx = canvasRef.current.getContext('2d');
+        if (ctx) {
+          ctx.clearRect(0, 0, width, height);
+          ctx.fillStyle = '#ff0000';
+          ctx.font = '16px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText('Error generating barcode', width / 2, height / 2);
+        }
+      }
+    };
 
-  if (type === "qr") {
-    return qrDataUrl ? (
-      <img src={qrDataUrl} alt={`QR Code: ${data}`} className="mx-auto" />
-    ) : (
-      <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800" style={{ width, height }}>
-        <span className="text-gray-500">Loading QR Code...</span>
-      </div>
-    );
-  }
+    generateBarcode();
+  }, [data, type, width, height]);
 
-  // For code128 and ean13, we'll show a placeholder for now
   return (
-    <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600" style={{ width, height }}>
-      <div className="text-center">
-        <p className="text-gray-500 dark:text-gray-400 font-mono text-sm">{type.toUpperCase()}</p>
-        <p className="text-gray-700 dark:text-gray-300 font-mono text-xs mt-1">{data}</p>
-      </div>
+    <div className={`border rounded-lg p-4 bg-white ${className}`}>
+      <canvas
+        ref={canvasRef}
+        width={width}
+        height={height}
+        className="max-w-full h-auto"
+      />
     </div>
   );
 };

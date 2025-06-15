@@ -13,6 +13,8 @@ const Callback = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
+        console.log('Handling auth callback...');
+        
         // Handle the auth callback
         const { data, error } = await supabase.auth.getSession();
         
@@ -22,11 +24,15 @@ const Callback = () => {
           return;
         }
 
+        console.log('Session data:', data);
+
         if (data?.session) {
+          console.log('Session found, redirecting...');
           // Get redirect URL from state or default to dashboard
           const redirectTo = searchParams.get('redirect_to') || '/dashboard';
           navigate(redirectTo, { replace: true });
         } else {
+          console.log('No session found, redirecting to auth...');
           // No session found, redirect to auth
           navigate('/auth', { replace: true });
         }
@@ -41,6 +47,7 @@ const Callback = () => {
       handleAuthCallback();
     } else {
       // User is already authenticated, redirect to dashboard
+      console.log('User already authenticated, redirecting to dashboard');
       navigate('/dashboard', { replace: true });
     }
   }, [navigate, searchParams, user]);
