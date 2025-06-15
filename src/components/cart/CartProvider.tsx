@@ -113,16 +113,15 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   };
 
   const addToCart = async (
-    product: Omit<CartItem, "id" | "quantity" | "user_id">,
-    quantity: number,
-    customization: Json = {}
+    product,
+    quantity,
+    customization = {}
   ) => {
     if (!user) {
       console.log("User not logged in");
       return;
     }
-
-    // Get product stock before allowing addToCart
+    // Check product stock from Supabase directly for freshness
     let productRes = await supabase
       .from("products")
       .select("id, stock_quantity")
@@ -134,7 +133,7 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         ? productRes.data?.stock_quantity
         : 99;
 
-    // Check number in cart
+    // Check how much is in cart for this customization
     const itemInCart = cart.find(
       (item) =>
         item.product_id === product.product_id &&
@@ -149,8 +148,10 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       return;
     }
 
-    // Block adding customizable products without required customization
-    if (product.name?.toLowerCase().includes("custom") && (!customization || Object.keys(customization).length === 0)) {
+    if (
+      product.name?.toLowerCase().includes("custom") &&
+      (!customization || Object.keys(customization).length === 0)
+    ) {
       console.log("Customization required for this product.");
       return;
     }
@@ -185,7 +186,7 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
           image_url: data.image_url || "",
           name: data.name || "",
           customization: data.customization ?? {},
-        } as CartItem
+        }
       ]);
     } catch (err) {
       console.error("Error adding to cart:", err);
@@ -209,11 +210,9 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
   const updateCartItem = async (id: string, quantity: number) => {
     try {
-      // Find item
       const item = cart.find((it) => it.id === id);
       if (!item) return;
-
-      // Fetch max stock for this product
+      // Fetch latest product stock
       let productRes = await supabase
         .from("products")
         .select("stock_quantity")
@@ -223,10 +222,8 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         typeof productRes.data?.stock_quantity === "number"
           ? productRes.data?.stock_quantity
           : 99;
-      // Apply restriction
       if (quantity > maxStock) return;
 
-      // Update cart item
       const { error } = await supabase
         .from("cart_items")
         .update({ quantity })

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Plus, Minus } from "lucide-react";
@@ -27,15 +28,15 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
   const { cart, addToCart } = useCart();
   const { toast } = useToast();
 
-  // Find max available stock; fallback to 99 if missing
+  // Get latest stock for the product
   const maxStock =
-    typeof (product as any).stock_quantity === "number"
-      ? (product as any).stock_quantity
+    typeof product.stock_quantity === "number"
+      ? product.stock_quantity
       : 99;
 
   const [quantity, setQuantity] = useState(1);
 
-  // Customization (reset fully after add)
+  // Customization control
   const [customization, setCustomization] = useState<any>({});
   const [customModalOpen, setCustomModalOpen] = useState(false);
 
@@ -44,10 +45,9 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
   const cartQuantity = existingItem ? existingItem.quantity : 0;
   const remainingStock = maxStock - cartQuantity;
 
-  // Helper for customization required
+  // Customization required logic
   const hasCustomization = () => {
     if (!customization || typeof customization !== "object") return false;
-    // Require at least one non-empty field
     return Object.values(customization).some(val =>
       typeof val === "string"
         ? val.trim() !== ""
@@ -57,12 +57,14 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
     );
   };
 
-  // Animation: state to trigger for add-to-cart fly
+  // Animation states for "fly-to-cart"
   const [animating, setAnimating] = useState(false);
+  const [showFlyAnim, setShowFlyAnim] = useState(false);
 
-  // Main add-to-cart action
+  // Main "add to cart" with animation
   const handleAddToCart = async () => {
     if (disabled) return;
+    // Enforce customization on custom products
     if (isCustomizable && !hasCustomization()) {
       setCustomModalOpen(true);
       toast({
@@ -73,9 +75,8 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
       });
       return;
     }
-
-    // Not enough stock
-    if (quantity > remainingStock) {
+    // Validate stock
+    if (quantity > remainingStock || remainingStock <= 0) {
       toast({
         title: "Stock Limit Reached",
         description: `Cannot add more than ${maxStock} of this product to your cart.`,
@@ -83,6 +84,10 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
       });
       return;
     }
+
+    // Show fly animation
+    setShowFlyAnim(true);
+    setTimeout(() => setShowFlyAnim(false), 700);
 
     await addToCart(
       {
@@ -107,7 +112,6 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
     setCustomModalOpen(false);
   };
 
-  // Quantity controls (if desired, could add plus/minus icons with limits)
   return (
     <>
       {/* Customization Modal */}
@@ -134,7 +138,14 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
         </div>
       )}
 
-      <div className="flex items-center gap-2">
+      <div className="relative flex items-center gap-2">
+        {/* Cart animation box */}
+        {showFlyAnim && (
+          <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-50 animate-fly-cart bg-primary rounded-lg shadow-lg p-3 flex items-center">
+            <ShoppingCart className="h-5 w-5 text-white animate-spin" />
+            <span className="ml-2 text-white text-xs font-bold">{quantity}</span>
+          </div>
+        )}
         {/* Decrease */}
         <Button
           type="button"
@@ -187,6 +198,17 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
           No more in stock.
         </div>
       )}
+      <style>{`
+      @keyframes flyCart {
+        0% { transform: translateY(0) scale(0.9) rotate(0deg);}
+        90% { transform: translateY(-60px) scale(1.08) rotate(30deg);}
+        100% { opacity: 0; transform: translateY(-100px) scale(0.1) rotate(360deg);}
+      }
+      .animate-fly-cart {
+        animation: flyCart 0.7s cubic-bezier(0.2,0.7,0.6,1) forwards;
+      }
+      `}
+      </style>
     </>
   );
 };

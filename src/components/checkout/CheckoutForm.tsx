@@ -48,8 +48,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
         <div key={item.id} className="flex justify-between items-center py-1 text-sm">
           <div>
             <span className="font-medium">{item.name}</span>
-            {item.customization && Object.keys(item.customization).length > 0 && (
-              <span className="ml-2 text-xs text-purple-600">[custom: {item.customization.text || "y"}]</span>
+            {item.customization && typeof item.customization === "object" && Object.keys(item.customization).length > 0 && (
+              <span className="ml-2 text-xs text-purple-600">[custom: {(item.customization as any).text || "y"}]</span>
             )}
             <span className="ml-2 text-gray-500">x{item.quantity}</span>
           </div>
@@ -136,7 +136,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
         }));
         await supabase.from("order_items").insert(orderItems);
 
-        // Deduct stock from products
+        // Ensure correct inventory deduction using the Supabase 'decrement_stock' function for each item
         for (const item of items) {
           if (item.product_id) {
             await supabase.rpc('decrement_stock', {

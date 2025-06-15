@@ -1,16 +1,17 @@
 
-import React from "react";
+import React, { useState } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, Search, UserPlus, Shield, Ban } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Users, Search, UserPlus, Shield, Ban, Crown } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 const AdminUsers = () => {
+  const queryClient = useQueryClient();
   const { data: users, isLoading } = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
@@ -18,10 +19,19 @@ const AdminUsers = () => {
         .from("profiles")
         .select("*")
         .order("created_at", { ascending: false });
-
       if (error) throw error;
       return data || [];
     },
+  });
+
+  // Role update mutation
+  const updateRoleMutation = useMutation({
+    mutationFn: async ({ id, role }) => {
+      await supabase.from("profiles").update({ role }).eq("id", id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["admin-users"]);
+    }
   });
 
   return (
@@ -49,12 +59,14 @@ const AdminUsers = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Search bar can be made to work in further improvements */}
             <div className="flex items-center gap-4 mb-6">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search users..."
                   className="pl-10"
+                  // Future: Add search functionality
                 />
               </div>
             </div>
@@ -87,8 +99,13 @@ const AdminUsers = () => {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <h3 className="font-medium text-foreground">
+                        <h3 className="font-medium text-foreground flex items-center gap-1">
                           {user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}
+                          {user.role === "admin" && (
+                            <span className="ml-1 inline-flex">
+                              <Crown className="h-4 w-4 text-yellow-500" title="Admin" />
+                            </span>
+                          )}
                         </h3>
                         <p className="text-sm text-muted-foreground">{user.email}</p>
                       </div>
@@ -101,6 +118,24 @@ const AdminUsers = () => {
                         ) : null}
                         {user.role || 'user'}
                       </Badge>
+                      {user.role !== 'admin' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateRoleMutation.mutate({ id: user.id, role: "admin" })}
+                        >
+                          Promote to Admin
+                        </Button>
+                      )}
+                      {user.role === "admin" && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => updateRoleMutation.mutate({ id: user.id, role: "user" })}
+                        >
+                          Demote
+                        </Button>
+                      )}
                       <Button variant="outline" size="sm">
                         <Ban className="h-4 w-4" />
                       </Button>
