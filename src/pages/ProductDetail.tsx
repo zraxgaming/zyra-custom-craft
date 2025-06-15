@@ -36,7 +36,7 @@ const ProductDetail: React.FC = () => {
   const [customizeModalOpen, setCustomizeModalOpen] = useState(false);
 
   const { toast } = useToast();
-  const { addItem } = useCart();
+  const { addToCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -90,7 +90,7 @@ const ProductDetail: React.FC = () => {
         });
         return;
     }
-    addItem({
+    addToCart({
       product_id: product.id,
       name: product.name,
       price: product.price,

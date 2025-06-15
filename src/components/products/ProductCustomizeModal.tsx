@@ -88,9 +88,7 @@ const ProductCustomizeModal: React.FC<Props> = ({ open, onOpenChange, product })
         product_id: product.id,
         name: product.name,
         price: product.price,
-        image_url: product.images[0] || "/placeholder-product.jpg",
-        is_digital: product.is_digital,
-        digital_file_url: product.digital_file_url
+        image_url: product.images[0] || "/placeholder-product.jpg"
       },
       quantity,
       customization

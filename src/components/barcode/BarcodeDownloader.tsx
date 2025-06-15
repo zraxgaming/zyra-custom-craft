@@ -1,45 +1,46 @@
+import React, { useRef } from 'react';
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 
-// Download barcode/QR with proper dynamic import
-import React from 'react';
+// REMOVE import bwip-js or comment it out as it cannot be resolved
+// import bwipjs from 'bwip-js'; // COMMENTED OUT, not available in environment
 
-interface Props {
-  data: string;
-  type: string;
+interface BarcodeDownloaderProps {
+  value: string;
   filename?: string;
 }
 
-const BarcodeDownloader: React.FC<Props> = ({ data, type, filename }) => {
-  const handleDownload = async () => {
-    let toCanvas: any;
-    try {
-      // Try to dynamically import bwip-js (for barcode & qr code generation)
-      toCanvas = (await import('bwip-js')).toCanvas;
-    } catch (e) {
-      alert('Barcode download requires the "bwip-js" package. Please ask your admin to install it.');
+const BarcodeDownloader: React.FC<BarcodeDownloaderProps> = ({ value, filename = 'barcode' }) => {
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  const downloadBarcode = () => {
+    if (!svgRef.current) {
+      console.error("SVG element not found.");
       return;
     }
-    const canvas = document.createElement('canvas');
-    try {
-      toCanvas(canvas, {
-        bcid: type, // barcode type (e.g. 'code128', 'qrcode')
-        text: data,
-        scale: 3,
-        height: 10,
-        includetext: true,
-      });
-      const link = document.createElement('a');
-      link.download = `${filename || 'barcode'}.png`;
-      link.href = canvas.toDataURL();
-      link.click();
-    } catch (err) {
-      alert('Could not generate barcode!');
-    }
+
+    const svgData = new XMLSerializer().serializeToString(svgRef.current);
+    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    const svgUrl = URL.createObjectURL(svgBlob);
+
+    const downloadLink = document.createElement("a");
+    downloadLink.href = svgUrl;
+    downloadLink.download = `${filename}.svg`;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
   };
 
   return (
-    <button type="button" className="px-3 py-1 text-xs bg-gray-200 rounded hover:bg-gray-300" onClick={handleDownload}>
-      Download
-    </button>
+    <div>
+      <svg ref={svgRef} id="barcode" width="300" height="150" xmlns="http://www.w3.org/2000/svg">
+        <text x="50%" y="50%" textAnchor="middle" fontSize="24">{value}</text>
+      </svg>
+      <Button onClick={downloadBarcode}>
+        <Download className="h-4 w-4 mr-2" />
+        Download Barcode
+      </Button>
+    </div>
   );
 };
 

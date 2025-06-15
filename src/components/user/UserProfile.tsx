@@ -35,7 +35,7 @@ const UserProfile = () => {
           </Avatar>
           <div className="flex items-center gap-2">
             <span className="text-lg font-medium">{displayName}</span>
-            {user.role === "admin" && (<Crown className="h-5 w-5 text-yellow-500" title="Admin" />)}
+            {user.role === "admin" && (<Crown className="h-5 w-5 text-yellow-500" />)}
           </div>
           <p className="text-sm text-muted-foreground">{user.email}</p>
         </div>

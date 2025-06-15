@@ -15,6 +15,7 @@ export interface Order {
   created_at: string;
   updated_at?: string;
   profile_id?: string;
+  payment_intent_id?: string; // Add this line to fix errors about payment_intent_id!
   order_items?: OrderItem[];
   profiles?: {
     id: string;

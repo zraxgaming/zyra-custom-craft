@@ -1,219 +1,127 @@
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Product } from "@/types/product";
+import { Star } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useCart } from "@/components/cart/CartProvider";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { Skeleton } from "@/components/ui/skeleton";
 
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Star, Heart, ShoppingCart } from 'lucide-react';
-import { useCart } from '@/components/cart/CartProvider';
-import { useWishlist } from '@/hooks/use-wishlist';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { Product } from '@/types/product';
+interface FeaturedProductsProps {
+  category?: string;
+  limit?: number;
+}
 
-const FeaturedProducts = () => {
-  const [products, setProducts] = useState<Product[]>([]);
+const FeaturedProducts: React.FC<FeaturedProductsProps> = ({ category, limit = 4 }) => {
+  const [products, setProducts] = useState<Product[] | null>(null);
   const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
-  const { addToWishlist, isInWishlist } = useWishlist();
-  const { toast } = useToast();
 
   useEffect(() => {
-    fetchFeaturedProducts();
-  }, []);
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const url = `/api/products/featured?limit=${limit}${category ? `&category=${category}` : ''}`;
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setProducts(data);
+      } catch (error) {
+        console.error("Could not fetch featured products:", error);
+        setProducts(null);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const fetchFeaturedProducts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_featured', true)
-        .eq('status', 'published')
-        .limit(6);
+    fetchProducts();
+  }, [category, limit]);
 
-      if (error) throw error;
-
-      const transformedProducts: Product[] = (data || []).map(product => ({
-        ...product,
-        images: Array.isArray(product.images) 
-          ? product.images.filter((img): img is string => typeof img === 'string')
-          : [],
-        image_url: Array.isArray(product.images) && product.images.length > 0 
-          ? (typeof product.images[0] === 'string' ? product.images[0] : '')
-          : ''
-      }));
-
-      setProducts(transformedProducts);
-    } catch (error) {
-      console.error('Error fetching featured products:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddToCart = (product: Product) => {
-    addToCart({
-      product_id: product.id,
-      name: product.name,
-      price: product.price,
-      quantity: 1,
-      image_url: product.image_url
-    });
-
-    toast({
-      title: "Added to cart!",
-      description: `${product.name} has been added to your cart.`,
-    });
-  };
-
-  const handleAddToWishlist = async (productId: string) => {
-    try {
-      await addToWishlist(productId);
-    } catch (error) {
-      console.error('Error adding to wishlist:', error);
-    }
+  const renderStars = (rating: number | undefined) => {
+    if (typeof rating !== 'number' || rating === 0) return <span className="text-sm text-muted-foreground">No reviews yet</span>;
+    const fullStars = Math.floor(rating);
+    const halfStar = rating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
+    return (
+      <div className="flex items-center">
+        {[...Array(fullStars)].map((_, i) => <Star key={`full-${i}`} className="h-4 w-4 fill-yellow-400 text-yellow-400" />)}
+        {halfStar && <Star key="half" className="h-4 w-4 fill-yellow-400 text-yellow-400" style={{ clipPath: 'polygon(0 0, 50% 0, 50% 100%, 0 100%)' }} />}
+        {[...Array(emptyStars)].map((_, i) => <Star key={`empty-${i}`} className="h-4 w-4 text-gray-300" />)}
+      </div>
+    );
   };
 
   if (loading) {
     return (
-      <section className="py-16 bg-background">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Featured Products</h2>
-            <p className="text-muted-foreground">Discover our most popular items</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="bg-gray-200 dark:bg-gray-700 rounded-lg h-64 mb-4"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {[...Array(limit)].map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardHeader>
+              <CardTitle><Skeleton className="h-5 w-3/4" /></CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-24" />
+            </CardContent>
+            <CardFooter>
+              <Skeleton className="h-10 w-full" />
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
     );
   }
 
+  if (!products) {
+    return <div className="text-red-500">Failed to load featured products.</div>;
+  }
+
   return (
-    <section className="py-16 bg-background">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-12 animate-fade-in">
-          <h2 className="text-3xl font-bold mb-4">Featured Products</h2>
-          <p className="text-muted-foreground">Discover our most popular and trending items</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {products.map((product, index) => (
-            <Card 
-              key={product.id} 
-              className="group hover:shadow-lg transition-all duration-300 animate-fade-in border-0 bg-card"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              <div className="relative overflow-hidden rounded-t-lg">
-                <Link to={`/product/${product.slug}`}>
-                  <div className="aspect-square bg-muted">
-                    {product.image_url ? (
-                      <img
-                        src={product.image_url}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                        <div className="text-4xl">📦</div>
-                      </div>
-                    )}
-                  </div>
-                </Link>
-                
-                <div className="absolute top-4 left-4 space-y-2">
-                  {product.is_featured && (
-                    <Badge className="bg-primary">
-                      Featured
-                    </Badge>
-                  )}
-                  {product.is_new && (
-                    <Badge variant="secondary" className="bg-green-500 text-white">
-                      New
-                    </Badge>
-                  )}
-                  {product.discount_percentage && product.discount_percentage > 0 && (
-                    <Badge variant="destructive">
-                      -{product.discount_percentage}%
-                    </Badge>
-                  )}
-                </div>
-
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={`absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity ${
-                    isInWishlist(product.id) ? 'text-red-500' : 'text-gray-600'
-                  }`}
-                  onClick={() => handleAddToWishlist(product.id)}
-                >
-                  <Heart className={`h-5 w-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
-                </Button>
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {products.map((product) => (
+        <Card key={product.id} className="bg-card text-card-foreground shadow-md transition-shadow duration-300 hover:shadow-lg">
+          <Link to={`/product/${product.slug}`}>
+            <div className="relative">
+              <AspectRatio ratio={4 / 3}>
+                <img
+                  src={product.images[0] || "/placeholder-product.jpg"}
+                  alt={product.name}
+                  className="object-cover rounded-md"
+                />
+              </AspectRatio>
+            </div>
+            <CardHeader className="pt-4">
+              <CardTitle className="text-lg font-semibold line-clamp-1">{product.name}</CardTitle>
+            </CardHeader>
+          </Link>
+          <CardContent className="py-2">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground line-clamp-2">{product.short_description || product.description}</p>
               </div>
-
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <Link to={`/product/${product.slug}`}>
-                    <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
-                      {product.name}
-                    </h3>
-                  </Link>
-                  
-                  {product.short_description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {product.short_description}
-                    </p>
-                  )}
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold text-primary">
-                        ${product.price.toFixed(2)}
-                      </span>
-                      {product.discount_percentage && product.discount_percentage > 0 && (
-                        <span className="text-sm text-muted-foreground line-through">
-                          ${(product.price / (1 - product.discount_percentage / 100)).toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                    
-                    {product.rating && product.rating > 0 && (
-                      <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm font-medium">{product.rating.toFixed(1)}</span>
-                        <span className="text-xs text-muted-foreground">({product.review_count})</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <Button
-                    onClick={() => handleAddToCart(product)}
-                    className="w-full"
-                    disabled={!product.in_stock}
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    {product.in_stock ? 'Add to Cart' : 'Out of Stock'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {products.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No featured products available at the moment.</p>
-          </div>
-        )}
-      </div>
-    </section>
+            </div>
+            <div className="mt-2">
+              {renderStars(product.rating)}
+            </div>
+          </CardContent>
+          <CardFooter className="flex items-center justify-between p-4">
+            <span className="text-xl font-bold text-primary">AED {product.price.toFixed(2)}</span>
+            <Button onClick={(e) => {
+              e.preventDefault();
+              addToCart({
+                product_id: product.id,
+                name: product.name,
+                price: product.price,
+                image_url: product.images[0] || "/placeholder-product.jpg"
+              }, 1);
+            }} variant="outline">Add to Cart</Button>
+          </CardFooter>
+        </Card>
+      ))}
+    </div>
   );
 };
 
