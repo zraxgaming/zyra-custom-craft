@@ -476,6 +476,53 @@ export type Database = {
           },
         ]
       }
+      order_refunds: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          metadata: Json | null
+          order_id: string
+          reason: string | null
+          status: string
+          updated_at: string
+          ziina_refund_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json | null
+          order_id: string
+          reason?: string | null
+          status: string
+          updated_at?: string
+          ziina_refund_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json | null
+          order_id?: string
+          reason?: string | null
+          status?: string
+          updated_at?: string
+          ziina_refund_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_refunds_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           billing_address: Json | null
@@ -484,6 +531,7 @@ export type Database = {
           delivery_type: string | null
           id: string
           notes: string | null
+          payment_intent_id: string | null
           payment_method: string | null
           payment_status: string | null
           profile_id: string | null
@@ -493,6 +541,7 @@ export type Database = {
           tracking_number: string | null
           updated_at: string | null
           user_id: string | null
+          ziina_payment_id: string | null
         }
         Insert: {
           billing_address?: Json | null
@@ -501,6 +550,7 @@ export type Database = {
           delivery_type?: string | null
           id?: string
           notes?: string | null
+          payment_intent_id?: string | null
           payment_method?: string | null
           payment_status?: string | null
           profile_id?: string | null
@@ -510,6 +560,7 @@ export type Database = {
           tracking_number?: string | null
           updated_at?: string | null
           user_id?: string | null
+          ziina_payment_id?: string | null
         }
         Update: {
           billing_address?: Json | null
@@ -518,6 +569,7 @@ export type Database = {
           delivery_type?: string | null
           id?: string
           notes?: string | null
+          payment_intent_id?: string | null
           payment_method?: string | null
           payment_status?: string | null
           profile_id?: string | null
@@ -527,6 +579,7 @@ export type Database = {
           tracking_number?: string | null
           updated_at?: string | null
           user_id?: string | null
+          ziina_payment_id?: string | null
         }
         Relationships: [
           {
@@ -888,6 +941,38 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      refunds: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          order_id: string
+          status: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          order_id: string
+          status: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          order_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refunds_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reviews: {
         Row: {

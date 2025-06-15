@@ -3,14 +3,17 @@ import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
 
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
+        // Handle the auth callback
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -22,18 +25,25 @@ const AuthCallback = () => {
         if (data?.session) {
           // Get redirect URL from state or default to dashboard
           const redirectTo = searchParams.get('redirect_to') || '/dashboard';
-          navigate(redirectTo);
+          navigate(redirectTo, { replace: true });
         } else {
-          navigate('/auth');
+          // No session found, redirect to auth
+          navigate('/auth', { replace: true });
         }
       } catch (error) {
         console.error('Auth callback error:', error);
-        navigate('/auth?error=callback_failed');
+        navigate('/auth?error=callback_failed', { replace: true });
       }
     };
 
-    handleAuthCallback();
-  }, [navigate, searchParams]);
+    // Only handle callback if user is not already authenticated
+    if (!user) {
+      handleAuthCallback();
+    } else {
+      // User is already authenticated, redirect to dashboard
+      navigate('/dashboard', { replace: true });
+    }
+  }, [navigate, searchParams, user]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">

@@ -1,274 +1,234 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { ShoppingCart, User, Menu, X, Search, Heart, Home, Store, Phone, Info } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/components/cart/CartProvider";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Menu, ShoppingCart, User, Heart, LogOut, Package, Gift, X } from "lucide-react";
-import SearchBar from "@/components/search/SearchBar";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import CartDrawer from "@/components/cart/CartDrawer";
-import { useToast } from "@/hooks/use-toast";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 
 const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const { user, isAdmin, signOut } = useAuth();
-  const { toggleCart, totalItems } = useCart();
+  const { user, signOut } = useAuth();
+  const { items } = useCart();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
-  const { toast } = useToast();
+
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery("");
+      setIsMenuOpen(false);
+    }
+  };
 
   const handleSignOut = async () => {
     try {
       await signOut();
-      navigate("/");
-      toast({
-        title: "Signed out successfully",
-        description: "You have been signed out of your account.",
-      });
+      navigate('/');
     } catch (error) {
-      console.error("Error signing out:", error);
-      toast({
-        title: "Error signing out",
-        description: "There was an error signing out. Please try again.",
-        variant: "destructive",
-      });
+      console.error('Sign out error:', error);
     }
   };
 
-  const navigation = [
-    { name: "Home", href: "/home" },
-    { name: "Shop", href: "/shop" },
-    { name: "Categories", href: "/categories" },
-    { name: "Gift Cards", href: "/gift-cards" },
-    { name: "About", href: "/about" },
-    { name: "Contact", href: "/contact" },
+  const navigationItems = [
+    { name: "Home", href: "/", icon: Home },
+    { name: "Shop", href: "/shop", icon: Store },
+    { name: "About", href: "/about", icon: Info },
+    { name: "Contact", href: "/contact", icon: Phone },
   ];
 
   return (
     <>
-      <nav className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link to="/home" className="flex-shrink-0 flex items-center">
-                <span className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                  Zyra
-                </span>
-              </Link>
-            </div>
+      <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <Link to="/" className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-primary to-purple-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">Z</span>
+              </div>
+              <span className="font-bold text-xl bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                Zyra
+              </span>
+            </Link>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
-              {navigation.map((item) => (
+              {navigationItems.map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
-                  className="text-muted-foreground hover:text-foreground transition-colors duration-200 font-medium hover:scale-105 transform"
+                  className="text-foreground/80 hover:text-foreground transition-colors duration-200 flex items-center gap-2 hover:scale-105"
                 >
+                  <item.icon className="h-4 w-4" />
                   {item.name}
                 </Link>
               ))}
             </div>
 
-            {/* Desktop Actions */}
-            <div className="hidden md:flex items-center space-x-4">
-              <SearchBar />
-              <ThemeToggle />
-              
+            {/* Search Bar - Desktop */}
+            <div className="hidden lg:block flex-1 max-w-md mx-8">
+              <form onSubmit={handleSearch} className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  type="search"
+                  placeholder="Search products..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-muted/50 border-0 focus:bg-background transition-colors"
+                />
+              </form>
+            </div>
+
+            {/* Right Side Actions */}
+            <div className="flex items-center space-x-2">
+              {/* Search - Mobile */}
+              <div className="lg:hidden">
+                <Drawer>
+                  <DrawerTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <Search className="h-5 w-5" />
+                    </Button>
+                  </DrawerTrigger>
+                  <DrawerContent>
+                    <div className="p-4">
+                      <form onSubmit={handleSearch}>
+                        <Input
+                          type="search"
+                          placeholder="Search products..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full"
+                          autoFocus
+                        />
+                      </form>
+                    </div>
+                  </DrawerContent>
+                </Drawer>
+              </div>
+
+              {/* Wishlist */}
               {user && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  asChild
-                  className="hover:scale-110 transition-transform duration-200"
-                >
-                  <Link to="/wishlist">
+                <Button variant="ghost" size="icon" asChild>
+                  <Link to="/account">
                     <Heart className="h-5 w-5" />
                   </Link>
                 </Button>
               )}
-              
+
+              {/* Cart */}
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={toggleCart}
-                className="relative hover:scale-110 transition-transform duration-200"
+                onClick={() => setIsCartOpen(true)}
+                className="relative"
               >
                 <ShoppingCart className="h-5 w-5" />
                 {totalItems > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs animate-pulse">
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                  >
                     {totalItems}
                   </Badge>
                 )}
               </Button>
 
+              {/* User Menu */}
               {user ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:scale-110 transition-transform duration-200">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={user.user_metadata?.avatar_url} alt={user.user_metadata?.first_name || "User"} />
-                        <AvatarFallback>
-                          {user.user_metadata?.first_name?.charAt(0) || user.email?.charAt(0) || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56 animate-slide-in-right" align="end" forceMount>
-                    <div className="flex items-center justify-start gap-2 p-2">
-                      <div className="flex flex-col space-y-1 leading-none">
-                        <p className="font-medium">
-                          {user.user_metadata?.first_name || "User"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {user.email}
-                        </p>
-                      </div>
-                    </div>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link to="/dashboard" className="cursor-pointer">
-                        <User className="mr-2 h-4 w-4" />
-                        Dashboard
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/gift-cards" className="cursor-pointer">
-                        <Gift className="mr-2 h-4 w-4" />
-                        Gift Cards
-                      </Link>
-                    </DropdownMenuItem>
-                    {isAdmin && (
-                      <DropdownMenuItem asChild>
-                        <Link to="/admin" className="cursor-pointer">
-                          <Package className="mr-2 h-4 w-4" />
-                          Admin Panel
-                        </Link>
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sign out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="hidden md:flex items-center space-x-2">
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/account">
+                      <User className="h-4 w-4 mr-2" />
+                      Account
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                    Sign Out
+                  </Button>
+                </div>
               ) : (
-                <Button asChild className="hover:scale-105 transition-transform duration-200">
+                <Button variant="default" size="sm" asChild className="hidden md:flex">
                   <Link to="/auth">Sign In</Link>
                 </Button>
               )}
-            </div>
 
-            {/* Mobile menu button */}
-            <div className="md:hidden flex items-center space-x-2">
-              <ThemeToggle />
+              {/* Mobile Menu Toggle */}
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={toggleCart}
-                className="relative hover:scale-110 transition-transform duration-200"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="md:hidden"
               >
-                <ShoppingCart className="h-5 w-5" />
-                {totalItems > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
-                    {totalItems}
-                  </Badge>
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsOpen(!isOpen)}
-                className="hover:scale-110 transition-transform duration-200"
-              >
-                {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </Button>
             </div>
           </div>
-        </div>
 
-        {/* Mobile Navigation */}
-        {isOpen && (
-          <div className="md:hidden animate-slide-in-right">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-background border-t border-border">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className="block px-3 py-2 text-muted-foreground hover:text-foreground transition-colors duration-200 hover:scale-105 transform"
-                  onClick={() => setIsOpen(false)}
-                >
-                  {item.name}
-                </Link>
-              ))}
-              <div className="px-3 py-2">
-                {user ? (
-                  <div className="space-y-2 animate-fade-in">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.user_metadata?.avatar_url} alt={user.user_metadata?.first_name || "User"} />
-                        <AvatarFallback>
-                          {user.user_metadata?.first_name?.charAt(0) || user.email?.charAt(0) || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm font-medium">
-                        {user.user_metadata?.first_name || "User"}
-                      </span>
+          {/* Mobile Menu */}
+          {isMenuOpen && (
+            <div className="md:hidden border-t bg-background/95 backdrop-blur">
+              <div className="px-4 py-4 space-y-3">
+                {navigationItems.map((item) => (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    className="flex items-center gap-3 px-3 py-2 rounded-md text-foreground/80 hover:text-foreground hover:bg-muted transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.name}
+                  </Link>
+                ))}
+                
+                <div className="border-t pt-3 mt-3">
+                  {user ? (
+                    <div className="space-y-2">
+                      <Link
+                        to="/account"
+                        className="flex items-center gap-3 px-3 py-2 rounded-md text-foreground/80 hover:text-foreground hover:bg-muted transition-colors"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <User className="h-4 w-4" />
+                        Account
+                      </Link>
+                      <button
+                        onClick={() => {
+                          handleSignOut();
+                          setIsMenuOpen(false);
+                        }}
+                        className="flex items-center gap-3 px-3 py-2 rounded-md text-foreground/80 hover:text-foreground hover:bg-muted transition-colors w-full text-left"
+                      >
+                        Sign Out
+                      </button>
                     </div>
-                    <Button asChild variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
-                      <Link to="/dashboard" onClick={() => setIsOpen(false)}>
-                        <User className="mr-2 h-4 w-4" />
-                        Dashboard
-                      </Link>
-                    </Button>
-                    <Button asChild variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
-                      <Link to="/wishlist" onClick={() => setIsOpen(false)}>
-                        <Heart className="mr-2 h-4 w-4" />
-                        Wishlist
-                      </Link>
-                    </Button>
-                    <Button asChild variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
-                      <Link to="/gift-cards" onClick={() => setIsOpen(false)}>
-                        <Gift className="mr-2 h-4 w-4" />
-                        Gift Cards
-                      </Link>
-                    </Button>
-                    {isAdmin && (
-                      <Button asChild variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
-                        <Link to="/admin" onClick={() => setIsOpen(false)}>
-                          <Package className="mr-2 h-4 w-4" />
-                          Admin Panel
-                        </Link>
-                      </Button>
-                    )}
-                    <Button onClick={handleSignOut} variant="ghost" className="w-full justify-start hover:scale-105 transition-transform duration-200">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sign out
-                    </Button>
-                  </div>
-                ) : (
-                  <Button asChild className="w-full hover:scale-105 transition-transform duration-200">
-                    <Link to="/auth" onClick={() => setIsOpen(false)}>
+                  ) : (
+                    <Link
+                      to="/auth"
+                      className="flex items-center gap-3 px-3 py-2 rounded-md text-foreground/80 hover:text-foreground hover:bg-muted transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <User className="h-4 w-4" />
                       Sign In
                     </Link>
-                  </Button>
-                )}
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </nav>
-      <CartDrawer />
+
+      {/* Cart Drawer */}
+      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </>
   );
 };

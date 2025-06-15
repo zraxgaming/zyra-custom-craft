@@ -16,5 +16,5 @@ export interface CartItem {
   image_url?: string;
   quantity: number;
   customization?: CartItemCustomization;
+  in_stock?: boolean;
 }
-

@@ -1,5 +1,6 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Container } from "@/components/ui/container";
@@ -15,9 +16,11 @@ import { useProducts } from "@/hooks/use-products";
 import { useCategories } from "@/hooks/use-categories";
 
 const Shop = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: products = [], isLoading: productsLoading } = useProducts();
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
-  const [searchTerm, setSearchTerm] = useState("");
+  
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || "");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("featured");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -26,6 +29,23 @@ const Shop = () => {
   const [inStock, setInStock] = useState(false);
   const [featured, setFeatured] = useState(false);
   const [customizable, setCustomizable] = useState(false);
+
+  // Update search term when URL params change
+  useEffect(() => {
+    const urlSearch = searchParams.get('search');
+    if (urlSearch) {
+      setSearchTerm(urlSearch);
+    }
+  }, [searchParams]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    if (value.trim()) {
+      setSearchParams({ search: value.trim() });
+    } else {
+      setSearchParams({});
+    }
+  };
 
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategories(prev => 
@@ -36,16 +56,23 @@ const Shop = () => {
   };
 
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = !searchTerm || 
+                         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.short_description?.toLowerCase().includes(searchTerm.toLowerCase());
+    
     const matchesCategory = selectedCategories.length === 0 || 
                            selectedCategories.some(catId => {
                              const category = categories.find(c => c.id === catId);
-                             return category && product.category === category.name;
+                             return category && (
+                               product.category === category.name || 
+                               product.category_id === category.id
+                             );
                            });
+    
     const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
     const matchesStock = !inStock || product.in_stock;
-    const matchesFeatured = !featured || product.featured;
+    const matchesFeatured = !featured || product.is_featured;
     const matchesCustomizable = !customizable || product.is_customizable;
     
     return matchesSearch && matchesCategory && matchesPrice && matchesStock && matchesFeatured && matchesCustomizable;
@@ -113,7 +140,7 @@ const Shop = () => {
                 <Input
                   placeholder="Search products..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-10 hover:scale-105 transition-transform duration-200"
                 />
               </div>
