@@ -23,7 +23,8 @@ import {
   Menu,
   X,
   LogOut,
-  Home
+  Home,
+  RefreshCw
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -41,6 +42,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     { name: 'Products', href: '/admin/products', icon: Package },
     { name: 'Categories', href: '/admin/categories', icon: Tag },
     { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
+    { name: 'Refunds', href: '/admin/refunds', icon: RefreshCw },
     { name: 'Inventory', href: '/admin/inventory', icon: Warehouse },
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'Gift Cards', href: '/admin/gift-cards', icon: Gift },
@@ -136,7 +138,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               onClick={handleSignOut}
               className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
             >
-              <LogOut className="w-4 h-4 mr-2" />
+              <LogOut className="w-4 w-4 mr-2" />
               Sign Out
             </Button>
           </div>

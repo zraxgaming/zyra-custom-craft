@@ -1,3 +1,4 @@
+
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
@@ -29,7 +30,6 @@ import OrderFailed from "@/pages/OrderFailed";
 import Referrals from "@/pages/Referrals";
 import Newsletter from "@/pages/Newsletter";
 import NotFound from "@/pages/NotFound";
-// FIX: ensure casing matches FILESYSTEM: should be 'Callback'
 import AuthCallback from "@/pages/auth/callback";
 
 // Admin Pages
@@ -54,6 +54,7 @@ import AdminOrderDetails from "@/pages/admin/AdminOrderDetails";
 import AdminOrderEdit from "@/pages/admin/ProductEdit";
 import AdminProductDetails from "@/pages/admin/AdminProductDetails";
 import OrderRefunds from "@/pages/admin/OrderRefunds";
+import AdminContact from "@/pages/admin/AdminContact";
 
 import "./index.css";
 
@@ -120,6 +121,11 @@ function App() {
                         <ProductNew />
                       </AdminRoute>
                     } />
+                    <Route path="/admin/products/:id" element={
+                      <AdminRoute>
+                        <AdminProductDetails />
+                      </AdminRoute>
+                    } />
                     <Route path="/admin/products/:id/edit" element={
                       <AdminRoute>
                         <ProductEdit />
@@ -145,6 +151,16 @@ function App() {
                         <AdminOrders />
                       </AdminRoute>
                     } />
+                    <Route path="/admin/orders/:id" element={
+                      <AdminRoute>
+                        <AdminOrderDetails />
+                      </AdminRoute>
+                    } />
+                    <Route path="/admin/orders/:id/edit" element={
+                      <AdminRoute>
+                        <AdminOrderEdit />
+                      </AdminRoute>
+                    } />
                     <Route path="/admin/refunds" element={
                       <AdminRoute>
                         <OrderRefunds />
@@ -158,6 +174,11 @@ function App() {
                     <Route path="/admin/gift-cards" element={
                       <AdminRoute>
                         <AdminGiftCards />
+                      </AdminRoute>
+                    } />
+                    <Route path="/admin/contact" element={
+                      <AdminRoute>
+                        <AdminContact />
                       </AdminRoute>
                     } />
                     <Route path="/admin/ziina" element={
