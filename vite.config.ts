@@ -25,4 +25,6 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Ensure vite will serve static files from /public (for sitemap.xml, robots.txt, etc.)
+  publicDir: 'public',
 }));
