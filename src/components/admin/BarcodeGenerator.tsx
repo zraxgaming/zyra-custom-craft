@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { QrCode, Barcode, Download } from "lucide-react";
 import ProductSearchSelect from "./ProductSearchSelect";
+import BarcodeDownloader from '@/components/barcode/BarcodeDownloader';
 
 interface Product {
   id: string;
@@ -74,6 +75,7 @@ const BarcodeGenerator: React.FC<BarcodeGeneratorProps> = ({ onGenerated }) => {
     }
   };
 
+  const previewData = selectedProduct ? (selectedProduct.sku || selectedProduct.name || selectedProduct.id) : customData;
   return (
     <Card>
       <CardHeader>
@@ -124,6 +126,17 @@ const BarcodeGenerator: React.FC<BarcodeGeneratorProps> = ({ onGenerated }) => {
         >
           {isGenerating ? "Generating..." : "Generate Barcode"}
         </Button>
+
+        {previewData && (
+          <div className="w-full flex flex-col items-center gap-2">
+            <div className="p-2">
+              {/* Inline barcode preview (just the data for now) */}
+              <div className="text-xs font-mono">Data: {previewData}</div>
+            </div>
+            {/* Download button for barcode/qr */}
+            <BarcodeDownloader data={previewData} type={barcodeType === 'qr' ? 'qrcode' : barcodeType} filename={previewData} />
+          </div>
+        )}
       </CardContent>
     </Card>
   );

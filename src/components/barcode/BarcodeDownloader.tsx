@@ -1,6 +1,6 @@
 
 import React from 'react';
-
+// Remove bwip-js. Instead, notify user and provide helpful message.
 interface Props {
   data: string;
   type: string;
@@ -8,8 +8,14 @@ interface Props {
 }
 const BarcodeDownloader: React.FC<Props> = ({ data, type, filename }) => {
   const handleDownload = async () => {
-    // Dynamically import bwip-js to generate barcode image
-    const { toCanvas } = await import('bwip-js');
+    let toCanvas: any;
+    try {
+      // Try to dynamically import bwip-js
+      toCanvas = (await import('bwip-js')).toCanvas;
+    } catch (e) {
+      alert('Barcode download requires the "bwip-js" package. Please ask your admin to install it.');
+      return;
+    }
     const canvas = document.createElement('canvas');
     try {
       toCanvas(canvas, {

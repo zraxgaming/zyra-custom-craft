@@ -20,6 +20,7 @@ interface Order {
   delivery_type: string;
   created_at: string;
   updated_at: string;
+  payment_intent_id?: string;
   profiles?: {
     id: string;
     email?: string;
@@ -230,6 +231,10 @@ const AdminOrders = () => {
                         <span className="font-medium">Date:</span>{' '}
                         {new Date(order.created_at).toLocaleDateString()}
                       </div>
+                    </div>
+                    <div>
+                      <span className="font-medium">Payment Intent:</span>{' '}
+                      <span className="font-mono text-xs">{order.payment_intent_id || "—"}</span>
                     </div>
                   </div>
                   

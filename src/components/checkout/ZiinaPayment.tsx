@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,7 +27,6 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       onError("Invalid Amount");
       return;
     }
-
     setIsProcessing(true);
     try {
       // Get Ziina API key from site_config
@@ -68,23 +66,20 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       const responseData = await response.json();
 
       if (!response.ok) {
-        console.error("Ziina API Error:", responseData);
         const errorMessage = responseData.message || responseData.error?.message || `Ziina API request failed with status ${response.status}`;
         throw new Error(errorMessage);
       }
-      
-      console.log("Ziina Payment Intent Created:", responseData);
-
-      if (responseData.next_action_url) {
+      // Make sure both next_action_url and payment_intent id are extracted and available!
+      if (responseData.next_action_url && responseData.id) {
+        // Save payment_intent ID, then redirect user
         onSuccess(responseData);
-        window.location.href = responseData.next_action_url;
+        // id = payment_intent_id
+        window.location.assign(responseData.next_action_url);
       } else if (responseData.id && responseData.status === 'succeeded') {
         onSuccess(responseData);
       } else {
-        console.error("Ziina response missing next_action_url or success status:", responseData);
         throw new Error(responseData.message || "Failed to get payment redirection URL from Ziina.");
       }
-
     } catch (error: any) {
       console.error('Ziina payment initiation error:', error);
       toast({

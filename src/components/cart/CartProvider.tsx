@@ -119,8 +119,24 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .select('*')
           .eq('user_id', user.id);
         if (!error && data) {
-          // Overwrite local cart with db
-          setItems(data);
+          // Fetch product data to fill in name, price
+          const productIds = data.map(item => item.product_id);
+          const { data: products } = await supabase
+            .from('products')
+            .select('id, name, price, images, in_stock')
+            .in('id', productIds);
+          setItems(
+            data.map(item => {
+              const prod = products?.find(p => p.id === item.product_id);
+              return {
+                ...item,
+                name: prod?.name || "Unknown",
+                price: prod?.price || 0,
+                image_url: Array.isArray(prod?.images) ? prod.images[0] : undefined,
+                in_stock: prod?.in_stock ?? true
+              };
+            })
+          );
         }
       }
     };
@@ -135,10 +151,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await supabase.from('cart_items').delete().eq('user_id', user.id);
         // Insert all
         if (items.length > 0) {
-          await supabase.from('cart_items').insert(items.map(item => ({
-            ...item,
-            user_id: user.id,
-          })));
+          // Remove props not in cart_items table
+          const pureItems = items.map(({ id, product_id, quantity, customization, user_id }) => ({
+            id,
+            product_id,
+            quantity,
+            customization,
+            user_id,
+          }));
+          await supabase.from('cart_items').insert(pureItems);
         }
       };
       saveCart();

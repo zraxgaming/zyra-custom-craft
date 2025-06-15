@@ -70,7 +70,7 @@ const EnhancedBarcodeScanner: React.FC<EnhancedBarcodeScannerProps> = ({
     if (!scanning || !videoRef.current || !canvasRef.current) {
       return;
     }
-    videoRef.current.style.transform = 'scaleX(1)'; // camera NOT mirrored.
+    videoRef.current.style.transform = ""; // remove any mirroring!
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d');

@@ -101,7 +101,7 @@ export default function Product() {
       quantity: 1,
       in_stock: product.in_stock,
       customization: {
-        image: product.images?.[0] || '/placeholder-product.jpg'
+        images: product.images?.[0] || '/placeholder-product.jpg'
       },
     });
   };

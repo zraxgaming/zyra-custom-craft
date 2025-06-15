@@ -29,7 +29,7 @@ const Dashboard = () => {
         .from('orders')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: 'false' })
+        .order('created_at', { ascending: false }) // true boolean!
         .then(({ data, error }) => {
           if (!error) setOrders(data || []);
         });

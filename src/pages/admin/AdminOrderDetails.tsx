@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +11,7 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import OrderSummary from "@/components/admin/order/OrderSummary";
 import PaymentInfo from "@/components/admin/order/PaymentInfo";
 import { OrderDetail } from "@/types/order";
+import { RefreshCw } from "lucide-react";
 
 const AdminOrderDetails = () => {
   const { id } = useParams();
@@ -20,12 +20,20 @@ const AdminOrderDetails = () => {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [refundAmount, setRefundAmount] = useState('');
+  const [refundReason, setRefundReason] = useState('');
+  const [refundSubmitting, setRefundSubmitting] = useState(false);
+  const [refunds, setRefunds] = useState<any[]>([]);
 
   useEffect(() => {
     if (id) {
       fetchOrderDetails();
     }
   }, [id]);
+
+  useEffect(() => {
+    if (order) fetchRefunds();
+  }, [order]);
 
   const fetchOrderDetails = async () => {
     try {
@@ -102,6 +110,12 @@ const AdminOrderDetails = () => {
     }
   };
 
+  const fetchRefunds = async () => {
+    if (!order) return;
+    const { data, error } = await supabase.from("order_refunds").select("*").eq("order_id", order.id).order("created_at", { ascending: false });
+    if (!error && data) setRefunds(data);
+  };
+
   const updateOrder = async (field: string, value: string) => {
     if (!order) return;
 
@@ -127,6 +141,32 @@ const AdminOrderDetails = () => {
       });
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleRefund = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!order?.payment_intent_id) return;
+    setRefundSubmitting(true);
+    try {
+      // Insert refund request to DB
+      const { error } = await supabase
+        .from('order_refunds')
+        .insert({
+          order_id: order.id,
+          amount: parseFloat(refundAmount),
+          reason: refundReason,
+          status: 'requested',
+          ziina_refund_id: `pending_${Date.now()}`,
+        });
+      if (error) throw error;
+      setRefundAmount('');
+      setRefundReason('');
+      fetchRefunds();
+    } catch {
+      // Error, do nothing for now
+    } finally {
+      setRefundSubmitting(false);
     }
   };
 
@@ -256,6 +296,62 @@ const AdminOrderDetails = () => {
                 </CardContent>
               </Card>
             )}
+            <Card className="animate-slide-in-right" style={{animationDelay: '400ms'}}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  Refunds
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {order.payment_intent_id && (
+                  <div className="mb-3">
+                    <div className="text-xs text-muted-foreground">Payment Intent ID:</div>
+                    <div className="font-mono text-sm">{order.payment_intent_id}</div>
+                  </div>
+                )}
+                <form onSubmit={handleRefund} className="flex flex-col gap-2 mb-3">
+                  <label>
+                    Amount
+                    <input
+                      type="number"
+                      className="input input-bordered w-full"
+                      required
+                      min="0.01"
+                      step="0.01"
+                      max={order.total_amount}
+                      value={refundAmount}
+                      onChange={e => setRefundAmount(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Reason
+                    <input
+                      type="text"
+                      className="input input-bordered w-full"
+                      required
+                      value={refundReason}
+                      onChange={e => setRefundReason(e.target.value)}
+                    />
+                  </label>
+                  <Button type="submit" disabled={refundSubmitting || !order.payment_intent_id} className="w-full">
+                    {refundSubmitting ? 'Submitting...' : 'Request Refund'}
+                  </Button>
+                </form>
+                <div className="mt-3">
+                  <div className="font-semibold text-xs mb-1">Previous Refunds:</div>
+                  <div className="flex flex-col gap-2">
+                    {refunds.length === 0 && <div className="text-xs text-muted-foreground">None</div>}
+                    {refunds.map((r) => (
+                      <div key={r.id} className="text-xs border p-2 rounded">
+                        AED {r.amount} • Reason: <b>{r.reason}</b> • Status: <span className="badge">{r.status}</span>
+                        <div className="text-muted-foreground font-mono">{r.ziina_refund_id}</div>
+                        <div>{new Date(r.created_at).toLocaleString()}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
