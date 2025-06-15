@@ -105,7 +105,7 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({ order }) => {
               {order.order_items.map((item) => (
                 <div key={item.id} className="flex items-center space-x-4 p-4 border rounded-lg">
                   <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
-                    {item.product.images?.[0] || item.product.image_url ? (
+                    {item.product?.images?.[0] || item.product?.image_url ? (
                       <img 
                         src={item.product.images?.[0] || item.product.image_url} 
                         alt={item.product.name}
@@ -119,14 +119,19 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({ order }) => {
                   </div>
                   
                   <div className="flex-1">
-                    <h4 className="font-medium">{item.product.name}</h4>
+                    <h4 className="font-medium">{item.product?.name || "Unnamed Product"}</h4>
                     <p className="text-sm text-muted-foreground">
                       Quantity: {item.quantity}
                     </p>
-                    {item.customization && (
-                      <p className="text-xs text-muted-foreground">
-                        Customization: {JSON.stringify(item.customization)}
-                      </p>
+                    {item.customization && Object.keys(item.customization).length > 0 && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          <span className="font-semibold text-primary">Customization:</span>
+                          <span className="ml-1">
+                            {JSON.stringify(item.customization)}
+                          </span>
+                        </p>
+                      </div>
                     )}
                   </div>
                   

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { ShoppingCart, Plus, Minus, Trash2 } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, ArrowLeft, Home } from "lucide-react";
 import { useCart } from "@/components/cart/CartProvider";
 import { useNavigate } from "react-router-dom";
 
@@ -28,6 +28,18 @@ const Cart = () => {
       <>
         <Navbar />
         <Container className="py-12">
+          {/* Navigation buttons for empty cart */}
+          <div className="flex gap-3 mb-6">
+            <Button variant="outline" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-4 w-4 mr-1" /> Back
+            </Button>
+            <Button variant="secondary" onClick={() => navigate("/shop")}>
+              Shop
+            </Button>
+            <Button variant="secondary" onClick={() => navigate("/home")}>
+              <Home className="h-4 w-4 mr-1" /> Home
+            </Button>
+          </div>
           <div className="text-center">
             <ShoppingCart className="h-24 w-24 text-gray-400 mx-auto mb-8" />
             <h1 className="text-3xl font-bold mb-4 text-gray-900 dark:text-gray-100">
@@ -53,6 +65,18 @@ const Cart = () => {
     <>
       <Navbar />
       <Container className="py-12">
+        {/* Navigation */}
+        <div className="flex gap-3 mb-6">
+          <Button variant="outline" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4 mr-1" /> Back
+          </Button>
+          <Button variant="secondary" onClick={() => navigate("/shop")}>
+            Shop
+          </Button>
+          <Button variant="secondary" onClick={() => navigate("/home")}>
+            <Home className="h-4 w-4 mr-1" /> Home
+          </Button>
+        </div>
         <h1 className="text-3xl font-bold mb-8 text-gray-900 dark:text-gray-100">
           Shopping Cart
         </h1>

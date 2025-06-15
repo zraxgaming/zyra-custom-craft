@@ -10,6 +10,8 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import AddToCartButton from "@/components/cart/AddToCartButton";
 import ProductReviews from "@/components/reviews/ProductReviews";
+import { ArrowLeft, Home } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface Product {
   id: string;
@@ -31,6 +33,7 @@ const Product = () => {
   const { toast } = useToast();
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -79,12 +82,29 @@ const Product = () => {
     fetchProduct();
   }, [slug, toast]);
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-lg">Loading...</div>
+    </div>
+  );
 
   return (
     <div>
-      {product ? (
-        <div className="container mx-auto py-12">
+      <Navbar />
+      <div className="container mx-auto py-8">
+        {/* Navigation buttons */}
+        <div className="flex items-center gap-3 mb-4">
+          <Button variant="outline" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4 mr-1" /> Back
+          </Button>
+          <Button variant="secondary" onClick={() => navigate("/home")}>
+            <Home className="h-4 w-4 mr-1" /> Home
+          </Button>
+          <Button variant="secondary" onClick={() => navigate("/shop")}>
+            Shop
+          </Button>
+        </div>
+        {product ? (
           <Card className="w-full max-w-4xl mx-auto">
             <CardHeader>
               <CardTitle className="text-2xl font-bold">{product.name}</CardTitle>
@@ -138,11 +158,14 @@ const Product = () => {
               </div>
             </CardContent>
           </Card>
+        ) : (
+          <div>Product not found</div>
+        )}
+        <div className="mt-8">
           <ProductReviews productId={product?.id || ""} />
         </div>
-      ) : (
-        <div>Product not found</div>
-      )}
+      </div>
+      <Footer />
     </div>
   );
 };

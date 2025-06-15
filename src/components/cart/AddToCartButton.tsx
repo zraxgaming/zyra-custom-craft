@@ -26,37 +26,36 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
   const { toast } = useToast();
   const [quantity, setQuantity] = useState(1);
 
-  // Customization logic
+  // Customization state
   const [customization, setCustomization] = useState<any>({});
   const [customModalOpen, setCustomModalOpen] = useState(false);
 
-  // Detect if product is customizable
   const isCustomizable = !!product.is_customizable;
   const existingItem = cart.find(item => item.product_id === product.id);
 
-  // Helper: is customization present
+  // Helper for customization check
   const hasCustomization = () =>
-    customization && Object.keys(customization).length > 0;
+    customization && Object.values(customization).some(val => val && val.trim && val.trim() !== "");
 
-  const handleAddToCart = () => {
+  // Fix: ensure customized products require customization
+  const handleAddToCart = async () => {
     if (disabled) return;
-    // Customizable check
     if (isCustomizable && !hasCustomization()) {
       setCustomModalOpen(true);
       toast({
         title: "Customization Required",
-        description: "Please customize this product before adding to cart.",
+        description: "Please enter customization details before adding to cart.",
         variant: "destructive"
       });
       return;
     }
-    addToCart(
+    await addToCart(
       {
         product_id: product.id,
         name: product.name,
         price: product.price,
         image_url: product.images[0] || "/placeholder-product.jpg",
-      }, 
+      },
       quantity,
       isCustomizable ? customization : {}
     );
@@ -66,35 +65,35 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
     });
     setQuantity(1);
     setCustomization({});
+    setCustomModalOpen(false);
   };
 
   return (
     <>
-      {/* Customization Modal could go here if needed */}
+      {/* Nicer Customization Modal */}
       {isCustomizable && customModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/30">
-          <div className="bg-white p-6 rounded shadow w-96">
-            <h2 className="font-semibold mb-2">Customize Your Product</h2>
-            {/* Here you could render your <ProductCustomizer> or inputs */}
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/40">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 space-y-4 relative">
+            <h2 className="font-bold text-lg mb-2">Customize Your Product</h2>
+            <label className="block font-medium mb-1 text-gray-800">Custom Text</label>
             <input
               type="text"
-              placeholder="Enter custom text..."
-              className="w-full border p-2 mb-2"
+              placeholder="Enter custom text"
+              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-primary text-gray-800 bg-gray-50 mb-2"
+              value={customization.text || ""}
               onChange={e => setCustomization({ ...customization, text: e.target.value })}
             />
-            <div className="flex gap-2 mt-2">
+            <div className="flex gap-3 mt-4 justify-end">
               <Button onClick={() => setCustomModalOpen(false)} variant="outline">Cancel</Button>
-              <Button 
-                onClick={() => {
-                  setCustomModalOpen(false);
-                  handleAddToCart();
-                }}
+              <Button
+                onClick={handleAddToCart}
                 disabled={!hasCustomization()}
               >Add to Cart</Button>
             </div>
           </div>
         </div>
       )}
+
       <Button
         onClick={handleAddToCart}
         disabled={disabled}
