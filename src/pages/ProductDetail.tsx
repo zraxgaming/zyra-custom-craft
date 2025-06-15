@@ -1,16 +1,17 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Product as ProductType } from "@/types/product";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { Star, ShoppingCart, Heart, Minus, Plus, MessageCircle, ShieldCheck, Truck, ChevronLeft, Info, Tag, CheckCircle } from "lucide-react";
+import { Star, ShoppingCart, Heart, Minus, Plus, MessageCircle, ShieldCheck, Truck, ChevronLeft, Info, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/components/cart/CartProvider";
 import WishlistButton from "@/components/products/WishlistButton";
@@ -20,11 +21,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import SEOHead from "@/components/seo/SEOHead";
 import { useAuth } from "@/contexts/AuthContext";
-import ProductCustomizeModal from "@/components/products/ProductCustomizeModal";
-import { CartItemCustomization } from "@/types/cart";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { Json } from "@/integrations/supabase/types";
-import AddToCartButton from "@/components/cart/AddToCartButton";
 
 const ProductDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -32,110 +28,128 @@ const ProductDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('description');
-  const [customization, setCustomization] = useState<CartItemCustomization | undefined>(undefined);
-  const [customizeModalOpen, setCustomizeModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("description");
+  const [customText, setCustomText] = useState("");
+  const [customImage, setCustomImage] = useState<File | null>(null);
+  const [customImagePreview, setCustomImagePreview] = useState<string | null>(null);
 
   const { toast } = useToast();
   const { addToCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // Supabase fetch logic: must use maybeSingle() with zero or one result
   useEffect(() => {
     const fetchProduct = async () => {
       if (!slug) return;
       setLoading(true);
       try {
         const { data, error } = await supabase
-          .from('products')
-          .select(`
-            *,
-            category_id (
-              id,
-              name,
-              slug
-            ),
-            reviews!fk_reviews_product (
-              id,
-              rating,
-              comment,
-              created_at,
-              title,
-              user_id
-            )
-          `)
-          .eq('slug', slug)
+          .from("products")
+          .select("*")
+          .eq("slug", slug)
           .maybeSingle();
 
         if (error) {
-          if (error.code === 'PGRST116') {
-            setProduct(null);
-          } else {
-            throw error;
+          setProduct(null);
+        } else if (data) {
+          setProduct({
+            ...data,
+            images: Array.isArray(data.images) ? data.images.filter((img): img is string => typeof img === "string") : [],
+          });
+          if (data?.images?.length && typeof data.images[0] === "string") {
+            setSelectedImage(data.images[0]);
           }
         } else {
-          setProduct(data as ProductType);
-          if (data?.images && Array.isArray(data.images) && data.images.length > 0) {
-            const firstImage = data.images[0];
-            if (typeof firstImage === 'string') {
-              setSelectedImage(firstImage);
-            }
-          }
+          setProduct(null);
         }
-      } catch (error: any) {
-        console.error('Error fetching product:', error);
-        toast({ title: 'Error', description: `Failed to load product details: ${error.message}`, variant: 'destructive' });
+      } catch (e: any) {
+        console.error("Error fetching product:", e);
+        toast({ title: "Error", description: "Could not load product details.", variant: "destructive" });
+        setProduct(null);
       } finally {
         setLoading(false);
       }
     };
     fetchProduct();
-  }, [slug, toast]);
+    // eslint-disable-next-line
+  }, [slug]);
 
-  const handleAddToCart = () => {
+  // Handle image preview for custom upload
+  useEffect(() => {
+    if (!customImage) {
+      setCustomImagePreview(null);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => setCustomImagePreview(reader.result as string);
+    reader.readAsDataURL(customImage);
+  }, [customImage]);
+
+  const isCustomizable = !!product?.is_customizable;
+  const allowText = true; // For simplicity (replace if you want to pull from product.customization_options)
+  const allowImage = true; // Same as above
+
+  // Guard: make sure customization is required before adding to cart
+  const canAddToCart = !isCustomizable ||
+    ((allowText ? customText.trim().length > 0 : true) && (allowImage ? !!customImage : true));
+
+  // Enforce customization on custom product add
+  const handleAddToCart = async () => {
     if (!product) return;
-    if (product.is_customizable && !customization) {
+
+    if (isCustomizable) {
+      // Require customization!
+      if ((allowText && !customText.trim()) || (allowImage && !customImage)) {
         toast({
-            title: "Customization Required",
-            description: "Please customize the product before adding to cart.",
-            variant: "default"
+          title: "Customization Required!",
+          description: "Please provide the required customization before adding to cart.",
+          variant: "destructive",
         });
         return;
+      }
     }
-    addToCart({
-      product_id: product.id,
-      name: product.name,
-      price: product.price,
-      quantity: quantity,
-      image_url: (product.images && Array.isArray(product.images) && typeof product.images[0] === 'string') ? product.images[0] : '/placeholder-product.jpg',
-      customization: customization,
-    });
-  };
 
-  const handleQuantityChange = (amount: number) => {
-    setQuantity((prev) => Math.max(1, prev + amount));
-  };
+    let customization: any = {};
+    if (allowText) customization.text = customText.trim();
 
-  const renderStars = (rating: number | undefined, reviewCount: number | undefined) => {
-    if (typeof rating !== 'number' || rating === 0) return <span className="text-sm text-muted-foreground">No reviews yet</span>;
-    const fullStars = Math.floor(rating);
-    const halfStar = rating % 1 >= 0.5;
-    const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
-    return (
-      <div className="flex items-center">
-        {[...Array(fullStars)].map((_, i) => <Star key={`full-${i}`} className="h-5 w-5 fill-yellow-400 text-yellow-400" />)}
-        {halfStar && <Star key="half" className="h-5 w-5 fill-yellow-400 text-yellow-400" style={{ clipPath: 'polygon(0 0, 50% 0, 50% 100%, 0 100%)' }} />}
-        {[...Array(emptyStars)].map((_, i) => <Star key={`empty-${i}`} className="h-5 w-5 text-gray-300" />)}
-        <a href="#reviews" className="ml-2 text-sm text-muted-foreground hover:underline">({reviewCount || 0} reviews)</a>
-      </div>
+    if (allowImage && customImage) {
+      // Demo only: convert image to base64; in production, upload to Supabase storage and save URL
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        customization.image_base64 = reader.result;
+        await addToCart(
+          {
+            product_id: product.id,
+            name: product.name,
+            price: product.price,
+            image_url: selectedImage || product.images[0] || "/placeholder-product.jpg",
+          },
+          quantity,
+          customization
+        );
+        toast({ title: "Added to cart!", description: `${quantity} ${product.name} added.` });
+      };
+      reader.readAsDataURL(customImage);
+      return;
+    }
+
+    // Standard, or text-only customization
+    await addToCart(
+      {
+        product_id: product.id,
+        name: product.name,
+        price: product.price,
+        image_url: selectedImage || product.images[0] || "/placeholder-product.jpg",
+      },
+      quantity,
+      customization
     );
+
+    toast({ title: "Added to cart!", description: `${quantity} ${product.name} added.` });
   };
 
-  const onCustomizationSave = (customizationData: CartItemCustomization) => {
-    setCustomization(customizationData);
-    toast({ title: "Customization Saved", description: "Your preferences have been saved and applied." });
-  };
-
+  // Main loading state
   if (loading) {
     return (
       <>
@@ -175,7 +189,7 @@ const ProductDetail: React.FC = () => {
     return (
       <>
         <Navbar />
-        <div className="container mx-auto px-4 py-8 text-center min-h-[60vh] flex flex-col justify-center items-center">
+        <div className="container mx-auto px-4 py-24 text-center min-h-[40vh] flex flex-col justify-center items-center">
           <Info className="h-16 w-16 text-destructive mb-4" />
           <h1 className="text-3xl font-bold mb-2">Product Not Found</h1>
           <p className="text-muted-foreground mb-6">Sorry, we couldn't find the product you're looking for.</p>
@@ -187,214 +201,191 @@ const ProductDetail: React.FC = () => {
       </>
     );
   }
-  
-  const productImages = (Array.isArray(product.images) ? product.images.filter(img => typeof img === 'string') : []) as string[];
 
-  // Safely handle category relation or null
-  const category =
-    product.category_id && typeof product.category_id === 'object' && product.category_id !== null
-      ? product.category_id as { id: string; name: string; slug: string }
-      : null;
+  // Ensure images are string[]
+  const productImages = product.images as string[];
 
   return (
     <>
       <SEOHead
-        title={product.meta_title || product.name}
-        description={product.meta_description || product.short_description || ''}
+        title={product?.meta_title || product?.name || "Product Details"}
+        description={product?.meta_description || product?.short_description || "View product details"}
         url={`https://shopzyra.vercel.app/product/${product.slug}`}
         image={selectedImage || productImages[0]}
-        // Add canonical for SEO
       />
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
-        <Breadcrumb className="mb-6">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild><Link to="/">Home</Link></BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild><Link to="/shop">Shop</Link></BreadcrumbLink>
-            </BreadcrumbItem>
-            {category && (
-              <>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbLink asChild><Link to={`/categories/${category.slug}`}>{category.name}</Link></BreadcrumbLink>
-                </BreadcrumbItem>
-              </>
+      <main className="container mx-auto px-4 py-8 max-w-7xl">
+        <header className="mb-6">
+          <h1 className="text-3xl md:text-5xl font-extrabold mb-1 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+            {product.name}
+          </h1>
+          <div className="flex items-center gap-2 flex-wrap mt-2">
+            {product.is_new && (
+              <Badge variant="secondary" className="bg-blue-500 text-white">New Arrival</Badge>
             )}
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{product.name}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-        <div className="grid md:grid-cols-2 gap-8 lg:gap-12 animate-fade-in">
-          {/* Image Gallery */}
-          <div className="space-y-4">
-             <Card className="overflow-hidden shadow-lg rounded-lg">
-                <AspectRatio ratio={1}>
-                  <img
-                    src={selectedImage || productImages[0] || '/placeholder-product.jpg'}
-                    alt={product.name}
-                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                  />
-                </AspectRatio>
-             </Card>
-            {productImages && productImages.length > 1 && (
-              <Carousel opts={{ align: "start", loop: productImages.length > 5 }} className="w-full">
-                <CarouselContent className="-ml-2">
-                  {productImages.map((image, index) => (
-                    <CarouselItem key={index} className="pl-2 basis-1/4 sm:basis-1/5">
-                      <Card 
-                        onClick={() => setSelectedImage(image)} 
-                        className={`overflow-hidden cursor-pointer transition-all rounded-md border-2 ${selectedImage === image ? 'border-primary' : 'border-transparent hover:border-muted-foreground/50'}`}
-                      >
-                        <AspectRatio ratio={1}>
-                          <img src={image} alt={`${product.name} thumbnail ${index + 1}`} className="w-full h-full object-cover" />
-                        </AspectRatio>
-                      </Card>
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-                {productImages.length > 5 && <CarouselPrevious className="left-[-10px] hidden sm:flex" />}
-                {productImages.length > 5 && <CarouselNext className="right-[-10px] hidden sm:flex" />}
-              </Carousel>
+            {product.is_featured && (
+              <Badge variant="secondary" className="bg-purple-500 text-white">Featured</Badge>
             )}
+            {!product.in_stock && <Badge variant="destructive">Out of Stock</Badge>}
+            <span className="text-base text-muted-foreground ml-2">
+              SKU: {product.sku || "N/A"}
+            </span>
           </div>
-
-          {/* Product Details */}
-          <Card className="shadow-lg rounded-lg">
-            <CardHeader>
-              {category && (
-                <Link to={`/categories/${category.slug}`} className="text-sm text-primary hover:underline mb-1 inline-block">
-                  {category.name}
-                </Link>
-              )}
-              <CardTitle className="text-3xl lg:text-4xl font-bold tracking-tight">{product.name}</CardTitle>
-              <div className="mt-2 flex items-center space-x-2">
-                {renderStars(product.rating, (product as any).review_count)}
-              </div>
-               <div className="mt-3 flex items-baseline gap-2">
-                <p className="text-3xl font-bold text-primary">AED {product.price.toFixed(2)}</p>
-                {product.discount_percentage && product.discount_percentage > 0 && (
-                  <Badge variant="destructive" className="text-sm">-{product.discount_percentage}% OFF</Badge>
-                )}
-              </div>
-              {product.sku && <p className="text-xs text-muted-foreground mt-1">SKU: {product.sku}</p>}
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <p className="text-muted-foreground leading-relaxed">{product.short_description || "Detailed information about this product is coming soon."}</p>
-              
-              {product.is_customizable || product.is_digital ? (
-                <>
-                  <Button
-                    className="w-full mt-4"
-                    onClick={() => setCustomizeModalOpen(true)}
-                    disabled={!product.in_stock}
-                  >
-                    {product.is_digital ? "Buy Now" : "Customize"}
-                  </Button>
-                  <ProductCustomizeModal
-                    open={customizeModalOpen}
-                    onOpenChange={setCustomizeModalOpen}
-                    product={product}
-                  />
-                </>
-              ) : (
-                <AddToCartButton product={{
-                  id: product.id,
-                  name: product.name,
-                  slug: product.slug,
-                  price: product.price,
-                  images: product.images,
-                  stock_quantity: product.stock_quantity
-                }} disabled={!product.in_stock} className="w-full mt-4" />
-              )}
-
-              <div className="flex items-center gap-2">
-                {product.in_stock ? (
-                  <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white">
-                    <CheckCircle className="mr-1 h-4 w-4" />In Stock
-                  </Badge>
-                ) : (
-                  <Badge variant="destructive">Out of Stock</Badge>
-                )}
-                 {product.is_new && <Badge variant="secondary" className="bg-blue-500 text-white">New Arrival</Badge>}
-                 {product.is_featured && <Badge variant="secondary" className="bg-purple-500 text-white">Featured</Badge>}
-              </div>
-
-            </CardContent>
-            <CardFooter className="flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-6 border-t">
-              <div className="flex items-center border rounded-md overflow-hidden">
-                <Button variant="ghost" size="icon" onClick={() => handleQuantityChange(-1)} disabled={quantity <= 1} className="rounded-none h-11 w-11">
-                  <Minus className="h-5 w-5" />
-                </Button>
-                <span className="w-12 text-center font-semibold text-lg">{quantity}</span>
-                <Button variant="ghost" size="icon" onClick={() => handleQuantityChange(1)} className="rounded-none h-11 w-11">
-                  <Plus className="h-5 w-5" />
-                </Button>
-              </div>
-              <Button size="lg" onClick={handleAddToCart} className="flex-1 h-11" disabled={!product.in_stock}>
-                <ShoppingCart className="mr-2 h-5 w-5" /> {product.in_stock ? "Add to Cart" : "Out of Stock"}
-              </Button>
-              <WishlistButton productId={product.id} size="lg" className="h-11 w-11" />
-            </CardFooter>
-          </Card>
-        </div>
-
-        {/* Tabs for Description and Reviews */}
-        <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="mt-12" id="reviews">
-          <TabsList className="grid w-full grid-cols-2 md:w-auto md:inline-flex bg-muted p-1 rounded-lg">
-            <TabsTrigger value="description" className="data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm">Description</TabsTrigger>
-            <TabsTrigger value="reviews" className="data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm">Reviews ({(product as any).reviews?.length || 0})</TabsTrigger>
-          </TabsList>
-          <TabsContent value="description">
-            <Card className="mt-4 shadow-sm rounded-lg">
-              <CardContent className="pt-6 prose dark:prose-invert max-w-none">
-                {product.description ? (
-                  <div dangerouslySetInnerHTML={{ __html: product.description }} />
-                ) : (
-                  <p>No detailed description available for this product yet. Check back soon!</p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="reviews">
-            <Card className="mt-4 shadow-sm rounded-lg">
-              <CardHeader>
-                <CardTitle>Customer Reviews & Feedback</CardTitle>
-                <CardDescription>Honest opinions from our valued customers.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <ProductReviews 
-                  productId={product.id}
+        </header>
+        {/* Product & Gallery */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+          <section>
+            <Card className="overflow-hidden shadow-lg rounded-lg bg-muted-foreground/5 mb-3">
+              <AspectRatio ratio={1}>
+                <img
+                  src={selectedImage || productImages[0] || "/placeholder-product.jpg"}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
                 />
-                <Separator />
-                {user ? (
-                  <ReviewForm productId={product.id} onReviewSubmitted={() => { 
-                    toast({title: "Review Submitted!", description: "Thank you for your feedback."})
-                   }} 
-                  />
-                ) : (
-                  <div className="text-center py-4 border rounded-lg bg-muted/50">
-                    <MessageCircle className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-muted-foreground">
-                      <Link to={`/auth?redirect=/product/${slug}#reviews`} className="text-primary font-semibold hover:underline">Sign in</Link> or <Link to={`/auth?redirect=/product/${slug}#reviews`} className="text-primary font-semibold hover:underline">create an account</Link> to leave a review.
-                    </p>
+              </AspectRatio>
+            </Card>
+            {productImages.length > 1 && (
+              <div className="flex gap-2 mt-3">
+                {productImages.map((img, i) => (
+                  <button key={i} className={`w-20 h-20 rounded border-2 ${selectedImage === img ? "border-primary" : "border-gray-200"}`}
+                    onClick={() => setSelectedImage(img)}>
+                    <img src={img} alt={`thumb-${i}`} className="object-cover w-full h-full" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+          {/* Product info + Customization */}
+          <section>
+            <div className="mb-4">
+              <span className="text-4xl font-bold text-primary">
+                AED {product.price.toFixed(2)}
+              </span>
+              {product.discount_percentage > 0 && (
+                <span className="ml-3 text-xl text-gray-400 line-through">
+                  AED {(product.price / (1 - product.discount_percentage / 100)).toFixed(2)}
+                </span>
+              )}
+            </div>
+            <div className="mb-5 flex items-center gap-2">
+              <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+              <span className="font-medium">{Number(product.rating || 0).toFixed(1)}</span>
+              <span className="text-sm text-muted-foreground">({product.review_count || 0})</span>
+            </div>
+            <p className="mb-4 text-muted-foreground">{product.short_description}</p>
+            <Separator className="mb-4" />
+            {/* Customization fields if required */}
+            {isCustomizable && (
+              <div className="mb-6 space-y-4 bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <h2 className="text-lg font-semibold text-purple-800 mb-2">Customize your product</h2>
+                {allowText && (
+                  <div>
+                    <label className="block mb-1 font-medium" htmlFor="customText">Custom Text *</label>
+                    <input
+                      id="customText"
+                      type="text"
+                      value={customText}
+                      onChange={e => setCustomText(e.target.value)}
+                      className="w-full border rounded px-3 py-2"
+                      placeholder="Your custom text"
+                      required
+                    />
                   </div>
                 )}
-              </CardContent>
-            </Card>
+                {allowImage && (
+                  <div>
+                    <label className="block mb-1 font-medium" htmlFor="customImage">Custom Image *</label>
+                    <input
+                      id="customImage"
+                      type="file"
+                      accept="image/*"
+                      onChange={e => setCustomImage(e.target.files ? e.target.files[0] : null)}
+                      className="w-full border rounded px-3 py-2"
+                      required
+                    />
+                    {customImagePreview && (
+                      <img src={customImagePreview} alt="custom preview" className="h-20 mt-2 rounded shadow" />
+                    )}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  All customizations are final. Custom products cannot be returned unless faulty.
+                </p>
+              </div>
+            )}
+            {/* Quantity & buttons */}
+            <div className="flex gap-2 items-center mb-4">
+              <Button variant="ghost" size="icon" onClick={() => setQuantity(q => Math.max(1, q - 1))} disabled={quantity <= 1}>
+                <Minus />
+              </Button>
+              <span className="w-12 text-center font-semibold text-lg">{quantity}</span>
+              <Button variant="ghost" size="icon" onClick={() => setQuantity(q => q + 1)}>
+                <Plus />
+              </Button>
+            </div>
+            <div className="flex gap-2 mb-8 flex-wrap">
+              <Button
+                size="lg"
+                onClick={handleAddToCart}
+                className="flex-1 h-12 bg-gradient-to-r from-primary to-purple-700 text-white font-semibold"
+                disabled={!product.in_stock || (isCustomizable && !canAddToCart)}
+              >
+                <ShoppingCart className="mr-2 h-5 w-5" />
+                {product.in_stock ? "Add to Cart" : "Out of Stock"}
+              </Button>
+              <WishlistButton productId={product.id} className="h-12 w-12" size="lg" />
+            </div>
+            {/* Internal Links */}
+            <nav aria-label="breadcrumb" className="mb-4">
+              <Link to="/shop" className="text-primary underline underline-offset-2 mr-2">Shop</Link>
+              |
+              <Link to="/categories" className="text-primary underline underline-offset-2 mx-2">Categories</Link>
+              |
+              <Link to="/faq" className="text-primary underline underline-offset-2 mx-2">FAQ</Link>
+              |
+              <Link to="/contact" className="text-primary underline underline-offset-2 ml-2">Contact</Link>
+            </nav>
+          </section>
+        </div>
+        {/* Product Description / Reviews as Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-12" id="details-tabs">
+          <TabsList className="mb-6">
+            <TabsTrigger value="description" className="mr-2">Description</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews</TabsTrigger>
+          </TabsList>
+          <TabsContent value="description">
+            <article className="prose dark:prose-invert max-w-none">
+              <h2>Description</h2>
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: product.description || "No product description available.",
+                }}
+              />
+            </article>
+          </TabsContent>
+          <TabsContent value="reviews">
+            <section className="space-y-6">
+              <ProductReviews productId={product.id} />
+              <Separator />
+              {user ? (
+                <ReviewForm productId={product.id} onReviewSubmitted={() => { toast({ title: "Review Submitted!", description: "Thank you for your feedback." }); }} />
+              ) : (
+                <div className="text-center py-4 border rounded-lg bg-muted/50">
+                  <MessageCircle className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-muted-foreground">
+                    <Link to={`/auth?redirect=/product/${slug}#reviews`} className="text-primary font-semibold hover:underline">Sign in</Link> or <Link to={`/auth?redirect=/product/${slug}#reviews`} className="text-primary font-semibold hover:underline">create an account</Link> to leave a review.
+                  </p>
+                </div>
+              )}
+            </section>
           </TabsContent>
         </Tabs>
-        
-        {/* TODO: Add related products section: <RelatedProducts categoryId={category?.id} currentProductId={product.id} /> */}
-      </div>
+      </main>
       <Footer />
     </>
   );
 };
 
 export default ProductDetail;
+
+// NOTE: This file is getting long. Please ask Lovable to modularize (split components by section) for maintainability.
