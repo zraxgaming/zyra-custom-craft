@@ -29,7 +29,7 @@ import OrderFailed from "@/pages/OrderFailed";
 import Referrals from "@/pages/Referrals";
 import Newsletter from "@/pages/Newsletter";
 import NotFound from "@/pages/NotFound";
-import AuthCallback from "@/pages/auth/Callback"; // Fix casing to match the actual filename
+import AuthCallback from "@/pages/auth/callback"; // <-- FIXED CASING
 import Cart from "@/pages/Cart";
 
 // Admin Pages
