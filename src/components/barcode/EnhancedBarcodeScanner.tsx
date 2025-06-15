@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,7 +33,6 @@ const EnhancedBarcodeScanner: React.FC<EnhancedBarcodeScannerProps> = ({
     } else {
       stopScanning();
     }
-
     return () => stopScanning();
   }, [internalActive]);
 
@@ -72,16 +70,14 @@ const EnhancedBarcodeScanner: React.FC<EnhancedBarcodeScannerProps> = ({
     if (!scanning || !videoRef.current || !canvasRef.current) {
       return;
     }
-
+    videoRef.current.style.transform = 'scaleX(1)'; // camera NOT mirrored.
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
-
     if (video.readyState === video.HAVE_ENOUGH_DATA && context) {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
       requestAnimationFrame(scanFrame);
     } else {
       requestAnimationFrame(scanFrame);
@@ -132,6 +128,7 @@ const EnhancedBarcodeScanner: React.FC<EnhancedBarcodeScannerProps> = ({
               muted
               className="w-full rounded-lg border cursor-pointer"
               onClick={simulateScan}
+              style={{ transform: 'scaleX(1)' }} // prevent mirroring
             />
             <canvas
               ref={canvasRef}

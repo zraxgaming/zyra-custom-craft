@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CartItem } from '@/types/cart';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
 
 interface CartContextType {
   items: CartItem[];
@@ -42,7 +43,7 @@ interface CartProviderProps {
   children: React.ReactNode;
 }
 
-export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
+export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -51,6 +52,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const [appliedGiftCard, setAppliedGiftCard] = useState<string | null>(null);
   const [giftCardAmount, setGiftCardAmount] = useState(0);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -106,6 +108,45 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
     checkStockStatus();
   }, [items.length]);
+
+  // IF user is logged in, sync cart with Supabase
+  useEffect(() => {
+    const syncCart = async () => {
+      if (user) {
+        // Load cart items from Supabase if any
+        const { data, error } = await supabase
+          .from('cart_items')
+          .select('*')
+          .eq('user_id', user.id);
+        if (!error && data) {
+          // Overwrite local cart with db
+          setItems(data);
+        }
+      }
+    };
+    syncCart();
+  }, [user]);
+
+  // Save each change to DB
+  useEffect(() => {
+    if (user) {
+      const saveCart = async () => {
+        // Remove existing
+        await supabase.from('cart_items').delete().eq('user_id', user.id);
+        // Insert all
+        if (items.length > 0) {
+          await supabase.from('cart_items').insert(items.map(item => ({
+            ...item,
+            user_id: user.id,
+          })));
+        }
+      };
+      saveCart();
+    } else {
+      // Store in localStorage for guests
+      localStorage.setItem('cart', JSON.stringify(items));
+    }
+  }, [items, user]);
 
   const addItem = (newItem: Omit<CartItem, 'id'>) => {
     const id = Date.now().toString();
@@ -236,3 +277,5 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     </CartContext.Provider>
   );
 };
+
+export default CartProvider;

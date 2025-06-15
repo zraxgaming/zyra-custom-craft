@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,11 +41,15 @@ const BarcodeGenerator: React.FC<BarcodeGeneratorProps> = ({ onGenerated }) => {
     setIsGenerating(true);
     try {
       let barcodeData = customData;
-      
       if (selectedProduct && !barcodeData) {
         barcodeData = selectedProduct.sku || selectedProduct.name || selectedProduct.id;
       }
-
+      if (selectedProduct && barcodeData) {
+        await supabase
+          .from('products')
+          .update({ barcode: barcodeData })
+          .eq('id', selectedProduct.id);
+      }
       const { error } = await supabase
         .from("barcode_generations")
         .insert({
@@ -54,23 +57,12 @@ const BarcodeGenerator: React.FC<BarcodeGeneratorProps> = ({ onGenerated }) => {
           barcode_data: barcodeData,
           product_id: selectedProduct?.id || null,
         });
-
       if (error) throw error;
-
       toast({
         title: "Barcode generated",
         description: "Barcode has been generated successfully.",
       });
-
-      // Reset form
-      setSelectedProduct(null);
-      setCustomData("");
-      setBarcodeType("qr");
-      
-      // Callback to refresh parent component
-      if (onGenerated) {
-        onGenerated();
-      }
+      if (onGenerated) onGenerated();
     } catch (error: any) {
       toast({
         title: "Error generating barcode",
@@ -107,7 +99,7 @@ const BarcodeGenerator: React.FC<BarcodeGeneratorProps> = ({ onGenerated }) => {
         </div>
 
         <div>
-          <Label>Product (Optional)</Label>
+          <Label>Product (Optional, will also set barcode)</Label>
           <ProductSearchSelect
             selectedProduct={selectedProduct}
             onProductSelect={setSelectedProduct}

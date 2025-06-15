@@ -144,14 +144,10 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
             .update({ payment_intent_id: paymentResp.id })
             .eq("id", orderData.id);
         }
-
-        if (!response.ok) {
-          throw new Error(paymentResp.message || "Failed to get Ziina payment intent.");
+        if (!response.ok || !paymentResp.next_action_url) {
+          throw new Error(paymentResp.message || "Failed to get payment redirect URL from Ziina.");
         }
-        if (!paymentResp.next_action_url) {
-          throw new Error(paymentResp.message || "No payment redirect URL received from Ziina.");
-        }
-        // Redirect user to Ziina
+        // Redirect
         window.location.href = paymentResp.next_action_url;
         return;
       } else {
