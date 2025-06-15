@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,12 +52,17 @@ const ProductDetail: React.FC = () => {
         if (error) {
           setProduct(null);
         } else if (data) {
+          // Fix Typing: always ensure images is an array of strings
+          let safeImages: string[] = [];
+          if (Array.isArray(data.images)) {
+            safeImages = data.images.filter((img): img is string => typeof img === "string");
+          }
           setProduct({
             ...data,
-            images: Array.isArray(data.images) ? data.images.filter((img): img is string => typeof img === "string") : [],
+            images: safeImages,
           });
-          if (data?.images?.length && typeof data.images[0] === "string") {
-            setSelectedImage(data.images[0]);
+          if (safeImages.length && typeof safeImages[0] === "string") {
+            setSelectedImage(safeImages[0]);
           }
         } else {
           setProduct(null);
@@ -86,20 +90,20 @@ const ProductDetail: React.FC = () => {
     reader.readAsDataURL(customImage);
   }, [customImage]);
 
+  // Fix: Customization validation logic (require both text and image if allowed)
   const isCustomizable = !!product?.is_customizable;
-  const allowText = true; // For simplicity (replace if you want to pull from product.customization_options)
-  const allowImage = true; // Same as above
+  const allowText = true;
+  const allowImage = true;
 
-  // Guard: make sure customization is required before adding to cart
+  // Validation for add-to-cart: must have text and image if both required
   const canAddToCart = !isCustomizable ||
     ((allowText ? customText.trim().length > 0 : true) && (allowImage ? !!customImage : true));
 
-  // Enforce customization on custom product add
+  // Fix: Enforce customization required in handleAddToCart
   const handleAddToCart = async () => {
     if (!product) return;
 
     if (isCustomizable) {
-      // Require customization!
       if ((allowText && !customText.trim()) || (allowImage && !customImage)) {
         toast({
           title: "Customization Required!",
@@ -123,7 +127,7 @@ const ProductDetail: React.FC = () => {
             product_id: product.id,
             name: product.name,
             price: product.price,
-            image_url: selectedImage || product.images[0] || "/placeholder-product.jpg",
+            image_url: selectedImage || (Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : "/placeholder-product.jpg"),
           },
           quantity,
           customization
@@ -140,7 +144,7 @@ const ProductDetail: React.FC = () => {
         product_id: product.id,
         name: product.name,
         price: product.price,
-        image_url: selectedImage || product.images[0] || "/placeholder-product.jpg",
+        image_url: selectedImage || (Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : "/placeholder-product.jpg"),
       },
       quantity,
       customization
