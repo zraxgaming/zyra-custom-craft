@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,10 +50,10 @@ const ProductDetail: React.FC = () => {
           .select(`
             *,
             category_id ( id, name, slug ),
-            reviews ( id, rating, comment, created_at, title, user_id (id, display_name, avatar_url) )
+            reviews!fk_reviews_product ( id, rating, comment, created_at, title, user_id (id, display_name, avatar_url) )
           `)
           .eq('slug', slug)
-          .single();
+          .maybeSingle();
 
         if (error) {
           if (error.code === 'PGRST116') { 
@@ -181,9 +182,11 @@ const ProductDetail: React.FC = () => {
   
   const productImages = (Array.isArray(product.images) ? product.images.filter(img => typeof img === 'string') : []) as string[];
 
-  const category = product.category_id && typeof product.category_id === 'object' 
-    ? product.category_id as { id: string; name: string; slug: string } 
-    : null;
+  // Safely handle category relation or null
+  const category =
+    product.category_id && typeof product.category_id === 'object' && product.category_id !== null
+      ? product.category_id as { id: string; name: string; slug: string }
+      : null;
 
   return (
     <>
@@ -365,3 +368,4 @@ const ProductDetail: React.FC = () => {
 };
 
 export default ProductDetail;
+
