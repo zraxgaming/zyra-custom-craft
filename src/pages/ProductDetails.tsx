@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,9 @@ const ProductDetails = () => {
           .from('products')
           .select('*')
           .eq('slug', slug)
-          .single();
+          .maybeSingle();
+
+        console.log("ProductDetails fetch result:", { data, error });
 
         if (error) throw error;
         

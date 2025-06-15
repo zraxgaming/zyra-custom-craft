@@ -1,353 +1,440 @@
-
 import React, { useState, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useCart } from '@/components/cart/CartProvider';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ShoppingBag, CreditCard, Truck, UserCircle, Gift, Smartphone } from 'lucide-react';
-import OrderSummary from './OrderSummary';
-import CouponForm from './CouponForm';
-import GiftCardForm from './GiftCardForm';
-import DeliveryOptionsComponent from './DeliveryOptions';
-import ZiinaPayment from './ZiinaPayment';
-
-interface DeliveryOptionType {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-}
-
-const addressSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email address"),
-  phone: z.string().min(1, "Phone number is required"),
-  address: z.string().min(1, "Address is required"),
-  city: z.string().min(1, "City is required"),
-  zipCode: z.string().min(1, "Zip code is required"),
-  country: z.string().min(1, "Country is required"),
-});
-
-type AddressFormData = z.infer<typeof addressSchema>;
+import { useNavigate } from 'react-router-dom';
+import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+import { Checkbox } from "@/components/ui/checkbox"
+import { ReloadIcon } from "@radix-ui/react-icons"
+import { cn } from "@/lib/utils";
+import { Coupon } from "@/types/coupon";
+import { supabase } from "@/integrations/supabase/client";
+import { Address } from "@/types/address";
+import { PaymentMethod } from "@/types/payment-method";
+import { OrderItem } from "@/types/order";
 
 interface CheckoutFormProps {
-  onPaymentSuccess: (orderId: string) => void;
+  subtotal: number;
 }
 
-const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess }) => {
-  const { 
-    items, 
-    clearCart, 
-    totalPrice, 
-    subtotal, 
-    applyCoupon, 
-    appliedCoupon, 
-    removeCoupon, 
-    applyGiftCard, 
-    appliedGiftCard,
-    removeGiftCard,
-    giftCardAmount,
-    discount, 
-  } = useCart();
-  const { user } = useAuth();
+const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
+  const { cartItems, clearCart } = useCart();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'ziina' | 'cod'>('ziina');
-  
-  const MOCK_DELIVERY_OPTIONS: DeliveryOptionType[] = [
-    { id: 'standard', name: 'Standard Delivery', price: 15, description: '5-7 days' },
-    { id: 'express', name: 'Express Delivery', price: 25, description: '2-3 days' },
-  ];
-  const [deliveryOptionsList, setDeliveryOptionsList] = useState<DeliveryOptionType[]>(MOCK_DELIVERY_OPTIONS);
-  const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | null>(null);
-  const selectedDelivery = deliveryOptionsList.find(opt => opt.id === selectedDeliveryId) || null;
-  
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const { control, handleSubmit, setValue, getValues, formState: { errors } } = useForm<AddressFormData>({
-    resolver: zodResolver(addressSchema),
-    defaultValues: {
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      address: '',
-      city: '',
-      zipCode: '',
-      country: 'UAE',
-    },
-  });
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [zipCode, setZipCode] = useState('');
+  const [country, setCountry] = useState('');
+  const [phone, setPhone] = useState('');
+  const [couponCode, setCouponCode] = useState('');
+  const [coupon, setCoupon] = useState<Coupon | string | null>(null);
+  const [discount, setDiscount] = useState(0);
+  const [loadingCoupon, setLoadingCoupon] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [shippingAddress, setShippingAddress] = useState<Address | null>(null);
+  const [billingAddress, setBillingAddress] = useState<Address | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (user) {
-      setValue('email', user.email || '');
+      setName(user?.user_metadata?.name || '');
+      setEmail(user?.email || '');
     }
-  }, [user, setValue]);
+  }, [user]);
 
-  const orderTotalAfterDiscounts = totalPrice - giftCardAmount;
-  const finalAmountWithDelivery = orderTotalAfterDiscounts + (selectedDelivery?.price || 0);
-
-  const handleSuccessfulOrderPlacement = async (orderId: string, paymentConfirmed: boolean = true) => {
-    toast({
-      title: paymentConfirmed ? "Order Placed!" : "Order Submitted!",
-      description: paymentConfirmed 
-        ? `Your order #${orderId} has been placed successfully.`
-        : `Your order #${orderId} is submitted. Payment pending.`,
-    });
-    await clearCart(); 
-    onPaymentSuccess(orderId); 
+  const calculateTotal = () => {
+    return subtotal - discount;
   };
 
-  const handlePaymentProcessError = (error: string) => {
-    toast({
-      title: "Payment Failed",
-      description: error,
-      variant: "destructive",
-    });
-    setIsLoading(false);
-    setIsProcessingPayment(false);
-  };
-  
-  const createOrderInDb = async (formData: AddressFormData, currentPaymentMethod: 'ziina' | 'cod', paymentDetails?: any) => {
-    if (!selectedDelivery) {
-      toast({ title: "Error", description: "Please select a delivery option.", variant: "destructive" });
-      throw new Error("Delivery option not selected");
+  const applyCoupon = async () => {
+    setLoadingCoupon(true);
+    try {
+      const { data: couponData, error } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('code', couponCode)
+        .single();
+
+      if (error) {
+        setCoupon(null);
+        setDiscount(0);
+        toast({
+          title: "Invalid coupon",
+          description: "Coupon code is not valid.",
+          variant: "destructive",
+        });
+      } else {
+        if (couponData && couponData.expiry && new Date(couponData.expiry) < new Date()) {
+          setCoupon(null);
+          setDiscount(0);
+          toast({
+            title: "Expired coupon",
+            description: "Coupon code has expired.",
+            variant: "destructive",
+          });
+          return;
+        }
+        setCoupon(couponData);
+        setDiscount(couponData.discount);
+        toast({
+          title: "Coupon applied",
+          description: "Coupon code applied successfully.",
+        });
+      }
+    } catch (error: any) {
+      setCoupon(null);
+      setDiscount(0);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingCoupon(false);
     }
-
-    const orderPayload = {
-      user_id: user?.id,
-      items: items.map(item => ({
-        product_id: item.product_id,
-        quantity: item.quantity,
-        price: item.price,
-        customization: item.customization,
-        name: item.name,
-        image_url: item.image_url
-      })),
-      total_amount: finalAmountWithDelivery,
-      shipping_address: formData,
-      billing_address: formData, 
-      status: currentPaymentMethod === 'cod' ? 'pending_cod_payment' : (paymentDetails?.status === 'succeeded' ? 'processing' : 'pending_payment'), 
-      currency: 'AED',
-      payment_method: currentPaymentMethod,
-      payment_status: paymentDetails?.status === 'succeeded' ? 'paid' : 'pending',
-      delivery_type: selectedDelivery.name,
-      notes: `Coupon: ${appliedCoupon?.code || 'None'}. Gift Card: ${appliedGiftCard?.code || 'None'}. Delivery: ${selectedDelivery.name} (+${selectedDelivery.price} AED). ${paymentDetails?.id ? `Ziina Payment ID: ${paymentDetails.id}` : ''}`,
-      coupon_id: appliedCoupon?.id,
-      gift_card_id: appliedGiftCard?.id,
-      shipping_cost: selectedDelivery.price,
-      ...(paymentDetails?.id && { payment_intent_id: paymentDetails.id }),
-    };
-
-    console.log("Creating order in DB with payload:", orderPayload);
-    const { data: orderResult, error } = await supabase
-      .from('orders')
-      .insert(orderPayload)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error creating order in DB:", error);
-      throw error;
-    }
-    console.log("Order created in DB:", orderResult);
-    return orderResult.id;
   };
 
-  const onSubmitMainForm = async (data: AddressFormData) => {
-    setIsLoading(true);
-    if (!selectedDelivery) {
-      toast({ title: "Error", description: "Please select a delivery option.", variant: "destructive" });
-      setIsLoading(false);
+  const handlePayment = async () => {
+    setIsSubmitting(true);
+
+    if (cartItems.length === 0) {
+      toast({
+        title: "Cart is empty",
+        description: "Please add items to your cart before proceeding to checkout.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
       return;
     }
 
-    if (paymentMethod === 'cod' || finalAmountWithDelivery === 0) {
-      try {
-        const orderId = await createOrderInDb(data, 'cod');
-        const paymentConfirmed = finalAmountWithDelivery === 0;
-        if (paymentConfirmed) {
-             await supabase.from('orders').update({ status: 'processing', payment_status: 'paid' }).eq('id', orderId);
-        }
-        await handleSuccessfulOrderPlacement(orderId, paymentConfirmed);
-      } catch (error: any) {
-        console.error("Error placing COD/Zero amount order:", error);
-        handlePaymentProcessError(error.message || "Could not place your order.");
-      } finally {
-        setIsLoading(false);
-      }
-    } else if (paymentMethod === 'ziina') {
-      toast({ title: "Proceed to Payment", description: "Please verify your details and click 'Pay with Ziina' in the payment section."});
-      setIsLoading(false); 
+    if (!name || !email || !address || !city || !state || !zipCode || !country || !phone) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+      return;
     }
-  };
 
-  const handleZiinaPaymentSuccess = async (paymentIntentData: any) => {
-    console.log("Ziina Payment Intent Success (from CheckoutForm):", paymentIntentData);
-    setIsProcessingPayment(true);
-    const formData = getValues();
+    const orderItems: OrderItem[] = cartItems.map(item => ({
+      product_id: item.product_id,
+      quantity: item.quantity,
+      price: item.price,
+      customization: item.customization,
+    }));
+
+    const orderData = {
+      user_id: user?.id,
+      name,
+      email,
+      address,
+      city,
+      state,
+      zip_code: zipCode,
+      country,
+      phone,
+      subtotal,
+      discount,
+      total: calculateTotal(),
+      items: orderItems,
+      coupon_id: typeof coupon === 'object' && coupon !== null ? coupon.id : null,
+      payment_method: paymentMethod?.name || 'Credit Card',
+      shipping_address: shippingAddress,
+      billing_address: billingAddress,
+    };
+
     try {
-      const orderId = await createOrderInDb(formData, 'ziina', paymentIntentData);
-      console.log(`Order ${orderId} linked with Ziina payment ${paymentIntentData.id}`);
-      toast({ title: "Redirecting to Ziina...", description: "You will be redirected to complete your payment." });
+      const { data, error } = await supabase
+        .from('orders')
+        .insert([orderData])
+        .select()
+
+      if (error) {
+        console.error('Error creating order:', error);
+        toast({
+          title: "Error",
+          description: "Failed to create order.",
+          variant: "destructive",
+        });
+      } else {
+        clearCart();
+        toast({
+          title: "Order created",
+          description: "Your order has been placed successfully.",
+        });
+        navigate(`/order-success/${data[0].id}`);
+      }
     } catch (error: any) {
-      console.error('Error processing Ziina success callback:', error);
-      handlePaymentProcessError(error.message || 'Failed to finalize order before Ziina redirect.');
+      console.error('Error creating order:', error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  if (items.length === 0 && !isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <ShoppingBag className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-        <h1 className="text-2xl font-bold mb-4">Your Cart is Empty</h1>
-        <p className="text-muted-foreground mb-6">
-          Looks like you haven't added anything to your cart yet.
-        </p>
-        <Button onClick={() => onPaymentSuccess('')}>Continue Shopping</Button>
-      </div>
-    );
-  }
+  const appliedCoupon = typeof coupon === 'object' && coupon !== null ? coupon : null;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center">Checkout</h1>
-      <form onSubmit={handleSubmit(onSubmitMainForm)} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <Accordion type="single" collapsible defaultValue="shipping" className="w-full">
-            <AccordionItem value="shipping">
-              <AccordionTrigger className="text-xl font-semibold">
-                <div className="flex items-center gap-2">
-                  <UserCircle className="h-6 w-6 text-primary" />
-                  Shipping Information
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="pt-4">
-                <Card>
-                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
-                    {(Object.keys(addressSchema.shape) as Array<keyof AddressFormData>).map((key) => (
-                      <div key={key} className={key === 'address' || key === 'country' ? 'md:col-span-2' : ''}>
-                        <Label htmlFor={key} className="capitalize">{key.replace(/([A-Z])/g, ' $1')}</Label>
-                        <Controller
-                          name={key}
-                          control={control}
-                          render={({ field }) => (
-                            <Input id={key} {...field} placeholder={`Enter your ${key.toLowerCase()}`} />
-                          )}
-                        />
-                        {errors[key] && <p className="text-red-500 text-sm mt-1">{errors[key]?.message}</p>}
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="delivery">
-              <AccordionTrigger className="text-xl font-semibold">
-                <div className="flex items-center gap-2">
-                  <Truck className="h-6 w-6 text-primary" />
-                  Delivery Options
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="pt-4">
-                <DeliveryOptionsComponent 
-                  selectedOption={selectedDeliveryId || ''} 
-                  onOptionChange={setSelectedDeliveryId}
-                />
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="payment">
-              <AccordionTrigger className="text-xl font-semibold">
-                <div className="flex items-center gap-2">
-                  <CreditCard className="h-6 w-6 text-primary" />
-                  Payment Method
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="pt-4">
-                <Card>
-                  <CardContent className="pt-6 space-y-4">
-                    <div className="flex gap-4">
-                      <Button type="button" variant={paymentMethod === 'ziina' ? 'default' : 'outline'} onClick={() => setPaymentMethod('ziina')} className="flex-1">
-                        <Smartphone className="mr-2 h-4 w-4"/> Ziina
-                      </Button>
-                      <Button type="button" variant={paymentMethod === 'cod' ? 'default' : 'outline'} onClick={() => setPaymentMethod('cod')} className="flex-1">Cash on Delivery</Button>
-                    </div>
-                    
-                    {paymentMethod === 'ziina' && finalAmountWithDelivery > 0 && (
-                      <ZiinaPayment
-                        amount={finalAmountWithDelivery}
-                        orderPayload={{ orderId: "TEMP_ORDER_ID_BEFORE_DB", metadata: { customerEmail: getValues("email") } }}
-                        onSuccess={handleZiinaPaymentSuccess}
-                        onError={handlePaymentProcessError}
-                      />
-                    )}
-                    {paymentMethod === 'cod' && (
-                      <p className="text-sm text-muted-foreground">You will pay upon delivery.</p>
-                    )}
-                     {finalAmountWithDelivery === 0 && <p className="text-sm text-green-600">Your order total is 0 AED. No payment required.</p>}
-                  </CardContent>
-                </Card>
-              </AccordionContent>
-            </AccordionItem>
-            
-            <AccordionItem value="promo">
-              <AccordionTrigger className="text-xl font-semibold">
-                <div className="flex items-center gap-2">
-                  <Gift className="h-6 w-6 text-primary" />
-                  Promotions & Gift Cards
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="pt-4 space-y-4">
-                <CouponForm 
-                  onCouponApply={applyCoupon}
-                  onCouponRemove={removeCoupon}
-                  orderTotal={subtotal}
-                  appliedCoupon={appliedCoupon}
-                />
-                <GiftCardForm 
-                  onGiftCardApply={applyGiftCard}
-                  onGiftCardRemove={removeGiftCard}
-                  orderTotal={totalPrice}
-                  appliedGiftCard={appliedGiftCard}
-                />
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>Checkout</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              placeholder="John Doe"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="johndoe@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="address">Address</Label>
+          <Input
+            id="address"
+            placeholder="123 Main St"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+          />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="city">City</Label>
+            <Input
+              id="city"
+              placeholder="New York"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="state">State</Label>
+            <Input
+              id="state"
+              placeholder="NY"
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="zipCode">Zip Code</Label>
+            <Input
+              id="zipCode"
+              placeholder="10001"
+              value={zipCode}
+              onChange={(e) => setZipCode(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="country">Country</Label>
+            <Input
+              id="country"
+              placeholder="USA"
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone</Label>
+            <Input
+              id="phone"
+              placeholder="555-555-5555"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+          </div>
         </div>
 
-        <div className="lg:col-span-1 space-y-6">
-          <OrderSummary items={items} deliveryCost={selectedDelivery?.price || 0} />
-          <Button 
-            type="submit" 
-            className="w-full py-3 text-lg" 
-            disabled={isLoading || (paymentMethod === 'ziina' && finalAmountWithDelivery > 0 && isProcessingPayment)} 
-          >
-            {isLoading ? (
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            ) : (
-              <ShoppingBag className="mr-2 h-5 w-5" />
-            )}
-            {paymentMethod === 'cod' || finalAmountWithDelivery === 0 ? 'Place Order' : `Confirm Details`}
-          </Button>
-          {paymentMethod === 'ziina' && finalAmountWithDelivery > 0 && !isLoading && (
-             <p className="text-center text-sm text-muted-foreground">
-                After filling details, click "Pay with Ziina" in the payment section above.
-             </p>
+        <Separator />
+
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="payment">
+            <AccordionTrigger>Payment Information</AccordionTrigger>
+            <AccordionContent>
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="paymentMethod">Payment Method</Label>
+                  <Select onValueChange={(value) => setPaymentMethod({ name: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a payment method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="credit_card">Credit Card</SelectItem>
+                      <SelectItem value="paypal">PayPal</SelectItem>
+                      <SelectItem value="ziina">Ziina</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  We support secure payments via Credit Card and PayPal.
+                </p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="shipping">
+            <AccordionTrigger>Shipping Address</AccordionTrigger>
+            <AccordionContent>
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="shippingAddress">Shipping Address</Label>
+                  <Input
+                    id="shippingAddress"
+                    placeholder="123 Shipping St"
+                    value={shippingAddress?.address || address}
+                    onChange={(e) => setShippingAddress({ ...shippingAddress, address: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="shippingCity">Shipping City</Label>
+                  <Input
+                    id="shippingCity"
+                    placeholder="Shipping City"
+                    value={shippingAddress?.city || city}
+                    onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="shippingCountry">Shipping Country</Label>
+                  <Input
+                    id="shippingCountry"
+                    placeholder="Shipping Country"
+                    value={shippingAddress?.country || country}
+                    onChange={(e) => setShippingAddress({ ...shippingAddress, country: e.target.value })}
+                  />
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="billing">
+            <AccordionTrigger>Billing Address</AccordionTrigger>
+            <AccordionContent>
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="billingAddress">Billing Address</Label>
+                  <Input
+                    id="billingAddress"
+                    placeholder="123 Billing St"
+                    value={billingAddress?.address || address}
+                    onChange={(e) => setBillingAddress({ ...billingAddress, address: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="billingCity">Billing City</Label>
+                  <Input
+                    id="billingCity"
+                    placeholder="Billing City"
+                    value={billingAddress?.city || city}
+                    onChange={(e) => setBillingAddress({ ...billingAddress, city: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="billingCountry">Billing Country</Label>
+                  <Input
+                    id="billingCountry"
+                    placeholder="Billing Country"
+                    value={billingAddress?.country || country}
+                    onChange={(e) => setBillingAddress({ ...billingAddress, country: e.target.value })}
+                  />
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+
+        <Separator />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="couponCode">Coupon Code</Label>
+            <div className="flex items-center">
+              <Input
+                id="couponCode"
+                placeholder="Enter coupon code"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value)}
+              />
+              <Button
+                className="ml-2"
+                onClick={applyCoupon}
+                disabled={loadingCoupon}
+              >
+                {loadingCoupon ? (
+                  <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  "Apply"
+                )}
+              </Button>
+            </div>
+            {appliedCoupon ? (
+              <div className="text-sm text-green-500">
+                Coupon "{appliedCoupon?.code}" applied. Discount: ${appliedCoupon?.discount}
+              </div>
+            ) : null}
+          </div>
+          <div className="text-right space-y-2">
+            <div className="text-lg font-semibold">Subtotal: ${subtotal.toFixed(2)}</div>
+            {discount > 0 ? (
+              <div className="text-lg font-semibold">Discount: -${discount.toFixed(2)}</div>
+            ) : null}
+            <div className="text-2xl font-bold">Total: ${calculateTotal().toFixed(2)}</div>
+          </div>
+        </div>
+        <Button
+          className="w-full"
+          size="lg"
+          onClick={handlePayment}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            "Place Order"
           )}
-        </div>
-      </form>
-    </div>
+        </Button>
+      </CardContent>
+    </Card>
   );
 };
 

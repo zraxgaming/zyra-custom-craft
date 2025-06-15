@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,11 +43,12 @@ const ProductPage = () => {
           .from('products')
           .select(`
             *,
-            category_id ( name, slug ),
-            reviews ( id, rating, comment, created_at, title, user_id (id, display_name, avatar_url) )
+            category_id ( id, name, slug )
           `)
           .eq('slug', slug)
-          .single();
+          .maybeSingle();
+
+        console.log("Supabase product fetch result:", { data, error });
 
         if (error) throw error;
         if (data) {
