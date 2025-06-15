@@ -60,8 +60,8 @@ const Wishlist = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <SEOHead 
-        title="Wishlist - Zyra Custom Craft" 
+      <SEOHead
+        title="Wishlist - Zyra Custom Craft"
         description="View your wishlist and easily add your favorite items to the cart."
         url="https://shopzyra.vercel.app/wishlist"
       />

@@ -63,22 +63,22 @@ const ProductDetail: React.FC = () => {
               title,
               user_id
             )
-          `, { count: 'exact', head: false })
+          `)
           .eq('slug', slug)
           .maybeSingle();
 
         if (error) {
-          if (error.code === 'PGRST116') { 
+          if (error.code === 'PGRST116') {
             setProduct(null);
           } else {
             throw error;
           }
         } else {
-          setProduct(data as ProductType); 
+          setProduct(data as ProductType);
           if (data?.images && Array.isArray(data.images) && data.images.length > 0) {
             const firstImage = data.images[0];
             if (typeof firstImage === 'string') {
-                 setSelectedImage(firstImage);
+              setSelectedImage(firstImage);
             }
           }
         }
@@ -141,30 +141,26 @@ const ProductDetail: React.FC = () => {
       <>
         <Navbar />
         <div className="container mx-auto px-4 py-8">
-          {/* Breadcrumb Skeleton */}
           <Skeleton className="h-6 w-1/2 mb-6" />
           <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-            {/* Image Gallery Skeleton */}
             <div className="space-y-4">
               <Skeleton className="w-full aspect-square rounded-lg shadow-md" />
               <div className="grid grid-cols-5 gap-2">
                 {[...Array(5)].map((_, i) => <Skeleton key={i} className="w-full aspect-square rounded" />)}
               </div>
             </div>
-            {/* Product Details Skeleton */}
             <div className="space-y-6">
-              <Skeleton className="h-10 w-3/4" /> {/* Product Name */}
-              <Skeleton className="h-6 w-1/4" /> {/* Price */}
-              <Skeleton className="h-5 w-1/2" /> {/* Rating */}
-              <Skeleton className="h-20 w-full" /> {/* Short Description */}
+              <Skeleton className="h-10 w-3/4" />
+              <Skeleton className="h-6 w-1/4" />
+              <Skeleton className="h-5 w-1/2" />
+              <Skeleton className="h-20 w-full" />
               <div className="flex items-center gap-4">
-                <Skeleton className="h-12 w-28" /> {/* Quantity */}
-                <Skeleton className="h-12 flex-1" /> {/* Add to Cart */}
-                <Skeleton className="h-12 w-12" /> {/* Wishlist */}
+                <Skeleton className="h-12 w-28" />
+                <Skeleton className="h-12 flex-1" />
+                <Skeleton className="h-12 w-12" />
               </div>
             </div>
           </div>
-          {/* Tabs Skeleton */}
           <div className="mt-12">
             <Skeleton className="h-10 w-1/3 mb-4" />
             <Skeleton className="h-40 w-full" />
@@ -205,7 +201,9 @@ const ProductDetail: React.FC = () => {
       <SEOHead
         title={product.meta_title || product.name}
         description={product.meta_description || product.short_description || ''}
+        url={`https://shopzyra.vercel.app/product/${product.slug}`}
         image={selectedImage || productImages[0]}
+        // Add canonical for SEO
       />
       <Navbar />
       <div className="container mx-auto px-4 py-8">
