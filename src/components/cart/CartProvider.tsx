@@ -76,9 +76,9 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         setCart(
           dbCart.map((item: any) => ({
             ...item,
-            price: item.price || 0,
-            image_url: item.image_url || "",
-            name: item.name || "",
+            price: typeof item.price === "number" ? item.price : 0,
+            image_url: typeof item.image_url === "string" ? item.image_url : "",
+            name: typeof item.name === "string" ? item.name : "",
             customization: item.customization ?? {},
           }))
         );

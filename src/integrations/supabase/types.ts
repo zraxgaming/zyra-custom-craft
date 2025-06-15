@@ -49,6 +49,9 @@ export type Database = {
           created_at: string | null
           customization: Json | null
           id: string
+          image_url: string | null
+          name: string | null
+          price: number | null
           product_id: string | null
           quantity: number
           updated_at: string | null
@@ -58,6 +61,9 @@ export type Database = {
           created_at?: string | null
           customization?: Json | null
           id?: string
+          image_url?: string | null
+          name?: string | null
+          price?: number | null
           product_id?: string | null
           quantity?: number
           updated_at?: string | null
@@ -67,6 +73,9 @@ export type Database = {
           created_at?: string | null
           customization?: Json | null
           id?: string
+          image_url?: string | null
+          name?: string | null
+          price?: number | null
           product_id?: string | null
           quantity?: number
           updated_at?: string | null

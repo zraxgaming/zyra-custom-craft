@@ -26,6 +26,17 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({ order }) => {
     }
   };
 
+  const prettyPrintCustomization = (customization: any) => {
+    if (!customization || typeof customization !== "object" || Object.keys(customization).length === 0) return null;
+    return (
+      <ul className="ml-2 text-xs text-muted-foreground">
+        {Object.entries(customization).map(([key, value]) => (
+          <li key={key}><span className="font-semibold">{key}:</span> {typeof value === "object" ? JSON.stringify(value) : String(value)}</li>
+        ))}
+      </ul>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -107,8 +118,8 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({ order }) => {
                   <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
                     {item.product?.images?.[0] || item.product?.image_url ? (
                       <img 
-                        src={item.product.images?.[0] || item.product.image_url} 
-                        alt={item.product.name}
+                        src={item.product?.images?.[0] || item.product?.image_url} 
+                        alt={item.product?.name}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -125,12 +136,10 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({ order }) => {
                     </p>
                     {item.customization && Object.keys(item.customization).length > 0 && (
                       <div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          <span className="font-semibold text-primary">Customization:</span>
-                          <span className="ml-1">
-                            {JSON.stringify(item.customization)}
-                          </span>
+                        <p className="text-xs text-primary mt-1 font-semibold">
+                          Customization:
                         </p>
+                        {prettyPrintCustomization(item.customization)}
                       </div>
                     )}
                   </div>
