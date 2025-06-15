@@ -24,6 +24,7 @@ import ProductCustomizeModal from "@/components/products/ProductCustomizeModal";
 import { CartItemCustomization } from "@/types/cart";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Json } from "@/integrations/supabase/types";
+import AddToCartButton from "@/components/cart/AddToCartButton";
 
 const ProductDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -49,9 +50,20 @@ const ProductDetail: React.FC = () => {
           .from('products')
           .select(`
             *,
-            category_id ( id, name, slug ),
-            reviews!fk_reviews_product ( id, rating, comment, created_at, title, user_id (id, display_name, avatar_url) )
-          `)
+            category_id (
+              id,
+              name,
+              slug
+            ),
+            reviews!fk_reviews_product (
+              id,
+              rating,
+              comment,
+              created_at,
+              title,
+              user_id
+            )
+          `, { count: 'exact', head: false })
           .eq('slug', slug)
           .maybeSingle();
 

@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import SEOHead from "@/components/seo/SEOHead";
 
 const Wishlist = () => {
-  const { wishlist, removeFromWishlist, isLoading } = useWishlist();
+  const { items: wishlist, removeFromWishlist, isLoading } = useWishlist();
   const { user } = useAuth();
   const { addToCart } = useCart(); // Get addToCart function from CartProvider
   const [isEmpty, setIsEmpty] = useState(true);
