@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -56,8 +55,9 @@ const Checkout = () => {
             </p>
           </div>
           
+          {/* Correct: pass subtotal to CheckoutForm */}
           <CheckoutForm
-            onPaymentSuccess={handlePaymentSuccess} // Pass only this prop
+            subtotal={typeof useCart().subtotal === "number" ? useCart().subtotal : 0}
           />
         </Container>
       </div>
@@ -68,4 +68,3 @@ const Checkout = () => {
 };
 
 export default Checkout;
-

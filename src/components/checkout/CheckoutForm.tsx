@@ -22,7 +22,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ReloadIcon } from "@radix-ui/react-icons"
+import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils";
 import { Coupon } from "@/types/coupon";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,7 +35,7 @@ interface CheckoutFormProps {
 }
 
 const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
-  const { cartItems, clearCart } = useCart();
+  const { items, clearCart } = useCart();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -119,7 +119,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
   const handlePayment = async () => {
     setIsSubmitting(true);
 
-    if (cartItems.length === 0) {
+    if (items.length === 0) {
       toast({
         title: "Cart is empty",
         description: "Please add items to your cart before proceeding to checkout.",
@@ -139,7 +139,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
       return;
     }
 
-    const orderItems: OrderItem[] = cartItems.map(item => ({
+    const orderItems: OrderItem[] = items.map(item => ({
       product_id: item.product_id,
       quantity: item.quantity,
       price: item.price,
@@ -401,7 +401,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
                 disabled={loadingCoupon}
               >
                 {loadingCoupon ? (
-                  <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   "Apply"
                 )}
@@ -428,7 +428,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
           disabled={isSubmitting}
         >
           {isSubmitting ? (
-            <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             "Place Order"
           )}
