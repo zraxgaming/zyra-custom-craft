@@ -70,7 +70,7 @@ function App() {
                   <OnlineStatus />
                   
                   <Routes>
-                    {/* Redirect root to home */}
+                    {/* Always redirect / to /home */}
                     <Route path="/" element={<Navigate to="/home" replace />} />
                     
                     {/* Public Pages */}

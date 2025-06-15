@@ -29,8 +29,11 @@ const BarcodeGenerator: React.FC<BarcodeGeneratorProps> = ({ onGenerated }) => {
   const [barcodeType, setBarcodeType] = useState("qr");
   const { toast } = useToast();
 
+  // Compute data for code generation
+  const barcodeData = selectedProduct?.barcode || customData || selectedProduct?.sku || selectedProduct?.name || selectedProduct?.id || "";
+
   const handleGenerate = async () => {
-    if (!selectedProduct && !customData) {
+    if (!barcodeData) {
       toast({
         title: "Missing data",
         description: "Please select a product or enter custom data.",
@@ -41,10 +44,6 @@ const BarcodeGenerator: React.FC<BarcodeGeneratorProps> = ({ onGenerated }) => {
 
     setIsGenerating(true);
     try {
-      let barcodeData = customData;
-      if (selectedProduct && !barcodeData) {
-        barcodeData = selectedProduct.sku || selectedProduct.name || selectedProduct.id;
-      }
       if (selectedProduct && barcodeData) {
         await supabase
           .from('products')
@@ -75,7 +74,6 @@ const BarcodeGenerator: React.FC<BarcodeGeneratorProps> = ({ onGenerated }) => {
     }
   };
 
-  const previewData = selectedProduct ? (selectedProduct.sku || selectedProduct.name || selectedProduct.id) : customData;
   return (
     <Card>
       <CardHeader>
@@ -127,14 +125,12 @@ const BarcodeGenerator: React.FC<BarcodeGeneratorProps> = ({ onGenerated }) => {
           {isGenerating ? "Generating..." : "Generate Barcode"}
         </Button>
 
-        {previewData && (
+        {barcodeData && (
           <div className="w-full flex flex-col items-center gap-2">
             <div className="p-2">
-              {/* Inline barcode preview (just the data for now) */}
-              <div className="text-xs font-mono">Data: {previewData}</div>
+              <div className="text-xs font-mono">Barcode: {barcodeData}</div>
             </div>
-            {/* Download button for barcode/qr */}
-            <BarcodeDownloader data={previewData} type={barcodeType === 'qr' ? 'qrcode' : barcodeType} filename={previewData} />
+            <BarcodeDownloader data={barcodeData} type={barcodeType === 'qr' ? 'qrcode' : barcodeType} filename={barcodeData} />
           </div>
         )}
       </CardContent>

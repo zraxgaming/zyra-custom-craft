@@ -12,6 +12,7 @@ import { MapPin, Phone, Mail, Clock, Send, MessageSquare, Heart } from "lucide-r
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import SEOHead from "@/components/seo/SEOHead";
+import ContactForm from "@/components/contact/ContactForm";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -161,88 +162,7 @@ const Contact = () => {
                   </p>
                 </CardHeader>
                 <CardContent className="p-8">
-                  <form onSubmit={handleSubmit} className="space-y-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2 animate-slide-in-left" style={{animationDelay: '0.1s'}}>
-                        <Label htmlFor="name" className="text-lg font-semibold text-gray-900 dark:text-white">
-                          Full Name *
-                        </Label>
-                        <Input
-                          id="name"
-                          name="name"
-                          type="text"
-                          placeholder="Enter your full name"
-                          value={formData.name}
-                          onChange={handleChange}
-                          required
-                          className="h-14 text-lg bg-white/90 dark:bg-gray-800/90 border-2 border-purple-200 dark:border-purple-700 focus:border-purple-500 dark:focus:border-purple-400 transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 rounded-xl shadow-lg focus:shadow-xl"
-                        />
-                      </div>
-                      <div className="space-y-2 animate-slide-in-right" style={{animationDelay: '0.2s'}}>
-                        <Label htmlFor="email" className="text-lg font-semibold text-gray-900 dark:text-white">
-                          Email Address *
-                        </Label>
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          placeholder="Enter your email address"
-                          value={formData.email}
-                          onChange={handleChange}
-                          required
-                          className="h-14 text-lg bg-white/90 dark:bg-gray-800/90 border-2 border-purple-200 dark:border-purple-700 focus:border-purple-500 dark:focus:border-purple-400 transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 rounded-xl shadow-lg focus:shadow-xl"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2 animate-fade-in" style={{animationDelay: '0.3s'}}>
-                      <Label htmlFor="subject" className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Subject *
-                      </Label>
-                      <Input
-                        id="subject"
-                        name="subject"
-                        type="text"
-                        placeholder="What's this about?"
-                        value={formData.subject}
-                        onChange={handleChange}
-                        required
-                        className="h-14 text-lg bg-white/90 dark:bg-gray-800/90 border-2 border-purple-200 dark:border-purple-700 focus:border-purple-500 dark:focus:border-purple-400 transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 rounded-xl shadow-lg focus:shadow-xl"
-                      />
-                    </div>
-                    <div className="space-y-2 animate-fade-in" style={{animationDelay: '0.4s'}}>
-                      <Label htmlFor="message" className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Message *
-                      </Label>
-                      <Textarea
-                        id="message"
-                        name="message"
-                        placeholder="Tell us more about your inquiry..."
-                        value={formData.message}
-                        onChange={handleChange}
-                        required
-                        rows={6}
-                        className="text-lg bg-white/90 dark:bg-gray-800/90 border-2 border-purple-200 dark:border-purple-700 focus:border-purple-500 dark:focus:border-purple-400 transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 rounded-xl shadow-lg focus:shadow-xl resize-none"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full h-16 bg-gradient-to-r from-purple-600 via-purple-700 to-pink-600 hover:from-purple-700 hover:via-purple-800 hover:to-pink-700 text-white font-bold text-xl rounded-xl shadow-2xl hover:shadow-purple-500/25 transition-all duration-500 transform hover:scale-[1.02] active:scale-[0.98] animate-bounce-in disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{animationDelay: '0.5s'}}
-                    >
-                      {isSubmitting ? (
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
-                          <span>Sending Message...</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          <Send className="h-6 w-6" />
-                          <span>Send Message</span>
-                        </div>
-                      )}
-                    </Button>
-                  </form>
+                  <ContactForm />
                 </CardContent>
               </Card>
             </div>

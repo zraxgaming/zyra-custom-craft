@@ -8,14 +8,15 @@ import { useNavigate } from 'react-router-dom';
 const SearchBar = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
-
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchTerm.trim()) {
-      navigate(`/shop?search=${encodeURIComponent(searchTerm.trim())}`);
+    const value = searchTerm.trim();
+    if (value) {
+      navigate(`/shop?search=${encodeURIComponent(value)}`);
+    } else {
+      navigate('/shop');
     }
   };
-
   return (
     <form onSubmit={handleSearch} className="flex w-full max-w-lg">
       <div className="relative flex-1">
@@ -38,5 +39,4 @@ const SearchBar = () => {
     </form>
   );
 };
-
 export default SearchBar;

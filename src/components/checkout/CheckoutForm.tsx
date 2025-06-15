@@ -101,6 +101,17 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
           customization: item.customization || null,
         }));
         await supabase.from("order_items").insert(orderItems);
+
+        // Deduct stock from products
+        for (const item of items) {
+          if (item.product_id) {
+            // We only deduct if the product tracks stock
+            await supabase.rpc('decrement_stock', {
+              product_id_input: item.product_id,
+              amount_input: item.quantity
+            });
+          }
+        }
       }
 
       if (paymentMethod === "ziina") {
