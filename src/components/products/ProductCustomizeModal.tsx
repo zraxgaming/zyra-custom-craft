@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -45,7 +44,7 @@ const ProductCustomizeModal: React.FC<Props> = ({ open, onOpenChange, product })
   const hasCustomization = opts.allow_text || opts.allow_image;
   const isDigital = !!product.is_digital;
 
-  // Enable if at least one customization value is set or digital
+  // Ensure not allowed unless customization actually provided (if required)
   const canAdd =
     (opts.allow_text ? customText.trim().length > 0 : true) &&
     (opts.allow_image ? !!selectedFile : true);
@@ -58,6 +57,14 @@ const ProductCustomizeModal: React.FC<Props> = ({ open, onOpenChange, product })
   };
 
   const handleAddToCart = async () => {
+    if (!canAdd) {
+      toast({
+        title: "Customization required",
+        description: "Please provide the required customization.",
+        variant: "destructive"
+      });
+      return;
+    }
     setLoading(true);
     // For now, we only store image uploads as base64 for demo; in production, upload to storage bucket!
     let customization: any = {};
@@ -104,7 +111,7 @@ const ProductCustomizeModal: React.FC<Props> = ({ open, onOpenChange, product })
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {isDigital ? "Purchase Digital Product" : "Customize Product"}
+            {product.is_digital ? "Purchase Digital Product" : "Customize Product"}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
@@ -135,7 +142,7 @@ const ProductCustomizeModal: React.FC<Props> = ({ open, onOpenChange, product })
               )}
             </div>
           )}
-          {!hasCustomization && !isDigital && (
+          {!opts.allow_text && !opts.allow_image && !product.is_digital && (
             <div className="text-muted-foreground text-sm">No customization required for this product.</div>
           )}
           <div className="flex items-center gap-4">
@@ -157,11 +164,11 @@ const ProductCustomizeModal: React.FC<Props> = ({ open, onOpenChange, product })
           </Button>
           <Button
             onClick={handleAddToCart}
-            disabled={!(canAdd) || loading}
+            disabled={!canAdd || loading}
             className="bg-primary text-white flex gap-2"
           >
             <ShoppingCart className="h-4 w-4" />
-            {isDigital ? "Purchase" : "Add to Cart"}
+            {product.is_digital ? "Purchase" : "Add to Cart"}
           </Button>
         </DialogFooter>
       </DialogContent>

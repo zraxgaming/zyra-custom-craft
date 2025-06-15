@@ -1,172 +1,267 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Star, ShoppingCart, CheckCircle, PackageCheck, Truck } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import AddToCartButton from "@/components/cart/AddToCartButton";
-import ProductReviews from "@/components/reviews/ProductReviews";
-import { ArrowLeft, Home } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
-interface Product {
+interface Review {
   id: string;
-  name: string;
-  slug: string;
-  price: number;
-  images: string[];
-  description?: string;
-  rating?: number;
-  review_count?: number;
-  is_featured?: boolean;
-  is_customizable?: boolean;
-  stock_quantity?: number;
-  in_stock?: boolean;
+  user_id: string;
+  product_id: string;
+  rating: number;
+  comment: string;
+  created_at: string;
+  user_name: string;
 }
 
 const Product = () => {
   const { slug } = useParams<{ slug: string }>();
+  const { user } = useAuth();
   const { toast } = useToast();
-  const [product, setProduct] = useState<Product | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const navigate = useNavigate();
+
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [newReview, setNewReview] = useState({
+    rating: 5,
+    comment: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
-      setIsLoading(true);
+      setLoading(true);
       try {
         const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .eq('slug', slug)
+          .from("products")
+          .select("*")
+          .eq("slug", slug)
           .single();
 
-        if (error) throw error;
+        if (error) {
+          throw error;
+        }
 
-        // Transform the data to match our Product interface
-        const transformedProduct: Product = {
-          id: data.id,
-          name: data.name,
-          slug: data.slug,
-          price: data.price,
-          images: Array.isArray(data.images)
-            ? data.images.filter(img => typeof img === 'string') as string[]
-            : [],
-          description: data.description || '',
-          rating: data.rating || 0,
-          review_count: data.review_count || 0,
-          is_featured: data.is_featured || false,
-          is_customizable: data.is_customizable || false,
-          stock_quantity: data.stock_quantity || 0,
-          in_stock: data.in_stock || false,
-        };
-
-        setProduct(transformedProduct);
+        setProduct(data);
       } catch (error: any) {
-        console.error('Error fetching product:', error);
         toast({
-          title: "Error",
-          description: "Failed to load product",
+          title: "Error fetching product",
+          description: error.message,
           variant: "destructive",
         });
-        setProduct(null); // Ensure product is null in case of error
       } finally {
-        setIsLoading(false);
+        setLoading(false);
+      }
+    };
+
+    const fetchReviews = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("reviews")
+          .select("*, user:user_id(user_metadata)")
+          .eq("product_id", product?.id)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          throw error;
+        }
+
+        const formattedReviews = data.map((review: any) => ({
+          id: review.id,
+          user_id: review.user_id,
+          product_id: review.product_id,
+          rating: review.rating,
+          comment: review.comment,
+          created_at: review.created_at,
+          user_name: review.user?.user_metadata?.full_name || "Anonymous",
+        }));
+
+        setReviews(formattedReviews);
+      } catch (error: any) {
+        toast({
+          title: "Error fetching reviews",
+          description: error.message,
+          variant: "destructive",
+        });
       }
     };
 
     fetchProduct();
-  }, [slug, toast]);
 
-  if (isLoading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-lg">Loading...</div>
-    </div>
-  );
+    if (product?.id) {
+      fetchReviews();
+    }
+  }, [slug, product?.id, toast]);
+
+  useEffect(() => {
+    if (product?.id) {
+      const fetchReviews = async () => {
+        try {
+          const { data, error } = await supabase
+            .from("reviews")
+            .select("*, user:user_id(user_metadata)")
+            .eq("product_id", product?.id)
+            .order("created_at", { ascending: false });
+
+          if (error) {
+            throw error;
+          }
+
+          const formattedReviews = data.map((review: any) => ({
+            id: review.id,
+            user_id: review.user_id,
+            product_id: review.product_id,
+            rating: review.rating,
+            comment: review.comment,
+            created_at: review.created_at,
+            user_name: review.user?.user_metadata?.full_name || "Anonymous",
+          }));
+
+          setReviews(formattedReviews);
+        } catch (error: any) {
+          toast({
+            title: "Error fetching reviews",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
+      };
+      fetchReviews();
+    }
+  }, [product?.id, toast]);
+
+  const handleAddReview = async () => {
+    if (!user) {
+      toast({
+        title: "You must be logged in to add a review",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const { error } = await supabase.from("reviews").insert({
+        user_id: user.id,
+        product_id: product.id,
+        rating: newReview.rating,
+        comment: newReview.comment,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setNewReview({ rating: 5, comment: "" });
+      toast({ title: "Review added successfully!" });
+
+      // Refresh reviews
+      const { data, error: fetchError } = await supabase
+        .from("reviews")
+        .select("*, user:user_id(user_metadata)")
+        .eq("product_id", product?.id)
+        .order("created_at", { ascending: false });
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      const formattedReviews = data.map((review: any) => ({
+        id: review.id,
+        user_id: review.user_id,
+        product_id: review.product_id,
+        rating: review.rating,
+        comment: review.comment,
+        created_at: review.created_at,
+        user_name: review.user?.user_metadata?.full_name || "Anonymous",
+      }));
+
+      setReviews(formattedReviews);
+    } catch (error: any) {
+      toast({
+        title: "Error adding review",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return <div>Loading product details...</div>;
+  }
+
+  if (!product) {
+    return <div>Product not found.</div>;
+  }
 
   return (
     <div>
-      <Navbar />
-      <div className="container mx-auto py-8">
-        {/* Navigation buttons */}
-        <div className="flex items-center gap-3 mb-4">
-          <Button variant="outline" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4 mr-1" /> Back
-          </Button>
-          <Button variant="secondary" onClick={() => navigate("/home")}>
-            <Home className="h-4 w-4 mr-1" /> Home
-          </Button>
-          <Button variant="secondary" onClick={() => navigate("/shop")}>
-            Shop
-          </Button>
-        </div>
-        {product ? (
-          <Card className="w-full max-w-4xl mx-auto">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold">{product.name}</CardTitle>
-              <CardDescription>{product.description}</CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                {product.images && product.images.length > 0 ? (
-                  <img
-                    src={product.images[0]}
-                    alt={product.name}
-                    className="w-full h-64 object-cover rounded-md"
+      {/* ... product details ... */}
+      <section>
+        <h3 className="font-semibold text-lg mt-4">Customer Reviews</h3>
+        <div>
+          {reviews.map((review: Review) => (
+            <div key={review.id} className="p-4 border-b">
+              <div className="flex gap-2">
+                <div className="font-medium">{review.user_name}</div>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={`h-4 w-4 ${
+                      star <= review.rating
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-gray-300"
+                    }`}
                   />
-                ) : (
-                  <div className="w-full h-64 bg-gray-200 rounded-md flex items-center justify-center">
-                    No Image
-                  </div>
-                )}
+                ))}
               </div>
-              <div>
-                <div className="mb-4">
-                  <p className="text-xl font-semibold">${product.price.toFixed(2)}</p>
-                  {product.is_featured && (
-                    <Badge className="ml-2 bg-green-500 text-white">Featured</Badge>
-                  )}
-                </div>
-                <div className="mb-4">
-                  {product.rating && (
-                    <div className="flex items-center">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-5 w-5 ${i < product.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-                            }`}
-                        />
-                      ))}
-                      <span className="ml-2 text-gray-500">({product.review_count} reviews)</span>
-                    </div>
-                  )}
-                </div>
-                <AddToCartButton
-                  product={{
-                    id: product.id,
-                    name: product.name,
-                    slug: product.slug,
-                    price: product.price,
-                    images: product.images,
-                    is_customizable: product.is_customizable,
-                  }}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <div>Product not found</div>
-        )}
-        <div className="mt-8">
-          <ProductReviews productId={product?.id || ""} />
+              <div className="text-sm mt-1">{review.comment}</div>
+              {/* NO edit/delete options! */}
+              {/* <Button>Edit</Button> <Button>Delete</Button> <-- DO NOT RENDER */}
+            </div>
+          ))}
         </div>
-      </div>
-      <Footer />
+        {/* Allow adding more reviews: show review form always */}
+        <div className="mt-4">
+          <h4 className="font-medium mb-2">Add a Review</h4>
+          <div>
+            <Label htmlFor="rating">Rating</Label>
+            <Input
+              type="number"
+              id="rating"
+              min="1"
+              max="5"
+              value={newReview.rating}
+              onChange={(e) =>
+                setNewReview({ ...newReview, rating: parseInt(e.target.value) })
+              }
+            />
+          </div>
+          <div>
+            <Label htmlFor="comment">Comment</Label>
+            <Textarea
+              id="comment"
+              value={newReview.comment}
+              onChange={(e) =>
+                setNewReview({ ...newReview, comment: e.target.value })
+              }
+            />
+          </div>
+          <Button onClick={handleAddReview} disabled={isSubmitting}>
+            {isSubmitting ? "Submitting..." : "Submit Review"}
+          </Button>
+        </div>
+      </section>
     </div>
   );
 };
+
 export default Product;

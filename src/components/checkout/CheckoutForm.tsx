@@ -1,429 +1,218 @@
 import React, { useState } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/components/cart/CartProvider";
-import { Loader2, CreditCard, Truck, MapPin, Check } from "lucide-react";
-
-const formSchema = z.object({
-  fullName: z.string().min(2, "Full name is required"),
-  email: z.string().email("Invalid email address"),
-  phone: z.string().min(8, "Valid phone number is required"),
-  address: z.string().min(5, "Address is required"),
-  city: z.string().min(2, "City is required"),
-  state: z.string().optional(),
-  zipCode: z.string().min(3, "Zip code is required"),
-  country: z.string().min(2, "Country is required"),
-  deliveryMethod: z.enum(["delivery", "pickup"]),
-  paymentMethod: z.enum(["card", "cash"]),
-  cardNumber: z.string().optional(),
-  cardExpiry: z.string().optional(),
-  cardCvc: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+import { Loader2, Smartphone, Check } from "lucide-react";
+import CouponForm from "@/components/checkout/CouponForm";
+import GiftCardForm from "@/components/checkout/GiftCardForm";
+import ZiinaPayment from "@/components/checkout/ZiinaPayment";
+import OrderSummary from "@/components/checkout/OrderSummary";
 
 interface CheckoutFormProps {
   subtotal: number;
   items: any[];
   onPaymentSuccess: (orderId: string) => void;
-  deliveryOptions: { label: string; value: string }[];
-  paymentMethods: { label: string; value: string }[];
+  // keep deliveryOptions, paymentMethods for future use
+  deliveryOptions?: { label: string; value: string }[];
+  paymentMethods?: { label: string; value: string }[];
 }
 
 const CheckoutForm: React.FC<CheckoutFormProps> = ({
   subtotal,
   items,
   onPaymentSuccess,
-  deliveryOptions,
-  paymentMethods,
 }) => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { clearCart } = useCart();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      fullName: user?.user_metadata?.full_name || "",
-      email: user?.email || "",
-      phone: user?.user_metadata?.phone || "",
-      address: user?.user_metadata?.address || "",
-      city: user?.user_metadata?.city || "",
-      state: user?.user_metadata?.state || "",
-      zipCode: user?.user_metadata?.zip_code || "",
-      country: user?.user_metadata?.country || "",
-      deliveryMethod: "delivery",
-      paymentMethod: "card",
-    },
+  const { coupon, giftCard, setCoupon, setGiftCard, discount, giftCardAmount, clearCart } = useCart();
+  const [form, setForm] = useState({
+    name: user?.user_metadata?.full_name || "",
+    email: user?.email || "",
+    phone: user?.user_metadata?.phone || "",
+    otherPhone: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [ziinaIntentId, setZiinaIntentId] = useState<string | null>(null);
 
-  const deliveryMethod = watch("deliveryMethod");
-  const paymentMethod = watch("paymentMethod");
+  const total = Math.max(0, subtotal - discount - giftCardAmount);
 
-  const onSubmit = async (data: FormValues) => {
+  // Main submit (trigger payment intent and order creation)
+  const handleZiinaPayment = async () => {
     setIsSubmitting(true);
     try {
-      // Create order in database
+      // 1. Save order as PENDING and get orderId
       const { data: order, error } = await supabase
         .from("orders")
         .insert({
           user_id: user?.id,
-          total_amount: subtotal,
-          status: paymentMethod === "cash" ? "pending" : "processing",
-          shipping_address: `${data.address}, ${data.city}, ${data.state || ""} ${data.zipCode}, ${data.country}`,
-          shipping_method: data.deliveryMethod,
-          payment_method: data.paymentMethod,
-          customer_name: data.fullName,
-          customer_email: data.email,
-          customer_phone: data.phone,
-          items: items.map((item) => ({
-            product_id: item.product_id,
-            quantity: item.quantity,
-            price: item.price,
-            name: item.name,
-            customization: item.customization || {},
-          })),
+          total_amount: total,
+          status: "pending",
+          payment_status: "pending",
+          payment_method: "ziina",
+          customer_name: form.name,
+          customer_email: form.email,
+          customer_phone: form.phone,
+          notes: form.otherPhone ? `Other phone: ${form.otherPhone}` : undefined,
+          // shipping_address: ... (keep logic for future)
         })
         .select()
         .single();
-
       if (error) throw error;
 
-      // Process payment (simplified for demo)
-      if (paymentMethod === "card") {
-        // Simulate payment processing
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+      // 2. Add order_items
+      if (order && items && items.length) {
+        await supabase.from("order_items").insert(
+          items.map(item => ({
+            order_id: order.id,
+            product_id: item.product_id,
+            quantity: item.quantity,
+            price: item.price,
+            customization: item.customization || null,
+          }))
+        );
       }
 
-      // Clear cart after successful order
-      await clearCart();
+      // 3. Start Ziina payment
+      const { data: configData } = await supabase
+        .from("site_config")
+        .select("value")
+        .eq("key", "ziina_api_key")
+        .single();
+      if (!configData?.value) throw new Error("Ziina API key not set.");
+      const ziinaApiKey = configData.value as string;
 
-      toast({
-        title: "Order placed successfully!",
-        description: `Your order #${order.id.substring(0, 8)} has been placed.`,
+      const { data: envData } = await supabase
+        .from('site_config')
+        .select('value')
+        .eq('key', 'ziina_env')
+        .single();
+      const ziinaEnv = envData?.value ?? 'test';
+      const endpoint = ziinaEnv === "prod"
+        ? 'https://api-v2.ziina.com/api/payment_intent'
+        : 'https://sandbox-api-v2.ziina.com/api/payment_intent';
+
+      // Prepare payload
+      const payload = {
+        amount: Math.round(total * 100),
+        currency_code: "AED",
+        metadata: { order_id: order.id },
+        success_url: `${window.location.origin}/order-success/${order.id}`,
+        cancel_url: `${window.location.origin}/order-failed?source=ziina&status=cancelled`,
+        failure_url: `${window.location.origin}/order-failed?source=ziina&status=failed`
+      };
+      const paymentRes = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${ziinaApiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
       });
+      const paymentResData = await paymentRes.json();
+      if (!paymentRes.ok) {
+        throw new Error(paymentResData.message || "Ziina payment failed");
+      }
+      // Save payment intent ID
+      if (paymentResData.id) {
+        await supabase
+          .from("orders")
+          .update({ payment_intent_id: paymentResData.id })
+          .eq("id", order.id);
+        setZiinaIntentId(paymentResData.id);
+      }
+      // Redirect to payment
+      if (paymentResData.next_action_url || paymentResData.payment_url || paymentResData.redirect_url) {
+        window.location.assign(paymentResData.next_action_url || paymentResData.payment_url || paymentResData.redirect_url);
+      } else {
+        throw new Error("No payment URL returned from Ziina");
+      }
 
-      onPaymentSuccess(order.id);
+      // Success (this will redirect, but keep for handling fallback)
+      toast({ title: "Payment Started", description: "You will be redirected to complete payment." });
     } catch (error: any) {
-      console.error("Checkout error:", error);
-      toast({
-        title: "Checkout failed",
-        description: error.message || "An error occurred during checkout",
-        variant: "destructive",
-      });
+      toast({ title: "Checkout failed", description: error.message || "Could not process checkout", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // UI: simple required form (name, email, phone, other phone)
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
-      {/* Left: Shipping & Billing */}
-      <div className="space-y-6">
-        <div className="mb-6">
-          <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-primary" />
-            Shipping Information
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input
-                id="fullName"
-                {...register("fullName")}
-                className={errors.fullName ? "border-red-500" : ""}
-              />
-              {errors.fullName && (
-                <p className="text-red-500 text-sm mt-1">{errors.fullName.message}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                {...register("email")}
-                className={errors.email ? "border-red-500" : ""}
-              />
-              {errors.email && (
-                <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                {...register("phone")}
-                className={errors.phone ? "border-red-500" : ""}
-              />
-              {errors.phone && (
-                <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
-              )}
-            </div>
-
-            <div className="col-span-2">
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                {...register("address")}
-                className={errors.address ? "border-red-500" : ""}
-              />
-              {errors.address && (
-                <p className="text-red-500 text-sm mt-1">{errors.address.message}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="city">City</Label>
-              <Input
-                id="city"
-                {...register("city")}
-                className={errors.city ? "border-red-500" : ""}
-              />
-              {errors.city && (
-                <p className="text-red-500 text-sm mt-1">{errors.city.message}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="state">State/Province</Label>
-              <Input id="state" {...register("state")} />
-            </div>
-
-            <div>
-              <Label htmlFor="zipCode">Zip/Postal Code</Label>
-              <Input
-                id="zipCode"
-                {...register("zipCode")}
-                className={errors.zipCode ? "border-red-500" : ""}
-              />
-              {errors.zipCode && (
-                <p className="text-red-500 text-sm mt-1">{errors.zipCode.message}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="country">Country</Label>
-              <Input
-                id="country"
-                {...register("country")}
-                className={errors.country ? "border-red-500" : ""}
-              />
-              {errors.country && (
-                <p className="text-red-500 text-sm mt-1">{errors.country.message}</p>
-              )}
-            </div>
-          </div>
+    <form className="max-w-2xl mx-auto space-y-6 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
+      <h2 className="text-2xl font-bold mb-3 flex items-center gap-2">
+        <Smartphone className="h-5 w-5 text-primary" />
+        Store Pickup Checkout
+      </h2>
+      <div className="space-y-3">
+        <div>
+          <Label htmlFor="name">Full Name *</Label>
+          <Input
+            id="name"
+            value={form.name}
+            required
+            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+            className="bg-background text-foreground border-border"
+          />
         </div>
-
-        <Separator />
-
-        <div className="mb-6">
-          <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
-            <Truck className="h-5 w-5 text-primary" />
-            Delivery Method
-          </h2>
-          <RadioGroup
-            defaultValue={deliveryMethod}
-            {...register("deliveryMethod")}
-            className="grid grid-cols-2 gap-4 pt-2"
-          >
-            {deliveryOptions.map((option) => (
-              <div
-                key={option.value}
-                className={`flex items-center space-x-2 border rounded-lg p-4 cursor-pointer transition-all ${
-                  deliveryMethod === option.value
-                    ? "border-primary bg-primary/5"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <RadioGroupItem
-                  value={option.value}
-                  id={`delivery-${option.value}`}
-                />
-                <Label
-                  htmlFor={`delivery-${option.value}`}
-                  className="flex-1 cursor-pointer"
-                >
-                  {option.label}
-                </Label>
-              </div>
-            ))}
-          </RadioGroup>
+        <div>
+          <Label htmlFor="email">Email *</Label>
+          <Input
+            id="email"
+            type="email"
+            value={form.email}
+            required
+            onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+            className="bg-background text-foreground border-border"
+          />
         </div>
-
-        <Separator />
-
-        <div className="mb-6">
-          <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-primary" />
-            Payment Method
-          </h2>
-          <RadioGroup
-            defaultValue={paymentMethod}
-            {...register("paymentMethod")}
-            className="grid grid-cols-2 gap-4 pt-2"
-          >
-            {paymentMethods.map((method) => (
-              <div
-                key={method.value}
-                className={`flex items-center space-x-2 border rounded-lg p-4 cursor-pointer transition-all ${
-                  paymentMethod === method.value
-                    ? "border-primary bg-primary/5"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <RadioGroupItem
-                  value={method.value}
-                  id={`payment-${method.value}`}
-                />
-                <Label
-                  htmlFor={`payment-${method.value}`}
-                  className="flex-1 cursor-pointer"
-                >
-                  {method.label}
-                </Label>
-              </div>
-            ))}
-          </RadioGroup>
-
-          {paymentMethod === "card" && (
-            <div className="mt-4 space-y-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-              <div>
-                <Label htmlFor="cardNumber">Card Number</Label>
-                <Input
-                  id="cardNumber"
-                  placeholder="1234 5678 9012 3456"
-                  {...register("cardNumber")}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="cardExpiry">Expiry Date</Label>
-                  <Input
-                    id="cardExpiry"
-                    placeholder="MM/YY"
-                    {...register("cardExpiry")}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="cardCvc">CVC</Label>
-                  <Input
-                    id="cardCvc"
-                    placeholder="123"
-                    {...register("cardCvc")}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+        <div>
+          <Label htmlFor="phone">Phone *</Label>
+          <Input
+            id="phone"
+            value={form.phone}
+            required
+            onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+            className="bg-background text-foreground border-border"
+          />
+        </div>
+        <div>
+          <Label htmlFor="otherPhone">Other Phone (optional)</Label>
+          <Input
+            id="otherPhone"
+            value={form.otherPhone}
+            onChange={e => setForm(f => ({ ...f, otherPhone: e.target.value }))}
+            className="bg-background text-foreground border-border"
+          />
         </div>
       </div>
-
-      {/* Right: Order Summary */}
-      <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 flex flex-col gap-4 sticky top-6">
-        <h2 className="text-xl font-bold mb-2">Order Summary</h2>
-        
-        <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700"
-            >
-              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden">
-                {item.image_url ? (
-                  <img
-                    src={item.image_url}
-                    alt={item.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    No Image
-                  </div>
-                )}
-              </div>
-              <div className="flex-1">
-                <h4 className="font-medium">{item.name}</h4>
-                <div className="flex justify-between items-center mt-1">
-                  <span className="text-sm text-muted-foreground">
-                    Qty: {item.quantity}
-                  </span>
-                  <span className="font-medium">
-                    ${(item.price * item.quantity).toFixed(2)}
-                  </span>
-                </div>
-                {item.customization && Object.keys(item.customization).length > 0 && (
-                  <div className="mt-1">
-                    <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
-                      Customized
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-auto pt-4 space-y-2">
-          <div className="flex justify-between">
-            <span>Subtotal</span>
-            <span>${subtotal.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Shipping</span>
-            <span>{deliveryMethod === "pickup" ? "Free" : "$5.00"}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Tax</span>
-            <span>${(subtotal * 0.05).toFixed(2)}</span>
-          </div>
-          <Separator className="my-2" />
-          <div className="flex justify-between font-bold text-lg">
-            <span>Total</span>
-            <span>
-              ${(
-                subtotal +
-                (deliveryMethod === "pickup" ? 0 : 5) +
-                subtotal * 0.05
-              ).toFixed(2)}
-            </span>
-          </div>
-        </div>
-
+      <div className="space-y-4">
+        <CouponForm
+          onCouponApply={setCoupon}
+          onCouponRemove={() => setCoupon(null)}
+          appliedCoupon={coupon}
+          orderTotal={subtotal}
+        />
+        <GiftCardForm
+          onGiftCardApply={setGiftCard}
+          onGiftCardRemove={() => setGiftCard(null)}
+          appliedGiftCard={giftCard}
+          orderTotal={subtotal - discount}
+        />
+      </div>
+      <OrderSummary items={items} deliveryCost={0} />
+      <div className="pt-4">
         <Button
-          type="submit"
-          className="w-full mt-6 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90"
-          disabled={isSubmitting}
+          type="button"
+          onClick={handleZiinaPayment}
+          disabled={isSubmitting || !form.name || !form.email || !form.phone || total < 0.01}
+          className="w-full bg-gradient-to-r from-primary to-purple-600 text-white"
         >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Processing...
-            </>
-          ) : (
-            <>
-              <Check className="mr-2 h-4 w-4" />
-              Complete Order
-            </>
-          )}
+          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+          {isSubmitting ? "Processing..." : `Pay AED ${total.toFixed(2)} with Ziina`}
         </Button>
       </div>
     </form>
