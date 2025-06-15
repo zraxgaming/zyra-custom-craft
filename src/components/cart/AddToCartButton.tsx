@@ -22,22 +22,21 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
   disabled = false,
   className = ""
 }) => {
-  const { addItem, items } = useCart();
+  const { cart, addToCart } = useCart();
   const { toast } = useToast();
   const [quantity, setQuantity] = useState(1);
 
-  const existingItem = items.find(item => item.product_id === product.id);
+  const existingItem = cart.find(item => item.product_id === product.id);
 
   const handleAddToCart = () => {
     if (disabled) return;
     
-    addItem({
+    addToCart({
       product_id: product.id,
       name: product.name,
       price: product.price,
-      quantity: quantity,
       image_url: product.images[0] || '/placeholder-product.jpg'
-    });
+    }, quantity);
 
     toast({
       title: "Added to cart",
