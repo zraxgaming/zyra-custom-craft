@@ -9,6 +9,7 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import BarcodeGenerator from "@/components/admin/BarcodeGenerator";
 import BarcodeDisplay from "@/components/barcode/BarcodeDisplay";
 import BarcodeDownloader from "@/components/barcode/BarcodeDownloader";
+import { EnhancedLoader } from "@/components/ui/enhanced-loader";
 
 interface BarcodeGeneration {
   id: string;
@@ -21,6 +22,7 @@ interface BarcodeGeneration {
 const AdminBarcodes = () => {
   const [barcodes, setBarcodes] = useState<BarcodeGeneration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -28,6 +30,8 @@ const AdminBarcodes = () => {
   }, []);
 
   const fetchBarcodes = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const { data, error } = await supabase
         .from('barcode_generations')
@@ -43,20 +47,11 @@ const AdminBarcodes = () => {
         description: "Failed to load barcodes",
         variant: "destructive",
       });
+      setError("Failed to load barcodes");
     } finally {
       setLoading(false);
     }
   };
-
-  if (loading) {
-    return (
-      <AdminLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </AdminLayout>
-    );
-  }
 
   return (
     <AdminLayout>
@@ -73,8 +68,12 @@ const AdminBarcodes = () => {
             <CardTitle>Recent Barcodes</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {barcodes.length === 0 ? (
+            <div className="space-y-4 min-h-[160px]">
+              {loading ? (
+                <EnhancedLoader message="Loading barcodes..." className="py-12" />
+              ) : error ? (
+                <div className="text-center text-red-500 py-8">{error}</div>
+              ) : (barcodes.length === 0 ? (
                 <div className="text-center py-8">
                   <QrCode className="h-16 w-16 mx-auto text-gray-400 mb-4" />
                   <h3 className="text-lg font-medium mb-2">No Barcodes Generated</h3>
@@ -91,37 +90,45 @@ const AdminBarcodes = () => {
                   >
                     <div className="flex items-center space-x-4">
                       <div className="w-24">
-                        <BarcodeDisplay 
-                          data={barcode.barcode_data} 
-                          type={barcode.barcode_type}
-                          width={120}
-                          height={60} 
-                          className="bg-white"
-                        />
+                        {barcode.barcode_data && barcode.barcode_type ? (
+                          <BarcodeDisplay 
+                            data={barcode.barcode_data} 
+                            type={barcode.barcode_type}
+                            width={120}
+                            height={60} 
+                            className="bg-white"
+                          />
+                        ) : (
+                          <div className="bg-gray-100 p-6 rounded">
+                            <Package className="h-10 w-10 text-gray-400 mx-auto" />
+                          </div>
+                        )}
                       </div>
                       <div>
-                        <p className="font-medium">{barcode.barcode_data}</p>
+                        <p className="font-medium">{barcode.barcode_data || "N/A"}</p>
                         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                           <Package className="h-4 w-4" />
                           <span>Product ID: {barcode.product_id || 'N/A'}</span>
                           <Calendar className="h-4 w-4 ml-4" />
-                          <span>{new Date(barcode.created_at).toLocaleDateString()}</span>
+                          <span>{barcode.created_at ? new Date(barcode.created_at).toLocaleDateString() : "Unknown date"}</span>
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">
-                        {barcode.barcode_type.toUpperCase()}
+                        {barcode.barcode_type?.toUpperCase() ?? "N/A"}
                       </Badge>
-                      <BarcodeDownloader
-                        data={barcode.barcode_data}
-                        type={barcode.barcode_type}
-                        filename={`barcode-${barcode.id}`}
-                      />
+                      {barcode.barcode_data && barcode.barcode_type ? (
+                        <BarcodeDownloader
+                          data={barcode.barcode_data}
+                          type={barcode.barcode_type}
+                          filename={`barcode-${barcode.id}`}
+                        />
+                      ) : null}
                     </div>
                   </div>
                 ))
-              )}
+              ))}
             </div>
           </CardContent>
         </Card>
