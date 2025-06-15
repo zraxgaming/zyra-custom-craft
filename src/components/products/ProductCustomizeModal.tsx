@@ -44,7 +44,8 @@ const ProductCustomizeModal: React.FC<Props> = ({ open, onOpenChange, product })
   const hasCustomization = opts.allow_text || opts.allow_image;
   const isDigital = !!product.is_digital;
 
-  // Ensure not allowed unless customization actually provided (if required)
+  // Only require customization if allow_text or allow_image;
+  // Otherwise, allow adding as is (for customizable that also can be "default").
   const canAdd =
     (opts.allow_text ? customText.trim().length > 0 : true) &&
     (opts.allow_image ? !!selectedFile : true);

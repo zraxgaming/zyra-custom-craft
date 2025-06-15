@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Star } from "lucide-react";
@@ -14,7 +15,7 @@ interface Review {
   user_id: string;
   product_id: string;
   rating: number;
-  comment: string;
+  comment: string | null;
   created_at: string;
   user_name: string;
 }
@@ -41,12 +42,9 @@ const Product = () => {
           .from("products")
           .select("*")
           .eq("slug", slug)
-          .single();
+          .maybeSingle();
 
-        if (error) {
-          throw error;
-        }
-
+        if (error) throw error;
         setProduct(data);
       } catch (error: any) {
         toast({
@@ -59,29 +57,48 @@ const Product = () => {
       }
     };
 
+    fetchProduct();
+  }, [slug, toast]);
+
+  useEffect(() => {
     const fetchReviews = async () => {
+      if (!product?.id) return;
       try {
         const { data, error } = await supabase
           .from("reviews")
-          .select("*, user:user_id(user_metadata)")
-          .eq("product_id", product?.id)
+          .select("*")
+          .eq("product_id", product.id)
           .order("created_at", { ascending: false });
 
-        if (error) {
-          throw error;
+        if (error) throw error;
+
+        // Fetch associated user display name (from profiles).
+        const profileNames: Record<string, string> = {};
+        for (const review of data) {
+          if (!review.user_id) continue;
+          if (!profileNames[review.user_id]) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("display_name, first_name, last_name")
+              .eq("id", review.user_id)
+              .maybeSingle();
+            if (profile) {
+              profileNames[review.user_id] =
+                profile.display_name ||
+                [profile.first_name, profile.last_name].filter(Boolean).join(" ") ||
+                "Anonymous";
+            } else {
+              profileNames[review.user_id] = "Anonymous";
+            }
+          }
         }
 
-        const formattedReviews = data.map((review: any) => ({
-          id: review.id,
-          user_id: review.user_id,
-          product_id: review.product_id,
-          rating: review.rating,
-          comment: review.comment,
-          created_at: review.created_at,
-          user_name: review.user?.user_metadata?.full_name || "Anonymous",
+        const formatted = data.map((review) => ({
+          ...review,
+          user_name: profileNames[review.user_id] || "Anonymous",
         }));
 
-        setReviews(formattedReviews);
+        setReviews(formatted);
       } catch (error: any) {
         toast({
           title: "Error fetching reviews",
@@ -90,50 +107,8 @@ const Product = () => {
         });
       }
     };
-
-    fetchProduct();
-
-    if (product?.id) {
-      fetchReviews();
-    }
-  }, [slug, product?.id, toast]);
-
-  useEffect(() => {
-    if (product?.id) {
-      const fetchReviews = async () => {
-        try {
-          const { data, error } = await supabase
-            .from("reviews")
-            .select("*, user:user_id(user_metadata)")
-            .eq("product_id", product?.id)
-            .order("created_at", { ascending: false });
-
-          if (error) {
-            throw error;
-          }
-
-          const formattedReviews = data.map((review: any) => ({
-            id: review.id,
-            user_id: review.user_id,
-            product_id: review.product_id,
-            rating: review.rating,
-            comment: review.comment,
-            created_at: review.created_at,
-            user_name: review.user?.user_metadata?.full_name || "Anonymous",
-          }));
-
-          setReviews(formattedReviews);
-        } catch (error: any) {
-          toast({
-            title: "Error fetching reviews",
-            description: error.message,
-            variant: "destructive",
-          });
-        }
-      };
-      fetchReviews();
-    }
-  }, [product?.id, toast]);
+    fetchReviews();
+  }, [product, toast]);
 
   const handleAddReview = async () => {
     if (!user) {
@@ -141,6 +116,11 @@ const Product = () => {
         title: "You must be logged in to add a review",
         variant: "destructive",
       });
+      return;
+    }
+
+    if (!newReview.rating) {
+      toast({ title: "Rating required" });
       return;
     }
 
@@ -154,9 +134,7 @@ const Product = () => {
         comment: newReview.comment,
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       setNewReview({ rating: 5, comment: "" });
       toast({ title: "Review added successfully!" });
@@ -164,25 +142,36 @@ const Product = () => {
       // Refresh reviews
       const { data, error: fetchError } = await supabase
         .from("reviews")
-        .select("*, user:user_id(user_metadata)")
-        .eq("product_id", product?.id)
+        .select("*")
+        .eq("product_id", product.id)
         .order("created_at", { ascending: false });
 
-      if (fetchError) {
-        throw fetchError;
+      if (fetchError) throw fetchError;
+
+      const profileNames: Record<string, string> = {};
+      for (const review of data) {
+        if (!review.user_id) continue;
+        if (!profileNames[review.user_id]) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("display_name, first_name, last_name")
+            .eq("id", review.user_id)
+            .maybeSingle();
+          if (profile) {
+            profileNames[review.user_id] =
+              profile.display_name ||
+              [profile.first_name, profile.last_name].filter(Boolean).join(" ") ||
+              "Anonymous";
+          } else {
+            profileNames[review.user_id] = "Anonymous";
+          }
+        }
       }
-
-      const formattedReviews = data.map((review: any) => ({
-        id: review.id,
-        user_id: review.user_id,
-        product_id: review.product_id,
-        rating: review.rating,
-        comment: review.comment,
-        created_at: review.created_at,
-        user_name: review.user?.user_metadata?.full_name || "Anonymous",
+      const formatted = data.map((review) => ({
+        ...review,
+        user_name: profileNames[review.user_id] || "Anonymous",
       }));
-
-      setReviews(formattedReviews);
+      setReviews(formatted);
     } catch (error: any) {
       toast({
         title: "Error adding review",
@@ -194,13 +183,8 @@ const Product = () => {
     }
   };
 
-  if (loading) {
-    return <div>Loading product details...</div>;
-  }
-
-  if (!product) {
-    return <div>Product not found.</div>;
-  }
+  if (loading) return <div>Loading product details...</div>;
+  if (!product) return <div>Product not found.</div>;
 
   return (
     <div>
@@ -224,12 +208,11 @@ const Product = () => {
                 ))}
               </div>
               <div className="text-sm mt-1">{review.comment}</div>
-              {/* NO edit/delete options! */}
-              {/* <Button>Edit</Button> <Button>Delete</Button> <-- DO NOT RENDER */}
+              {/* NO edit or delete options! */}
             </div>
           ))}
         </div>
-        {/* Allow adding more reviews: show review form always */}
+        {/* Always show the review form, allow adding multiple reviews */}
         <div className="mt-4">
           <h4 className="font-medium mb-2">Add a Review</h4>
           <div>
@@ -265,3 +248,5 @@ const Product = () => {
 };
 
 export default Product;
+
+// src/pages/Product.tsx is getting long! Consider asking to refactor it soon.
