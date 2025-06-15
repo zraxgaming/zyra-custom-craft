@@ -1,25 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Product as ProductType } from "@/types/product";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { Star, ShoppingCart, Heart, Minus, Plus, MessageCircle, ShieldCheck, Truck, ChevronLeft, Info, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/components/cart/CartProvider";
-import WishlistButton from "@/components/products/WishlistButton";
-import ProductReviews from "@/components/reviews/ProductReviews";
-import ReviewForm from "@/components/products/ReviewForm";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { Info, ChevronLeft, Star, ShoppingCart, Plus, Minus } from "lucide-react";
 import SEOHead from "@/components/seo/SEOHead";
-import { useAuth } from "@/contexts/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const ProductDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -27,20 +21,17 @@ const ProductDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("description");
-  const [customText, setCustomText] = useState("");
-  const [customImage, setCustomImage] = useState<File | null>(null);
+  // Customization fields
+  const [customText, setCustomText] = useState<string>("");
+  const [customImageFile, setCustomImageFile] = useState<File | null>(null);
   const [customImagePreview, setCustomImagePreview] = useState<string | null>(null);
 
   const { toast } = useToast();
   const { addToCart } = useCart();
-  const { user } = useAuth();
-  const navigate = useNavigate();
 
-  // Supabase fetch logic: must use maybeSingle() with zero or one result
+  // Fetch product from Supabase
   useEffect(() => {
     const fetchProduct = async () => {
-      if (!slug) return;
       setLoading(true);
       try {
         const { data, error } = await supabase
@@ -48,77 +39,62 @@ const ProductDetail: React.FC = () => {
           .select("*")
           .eq("slug", slug)
           .maybeSingle();
-
-        if (error) {
+        if (error || !data) {
           setProduct(null);
-        } else if (data) {
-          // Fix Typing: always ensure images is an array of strings
-          let safeImages: string[] = [];
-          if (Array.isArray(data.images)) {
-            safeImages = data.images.filter((img): img is string => typeof img === "string");
-          }
-          setProduct({
-            ...data,
-            images: safeImages,
-          });
-          if (safeImages.length && typeof safeImages[0] === "string") {
-            setSelectedImage(safeImages[0]);
-          }
         } else {
-          setProduct(null);
+          // Ensure images type and a fallback
+          const safeImages: string[] = Array.isArray(data.images)
+            ? data.images.filter((img): img is string => typeof img === "string")
+            : [];
+          setProduct({ ...data, images: safeImages });
+          setSelectedImage(safeImages[0] || "/placeholder-product.jpg");
         }
-      } catch (e: any) {
-        console.error("Error fetching product:", e);
-        toast({ title: "Error", description: "Could not load product details.", variant: "destructive" });
+      } catch (e) {
         setProduct(null);
+        toast({ title: "Error", description: "Could not load product.", variant: "destructive" });
       } finally {
         setLoading(false);
       }
     };
-    fetchProduct();
-    // eslint-disable-next-line
-  }, [slug]);
+    if (slug) fetchProduct();
+  }, [slug, toast]);
 
-  // Handle image preview for custom upload
+  // Handle custom image preview
   useEffect(() => {
-    if (!customImage) {
+    if (!customImageFile) {
       setCustomImagePreview(null);
       return;
     }
     const reader = new FileReader();
     reader.onloadend = () => setCustomImagePreview(reader.result as string);
-    reader.readAsDataURL(customImage);
-  }, [customImage]);
+    reader.readAsDataURL(customImageFile);
+  }, [customImageFile]);
 
-  // Fix: Customization validation logic (require both text and image if allowed)
+  // Handle add to cart, with validation
   const isCustomizable = !!product?.is_customizable;
   const allowText = true;
   const allowImage = true;
+  const mustProvideCustomization = isCustomizable;
+  const canAddToCart =
+    !mustProvideCustomization ||
+    ((allowText ? customText.trim().length > 0 : true) &&
+      (allowImage ? !!customImageFile : true));
 
-  // Validation for add-to-cart: must have text and image if both required
-  const canAddToCart = !isCustomizable ||
-    ((allowText ? customText.trim().length > 0 : true) && (allowImage ? !!customImage : true));
-
-  // Fix: Enforce customization required in handleAddToCart
   const handleAddToCart = async () => {
     if (!product) return;
-
-    if (isCustomizable) {
-      if ((allowText && !customText.trim()) || (allowImage && !customImage)) {
+    if (mustProvideCustomization) {
+      if ((allowText && !customText.trim()) || (allowImage && !customImageFile)) {
         toast({
-          title: "Customization Required!",
-          description: "Please provide the required customization before adding to cart.",
+          title: "Customization Required",
+          description: "Please fill in all required customization fields.",
           variant: "destructive",
         });
         return;
       }
     }
-
     let customization: any = {};
     if (allowText) customization.text = customText.trim();
-
-    if (allowImage && customImage) {
-      // Demo only: convert image to base64; in production, upload to Supabase storage and save URL
+    if (allowImage && customImageFile) {
       const reader = new FileReader();
       reader.onloadend = async () => {
         customization.image_base64 = reader.result;
@@ -127,61 +103,44 @@ const ProductDetail: React.FC = () => {
             product_id: product.id,
             name: product.name,
             price: product.price,
-            image_url: selectedImage || (Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : "/placeholder-product.jpg"),
+            image_url: selectedImage ?? "/placeholder-product.jpg",
           },
           quantity,
           customization
         );
-        toast({ title: "Added to cart!", description: `${quantity} ${product.name} added.` });
+        toast({ title: "Added to cart!", description: `${quantity} ${product.name} added!` });
       };
-      reader.readAsDataURL(customImage);
+      reader.readAsDataURL(customImageFile);
       return;
     }
-
-    // Standard, or text-only customization
+    // Non-image route
     await addToCart(
       {
         product_id: product.id,
         name: product.name,
         price: product.price,
-        image_url: selectedImage || (Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : "/placeholder-product.jpg"),
+        image_url: selectedImage ?? "/placeholder-product.jpg",
       },
       quantity,
       customization
     );
-
-    toast({ title: "Added to cart!", description: `${quantity} ${product.name} added.` });
+    toast({ title: "Added to cart!", description: `${quantity} ${product.name} added!` });
   };
 
-  // Main loading state
+  // ----------- Layout Starts Here -----------
   if (loading) {
     return (
       <>
         <Navbar />
         <div className="container mx-auto px-4 py-8">
-          <Skeleton className="h-6 w-1/2 mb-6" />
-          <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-            <div className="space-y-4">
-              <Skeleton className="w-full aspect-square rounded-lg shadow-md" />
-              <div className="grid grid-cols-5 gap-2">
-                {[...Array(5)].map((_, i) => <Skeleton key={i} className="w-full aspect-square rounded" />)}
-              </div>
+          <Skeleton className="h-8 w-1/3 mb-4" />
+          <div className="grid md:grid-cols-2 gap-8">
+            <Skeleton className="w-full aspect-square rounded-lg" />
+            <div>
+              <Skeleton className="h-10 w-2/3 mb-4" />
+              <Skeleton className="h-6 w-1/3 mb-4" />
+              <Skeleton className="h-6 w-1/2" />
             </div>
-            <div className="space-y-6">
-              <Skeleton className="h-10 w-3/4" />
-              <Skeleton className="h-6 w-1/4" />
-              <Skeleton className="h-5 w-1/2" />
-              <Skeleton className="h-20 w-full" />
-              <div className="flex items-center gap-4">
-                <Skeleton className="h-12 w-28" />
-                <Skeleton className="h-12 flex-1" />
-                <Skeleton className="h-12 w-12" />
-              </div>
-            </div>
-          </div>
-          <div className="mt-12">
-            <Skeleton className="h-10 w-1/3 mb-4" />
-            <Skeleton className="h-40 w-full" />
           </div>
         </div>
         <Footer />
@@ -193,7 +152,7 @@ const ProductDetail: React.FC = () => {
     return (
       <>
         <Navbar />
-        <div className="container mx-auto px-4 py-24 text-center min-h-[40vh] flex flex-col justify-center items-center">
+        <div className="container mx-auto px-4 py-24 flex flex-col items-center text-center min-h-[40vh]">
           <Info className="h-16 w-16 text-destructive mb-4" />
           <h1 className="text-3xl font-bold mb-2">Product Not Found</h1>
           <p className="text-muted-foreground mb-6">Sorry, we couldn't find the product you're looking for.</p>
@@ -206,40 +165,41 @@ const ProductDetail: React.FC = () => {
     );
   }
 
-  // Ensure images are string[]
-  const productImages = product.images as string[];
+  const productImages: string[] = Array.isArray(product.images)
+    ? product.images
+    : [];
 
+  // ----------- Actual product detail layout -----------
   return (
     <>
       <SEOHead
-        title={product?.meta_title || product?.name || "Product Details"}
-        description={product?.meta_description || product?.short_description || "View product details"}
+        title={`${product.name} | Zyra Custom Craft`}
+        description={product.meta_description || product.short_description || ""}
         url={`https://shopzyra.vercel.app/product/${product.slug}`}
         image={selectedImage || productImages[0]}
       />
       <Navbar />
       <main className="container mx-auto px-4 py-8 max-w-7xl">
-        <header className="mb-6">
-          <h1 className="text-3xl md:text-5xl font-extrabold mb-1 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-            {product.name}
-          </h1>
-          <div className="flex items-center gap-2 flex-wrap mt-2">
-            {product.is_new && (
-              <Badge variant="secondary" className="bg-blue-500 text-white">New Arrival</Badge>
-            )}
-            {product.is_featured && (
-              <Badge variant="secondary" className="bg-purple-500 text-white">Featured</Badge>
-            )}
-            {!product.in_stock && <Badge variant="destructive">Out of Stock</Badge>}
-            <span className="text-base text-muted-foreground ml-2">
-              SKU: {product.sku || "N/A"}
-            </span>
+        {/* H1 for SEO */}
+        <h1 className="text-3xl md:text-5xl font-extrabold mb-3 text-gradient bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+          {product.name}
+        </h1>
+        {/* Sub Info & badges */}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          {product.is_new && <Badge variant="secondary" className="bg-green-600 text-white">New</Badge>}
+          {product.is_featured && <Badge variant="secondary" className="bg-purple-700 text-white">Featured</Badge>}
+          {!product.in_stock && <Badge variant="destructive">Out of Stock</Badge>}
+          <span className="text-muted-foreground ml-2 text-base">SKU: {product.sku || "N/A"}</span>
+          <div className="flex items-center ml-auto gap-2 text-yellow-400">
+            <Star className="w-5 h-5" /><span className="font-semibold">{Number(product.rating || 0).toFixed(1)} ({product.review_count || 0})</span>
           </div>
-        </header>
-        {/* Product & Gallery */}
+        </div>
+        <Separator className="mb-5" />
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+          {/* Product images */}
           <section>
-            <Card className="overflow-hidden shadow-lg rounded-lg bg-muted-foreground/5 mb-3">
+            <Card className="overflow-hidden shadow-lg bg-muted-foreground/10 rounded-lg">
               <AspectRatio ratio={1}>
                 <img
                   src={selectedImage || productImages[0] || "/placeholder-product.jpg"}
@@ -251,139 +211,125 @@ const ProductDetail: React.FC = () => {
             {productImages.length > 1 && (
               <div className="flex gap-2 mt-3">
                 {productImages.map((img, i) => (
-                  <button key={i} className={`w-20 h-20 rounded border-2 ${selectedImage === img ? "border-primary" : "border-gray-200"}`}
-                    onClick={() => setSelectedImage(img)}>
+                  <button
+                    key={i}
+                    className={`w-20 h-20 rounded border-2 focus:outline-none ${selectedImage === img ? "border-primary" : "border-gray-200"}`}
+                    onClick={() => setSelectedImage(img)}
+                  >
                     <img src={img} alt={`thumb-${i}`} className="object-cover w-full h-full" />
                   </button>
                 ))}
               </div>
             )}
           </section>
-          {/* Product info + Customization */}
+          {/* Product info & Customization */}
           <section>
-            <div className="mb-4">
-              <span className="text-4xl font-bold text-primary">
+            <div className="mb-3 flex items-end gap-3 flex-wrap">
+              <span className="text-3xl font-bold text-primary">
                 AED {product.price.toFixed(2)}
               </span>
               {product.discount_percentage > 0 && (
-                <span className="ml-3 text-xl text-gray-400 line-through">
-                  AED {(product.price / (1 - product.discount_percentage / 100)).toFixed(2)}
+                <span className="ml-2 text-xl text-gray-400 line-through">
+                  AED {(product.price / (1 - Number(product.discount_percentage) / 100)).toFixed(2)}
                 </span>
               )}
             </div>
-            <div className="mb-5 flex items-center gap-2">
-              <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-              <span className="font-medium">{Number(product.rating || 0).toFixed(1)}</span>
-              <span className="text-sm text-muted-foreground">({product.review_count || 0})</span>
-            </div>
-            <p className="mb-4 text-muted-foreground">{product.short_description}</p>
-            <Separator className="mb-4" />
-            {/* Customization fields if required */}
+            <p className="mb-3 text-lg text-muted-foreground">{product.short_description}</p>
+
+            <Separator className="mb-6" />
+
             {isCustomizable && (
               <div className="mb-6 space-y-4 bg-purple-50 border border-purple-200 rounded-lg p-4">
-                <h2 className="text-lg font-semibold text-purple-800 mb-2">Customize your product</h2>
-                {allowText && (
-                  <div>
-                    <label className="block mb-1 font-medium" htmlFor="customText">Custom Text *</label>
-                    <input
-                      id="customText"
-                      type="text"
-                      value={customText}
-                      onChange={e => setCustomText(e.target.value)}
-                      className="w-full border rounded px-3 py-2"
-                      placeholder="Your custom text"
-                      required
-                    />
-                  </div>
-                )}
-                {allowImage && (
-                  <div>
-                    <label className="block mb-1 font-medium" htmlFor="customImage">Custom Image *</label>
-                    <input
-                      id="customImage"
-                      type="file"
-                      accept="image/*"
-                      onChange={e => setCustomImage(e.target.files ? e.target.files[0] : null)}
-                      className="w-full border rounded px-3 py-2"
-                      required
-                    />
-                    {customImagePreview && (
-                      <img src={customImagePreview} alt="custom preview" className="h-20 mt-2 rounded shadow" />
-                    )}
-                  </div>
-                )}
+                <h2 className="text-lg font-semibold text-purple-800 mb-2">Customize this product</h2>
+                {/* Simple Customization Editor */}
+                <div>
+                  <label className="block mb-1 font-medium" htmlFor="customText">Custom Text *</label>
+                  <input
+                    id="customText"
+                    type="text"
+                    value={customText}
+                    onChange={e => setCustomText(e.target.value)}
+                    className="w-full border rounded px-3 py-2 mb-1"
+                    placeholder="Type your custom message"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium" htmlFor="customImage">Custom Image *</label>
+                  <input
+                    id="customImage"
+                    type="file"
+                    accept="image/*"
+                    onChange={e =>
+                      setCustomImageFile(e.target.files && e.target.files.length > 0 ? e.target.files[0] : null)
+                    }
+                    className="w-full border rounded px-3 py-2"
+                    required
+                  />
+                  {customImagePreview && (
+                    <div className="mt-2">
+                      <img src={customImagePreview} alt="Preview" className="rounded h-24 border shadow" />
+                    </div>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  All customizations are final. Custom products cannot be returned unless faulty.
+                  Please review your customization carefully. Customized products are final sale.
                 </p>
               </div>
             )}
-            {/* Quantity & buttons */}
+
+            {/* Quantity and buttons */}
             <div className="flex gap-2 items-center mb-4">
-              <Button variant="ghost" size="icon" onClick={() => setQuantity(q => Math.max(1, q - 1))} disabled={quantity <= 1}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                disabled={quantity <= 1}
+              >
                 <Minus />
               </Button>
-              <span className="w-12 text-center font-semibold text-lg">{quantity}</span>
-              <Button variant="ghost" size="icon" onClick={() => setQuantity(q => q + 1)}>
+              <span className="w-12 text-center font-semibold text-xl">{quantity}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setQuantity(q => q + 1)}
+              >
                 <Plus />
               </Button>
             </div>
-            <div className="flex gap-2 mb-8 flex-wrap">
-              <Button
-                size="lg"
-                onClick={handleAddToCart}
-                className="flex-1 h-12 bg-gradient-to-r from-primary to-purple-700 text-white font-semibold"
-                disabled={!product.in_stock || (isCustomizable && !canAddToCart)}
-              >
-                <ShoppingCart className="mr-2 h-5 w-5" />
-                {product.in_stock ? "Add to Cart" : "Out of Stock"}
-              </Button>
-              <WishlistButton productId={product.id} className="h-12 w-12" size="lg" />
+            <Button
+              size="lg"
+              onClick={handleAddToCart}
+              className="flex-1 h-12 bg-gradient-to-r from-primary to-purple-700 text-white font-semibold mb-3"
+              disabled={!product.in_stock || (isCustomizable && !canAddToCart)}
+            >
+              <ShoppingCart className="mr-2 h-5 w-5" />
+              {product.in_stock ? "Add to Cart" : "Out of Stock"}
+            </Button>
+
+            {/* Internal links for navigation */}
+            <div className="flex flex-wrap mt-5 gap-2 text-primary">
+              <Link to="/shop" className="underline underline-offset-2">Shop</Link>
+              <span>|</span>
+              <Link to="/categories" className="underline underline-offset-2">Categories</Link>
+              <span>|</span>
+              <Link to="/faq" className="underline underline-offset-2">FAQ</Link>
+              <span>|</span>
+              <Link to="/contact" className="underline underline-offset-2">Contact</Link>
             </div>
-            {/* Internal Links */}
-            <nav aria-label="breadcrumb" className="mb-4">
-              <Link to="/shop" className="text-primary underline underline-offset-2 mr-2">Shop</Link>
-              |
-              <Link to="/categories" className="text-primary underline underline-offset-2 mx-2">Categories</Link>
-              |
-              <Link to="/faq" className="text-primary underline underline-offset-2 mx-2">FAQ</Link>
-              |
-              <Link to="/contact" className="text-primary underline underline-offset-2 ml-2">Contact</Link>
-            </nav>
           </section>
         </div>
-        {/* Product Description / Reviews as Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-12" id="details-tabs">
-          <TabsList className="mb-6">
-            <TabsTrigger value="description" className="mr-2">Description</TabsTrigger>
-            <TabsTrigger value="reviews">Reviews</TabsTrigger>
-          </TabsList>
-          <TabsContent value="description">
-            <article className="prose dark:prose-invert max-w-none">
-              <h2>Description</h2>
-              <div
-                dangerouslySetInnerHTML={{
-                  __html: product.description || "No product description available.",
-                }}
-              />
-            </article>
-          </TabsContent>
-          <TabsContent value="reviews">
-            <section className="space-y-6">
-              <ProductReviews productId={product.id} />
-              <Separator />
-              {user ? (
-                <ReviewForm productId={product.id} onReviewSubmitted={() => { toast({ title: "Review Submitted!", description: "Thank you for your feedback." }); }} />
-              ) : (
-                <div className="text-center py-4 border rounded-lg bg-muted/50">
-                  <MessageCircle className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-muted-foreground">
-                    <Link to={`/auth?redirect=/product/${slug}#reviews`} className="text-primary font-semibold hover:underline">Sign in</Link> or <Link to={`/auth?redirect=/product/${slug}#reviews`} className="text-primary font-semibold hover:underline">create an account</Link> to leave a review.
-                  </p>
-                </div>
-              )}
-            </section>
-          </TabsContent>
-        </Tabs>
+
+        {/* Main product description */}
+        <section className="mt-10">
+          <h2 className="text-2xl font-bold mb-2">Full Description</h2>
+          <div
+            className="prose dark:prose-invert max-w-none"
+            dangerouslySetInnerHTML={{
+              __html: product.description || "No product description available.",
+            }}
+          />
+        </section>
       </main>
       <Footer />
     </>
@@ -392,4 +338,4 @@ const ProductDetail: React.FC = () => {
 
 export default ProductDetail;
 
-// NOTE: This file is getting long. Please ask Lovable to modularize (split components by section) for maintainability.
+// NOTE: This file is getting long. Consider asking Lovable to split it up for maintainability.
