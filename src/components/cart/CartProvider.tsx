@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CartItem } from '@/types/cart';
 import { useToast } from '@/hooks/use-toast';
@@ -69,7 +68,11 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
   // Save cart to localStorage whenever items change
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(items));
+    try {
+      localStorage.setItem('cart', JSON.stringify(items));
+    } catch (e) {
+      console.error('Cart save error:', e);
+    }
   }, [items]);
 
   // Check stock status for items in cart

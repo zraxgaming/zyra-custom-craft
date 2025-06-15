@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,7 +63,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
       const orderPayload = {
         user_id: user?.id,
         total_amount: subtotal,
-        payment_status: paymentMethod === "cash" ? "pending" : "pending",
+        payment_status: "pending",
         payment_method: paymentMethod,
         shipping_address: {
           name,
@@ -106,13 +105,12 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
 
       // Handle payment actions
       if (paymentMethod === "ziina") {
-        // Initiate Ziina payment intent (redirect user)
         // Get ziina_api_key from site_config
         const { data: configData, error: configError } = await supabase
           .from("site_config")
           .select("value")
           .eq("key", "ziina_api_key")
-          .single();
+          .maybeSingle();
         if (configError || !configData?.value) {
           throw new Error("Ziina integration not set up.");
         }
@@ -139,6 +137,14 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
           body: JSON.stringify(paymentIntentPayload),
         });
         const paymentResp = await response.json();
+
+        // Save payment_intent_id to the order if available
+        if (paymentResp.id) {
+          await supabase
+            .from("orders")
+            .update({ payment_intent_id: paymentResp.id })
+            .eq("id", orderData.id);
+        }
 
         if (!response.ok || !paymentResp.next_action_url) {
           throw new Error(paymentResp.message || "Failed to get Ziina payment URL.");
@@ -174,9 +180,9 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Warning */}
+        {/* WARNING */}
         <div className="bg-yellow-200 border-l-4 border-yellow-600 text-yellow-900 dark:bg-yellow-700/25 dark:text-yellow-100 px-4 py-3 rounded-lg mb-4">
-          <strong>Pickup Only!</strong> All orders must be picked up in person. No delivery or shipping offered at this time.
+          <strong>Pickup Only!</strong> All orders must be picked up in person. <br/> <span>No delivery or shipping offered at this time.</span>
         </div>
         {/* Name */}
         <div className="space-y-2">

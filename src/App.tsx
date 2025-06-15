@@ -30,7 +30,7 @@ import Referrals from "@/pages/Referrals";
 import Newsletter from "@/pages/Newsletter";
 import NotFound from "@/pages/NotFound";
 // FIX: ensure casing matches FILESYSTEM: should be 'Callback'
-import AuthCallback from "@/pages/auth/Callback";
+import AuthCallback from "@/pages/auth/callback";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";
