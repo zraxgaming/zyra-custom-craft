@@ -59,7 +59,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
     setIsSubmitting(true);
 
     try {
-      // Compose order object
+      // Compose order object, save as USD for db, pay in AED for Ziina
       const orderPayload = {
         user_id: user?.id,
         total_amount: subtotal,
@@ -103,7 +103,6 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
         await supabase.from("order_items").insert(orderItems);
       }
 
-      // Handle payment actions
       if (paymentMethod === "ziina") {
         // Get ziina_api_key from site_config
         const { data: configData, error: configError } = await supabase
@@ -138,7 +137,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
         });
         const paymentResp = await response.json();
 
-        // Save payment_intent_id to the order if available
+        // Always save payment_intent_id to the order if available
         if (paymentResp.id) {
           await supabase
             .from("orders")
@@ -146,12 +145,15 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
             .eq("id", orderData.id);
         }
 
-        if (!response.ok || !paymentResp.next_action_url) {
-          throw new Error(paymentResp.message || "Failed to get Ziina payment URL.");
+        if (!response.ok) {
+          throw new Error(paymentResp.message || "Failed to get Ziina payment intent.");
         }
-        // Redirect user to pay
+        if (!paymentResp.next_action_url) {
+          throw new Error(paymentResp.message || "No payment redirect URL received from Ziina.");
+        }
+        // Redirect user to Ziina
         window.location.href = paymentResp.next_action_url;
-        return; // Prevent order success redirect (user will be redirected after payment)
+        return;
       } else {
         // Cash on pickup: show success & clear cart
         toast({

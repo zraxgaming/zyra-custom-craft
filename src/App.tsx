@@ -1,4 +1,3 @@
-
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
@@ -30,7 +29,7 @@ import OrderFailed from "@/pages/OrderFailed";
 import Referrals from "@/pages/Referrals";
 import Newsletter from "@/pages/Newsletter";
 import NotFound from "@/pages/NotFound";
-import AuthCallback from "@/pages/auth/callback";
+import AuthCallback from "@/pages/auth/Callback"; // Fix casing here
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";

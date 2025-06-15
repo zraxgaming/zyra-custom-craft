@@ -23,7 +23,7 @@ export default function Product() {
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const { addItem } = useCart();
-  const { wishlist, addToWishlist, removeFromWishlist } = useWishlist();
+  const { addToWishlist, removeFromWishlist } = useWishlist();
   const { toast } = useToast();
   const [isWishlisted, setIsWishlisted] = useState(false);
 
@@ -35,11 +35,19 @@ export default function Product() {
   }, [slug]);
 
   useEffect(() => {
-    if (product) {
-      setSelectedImage(product.images?.[0] || null);
-      setIsWishlisted(wishlist.some((item) => item.id === product.id));
+    if (product && product.id) {
+      const w = localStorage.getItem('wishlist');
+      let found = false;
+      if (w) {
+        try {
+          const wArr = JSON.parse(w) as { id: string }[];
+          found = wArr.some(item => item.id === product.id);
+        } catch (_) {}
+      }
+      setIsWishlisted(found);
     }
-  }, [product, wishlist]);
+    if (product) setSelectedImage(product.images?.[0] || null);
+  }, [product]);
 
   const fetchProduct = async (slug: string) => {
     setLoading(true);
@@ -60,7 +68,6 @@ export default function Product() {
       }
 
       if (data) {
-        // Transform the data to match our Product interface
         const transformedProduct: ProductType = {
           ...data,
           images: Array.isArray(data.images)
@@ -87,21 +94,20 @@ export default function Product() {
 
   const handleAddToCart = (product: ProductType) => {
     if (!product) return;
-
     addItem({
       product_id: product.id,
       name: product.name,
       price: product.price,
-      image: product.images?.[0] || '/placeholder-product.jpg',
       quantity: 1,
       in_stock: product.in_stock,
-      customization: {},
+      customization: {
+        image: product.images?.[0] || '/placeholder-product.jpg'
+      },
     });
   };
 
   const toggleWishlist = (product: ProductType) => {
     if (!product) return;
-
     if (isWishlisted) {
       removeFromWishlist(product.id);
       setIsWishlisted(false);
@@ -110,12 +116,18 @@ export default function Product() {
         description: `${product.name} has been removed from your wishlist.`,
       });
     } else {
-      addToWishlist({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image: product.images?.[0] || '/placeholder-product.jpg',
-      });
+      let wArr: { id: string; name: string; price: number; image: string }[] = [];
+      try {
+        const w = localStorage.getItem('wishlist');
+        if (w) wArr = JSON.parse(w);
+        wArr.push({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          image: product.images?.[0] || '/placeholder-product.jpg'
+        });
+        localStorage.setItem('wishlist', JSON.stringify(wArr));
+      } catch (_) {}
       setIsWishlisted(true);
       toast({
         title: "Added to Wishlist",
@@ -189,7 +201,7 @@ export default function Product() {
                     </Link>
                   </div>
                 </li>
-                {product?.category_id && (
+                {product?.category && (
                   <li>
                     <div className="flex items-center">
                       <ChevronRight className="w-4 h-4 text-gray-400" />
@@ -248,12 +260,7 @@ export default function Product() {
 
               <div className="space-y-2">
                 <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">${product.price}</h2>
-                {product.discount_price && (
-                  <div className="flex items-center space-x-2">
-                    <span className="text-lg text-red-500 line-through">${product.discount_price}</span>
-                    <Badge variant="destructive">Discounted</Badge>
-                  </div>
-                )}
+                {/* No discount_price block */}
               </div>
 
               <Separator />
