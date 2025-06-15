@@ -46,7 +46,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({
     setIsSubmitting(true);
     try {
       // 1. Save order as PENDING and get orderId
-      // customer_email removed because it's not in your schema (add it in SQL later)
+      // customer_name is NOT inserted directly to avoid column missing errors.
+      // Instead, store customer details in notes so checkout never fails.
       const { data: order, error } = await supabase
         .from("orders")
         .insert({
@@ -55,10 +56,10 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({
           status: "pending",
           payment_status: "pending",
           payment_method: paymentMethod,
-          customer_name: form.name,
-          // customer_email: form.email, // REMOVED: column missing!
-          // fallback: store in notes if you want to log it (until you update schema)
+          // customer_name: form.name, // COMMENTED OUT. See note above.
+          // Store customer info in notes to avoid schema issues.
           notes: [
+            form.name && `Name: ${form.name}`,
             form.otherPhone && `Other phone: ${form.otherPhone}`,
             form.email && `Email: ${form.email}`,
           ].filter(Boolean).join("; "),
