@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Plus, Minus } from "lucide-react";
@@ -14,18 +13,26 @@ interface AddToCartButtonProps {
     price: number;
     images: string[];
     is_customizable?: boolean;
+    stock_quantity?: number;
   };
   disabled?: boolean;
   className?: string;
 }
 
-const AddToCartButton: React.FC<AddToCartButtonProps> = ({ 
-  product, 
+const AddToCartButton: React.FC<AddToCartButtonProps> = ({
+  product,
   disabled = false,
-  className = ""
+  className = "",
 }) => {
   const { cart, addToCart } = useCart();
   const { toast } = useToast();
+
+  // Find max available stock; fallback to 99 if missing
+  const maxStock =
+    typeof (product as any).stock_quantity === "number"
+      ? (product as any).stock_quantity
+      : 99;
+
   const [quantity, setQuantity] = useState(1);
 
   // Customization (reset fully after add)
@@ -33,7 +40,9 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
   const [customModalOpen, setCustomModalOpen] = useState(false);
 
   const isCustomizable = !!product.is_customizable;
-  const existingItem = cart.find(item => item.product_id === product.id);
+  const existingItem = cart.find((item) => item.product_id === product.id);
+  const cartQuantity = existingItem ? existingItem.quantity : 0;
+  const remainingStock = maxStock - cartQuantity;
 
   // Helper for customization required
   const hasCustomization = () => {
@@ -58,8 +67,19 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
       setCustomModalOpen(true);
       toast({
         title: "Customization Required",
-        description: "Please enter customization details before adding to cart.",
-        variant: "destructive"
+        description:
+          "Please enter customization details before adding to cart.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Not enough stock
+    if (quantity > remainingStock) {
+      toast({
+        title: "Stock Limit Reached",
+        description: `Cannot add more than ${maxStock} of this product to your cart.`,
+        variant: "destructive",
       });
       return;
     }
@@ -77,9 +97,9 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
 
     toast({
       title: "Added to cart",
-      description: `${quantity} ${product.name} added to your cart`
+      description: `${quantity} ${product.name} added to your cart`,
     });
-    setAnimating(true); // Trigger add-to-cart animation
+    setAnimating(true);
     setTimeout(() => setAnimating(false), 750);
 
     setQuantity(1);
@@ -87,6 +107,7 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
     setCustomModalOpen(false);
   };
 
+  // Quantity controls (if desired, could add plus/minus icons with limits)
   return (
     <>
       {/* Customization Modal */}
@@ -113,18 +134,59 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
         </div>
       )}
 
-      <Button
-        onClick={handleAddToCart}
-        disabled={disabled || (isCustomizable && !hasCustomization())}
-        className={cn(
-          "w-full",
-          className,
-          animating && "animate-bounce animate-spin scale-105"
-        )}
-      >
-        <ShoppingCart className="h-4 w-4 mr-2" />
-        {existingItem ? "Add More" : "Add to Cart"}
-      </Button>
+      <div className="flex items-center gap-2">
+        {/* Decrease */}
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          disabled={quantity <= 1}
+          aria-label="Decrease quantity"
+          onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+          className="w-8 h-8"
+        >
+          <Minus className="h-4 w-4" />
+        </Button>
+        <span className="px-2">{quantity}</span>
+        {/* Increase */}
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          disabled={quantity >= remainingStock}
+          aria-label="Increase quantity"
+          onClick={() =>
+            setQuantity((q) =>
+              q < remainingStock ? q + 1 : q
+            )
+          }
+          className="w-8 h-8"
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
+
+        <Button
+          onClick={handleAddToCart}
+          disabled={
+            disabled ||
+            (isCustomizable && !hasCustomization()) ||
+            remainingStock <= 0
+          }
+          className={cn(
+            "flex-1 w-full",
+            className,
+            animating && "animate-bounce animate-spin scale-105"
+          )}
+        >
+          <ShoppingCart className="h-4 w-4 mr-2" />
+          {existingItem ? "Add More" : "Add to Cart"}
+        </Button>
+      </div>
+      {remainingStock <= 0 && (
+        <div className="text-xs text-red-600 mt-1">
+          No more in stock.
+        </div>
+      )}
     </>
   );
 };

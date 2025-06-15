@@ -121,6 +121,34 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       console.log("User not logged in");
       return;
     }
+
+    // Get product stock before allowing addToCart
+    let productRes = await supabase
+      .from("products")
+      .select("id, stock_quantity")
+      .eq("id", product.product_id)
+      .maybeSingle();
+
+    const maxStock =
+      typeof productRes.data?.stock_quantity === "number"
+        ? productRes.data?.stock_quantity
+        : 99;
+
+    // Check number in cart
+    const itemInCart = cart.find(
+      (item) =>
+        item.product_id === product.product_id &&
+        JSON.stringify(item.customization || {}) ===
+          JSON.stringify(customization || {})
+    );
+    const cartQty = itemInCart ? itemInCart.quantity : 0;
+    const totalDesired = cartQty + quantity;
+
+    if (totalDesired > maxStock) {
+      console.log("Attempted to add above stock level.");
+      return;
+    }
+
     // Block adding customizable products without required customization
     if (product.name?.toLowerCase().includes("custom") && (!customization || Object.keys(customization).length === 0)) {
       console.log("Customization required for this product.");
@@ -181,6 +209,24 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
   const updateCartItem = async (id: string, quantity: number) => {
     try {
+      // Find item
+      const item = cart.find((it) => it.id === id);
+      if (!item) return;
+
+      // Fetch max stock for this product
+      let productRes = await supabase
+        .from("products")
+        .select("stock_quantity")
+        .eq("id", item.product_id)
+        .maybeSingle();
+      const maxStock =
+        typeof productRes.data?.stock_quantity === "number"
+          ? productRes.data?.stock_quantity
+          : 99;
+      // Apply restriction
+      if (quantity > maxStock) return;
+
+      // Update cart item
       const { error } = await supabase
         .from("cart_items")
         .update({ quantity })

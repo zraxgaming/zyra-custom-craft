@@ -13,6 +13,7 @@ interface CartDrawerProps {
 const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   const { cart, updateCartItem, removeFromCart, totalItems, totalPrice } = useCart();
 
+  // Get each item's available stock if present, fallback 99
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent className="w-[400px] sm:w-[540px]">
@@ -32,49 +33,68 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
           ) : (
             <>
               <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-                {cart.map((item) => (
-                  <div key={item.id} className="flex items-center gap-4 p-4 border rounded-lg">
-                    {item.image_url ? (
-                      <img src={item.image_url} alt={item.name} className="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
-                    ) : (
-                      <div className="w-16 h-16 bg-muted rounded-lg flex-shrink-0"></div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium truncate">{item.name}</h4>
-                      <p className="text-sm text-muted-foreground">${item.price}</p>
-                      {/* You could add stock status here if desired */}
+                {cart.map((item) => {
+                  // optional: get stock_quantity for product? can be passed in via API, or else 99
+                  // For this demo fall back to 99 (should ideally refetch live on product change)
+                  const maxStock = typeof (item as any).stock_quantity === "number"
+                    ? (item as any).stock_quantity
+                    : 99;
+                  return (
+                    <div key={item.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                      {item.image_url ? (
+                        <img src={item.image_url} alt={item.name} className="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
+                      ) : (
+                        <div className="w-16 h-16 bg-muted rounded-lg flex-shrink-0"></div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium truncate">{item.name}</h4>
+                        <p className="text-sm text-muted-foreground">${item.price}</p>
+                        {/* Customization */}
+                        {item.customization && Object.keys(item.customization).length > 0 && (
+                          <p className="text-xs text-purple-700 break-all">[customized]</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateCartItem(item.id, Math.max(0, item.quantity - 1))}
+                          disabled={item.quantity <= 1}
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <span className="w-8 text-center">{item.quantity}</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            updateCartItem(
+                              item.id,
+                              item.quantity + 1 > maxStock ? maxStock : item.quantity + 1
+                            )
+                          }
+                          disabled={item.quantity >= maxStock}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeFromCart(item.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => updateCartItem(item.id, Math.max(0, item.quantity - 1))}
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="w-8 text-center">{item.quantity}</span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => updateCartItem(item.id, item.quantity + 1)}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeFromCart(item.id)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               
               <div className="border-t pt-4">
                 <div className="flex justify-between items-center mb-4">
-                  <span className="font-semibold">Total: ${totalPrice().toFixed(2)}</span>
+                  <span className="font-semibold">
+                    Total: ${totalPrice().toFixed(2)}
+                  </span>
                 </div>
                 <div className="space-y-2">
                   <Button asChild className="w-full">
