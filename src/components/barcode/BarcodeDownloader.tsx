@@ -1,16 +1,18 @@
 
+// Download barcode/QR with proper dynamic import
 import React from 'react';
-// Remove bwip-js. Instead, notify user and provide helpful message.
+
 interface Props {
   data: string;
   type: string;
   filename?: string;
 }
+
 const BarcodeDownloader: React.FC<Props> = ({ data, type, filename }) => {
   const handleDownload = async () => {
     let toCanvas: any;
     try {
-      // Try to dynamically import bwip-js
+      // Try to dynamically import bwip-js (for barcode & qr code generation)
       toCanvas = (await import('bwip-js')).toCanvas;
     } catch (e) {
       alert('Barcode download requires the "bwip-js" package. Please ask your admin to install it.');
@@ -19,7 +21,7 @@ const BarcodeDownloader: React.FC<Props> = ({ data, type, filename }) => {
     const canvas = document.createElement('canvas');
     try {
       toCanvas(canvas, {
-        bcid: type, // barcode type
+        bcid: type, // barcode type (e.g. 'code128', 'qrcode')
         text: data,
         scale: 3,
         height: 10,

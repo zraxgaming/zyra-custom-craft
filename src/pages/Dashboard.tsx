@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useReferrals } from "@/hooks/use-referrals";
+import UserProfile from "@/components/user/UserProfile";
 import {
   Card,
   CardContent,
@@ -21,6 +23,7 @@ const Dashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [orders, setOrders] = useState<any[]>([]);
+  const referrals = useReferrals();
 
   useEffect(() => {
     if (user) {
@@ -50,27 +53,17 @@ const Dashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* User Profile Section */}
-            <div className="flex items-center space-x-4">
-              <Avatar>
-                <AvatarImage src={user?.user_metadata?.avatar_url as string} />
-                <AvatarFallback>
-                  {user?.user_metadata?.first_name?.[0]}
-                  {user?.user_metadata?.last_name?.[0]}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h2 className="text-lg font-semibold">
-                  {user?.user_metadata?.first_name}{" "}
-                  {user?.user_metadata?.last_name}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  {user?.email}
-                </p>
-              </div>
-            </div>
-
+            {/* Editable User Profile Section */}
+            <UserProfile />
             <Separator />
+
+            {/* Referrals Program section */}
+            {/* If you want this as a separate card/component, you can display a Referral dashboard: */}
+            <div className="mt-8">
+              <h3 className="text-xl font-semibold mb-4">Referrals</h3>
+              {/* Add referral stats, copy/share code, etc */}
+              {/* You could also import and use <ReferralDashboard /> if it exists */}
+            </div>
 
             {/* Order History Section */}
             <div className="space-y-4">

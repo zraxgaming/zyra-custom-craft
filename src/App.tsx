@@ -29,7 +29,7 @@ import OrderFailed from "@/pages/OrderFailed";
 import Referrals from "@/pages/Referrals";
 import Newsletter from "@/pages/Newsletter";
 import NotFound from "@/pages/NotFound";
-import AuthCallback from "@/pages/auth/callback"; // Fix casing here
+import AuthCallback from "@/pages/auth/Callback"; // Fix casing here
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";
