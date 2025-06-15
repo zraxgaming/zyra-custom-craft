@@ -38,6 +38,25 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
     }
   }, [user]);
 
+  // Helper to display order summary in the checkout
+  const renderOrderSummary = () => (
+    <div className="border rounded-lg p-3 bg-gray-50 mt-4">
+      <div className="font-semibold mb-2 text-gray-800">Order Items</div>
+      {items.map(item => (
+        <div key={item.id} className="flex justify-between items-center py-1 text-sm">
+          <div>
+            <span className="font-medium">{item.name}</span>
+            {item.customization && Object.keys(item.customization).length > 0 && (
+              <span className="ml-2 text-xs text-purple-600">[custom]</span>
+            )}
+            <span className="ml-2 text-gray-500">x{item.quantity}</span>
+          </div>
+          <div className="text-right whitespace-nowrap">${(item.price * item.quantity).toFixed(2)}</div>
+        </div>
+      ))}
+    </div>
+  );
+
   const handleOrder = async () => {
     // Check form fields
     if (!name || !email || !phone) {
@@ -48,10 +67,25 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
       });
       return;
     }
+    // Prevent checkout with empty cart
     if (items.length === 0) {
       toast({
         title: "Cart is empty",
         description: "Please add items to your cart before checking out.",
+        variant: "destructive",
+      });
+      return;
+    }
+    // Prevent non-customized customizable products in cart
+    const hasUncustomizedCustomProduct = items.some(
+      item => item.customization !== undefined && item.customization !== null && item.name?.toLowerCase().includes('custom')
+        ? Object.keys(item.customization).length === 0
+        : false
+    );
+    if (hasUncustomizedCustomProduct) {
+      toast({
+        title: "Customization Required",
+        description: "Please provide customization for all customizable products before checkout.",
         variant: "destructive",
       });
       return;
@@ -148,18 +182,24 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
         });
         const paymentResp = await response.json();
 
-        // Always save payment_intent_id to the order if available
+        // Save payment_intent_id to the order if available
         if (paymentResp.id) {
           await supabase
             .from("orders")
             .update({ payment_intent_id: paymentResp.id })
             .eq("id", orderData.id);
         }
-        if (!response.ok || !paymentResp.next_action_url) {
+
+        // Try all possible redirect url fields
+        const redirectUrl =
+          paymentResp.next_action_url ||
+          paymentResp.payment_url ||
+          paymentResp.redirect_url;
+        if (!response.ok || !redirectUrl) {
           throw new Error(paymentResp.message || "Failed to get payment redirect URL from Ziina.");
         }
         // Redirect
-        window.location.href = paymentResp.next_action_url;
+        window.location.href = redirectUrl;
         return;
       } else {
         // Cash on pickup: show success & clear cart
@@ -261,6 +301,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
             Pay cash when you come to pick up your order.
           </div>
         )}
+        {/* Show Order Summary */}
+        {renderOrderSummary()}
         {/* Order Summary */}
         <div className="pt-3 flex justify-end">
           <div>

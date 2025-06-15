@@ -23,7 +23,11 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 
   const handleInitiatePayment = async () => {
     if (amount <= 0) {
-      toast({ title: "Invalid Amount", description: "Payment amount must be greater than zero.", variant: "destructive" });
+      toast({
+        title: "Invalid Amount",
+        description: "Payment amount must be greater than zero.",
+        variant: "destructive"
+      });
       onError("Invalid Amount");
       return;
     }
@@ -82,12 +86,15 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
         const errorMessage = responseData.message || responseData.error?.message || `Ziina API request failed with status ${response.status}`;
         throw new Error(errorMessage);
       }
-      // Make sure both next_action_url and payment_intent id are extracted and available!
-      if (responseData.next_action_url && responseData.id) {
-        // Save payment_intent ID, then redirect user
+      // Try all possible redirect fields!
+      const redirectUrl =
+        responseData.next_action_url ||
+        responseData.payment_url ||
+        responseData.redirect_url;
+
+      if (redirectUrl && responseData.id) {
         onSuccess(responseData);
-        // id = payment_intent_id
-        window.location.assign(responseData.next_action_url);
+        window.location.assign(redirectUrl);
       } else if (responseData.id && responseData.status === 'succeeded') {
         onSuccess(responseData);
       } else {

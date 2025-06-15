@@ -37,6 +37,7 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
   // Helper for customization check
   const hasCustomization = () => {
     if (!customization || typeof customization !== "object") return false;
+    // Require at least one non-empty field for custom products
     return Object.values(customization).some(val =>
       typeof val === "string"
         ? val.trim() !== ""
@@ -105,7 +106,7 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
 
       <Button
         onClick={handleAddToCart}
-        disabled={disabled}
+        disabled={disabled || (isCustomizable && !hasCustomization())}
         className={cn("w-full", className)}
       >
         <ShoppingCart className="h-4 w-4 mr-2" />
