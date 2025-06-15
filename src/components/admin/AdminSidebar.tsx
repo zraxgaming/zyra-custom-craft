@@ -84,6 +84,11 @@ const AdminSidebar = () => {
           icon: ShoppingCart,
         },
         {
+          title: "Refunds",
+          href: "/admin/refunds",
+          icon: CreditCard,
+        },
+        {
           title: "Gift Cards",
           href: "/admin/gift-cards",
           icon: Gift,

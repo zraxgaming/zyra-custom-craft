@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "@/components/admin/AdminLayout";
 import BarcodeGenerator from "@/components/admin/BarcodeGenerator";
+import BarcodeDisplay from "@/components/barcode/BarcodeDisplay";
+import BarcodeDownloader from "@/components/barcode/BarcodeDownloader";
 
 interface BarcodeGeneration {
   id: string;
@@ -65,9 +67,7 @@ const AdminBarcodes = () => {
             Barcode Management
           </h1>
         </div>
-
         <BarcodeGenerator />
-
         <Card className="animate-scale-in">
           <CardHeader>
             <CardTitle>Recent Barcodes</CardTitle>
@@ -90,8 +90,14 @@ const AdminBarcodes = () => {
                     style={{animationDelay: `${index * 50}ms`}}
                   >
                     <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <QrCode className="h-6 w-6 text-primary" />
+                      <div className="w-24">
+                        <BarcodeDisplay 
+                          data={barcode.barcode_data} 
+                          type={barcode.barcode_type}
+                          width={120}
+                          height={60} 
+                          className="bg-white"
+                        />
                       </div>
                       <div>
                         <p className="font-medium">{barcode.barcode_data}</p>
@@ -103,9 +109,16 @@ const AdminBarcodes = () => {
                         </div>
                       </div>
                     </div>
-                    <Badge variant="outline">
-                      {barcode.barcode_type.toUpperCase()}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">
+                        {barcode.barcode_type.toUpperCase()}
+                      </Badge>
+                      <BarcodeDownloader
+                        data={barcode.barcode_data}
+                        type={barcode.barcode_type}
+                        filename={`barcode-${barcode.id}`}
+                      />
+                    </div>
                   </div>
                 ))
               )}
