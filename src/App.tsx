@@ -30,6 +30,7 @@ import OrderFailed from "@/pages/OrderFailed";
 import Referrals from "@/pages/Referrals";
 import Newsletter from "@/pages/Newsletter";
 import NotFound from "@/pages/NotFound";
+import AuthCallback from "@/pages/auth/Callback";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";
@@ -81,6 +82,7 @@ function App() {
                     
                     {/* Auth Pages */}
                     <Route path="/auth" element={<Auth />} />
+                    <Route path="/auth/callback" element={<AuthCallback />} />
                     
                     {/* User Dashboard - Fixed routing */}
                     <Route path="/dashboard" element={<Dashboard />} />

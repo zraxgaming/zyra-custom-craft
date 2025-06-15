@@ -16,34 +16,55 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Initialize with explicit values to prevent dispatcher issues
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   useEffect(() => {
+    let mounted = true;
+
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        checkAdminStatus(session.user.id);
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (mounted) {
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            await checkAdminStatus(session.user.id);
+          }
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (mounted) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
-    });
+    };
+
+    initializeAuth();
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await checkAdminStatus(session.user.id);
-      } else {
-        setIsAdmin(false);
+      if (mounted) {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await checkAdminStatus(session.user.id);
+        } else {
+          setIsAdmin(false);
+        }
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const checkAdminStatus = async (userId: string) => {
