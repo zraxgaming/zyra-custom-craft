@@ -66,7 +66,7 @@ const PhoneCallInterface: React.FC<PhoneCallInterfaceProps> = ({ onCallInitiated
       const response = await fetch('https://api.bland.ai/v1/calls', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer org_01fb0831afd9909c81719bf0c2e25bf3c5b5f039f68f2421b93b5c09ad4a6f074c162979debe95abad6a69`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
