@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Plus, Minus } from "lucide-react";
@@ -20,6 +19,7 @@ interface AddToCartButtonProps {
   className?: string;
 }
 
+// Only show for standard products, animation effect tweaked for any use
 const AddToCartButton: React.FC<AddToCartButtonProps> = ({
   product,
   disabled = false,
@@ -36,45 +36,38 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
 
   const [quantity, setQuantity] = useState(1);
 
-  // Customization control
-  const [customization, setCustomization] = useState<any>({});
-  const [customModalOpen, setCustomModalOpen] = useState(false);
-
-  const isCustomizable = !!product.is_customizable;
   const existingItem = cart.find((item) => item.product_id === product.id);
   const cartQuantity = existingItem ? existingItem.quantity : 0;
   const remainingStock = maxStock - cartQuantity;
-
-  // Customization required logic
-  const hasCustomization = () => {
-    if (!customization || typeof customization !== "object") return false;
-    return Object.values(customization).some(val =>
-      typeof val === "string"
-        ? val.trim() !== ""
-        : val && typeof val === "object"
-          ? Object.keys(val).length > 0
-          : Boolean(val)
-    );
-  };
 
   // Animation states for "fly-to-cart"
   const [animating, setAnimating] = useState(false);
   const [showFlyAnim, setShowFlyAnim] = useState(false);
 
-  // Main "add to cart" with animation
+  // Overhaul: Animate product image to cart icon
+  const flyImage = () => {
+    const img = document.createElement("img");
+    img.src = product.images[0] || "/placeholder-product.jpg";
+    img.className = "fixed z-[9999] pointer-events-none w-16 h-16 object-cover rounded-full shadow-2xl";
+    img.style.left = `${window.innerWidth / 2 - 64}px`;
+    img.style.top = `${window.innerHeight / 2 - 64}px`;
+    document.body.appendChild(img);
+
+    const cart = document.querySelector("#navbar-cart-icon") as HTMLElement;
+    if (cart) {
+      const cartRect = cart.getBoundingClientRect();
+      img.animate([
+        { left: img.style.left, top: img.style.top, opacity: 1, transform: "scale(1.1)" },
+        { left: `${cartRect.left}px`, top: `${cartRect.top}px`, opacity: 0.3, transform: "scale(0.5)" }
+      ], { duration: 700, easing: "cubic-bezier(.77,0,.18,1)" }).onfinish = () => img.remove();
+    } else {
+      setTimeout(() => img.remove(), 800);
+    }
+  };
+
   const handleAddToCart = async () => {
     if (disabled) return;
-    // Enforce customization on custom products
-    if (isCustomizable && !hasCustomization()) {
-      setCustomModalOpen(true);
-      toast({
-        title: "Customization Required",
-        description:
-          "Please enter customization details before adding to cart.",
-        variant: "destructive",
-      });
-      return;
-    }
+
     // Validate stock
     if (quantity > remainingStock || remainingStock <= 0) {
       toast({
@@ -85,19 +78,15 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
       return;
     }
 
-    // Show fly animation
-    setShowFlyAnim(true);
-    setTimeout(() => setShowFlyAnim(false), 700);
-
+    flyImage();
     await addToCart(
       {
         product_id: product.id,
         name: product.name,
         price: product.price,
-        image_url: product.images[0] || "/placeholder-product.jpg",
+        image_url: product.images[0] || "/placeholder-product.jpg"
       },
-      quantity,
-      isCustomizable ? customization : {}
+      quantity
     );
 
     toast({
@@ -108,44 +97,11 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
     setTimeout(() => setAnimating(false), 750);
 
     setQuantity(1);
-    setCustomization({});
-    setCustomModalOpen(false);
   };
 
   return (
     <>
-      {/* Customization Modal */}
-      {isCustomizable && customModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/50">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full p-6 space-y-4 relative">
-            <h2 className="font-bold text-lg mb-2 text-gray-900 dark:text-white">Customize Your Product</h2>
-            <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Custom Text</label>
-            <input
-              type="text"
-              placeholder="Enter custom text"
-              className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 focus:outline-primary text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 mb-2"
-              value={customization.text || ""}
-              onChange={e => setCustomization({ ...customization, text: e.target.value })}
-            />
-            <div className="flex gap-3 mt-4 justify-end">
-              <Button onClick={() => setCustomModalOpen(false)} variant="outline">Cancel</Button>
-              <Button
-                onClick={handleAddToCart}
-                disabled={!hasCustomization()}
-              >Add to Cart</Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="relative flex items-center gap-2">
-        {/* Cart animation box */}
-        {showFlyAnim && (
-          <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-50 animate-fly-cart bg-primary rounded-lg shadow-lg p-3 flex items-center">
-            <ShoppingCart className="h-5 w-5 text-white animate-spin" />
-            <span className="ml-2 text-white text-xs font-bold">{quantity}</span>
-          </div>
-        )}
         {/* Decrease */}
         <Button
           type="button"
@@ -180,7 +136,6 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
           onClick={handleAddToCart}
           disabled={
             disabled ||
-            (isCustomizable && !hasCustomization()) ||
             remainingStock <= 0
           }
           className={cn(

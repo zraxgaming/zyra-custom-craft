@@ -1,333 +1,432 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useCart } from "@/components/cart/CartProvider";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
-import { Loader2, Smartphone, HandCoins } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useCart } from "@/components/cart/CartProvider";
+import { Loader2, CreditCard, Truck, MapPin, Check } from "lucide-react";
+
+const formSchema = z.object({
+  fullName: z.string().min(2, "Full name is required"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().min(8, "Valid phone number is required"),
+  address: z.string().min(5, "Address is required"),
+  city: z.string().min(2, "City is required"),
+  state: z.string().optional(),
+  zipCode: z.string().min(3, "Zip code is required"),
+  country: z.string().min(2, "Country is required"),
+  deliveryMethod: z.enum(["delivery", "pickup"]),
+  paymentMethod: z.enum(["card", "cash"]),
+  cardNumber: z.string().optional(),
+  cardExpiry: z.string().optional(),
+  cardCvc: z.string().optional(),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 interface CheckoutFormProps {
   subtotal: number;
+  items: any[];
+  onPaymentSuccess: (orderId: string) => void;
+  deliveryOptions: { label: string; value: string }[];
+  paymentMethods: { label: string; value: string }[];
 }
 
-const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
-  const { items, clearCart } = useCart();
+const CheckoutForm: React.FC<CheckoutFormProps> = ({
+  subtotal,
+  items,
+  onPaymentSuccess,
+  deliveryOptions,
+  paymentMethods,
+}) => {
   const { toast } = useToast();
-  const navigate = useNavigate();
   const { user } = useAuth();
-
-  // Form data state
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const { clearCart } = useCart();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"ziina" | "cash">("ziina");
-  // for dark mode readability
-  const darkBgClass = "bg-gray-950";
 
-  useEffect(() => {
-    if (user) {
-      setName(
-        user.user_metadata?.first_name && user.user_metadata?.last_name
-          ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
-          : user.user_metadata?.name || ""
-      );
-      setEmail(user.email || "");
-    }
-  }, [user]);
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      fullName: user?.user_metadata?.full_name || "",
+      email: user?.email || "",
+      phone: user?.user_metadata?.phone || "",
+      address: user?.user_metadata?.address || "",
+      city: user?.user_metadata?.city || "",
+      state: user?.user_metadata?.state || "",
+      zipCode: user?.user_metadata?.zip_code || "",
+      country: user?.user_metadata?.country || "",
+      deliveryMethod: "delivery",
+      paymentMethod: "card",
+    },
+  });
 
-  // Helper to display order summary in the checkout
-  const renderOrderSummary = () => (
-    <div className={`border rounded-lg p-3 bg-gray-50 dark:${darkBgClass} mt-4`}>
-      <div className="font-semibold mb-2 text-gray-800 dark:text-white">Order Items</div>
-      {items.map(item => (
-        <div key={item.id} className="flex justify-between items-center py-1 text-sm">
-          <div>
-            <span className="font-medium">{item.name}</span>
-            {item.customization && typeof item.customization === "object" && Object.keys(item.customization).length > 0 && (
-              <span className="ml-2 text-xs text-purple-600">[custom: {(item.customization as any).text || "y"}]</span>
-            )}
-            <span className="ml-2 text-gray-500">x{item.quantity}</span>
-          </div>
-          <div className="text-right whitespace-nowrap">${(item.price * item.quantity).toFixed(2)}</div>
-        </div>
-      ))}
-    </div>
-  );
+  const deliveryMethod = watch("deliveryMethod");
+  const paymentMethod = watch("paymentMethod");
 
-  // Helper: Check all customizable products have customization before order
-  const hasUncustomizedCustomProduct = items.some(
-    item =>
-      (item.customization !== undefined && item.customization !== null && item.name?.toLowerCase().includes("custom")) &&
-      (!item.customization || Object.keys(item.customization).length === 0)
-  );
-
-  const handleOrder = async () => {
-    // Validate form fields
-    if (!name || !email || !phone) {
-      toast({
-        title: "Missing information",
-        description: "Please fill in all required fields.",
-        variant: "destructive",
-      });
-      return;
-    }
-    // Block empty cart
-    if (items.length === 0) {
-      toast({
-        title: "Cart is empty",
-        description: "Please add items to your cart before checking out.",
-        variant: "destructive",
-      });
-      return;
-    }
-    // Prevent non-customized customizable products
-    if (hasUncustomizedCustomProduct) {
-      toast({
-        title: "Customization Required",
-        description: "Please provide customization for all customizable products before checkout.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
-      // Compose order object; save customizations
-      const orderPayload = {
-        user_id: user?.id,
-        total_amount: subtotal,
-        payment_status: "pending",
-        payment_method: paymentMethod,
-        shipping_address: {
-          name,
-          email,
-          phone,
-          note: "Pickup Only",
-        },
-        billing_address: {
-          name,
-          email,
-          phone,
-          note: "Pickup Only",
-        },
-        status: "pending",
-      };
-      // Insert order
-      const { data: orderData, error: orderError } = await supabase
+      // Create order in database
+      const { data: order, error } = await supabase
         .from("orders")
-        .insert(orderPayload)
+        .insert({
+          user_id: user?.id,
+          total_amount: subtotal,
+          status: paymentMethod === "cash" ? "pending" : "processing",
+          shipping_address: `${data.address}, ${data.city}, ${data.state || ""} ${data.zipCode}, ${data.country}`,
+          shipping_method: data.deliveryMethod,
+          payment_method: data.paymentMethod,
+          customer_name: data.fullName,
+          customer_email: data.email,
+          customer_phone: data.phone,
+          items: items.map((item) => ({
+            product_id: item.product_id,
+            quantity: item.quantity,
+            price: item.price,
+            name: item.name,
+            customization: item.customization || {},
+          })),
+        })
         .select()
         .single();
-      if (orderError || !orderData) {
-        throw new Error(orderError?.message || "Failed to create order.");
-      }
-      // Insert order items and make sure customizations are saved!
-      if (items.length > 0) {
-        const orderItems = items.map((item: any) => ({
-          order_id: orderData.id,
-          product_id: item.id || item.product_id,
-          quantity: item.quantity,
-          price: item.price,
-          customization: item.customization || null,
-        }));
-        await supabase.from("order_items").insert(orderItems);
 
-        // Ensure correct inventory deduction using the Supabase 'decrement_stock' function for each item
-        for (const item of items) {
-          if (item.product_id) {
-            await supabase.rpc('decrement_stock', {
-              product_id_input: item.product_id,
-              amount_input: item.quantity
-            });
-          }
-        }
+      if (error) throw error;
+
+      // Process payment (simplified for demo)
+      if (paymentMethod === "card") {
+        // Simulate payment processing
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
 
-      if (paymentMethod === "ziina") {
-        // Get keys
-        const { data: configData, error: configError } = await supabase
-          .from("site_config")
-          .select("value")
-          .eq("key", "ziina_api_key")
-          .maybeSingle();
-        if (configError || !configData?.value) throw new Error("Ziina integration not set up.");
-        const ziinaApiKey = configData.value;
-        const aedAmount = Math.round(subtotal * 3.67 * 100);
-        // Prepare payload
-        const paymentIntentPayload = {
-          amount: aedAmount,
-          currency_code: "AED",
-          metadata: { order_id: orderData.id },
-          success_url: `${window.location.origin}/order-success/${orderData.id}`,
-          cancel_url: `${window.location.origin}/order-failed?orderId=${orderData.id}&reason=cancel`,
-          failure_url: `${window.location.origin}/order-failed?orderId=${orderData.id}&reason=failure`,
-        };
-        // Call Ziina, improve handling for all possible redirect urls
-        const response = await fetch("https://api-v2.ziina.com/api/payment_intent", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${ziinaApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(paymentIntentPayload),
-        });
-        const paymentResp = await response.json();
-        // Save payment_intent_id if available
-        if (paymentResp.id) {
-          await supabase
-            .from("orders")
-            .update({ payment_intent_id: paymentResp.id })
-            .eq("id", orderData.id);
-        }
-        // Find redirect
-        const redirectUrl = 
-          paymentResp.next_action_url ||
-          paymentResp.payment_url ||
-          paymentResp.redirect_url ||
-          (paymentResp.next_action && paymentResp.next_action.url); // fallback
-        if (!response.ok || !redirectUrl) {
-          // CHECK for failure/cancellation from response
-          window.location.href = `/order-failed?orderId=${orderData.id}&reason=ziina`;
-          return;
-        }
-        // Redirect to Ziina
-        window.location.href = redirectUrl;
-        return;
-      } else {
-        // Cash on pickup
-        toast({
-          title: "Order Placed (Pickup)",
-          description: "Your order has been created. Please pick up and pay at the store.",
-        });
-        await clearCart(); // Fix: Await clearing the cart
-        navigate(`/order-success/${orderData.id}`);
-      }
+      // Clear cart after successful order
+      await clearCart();
+
+      toast({
+        title: "Order placed successfully!",
+        description: `Your order #${order.id.substring(0, 8)} has been placed.`,
+      });
+
+      onPaymentSuccess(order.id);
     } catch (error: any) {
+      console.error("Checkout error:", error);
       toast({
         title: "Checkout failed",
-        description: error.message || "Unable to place order.",
+        description: error.message || "An error occurred during checkout",
         variant: "destructive",
       });
-      // On error, route to failed page
-      navigate(`/order-failed`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Card className="max-w-xl mx-auto mt-8 shadow-lg border-purple-200 dark:border-purple-800">
-      <CardHeader>
-        <CardTitle>
-          Checkout
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* WARNING */}
-        <div className="bg-yellow-200 border-l-4 border-yellow-600 text-yellow-900 dark:bg-yellow-700/25 dark:text-yellow-100 px-4 py-3 rounded-lg mb-4">
-          <strong>Pickup Only!</strong> All orders must be picked up in person. <br/> <span>No delivery or shipping offered at this time.</span>
+    <form onSubmit={handleSubmit(onSubmit)} className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
+      {/* Left: Shipping & Billing */}
+      <div className="space-y-6">
+        <div className="mb-6">
+          <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-primary" />
+            Shipping Information
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <Label htmlFor="fullName">Full Name</Label>
+              <Input
+                id="fullName"
+                {...register("fullName")}
+                className={errors.fullName ? "border-red-500" : ""}
+              />
+              {errors.fullName && (
+                <p className="text-red-500 text-sm mt-1">{errors.fullName.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                {...register("email")}
+                className={errors.email ? "border-red-500" : ""}
+              />
+              {errors.email && (
+                <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                {...register("phone")}
+                className={errors.phone ? "border-red-500" : ""}
+              />
+              {errors.phone && (
+                <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
+              )}
+            </div>
+
+            <div className="col-span-2">
+              <Label htmlFor="address">Address</Label>
+              <Input
+                id="address"
+                {...register("address")}
+                className={errors.address ? "border-red-500" : ""}
+              />
+              {errors.address && (
+                <p className="text-red-500 text-sm mt-1">{errors.address.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="city">City</Label>
+              <Input
+                id="city"
+                {...register("city")}
+                className={errors.city ? "border-red-500" : ""}
+              />
+              {errors.city && (
+                <p className="text-red-500 text-sm mt-1">{errors.city.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="state">State/Province</Label>
+              <Input id="state" {...register("state")} />
+            </div>
+
+            <div>
+              <Label htmlFor="zipCode">Zip/Postal Code</Label>
+              <Input
+                id="zipCode"
+                {...register("zipCode")}
+                className={errors.zipCode ? "border-red-500" : ""}
+              />
+              {errors.zipCode && (
+                <p className="text-red-500 text-sm mt-1">{errors.zipCode.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="country">Country</Label>
+              <Input
+                id="country"
+                {...register("country")}
+                className={errors.country ? "border-red-500" : ""}
+              />
+              {errors.country && (
+                <p className="text-red-500 text-sm mt-1">{errors.country.message}</p>
+              )}
+            </div>
+          </div>
         </div>
-        {/* Name */}
-        <div className="space-y-2">
-          <Label htmlFor="name">Name *</Label>
-          <Input
-            id="name"
-            placeholder="John Doe"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            required
-          />
+
+        <Separator />
+
+        <div className="mb-6">
+          <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
+            <Truck className="h-5 w-5 text-primary" />
+            Delivery Method
+          </h2>
+          <RadioGroup
+            defaultValue={deliveryMethod}
+            {...register("deliveryMethod")}
+            className="grid grid-cols-2 gap-4 pt-2"
+          >
+            {deliveryOptions.map((option) => (
+              <div
+                key={option.value}
+                className={`flex items-center space-x-2 border rounded-lg p-4 cursor-pointer transition-all ${
+                  deliveryMethod === option.value
+                    ? "border-primary bg-primary/5"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <RadioGroupItem
+                  value={option.value}
+                  id={`delivery-${option.value}`}
+                />
+                <Label
+                  htmlFor={`delivery-${option.value}`}
+                  className="flex-1 cursor-pointer"
+                >
+                  {option.label}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
         </div>
-        {/* Email */}
-        <div className="space-y-2">
-          <Label htmlFor="email">Email *</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="user@email.com"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-          />
+
+        <Separator />
+
+        <div className="mb-6">
+          <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-primary" />
+            Payment Method
+          </h2>
+          <RadioGroup
+            defaultValue={paymentMethod}
+            {...register("paymentMethod")}
+            className="grid grid-cols-2 gap-4 pt-2"
+          >
+            {paymentMethods.map((method) => (
+              <div
+                key={method.value}
+                className={`flex items-center space-x-2 border rounded-lg p-4 cursor-pointer transition-all ${
+                  paymentMethod === method.value
+                    ? "border-primary bg-primary/5"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <RadioGroupItem
+                  value={method.value}
+                  id={`payment-${method.value}`}
+                />
+                <Label
+                  htmlFor={`payment-${method.value}`}
+                  className="flex-1 cursor-pointer"
+                >
+                  {method.label}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
+
+          {paymentMethod === "card" && (
+            <div className="mt-4 space-y-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+              <div>
+                <Label htmlFor="cardNumber">Card Number</Label>
+                <Input
+                  id="cardNumber"
+                  placeholder="1234 5678 9012 3456"
+                  {...register("cardNumber")}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="cardExpiry">Expiry Date</Label>
+                  <Input
+                    id="cardExpiry"
+                    placeholder="MM/YY"
+                    {...register("cardExpiry")}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="cardCvc">CVC</Label>
+                  <Input
+                    id="cardCvc"
+                    placeholder="123"
+                    {...register("cardCvc")}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-        {/* Phone */}
-        <div className="space-y-2">
-          <Label htmlFor="phone">Phone *</Label>
-          <Input
-            id="phone"
-            placeholder="+971 50 123 4567"
-            value={phone}
-            onChange={e => setPhone(e.target.value)}
-            required
-          />
-        </div>
-        {/* Payment Method: only show Ziina and Cash on Pickup */}
-        <div className="space-y-2">
-          <Label>Payment Method</Label>
-          <div className="flex gap-4 mt-2">
-            <Button
-              type="button"
-              variant={paymentMethod === "ziina" ? "default" : "outline"}
-              className={paymentMethod === "ziina" ? "border-purple-500" : ""}
-              onClick={() => setPaymentMethod("ziina")}
+      </div>
+
+      {/* Right: Order Summary */}
+      <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 flex flex-col gap-4 sticky top-6">
+        <h2 className="text-xl font-bold mb-2">Order Summary</h2>
+        
+        <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2">
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700"
             >
-              <Smartphone className="w-4 h-4 mr-1" />
-              Ziina Payment (AED)
-            </Button>
-            <Button
-              type="button"
-              variant={paymentMethod === "cash" ? "default" : "outline"}
-              className={paymentMethod === "cash" ? "border-purple-500" : ""}
-              onClick={() => setPaymentMethod("cash")}
-            >
-              <HandCoins className="w-4 h-4 mr-1" />
-              Cash on Pickup
-            </Button>
+              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden">
+                {item.image_url ? (
+                  <img
+                    src={item.image_url}
+                    alt={item.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                    No Image
+                  </div>
+                )}
+              </div>
+              <div className="flex-1">
+                <h4 className="font-medium">{item.name}</h4>
+                <div className="flex justify-between items-center mt-1">
+                  <span className="text-sm text-muted-foreground">
+                    Qty: {item.quantity}
+                  </span>
+                  <span className="font-medium">
+                    ${(item.price * item.quantity).toFixed(2)}
+                  </span>
+                </div>
+                {item.customization && Object.keys(item.customization).length > 0 && (
+                  <div className="mt-1">
+                    <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
+                      Customized
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-auto pt-4 space-y-2">
+          <div className="flex justify-between">
+            <span>Subtotal</span>
+            <span>${subtotal.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Shipping</span>
+            <span>{deliveryMethod === "pickup" ? "Free" : "$5.00"}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Tax</span>
+            <span>${(subtotal * 0.05).toFixed(2)}</span>
+          </div>
+          <Separator className="my-2" />
+          <div className="flex justify-between font-bold text-lg">
+            <span>Total</span>
+            <span>
+              ${(
+                subtotal +
+                (deliveryMethod === "pickup" ? 0 : 5) +
+                subtotal * 0.05
+              ).toFixed(2)}
+            </span>
           </div>
         </div>
-        {paymentMethod === "ziina" && (
-          <div className="bg-blue-50 p-3 text-blue-700 rounded-lg border border-blue-200 mt-2">
-            You will be redirected to our payment provider (Ziina) to securely pay for your order online (AED). Receipt required at pickup.
-          </div>
-        )}
-        {paymentMethod === "cash" && (
-          <div className="bg-gray-50 p-3 text-gray-700 rounded-lg border border-gray-200 mt-2">
-            Pay cash when you come to pick up your order.
-          </div>
-        )}
-        {/* Show Order Summary */}
-        {renderOrderSummary()}
-        {/* Order Summary */}
-        <div className="pt-3 flex justify-end">
-          <div>
-            <div className="text-lg font-semibold text-right">Subtotal: <span className="text-purple-600">{subtotal ? `$${subtotal.toFixed(2)}` : "$0.00"}</span></div>
-            <div className="text-2xl font-bold text-right">Total: <span className="text-purple-700">{subtotal ? `$${subtotal.toFixed(2)}` : "$0.00"}</span></div>
-          </div>
-        </div>
-        {/* Place Order */}
+
         <Button
-          className="w-full mt-2 text-lg"
-          size="lg"
-          onClick={handleOrder}
+          type="submit"
+          className="w-full mt-6 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90"
           disabled={isSubmitting}
         >
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Placing Order...
+              Processing...
             </>
-          ) : paymentMethod === "ziina" ? (
-            <>Pay & Order with Ziina</>
           ) : (
-            <>Place Order (Cash on Pickup)</>
+            <>
+              <Check className="mr-2 h-4 w-4" />
+              Complete Order
+            </>
           )}
         </Button>
-      </CardContent>
-    </Card>
+      </div>
+    </form>
   );
 };
 

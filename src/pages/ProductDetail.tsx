@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import SEOHead from "@/components/seo/SEOHead";
 import { useAuth } from "@/contexts/AuthContext";
-import ProductCustomizer from "@/components/products/ProductCustomizer";
+import ProductCustomizeModal from "@/components/products/ProductCustomizeModal";
 import { CartItemCustomization } from "@/types/cart";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Json } from "@/integrations/supabase/types";
@@ -34,6 +33,7 @@ const ProductDetail: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('description');
   const [customization, setCustomization] = useState<CartItemCustomization | undefined>(undefined);
+  const [customizeModalOpen, setCustomizeModalOpen] = useState(false);
 
   const { toast } = useToast();
   const { addItem } = useCart();
@@ -277,10 +277,30 @@ const ProductDetail: React.FC = () => {
             <CardContent className="space-y-6">
               <p className="text-muted-foreground leading-relaxed">{product.short_description || "Detailed information about this product is coming soon."}</p>
               
-              {product.is_customizable && (
-                <ProductCustomizer productId={product.id}>
-                  <Button variant="outline">Customize Product</Button>
-                </ProductCustomizer>
+              {product.is_customizable || product.is_digital ? (
+                <>
+                  <Button
+                    className="w-full mt-4"
+                    onClick={() => setCustomizeModalOpen(true)}
+                    disabled={!product.in_stock}
+                  >
+                    {product.is_digital ? "Buy Now" : "Customize"}
+                  </Button>
+                  <ProductCustomizeModal
+                    open={customizeModalOpen}
+                    onOpenChange={setCustomizeModalOpen}
+                    product={product}
+                  />
+                </>
+              ) : (
+                <AddToCartButton product={{
+                  id: product.id,
+                  name: product.name,
+                  slug: product.slug,
+                  price: product.price,
+                  images: product.images,
+                  stock_quantity: product.stock_quantity
+                }} disabled={!product.in_stock} className="w-full mt-4" />
               )}
 
               <div className="flex items-center gap-2">
@@ -368,4 +388,3 @@ const ProductDetail: React.FC = () => {
 };
 
 export default ProductDetail;
-
