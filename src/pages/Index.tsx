@@ -80,9 +80,9 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <SEOHead 
-        title="Zyra Custom Craft - Premium Customizable Products"
-        description="Discover premium customizable products at Zyra Custom Craft. Transform ordinary items into personalized masterpieces."
-        keywords="custom products, personalized gifts, crafting, UAE, customization"
+        title="Zyra Custom Craft – Personalized Gifts, Premium Customizable Products & Creative Shop"
+        description="Shop at Zyra Custom Craft for the best customizable products and unique personalized gifts. Explore an amazing variety of custom items in the UAE with fast delivery and top quality."
+        keywords="personalized gifts, custom products, UAE, unique gifts, premium shop"
       />
       <Navbar />
       
@@ -91,32 +91,46 @@ const Index = () => {
         <div className="absolute inset-0 bg-black/20"></div>
         <div className="relative container mx-auto px-4 text-center animate-fade-in">
           <div className="max-w-4xl mx-auto">
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent animate-slide-in-left">
-              Welcome to Zyra
+            <h1 className="text-5xl md:text-6xl font-extrabold mb-4 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent animate-slide-in-left">
+              Zyra Custom Craft: Personalized Gifts & Premium Custom Products
             </h1>
-            <p className="text-xl md:text-2xl mb-8 text-purple-100 animate-slide-in-right">
-              Transform ordinary products into extraordinary personalized masterpieces
+            <h2 className="text-2xl md:text-3xl mb-6 font-semibold">
+              Transform ordinary items into unique, meaningful keepsakes.
+            </h2>
+            <p className="text-lg md:text-xl mb-8 text-purple-100 animate-slide-in-right">
+              Discover quality, customization, and creativity in every product.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-scale-in">
-              <Button asChild size="lg" className="bg-white text-purple-600 hover:bg-purple-50 hover:scale-105 transition-all duration-300">
+              <Button asChild size="lg" className="bg-white text-purple-600 hover:bg-purple-50 hover:scale-105 transition-all duration-300" aria-label="Shop Now">
                 <Link to="/shop">
                   <ShoppingCart className="mr-2 h-5 w-5" />
                   Shop Now
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-purple-600 hover:scale-105 transition-all duration-300">
+              <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-purple-600 hover:scale-105 transition-all duration-300" aria-label="Learn More">
                 <Link to="/about">
                   Learn More
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
             </div>
+            {/* New: More internal navigation links below the hero */}
+            <div className="flex flex-wrap justify-center gap-3 mt-10 text-base">
+              <Link to="/shop" className="underline underline-offset-4 hover:text-purple-200">Browse All Products</Link>
+              <span className="text-gray-400">|</span>
+              <Link to="/categories" className="underline underline-offset-4 hover:text-purple-200">Categories</Link>
+              <span className="text-gray-400">|</span>
+              <Link to="/about" className="underline underline-offset-4 hover:text-purple-200">About Us</Link>
+              <span className="text-gray-400">|</span>
+              <Link to="/contact" className="underline underline-offset-4 hover:text-purple-200">Contact</Link>
+            </div>
           </div>
         </div>
         <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white dark:from-gray-900 to-transparent"></div>
       </section>
+      {/* END hero */}
 
-      {/* Featured Products */}
+      {/* Featured Products Section */}
       <section className="py-16 bg-gradient-to-br from-gray-50 to-purple-50 dark:from-gray-900 dark:to-purple-900">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12 animate-fade-in">
@@ -128,10 +142,9 @@ const Index = () => {
               <Sparkles className="h-8 w-8 text-purple-600 animate-pulse" />
             </div>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Discover our handpicked selection of premium customizable products
+              Discover our handpicked selection of premium customizable products.
             </p>
           </div>
-
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {[...Array(6)].map((_, i) => (
@@ -257,6 +270,20 @@ const Index = () => {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
+          </div>
+          {/* Additional internal navigation links for SEO */}
+          <div className="flex flex-wrap justify-center gap-3 mt-8 text-sm text-primary font-semibold">
+            <Link to="/faq" className="hover:underline">FAQs</Link>
+            <span>|</span>
+            <Link to="/giftcards" className="hover:underline">Gift Cards</Link>
+            <span>|</span>
+            <Link to="/referrals" className="hover:underline">Referral Program</Link>
+            <span>|</span>
+            <Link to="/newsletter" className="hover:underline">Newsletter</Link>
+            <span>|</span>
+            <Link to="/privacy" className="hover:underline">Privacy Policy</Link>
+            <span>|</span>
+            <Link to="/terms" className="hover:underline">Terms of Service</Link>
           </div>
         </div>
       </section>
