@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,7 +29,7 @@ const AdminUsers = () => {
       await supabase.from("profiles").update({ role }).eq("id", id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(["admin-users"]);
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     }
   });
 
@@ -85,7 +84,7 @@ const AdminUsers = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {users?.map((user, index) => (
+                {users?.map((user) => (
                   <div
                     key={user.id}
                     className="flex items-center justify-between p-4 border border-border/50 rounded-lg hover:shadow-md transition-all duration-200 animate-slide-in-up"

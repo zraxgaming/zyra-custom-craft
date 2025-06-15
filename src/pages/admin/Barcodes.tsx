@@ -1,135 +1,220 @@
-
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { QrCode, Package, Calendar } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import React, { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableRow,
+} from "@/components/ui/table"
 import { useToast } from "@/hooks/use-toast";
+import { Download, Copy } from 'lucide-react';
+import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
-import BarcodeGenerator from "@/components/admin/BarcodeGenerator";
-import BarcodeDisplay from "@/components/barcode/BarcodeDisplay";
-import BarcodeDownloader from "@/components/barcode/BarcodeDownloader";
-import { EnhancedLoader } from "@/components/ui/enhanced-loader";
+import Barcode from 'react-barcode';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 
-interface BarcodeGeneration {
+interface BarcodeData {
   id: string;
-  product_id: string;
-  barcode_type: string;
-  barcode_data: string;
-  created_at: string;
+  product_name: string;
+  barcode: string;
 }
 
+interface BarcodeDownloaderProps {
+  barcodeData: string;
+  type: string;
+  filename: string;
+}
+
+const BarcodeDownloader: React.FC<BarcodeDownloaderProps> = ({ barcodeData, type, filename }) => {
+  const handleDownload = () => {
+    const doc = new jsPDF();
+    doc.text(`Barcode for ${filename}`, 10, 10);
+
+    // Generate barcode as SVG and then render it to Canvas
+    const svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    Barcode(svgElement, barcodeData, { format: type.toUpperCase() });
+
+    const svgString = new XMLSerializer().serializeToString(svgElement);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      console.error('Could not get canvas context');
+      return;
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+
+      const imgData = canvas.toDataURL('image/png');
+      doc.addImage(imgData, 'PNG', 15, 30, 180, 40); // Adjust position and size as needed
+      doc.save(`${filename}.pdf`);
+    };
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+  };
+
+  return (
+    <Button onClick={handleDownload} variant="outline" size="sm">
+      <Download className="mr-2 h-4 w-4" />
+      Download
+    </Button>
+  );
+};
+
 const AdminBarcodes = () => {
-  const [barcodes, setBarcodes] = useState<BarcodeGeneration[]>([]);
+  const [barcodeData, setBarcodeData] = useState<BarcodeData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [newBarcode, setNewBarcode] = useState('');
+  const [newProductName, setNewProductName] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchBarcodes();
+    fetchBarcodeData();
   }, []);
 
-  const fetchBarcodes = async () => {
+  const fetchBarcodeData = async () => {
     setLoading(true);
-    setError(null);
     try {
       const { data, error } = await supabase
-        .from('barcode_generations')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .from('barcodes')
+        .select('*');
 
-      if (error) throw error;
-      setBarcodes(data || []);
-    } catch (error) {
-      console.error('Error fetching barcodes:', error);
+      if (error) {
+        throw error;
+      }
+
+      setBarcodeData(data || []);
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to load barcodes",
+        description: error.message,
         variant: "destructive",
       });
-      setError("Failed to load barcodes");
     } finally {
       setLoading(false);
     }
   };
 
+  const addBarcode = async () => {
+    if (!newBarcode || !newProductName) {
+      toast({
+        title: "Error",
+        description: "Please enter both barcode and product name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('barcodes')
+        .insert([{ barcode: newBarcode, product_name: newProductName }])
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      setBarcodeData([...barcodeData, ...(data || [])]);
+      setNewBarcode('');
+      setNewProductName('');
+
+      toast({
+        title: "Success",
+        description: "Barcode added successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const copyBarcode = (barcode: string) => {
+    navigator.clipboard.writeText(barcode);
+    toast({
+      title: "Copied",
+      description: "Barcode copied to clipboard.",
+    });
+  };
+
   return (
     <AdminLayout>
-      <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold animate-slide-in-left flex items-center">
-            <QrCode className="h-8 w-8 mr-3" />
-            Barcode Management
-          </h1>
-        </div>
-        <BarcodeGenerator />
-        <Card className="animate-scale-in">
-          <CardHeader>
-            <CardTitle>Recent Barcodes</CardTitle>
-          </CardHeader>
+      <div className="container mx-auto py-10">
+        <h1 className="text-3xl font-bold mb-5">Barcode Management</h1>
+
+        {/* Add Barcode Form */}
+        <Card className="mb-5">
           <CardContent>
-            <div className="space-y-4 min-h-[160px]">
-              {loading ? (
-                <EnhancedLoader message="Loading barcodes..." className="py-12" />
-              ) : error ? (
-                <div className="text-center text-red-500 py-8">{error}</div>
-              ) : (barcodes.length === 0 ? (
-                <div className="text-center py-8">
-                  <QrCode className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No Barcodes Generated</h3>
-                  <p className="text-muted-foreground">
-                    Use the generator above to create your first barcode.
-                  </p>
-                </div>
-              ) : (
-                barcodes.map((barcode, index) => (
-                  <div 
-                    key={barcode.id} 
-                    className="flex items-center justify-between p-4 border rounded-lg hover:shadow-md transition-all duration-300 animate-slide-in-up"
-                    style={{animationDelay: `${index * 50}ms`}}
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className="w-24">
-                        {barcode.barcode_data && barcode.barcode_type ? (
-                          <BarcodeDisplay 
-                            data={barcode.barcode_data} 
-                            type={barcode.barcode_type}
-                            width={120}
-                            height={60} 
-                            className="bg-white"
-                          />
-                        ) : (
-                          <div className="bg-gray-100 p-6 rounded">
-                            <Package className="h-10 w-10 text-gray-400 mx-auto" />
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-medium">{barcode.barcode_data || "N/A"}</p>
-                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                          <Package className="h-4 w-4" />
-                          <span>Product ID: {barcode.product_id || 'N/A'}</span>
-                          <Calendar className="h-4 w-4 ml-4" />
-                          <span>{barcode.created_at ? new Date(barcode.created_at).toLocaleDateString() : "Unknown date"}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">
-                        {barcode.barcode_type?.toUpperCase() ?? "N/A"}
-                      </Badge>
-                      {barcode.barcode_data && barcode.barcode_type ? (
-                        <BarcodeDownloader
-                          data={barcode.barcode_data}
-                          type={barcode.barcode_type}
-                          filename={`barcode-${barcode.id}`}
-                        />
-                      ) : null}
-                    </div>
-                  </div>
-                ))
-              ))}
+            <h2 className="text-xl font-semibold mb-3">Add New Barcode</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="productName">Product Name</Label>
+                <Input
+                  type="text"
+                  id="productName"
+                  value={newProductName}
+                  onChange={(e) => setNewProductName(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="barcodeValue">Barcode Value</Label>
+                <Input
+                  type="text"
+                  id="barcodeValue"
+                  value={newBarcode}
+                  onChange={(e) => setNewBarcode(e.target.value)}
+                />
+              </div>
             </div>
+            <Button className="mt-4" onClick={addBarcode}>Add Barcode</Button>
+          </CardContent>
+        </Card>
+
+        {/* Barcode List */}
+        <Card>
+          <CardContent>
+            <h2 className="text-xl font-semibold mb-3">Existing Barcodes</h2>
+            {loading ? (
+              <p>Loading barcodes...</p>
+            ) : (
+              <Table>
+                <TableCaption>A list of your barcodes.</TableCaption>
+                <TableHead>
+                  <TableRow>
+                    <TableHead>Product Name</TableHead>
+                    <TableHead>Barcode</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {barcodeData.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{item.product_name}</TableCell>
+                      <TableCell className="font-mono">{item.barcode}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" onClick={() => copyBarcode(item.barcode)}>
+                          <Copy className="mr-2 h-4 w-4" />
+                          Copy
+                        </Button>
+                        <BarcodeDownloader barcodeData={item.barcode} type="CODE128" filename={item.product_name} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>

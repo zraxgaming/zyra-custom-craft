@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Info, ChevronLeft, Star, ShoppingCart, Plus, Minus } from "lucide-react";
 import SEOHead from "@/components/seo/SEOHead";
 import { Skeleton } from "@/components/ui/skeleton";
+import ProductCustomizationModal from "@/components/products/ProductCustomizationModal";
 
 const ProductDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -28,6 +29,8 @@ const ProductDetail: React.FC = () => {
 
   const { toast } = useToast();
   const { addToCart } = useCart();
+  const [customizationModalOpen, setCustomizationModalOpen] = useState(false);
+  const [pendingCustomization, setPendingCustomization] = useState<any>(null);
 
   // Fetch product from Supabase
   useEffect(() => {
@@ -80,40 +83,11 @@ const ProductDetail: React.FC = () => {
     ((allowText ? customText.trim().length > 0 : true) &&
       (allowImage ? !!customImageFile : true));
 
-  const handleAddToCart = async () => {
+  // NEW: Open modal for customizable products instead of inline UI
+  const openCustomizationModal = () => setCustomizationModalOpen(true);
+  const handleCustomizationSave = async (options: { text: string; imageBase64?: string }) => {
+    setPendingCustomization(options);
     if (!product) return;
-    if (mustProvideCustomization) {
-      if ((allowText && !customText.trim()) || (allowImage && !customImageFile)) {
-        toast({
-          title: "Customization Required",
-          description: "Please fill in all required customization fields.",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
-    let customization: any = {};
-    if (allowText) customization.text = customText.trim();
-    if (allowImage && customImageFile) {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        customization.image_base64 = reader.result;
-        await addToCart(
-          {
-            product_id: product.id,
-            name: product.name,
-            price: product.price,
-            image_url: selectedImage ?? "/placeholder-product.jpg",
-          },
-          quantity,
-          customization
-        );
-        toast({ title: "Added to cart!", description: `${quantity} ${product.name} added!` });
-      };
-      reader.readAsDataURL(customImageFile);
-      return;
-    }
-    // Non-image route
     await addToCart(
       {
         product_id: product.id,
@@ -122,9 +96,31 @@ const ProductDetail: React.FC = () => {
         image_url: selectedImage ?? "/placeholder-product.jpg",
       },
       quantity,
-      customization
+      options
     );
-    toast({ title: "Added to cart!", description: `${quantity} ${product.name} added!` });
+    toast({
+      title: "Added to cart!",
+      description: `${quantity} ${product.name} (Customized) added!`
+    });
+  };
+
+  const handleAddToCartBtn = () => {
+    if (isCustomizable) {
+      openCustomizationModal();
+      return;
+    }
+    if (product) {
+      addToCart(
+        {
+          product_id: product.id,
+          name: product.name,
+          price: product.price,
+          image_url: selectedImage ?? "/placeholder-product.jpg",
+        },
+        quantity
+      );
+      toast({ title: "Added to cart!", description: `${quantity} ${product.name} added!` });
+    }
   };
 
   // ----------- Layout Starts Here -----------
@@ -238,40 +234,17 @@ const ProductDetail: React.FC = () => {
 
             <Separator className="mb-6" />
 
+            {/* Instead of inline customization UI: */}
             {isCustomizable && (
               <div className="mb-6 space-y-4 bg-purple-50 border border-purple-200 rounded-lg p-4">
                 <h2 className="text-lg font-semibold text-purple-800 mb-2">Customize this product</h2>
-                {/* Simple Customization Editor */}
-                <div>
-                  <label className="block mb-1 font-medium" htmlFor="customText">Custom Text *</label>
-                  <input
-                    id="customText"
-                    type="text"
-                    value={customText}
-                    onChange={e => setCustomText(e.target.value)}
-                    className="w-full border rounded px-3 py-2 mb-1"
-                    placeholder="Type your custom message"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block mb-1 font-medium" htmlFor="customImage">Custom Image *</label>
-                  <input
-                    id="customImage"
-                    type="file"
-                    accept="image/*"
-                    onChange={e =>
-                      setCustomImageFile(e.target.files && e.target.files.length > 0 ? e.target.files[0] : null)
-                    }
-                    className="w-full border rounded px-3 py-2"
-                    required
-                  />
-                  {customImagePreview && (
-                    <div className="mt-2">
-                      <img src={customImagePreview} alt="Preview" className="rounded h-24 border shadow" />
-                    </div>
-                  )}
-                </div>
+                <Button variant="default" onClick={openCustomizationModal}>Open Customization Editor</Button>
+                <ProductCustomizationModal
+                  open={customizationModalOpen}
+                  onOpenChange={setCustomizationModalOpen}
+                  onSave={handleCustomizationSave}
+                  allowText={true} allowImage={true} maxTextLength={80}
+                />
                 <p className="text-xs text-muted-foreground">
                   Please review your customization carefully. Customized products are final sale.
                 </p>
@@ -299,12 +272,12 @@ const ProductDetail: React.FC = () => {
             </div>
             <Button
               size="lg"
-              onClick={handleAddToCart}
+              onClick={handleAddToCartBtn}
               className="flex-1 h-12 bg-gradient-to-r from-primary to-purple-700 text-white font-semibold mb-3"
-              disabled={!product.in_stock || (isCustomizable && !canAddToCart)}
+              disabled={!product.in_stock}
             >
               <ShoppingCart className="mr-2 h-5 w-5" />
-              {product.in_stock ? "Add to Cart" : "Out of Stock"}
+              {product.in_stock ? (isCustomizable ? "Customize & Add to Cart" : "Add to Cart") : "Out of Stock"}
             </Button>
 
             {/* Internal links for navigation */}
