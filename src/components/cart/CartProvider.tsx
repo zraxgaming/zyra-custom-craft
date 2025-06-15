@@ -4,6 +4,7 @@ import React, {
   useEffect,
   useContext,
   ReactNode,
+  useRef,
 } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,12 +55,24 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    const poll = () => {
+      if (user) {
+        loadCartFromDb();
+      }
+    };
     if (user) {
       loadCartFromDb();
+      intervalRef.current = setInterval(poll, 5000);
     } else {
       setCart([]);
+    }
+    return () => {
+      cancelled = true;
+      if (intervalRef.current) clearInterval(intervalRef.current);
     }
   }, [user]);
 

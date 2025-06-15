@@ -1,12 +1,12 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, Heart, Settings } from "lucide-react";
+import { Star, Heart, Settings, ShoppingCart } from "lucide-react";
 import AddToCartButton from "@/components/cart/AddToCartButton";
 import ProductCustomizer from "@/components/products/ProductCustomizer";
+import { useCart } from "@/components/cart/CartProvider";
 
 interface ProductCardProps {
   product: {
@@ -30,6 +30,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const imageUrl = Array.isArray(product.images) && product.images.length > 0 
     ? product.images[0] 
     : '/placeholder-product.jpg';
+  const { cart, addToCart } = useCart();
+  const isInCart = !!cart.find(item => item.product_id === product.id);
 
   return (
     <Card className="group hover:shadow-lg transition-all duration-300 hover:scale-105 overflow-hidden bg-gradient-to-br from-card/80 to-card border-border/50">
@@ -114,17 +116,25 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
 
         <div className="flex gap-2">
-          <AddToCartButton
-            product={{
-              id: product.id,
-              name: product.name,
-              slug: product.slug,
-              price: product.price,
-              images: product.images
-            }}
+          <Button
+            onClick={() =>
+              addToCart(
+                {
+                  product_id: product.id,
+                  name: product.name,
+                  price: product.price,
+                  image_url: imageUrl,
+                },
+                1
+              )
+            }
+            className="flex-1 bg-gradient-to-r from-primary to-purple-600 text-white"
             disabled={!inStock}
-            className="flex-1"
-          />
+            aria-label={isInCart ? "Added to Cart" : "Add to Cart"}
+          >
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            {isInCart ? `In Cart` : `Add to Cart`}
+          </Button>
           
           {product.is_customizable && (
             <ProductCustomizer productId={product.id}>

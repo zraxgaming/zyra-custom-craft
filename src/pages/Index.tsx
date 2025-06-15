@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,7 +16,7 @@ import SEOHead from '@/components/seo/SEOHead';
 const Index = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const { addToCart } = useCart();
+  const { addToCart, cart } = useCart();
   const { addToWishlist, isInWishlist } = useWishlist();
   const { toast } = useToast();
 
@@ -55,14 +54,15 @@ const Index = () => {
   };
 
   const handleAddToCart = (product: Product) => {
-    addToCart({
-      product_id: product.id,
-      name: product.name,
-      price: product.price,
-      quantity: 1,
-      image_url: product.image_url
-    });
-
+    addToCart(
+      {
+        product_id: product.id,
+        name: product.name,
+        price: product.price,
+        image_url: product.image_url,
+      },
+      1
+    );
     toast({
       title: "Added to cart!",
       description: `${product.name} has been added to your cart.`,
@@ -144,106 +144,109 @@ const Index = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {products.map((product, index) => (
-                <Card 
-                  key={product.id} 
-                  className="group hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border-2 border-transparent hover:border-purple-200 bg-white dark:bg-gray-800 overflow-hidden animate-fade-in"
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <div className="relative overflow-hidden">
-                    <Link to={`/product/${product.slug}`}>
-                      <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600">
-                        {product.image_url ? (
-                          <img
-                            src={product.image_url}
-                            alt={product.name}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <div className="text-6xl text-gray-400">📦</div>
-                          </div>
-                        )}
-                      </div>
-                    </Link>
-                    
-                    <div className="absolute top-4 left-4 space-y-2">
-                      {product.is_featured && (
-                        <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white animate-pulse">
-                          Featured
-                        </Badge>
-                      )}
-                      {product.is_new && (
-                        <Badge variant="secondary" className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
-                          New
-                        </Badge>
-                      )}
-                      {product.discount_percentage && product.discount_percentage > 0 && (
-                        <Badge variant="destructive" className="animate-bounce">
-                          -{product.discount_percentage}%
-                        </Badge>
-                      )}
-                    </div>
-
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={`absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform hover:scale-110 ${
-                        isInWishlist(product.id) ? 'text-red-500' : 'text-gray-600'
-                      }`}
-                      onClick={() => handleAddToWishlist(product.id)}
-                    >
-                      <Heart className={`h-5 w-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
-                    </Button>
-                  </div>
-
-                  <CardContent className="p-6">
-                    <div className="space-y-3">
+              {products.map((product, index) => {
+                const isInCart = !!cart.find(item => item.product_id === product.id);
+                return (
+                  <Card 
+                    key={product.id} 
+                    className="group hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border-2 border-transparent hover:border-purple-200 bg-white dark:bg-gray-800 overflow-hidden animate-fade-in"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <div className="relative overflow-hidden">
                       <Link to={`/product/${product.slug}`}>
-                        <h3 className="font-semibold text-lg text-gray-900 dark:text-white group-hover:text-purple-600 transition-colors duration-300">
-                          {product.name}
-                        </h3>
-                      </Link>
-                      
-                      {product.short_description && (
-                        <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
-                          {product.short_description}
-                        </p>
-                      )}
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl font-bold text-purple-600">
-                            ${product.price.toFixed(2)}
-                          </span>
-                          {product.discount_percentage && product.discount_percentage > 0 && (
-                            <span className="text-sm text-gray-500 line-through">
-                              ${(product.price / (1 - product.discount_percentage / 100)).toFixed(2)}
-                            </span>
+                        <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600">
+                          {product.image_url ? (
+                            <img
+                              src={product.image_url}
+                              alt={product.name}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <div className="text-6xl text-gray-400">📦</div>
+                            </div>
                           )}
                         </div>
-                        
-                        {product.rating && product.rating > 0 && (
-                          <div className="flex items-center gap-1">
-                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                            <span className="text-sm font-medium">{product.rating.toFixed(1)}</span>
-                            <span className="text-xs text-gray-500">({product.review_count})</span>
-                          </div>
+                      </Link>
+                      
+                      <div className="absolute top-4 left-4 space-y-2">
+                        {product.is_featured && (
+                          <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white animate-pulse">
+                            Featured
+                          </Badge>
+                        )}
+                        {product.is_new && (
+                          <Badge variant="secondary" className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
+                            New
+                          </Badge>
+                        )}
+                        {product.discount_percentage && product.discount_percentage > 0 && (
+                          <Badge variant="destructive" className="animate-bounce">
+                            -{product.discount_percentage}%
+                          </Badge>
                         )}
                       </div>
 
                       <Button
-                        onClick={() => handleAddToCart(product)}
-                        className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-                        disabled={!product.in_stock}
+                        variant="ghost"
+                        size="icon"
+                        className={`absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform hover:scale-110 ${
+                          isInWishlist(product.id) ? 'text-red-500' : 'text-gray-600'
+                        }`}
+                        onClick={() => handleAddToWishlist(product.id)}
                       >
-                        <ShoppingCart className="h-4 w-4 mr-2" />
-                        {product.in_stock ? 'Add to Cart' : 'Out of Stock'}
+                        <Heart className={`h-5 w-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
                       </Button>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+
+                    <CardContent className="p-6">
+                      <div className="space-y-3">
+                        <Link to={`/product/${product.slug}`}>
+                          <h3 className="font-semibold text-lg text-gray-900 dark:text-white group-hover:text-purple-600 transition-colors duration-300">
+                            {product.name}
+                          </h3>
+                        </Link>
+                        
+                        {product.short_description && (
+                          <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+                            {product.short_description}
+                          </p>
+                        )}
+
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl font-bold text-purple-600">
+                              ${product.price.toFixed(2)}
+                            </span>
+                            {product.discount_percentage && product.discount_percentage > 0 && (
+                              <span className="text-sm text-gray-500 line-through">
+                                ${(product.price / (1 - product.discount_percentage / 100)).toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {product.rating && product.rating > 0 && (
+                            <div className="flex items-center gap-1">
+                              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                              <span className="text-sm font-medium">{product.rating.toFixed(1)}</span>
+                              <span className="text-xs text-gray-500">({product.review_count})</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <Button
+                          onClick={() => handleAddToCart(product)}
+                          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                          disabled={!product.in_stock}
+                        >
+                          <ShoppingCart className="h-4 w-4 mr-2" />
+                          {isInCart ? "In Cart" : (product.in_stock ? 'Add to Cart' : 'Out of Stock')}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
 
