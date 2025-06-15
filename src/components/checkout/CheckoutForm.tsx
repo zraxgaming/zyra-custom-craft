@@ -26,6 +26,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
   const [phone, setPhone] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"ziina" | "cash">("ziina");
+  // for dark mode readability
+  const darkBgClass = "bg-gray-950";
 
   useEffect(() => {
     if (user) {
@@ -40,14 +42,14 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
 
   // Helper to display order summary in the checkout
   const renderOrderSummary = () => (
-    <div className="border rounded-lg p-3 bg-gray-50 mt-4">
-      <div className="font-semibold mb-2 text-gray-800">Order Items</div>
+    <div className={`border rounded-lg p-3 bg-gray-50 dark:${darkBgClass} mt-4`}>
+      <div className="font-semibold mb-2 text-gray-800 dark:text-white">Order Items</div>
       {items.map(item => (
         <div key={item.id} className="flex justify-between items-center py-1 text-sm">
           <div>
             <span className="font-medium">{item.name}</span>
             {item.customization && Object.keys(item.customization).length > 0 && (
-              <span className="ml-2 text-xs text-purple-600">[custom]</span>
+              <span className="ml-2 text-xs text-purple-600">[custom: {item.customization.text || "y"}]</span>
             )}
             <span className="ml-2 text-gray-500">x{item.quantity}</span>
           </div>
@@ -57,8 +59,15 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
     </div>
   );
 
+  // Helper: Check all customizable products have customization before order
+  const hasUncustomizedCustomProduct = items.some(
+    item =>
+      (item.customization !== undefined && item.customization !== null && item.name?.toLowerCase().includes("custom")) &&
+      (!item.customization || Object.keys(item.customization).length === 0)
+  );
+
   const handleOrder = async () => {
-    // Check form fields
+    // Validate form fields
     if (!name || !email || !phone) {
       toast({
         title: "Missing information",
@@ -67,7 +76,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
       });
       return;
     }
-    // Prevent checkout with empty cart
+    // Block empty cart
     if (items.length === 0) {
       toast({
         title: "Cart is empty",
@@ -76,12 +85,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
       });
       return;
     }
-    // Prevent non-customized customizable products in cart
-    const hasUncustomizedCustomProduct = items.some(
-      item => item.customization !== undefined && item.customization !== null && item.name?.toLowerCase().includes('custom')
-        ? Object.keys(item.customization).length === 0
-        : false
-    );
+    // Prevent non-customized customizable products
     if (hasUncustomizedCustomProduct) {
       toast({
         title: "Customization Required",
@@ -91,9 +95,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
       return;
     }
     setIsSubmitting(true);
-
     try {
-      // Compose order object, save as USD for db, pay in AED for Ziina
+      // Compose order object; save customizations
       const orderPayload = {
         user_id: user?.id,
         total_amount: subtotal,
@@ -113,19 +116,16 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
         },
         status: "pending",
       };
-
       // Insert order
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
         .insert(orderPayload)
         .select()
         .single();
-
       if (orderError || !orderData) {
         throw new Error(orderError?.message || "Failed to create order.");
       }
-
-      // Insert order items
+      // Insert order items and make sure customizations are saved!
       if (items.length > 0) {
         const orderItems = items.map((item: any) => ({
           order_id: orderData.id,
@@ -139,7 +139,6 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
         // Deduct stock from products
         for (const item of items) {
           if (item.product_id) {
-            // We only deduct if the product tracks stock
             await supabase.rpc('decrement_stock', {
               product_id_input: item.product_id,
               amount_input: item.quantity
@@ -149,29 +148,25 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
       }
 
       if (paymentMethod === "ziina") {
-        // Get ziina_api_key from site_config
+        // Get keys
         const { data: configData, error: configError } = await supabase
           .from("site_config")
           .select("value")
           .eq("key", "ziina_api_key")
           .maybeSingle();
-        if (configError || !configData?.value) {
-          throw new Error("Ziina integration not set up.");
-        }
+        if (configError || !configData?.value) throw new Error("Ziina integration not set up.");
         const ziinaApiKey = configData.value;
         const aedAmount = Math.round(subtotal * 3.67 * 100);
-
-        // Prepare the payload for Ziina
+        // Prepare payload
         const paymentIntentPayload = {
           amount: aedAmount,
           currency_code: "AED",
           metadata: { order_id: orderData.id },
           success_url: `${window.location.origin}/order-success/${orderData.id}`,
-          cancel_url: `${window.location.origin}/checkout`,
-          failure_url: `${window.location.origin}/checkout`,
+          cancel_url: `${window.location.origin}/order-failed?orderId=${orderData.id}&reason=cancel`,
+          failure_url: `${window.location.origin}/order-failed?orderId=${orderData.id}&reason=failure`,
         };
-
-        // Call Ziina payment intent API
+        // Call Ziina, improve handling for all possible redirect urls
         const response = await fetch("https://api-v2.ziina.com/api/payment_intent", {
           method: "POST",
           headers: {
@@ -181,33 +176,34 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
           body: JSON.stringify(paymentIntentPayload),
         });
         const paymentResp = await response.json();
-
-        // Save payment_intent_id to the order if available
+        // Save payment_intent_id if available
         if (paymentResp.id) {
           await supabase
             .from("orders")
             .update({ payment_intent_id: paymentResp.id })
             .eq("id", orderData.id);
         }
-
-        // Try all possible redirect url fields
-        const redirectUrl =
+        // Find redirect
+        const redirectUrl = 
           paymentResp.next_action_url ||
           paymentResp.payment_url ||
-          paymentResp.redirect_url;
+          paymentResp.redirect_url ||
+          (paymentResp.next_action && paymentResp.next_action.url); // fallback
         if (!response.ok || !redirectUrl) {
-          throw new Error(paymentResp.message || "Failed to get payment redirect URL from Ziina.");
+          // CHECK for failure/cancellation from response
+          window.location.href = `/order-failed?orderId=${orderData.id}&reason=ziina`;
+          return;
         }
-        // Redirect
+        // Redirect to Ziina
         window.location.href = redirectUrl;
         return;
       } else {
-        // Cash on pickup: show success & clear cart
+        // Cash on pickup
         toast({
           title: "Order Placed (Pickup)",
           description: "Your order has been created. Please pick up and pay at the store.",
         });
-        clearCart();
+        await clearCart(); // Fix: Await clearing the cart
         navigate(`/order-success/${orderData.id}`);
       }
     } catch (error: any) {
@@ -216,6 +212,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal }) => {
         description: error.message || "Unable to place order.",
         variant: "destructive",
       });
+      // On error, route to failed page
+      navigate(`/order-failed`);
     } finally {
       setIsSubmitting(false);
     }

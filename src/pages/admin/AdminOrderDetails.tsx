@@ -37,7 +37,6 @@ const AdminOrderDetails = () => {
 
   const fetchOrderDetails = async () => {
     try {
-      // Fetch order details
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select('*')
@@ -46,7 +45,7 @@ const AdminOrderDetails = () => {
 
       if (orderError) throw orderError;
 
-      // Fetch order items with product details
+      // Fetch order items with customization
       const { data: itemsData, error: itemsError } = await supabase
         .from('order_items')
         .select(`
@@ -66,7 +65,6 @@ const AdminOrderDetails = () => {
 
       if (itemsError) throw itemsError;
 
-      // Fetch profile information
       let profileData = null;
       if (orderData.user_id) {
         const { data: profile } = await supabase
@@ -77,13 +75,14 @@ const AdminOrderDetails = () => {
         profileData = profile;
       }
 
+      // Include customization in transformedItems
       const transformedItems = (itemsData || []).map(item => ({
         id: item.id,
         order_id: item.order_id,
         product_id: item.product_id,
         quantity: item.quantity,
         price: item.price,
-        customization: item.customization,
+        customization: item.customization, // Now always included
         product: {
           id: item.product?.id || '',
           name: item.product?.name || 'Unknown Product',

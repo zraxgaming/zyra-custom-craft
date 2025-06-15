@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,11 +30,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const imageUrl = Array.isArray(product.images) && product.images.length > 0 
     ? product.images[0] 
     : '/placeholder-product.jpg';
-  const { cart, addToCart } = useCart();
-  const isInCart = !!cart.find(item => item.product_id === product.id);
+  const { cart } = useCart();
+  const [animating, setAnimating] = useState(false);
+
+  const handleAddToCartAnim = () => {
+    setAnimating(true);
+    setTimeout(() => setAnimating(false), 900);
+  };
 
   return (
-    <Card className="group hover:shadow-lg transition-all duration-300 hover:scale-105 overflow-hidden bg-gradient-to-br from-card/80 to-card border-border/50">
+    <Card className={`group hover:shadow-lg transition-all duration-300 hover:scale-105 overflow-hidden bg-gradient-to-br from-card/80 to-card border-border/50 ${animating ? "animate-pulse" : ""}`}>
       <div className="relative overflow-hidden">
         <Link to={`/product/${product.slug}`}>
           <img
@@ -116,25 +121,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
 
         <div className="flex gap-2">
-          <Button
-            onClick={() =>
-              addToCart(
-                {
-                  product_id: product.id,
-                  name: product.name,
-                  price: product.price,
-                  image_url: imageUrl,
-                },
-                1
-              )
-            }
-            className={`flex-1 bg-gradient-to-r from-primary to-purple-600 text-white ${isInCart ? "opacity-60" : ""}`}
+          <AddToCartButton
+            product={product}
+            className={`flex-1 bg-gradient-to-r from-primary to-purple-600 text-white`}
             disabled={!inStock}
-            aria-label={isInCart ? "Added to Cart" : "Add to Cart"}
-          >
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            {isInCart ? `In Cart` : `Add to Cart`}
-          </Button>
+          />
           
           {product.is_customizable && (
             <ProductCustomizer productId={product.id}>

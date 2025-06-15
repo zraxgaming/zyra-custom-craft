@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Plus, Minus } from "lucide-react";
@@ -27,17 +28,17 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
   const { toast } = useToast();
   const [quantity, setQuantity] = useState(1);
 
-  // Customization state
+  // Customization (reset fully after add)
   const [customization, setCustomization] = useState<any>({});
   const [customModalOpen, setCustomModalOpen] = useState(false);
 
   const isCustomizable = !!product.is_customizable;
   const existingItem = cart.find(item => item.product_id === product.id);
 
-  // Helper for customization check
+  // Helper for customization required
   const hasCustomization = () => {
     if (!customization || typeof customization !== "object") return false;
-    // Require at least one non-empty field for custom products
+    // Require at least one non-empty field
     return Object.values(customization).some(val =>
       typeof val === "string"
         ? val.trim() !== ""
@@ -46,6 +47,9 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
           : Boolean(val)
     );
   };
+
+  // Animation: state to trigger for add-to-cart fly
+  const [animating, setAnimating] = useState(false);
 
   // Main add-to-cart action
   const handleAddToCart = async () => {
@@ -59,6 +63,7 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
       });
       return;
     }
+
     await addToCart(
       {
         product_id: product.id,
@@ -69,10 +74,14 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
       quantity,
       isCustomizable ? customization : {}
     );
+
     toast({
       title: "Added to cart",
       description: `${quantity} ${product.name} added to your cart`
     });
+    setAnimating(true); // Trigger add-to-cart animation
+    setTimeout(() => setAnimating(false), 750);
+
     setQuantity(1);
     setCustomization({});
     setCustomModalOpen(false);
@@ -80,7 +89,7 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
 
   return (
     <>
-      {/* Customization Modal - improved contrast/theme */}
+      {/* Customization Modal */}
       {isCustomizable && customModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/50">
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full p-6 space-y-4 relative">
@@ -107,7 +116,11 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
       <Button
         onClick={handleAddToCart}
         disabled={disabled || (isCustomizable && !hasCustomization())}
-        className={cn("w-full", className)}
+        className={cn(
+          "w-full",
+          className,
+          animating && "animate-bounce animate-spin scale-105"
+        )}
       >
         <ShoppingCart className="h-4 w-4 mr-2" />
         {existingItem ? "Add More" : "Add to Cart"}

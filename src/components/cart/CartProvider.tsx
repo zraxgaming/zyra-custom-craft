@@ -85,6 +85,7 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }
   }, [user]);
 
+  // always ensure customization is loaded/saved properly
   const loadCartFromDb = async () => {
     setIsLoading(true);
     try {
@@ -94,14 +95,13 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         .eq("user_id", user?.id);
 
       if (!error && dbCart) {
-        // Provide safe fallback for price, name, image_url!
         setCart(
           dbCart.map((item: any) => ({
             ...item,
             price: typeof item.price === "number" ? item.price : 0,
             image_url: typeof item.image_url === "string" ? item.image_url : "",
             name: typeof item.name === "string" ? item.name : "",
-            customization: item.customization ?? {},
+            customization: item.customization ?? {}, // ensure customization is always an object or {}
           }))
         );
       }
@@ -119,6 +119,11 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   ) => {
     if (!user) {
       console.log("User not logged in");
+      return;
+    }
+    // Block adding customizable products without required customization
+    if (product.name?.toLowerCase().includes("custom") && (!customization || Object.keys(customization).length === 0)) {
+      console.log("Customization required for this product.");
       return;
     }
 

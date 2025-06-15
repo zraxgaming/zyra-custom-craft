@@ -65,8 +65,8 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
         currency_code: "AED",
         metadata: orderPayload.metadata || { order_id: orderPayload.orderId || "N/A" },
         success_url: `${window.location.origin}/order-success?source=ziina`,
-        cancel_url: `${window.location.origin}/checkout?source=ziina&status=cancelled`,
-        failure_url: `${window.location.origin}/checkout?source=ziina&status=failed`,
+        cancel_url: `${window.location.origin}/order-failed?source=ziina&status=cancelled`,
+        failure_url: `${window.location.origin}/order-failed?source=ziina&status=failed`,
       };
 
       console.log("Initiating Ziina Payment with payload:", body);
@@ -84,6 +84,8 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 
       if (!response.ok) {
         const errorMessage = responseData.message || responseData.error?.message || `Ziina API request failed with status ${response.status}`;
+        // Redirect to failed if error
+        window.location.assign("/order-failed?source=ziina");
         throw new Error(errorMessage);
       }
       // Try all possible redirect fields!
@@ -91,13 +93,14 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
         responseData.next_action_url ||
         responseData.payment_url ||
         responseData.redirect_url;
-
       if (redirectUrl && responseData.id) {
         onSuccess(responseData);
         window.location.assign(redirectUrl);
       } else if (responseData.id && responseData.status === 'succeeded') {
         onSuccess(responseData);
       } else {
+        // If unable to get a redirection URL, go to failure
+        window.location.assign("/order-failed?source=ziina&status=nourl");
         throw new Error(responseData.message || "Failed to get payment redirection URL from Ziina.");
       }
     } catch (error: any) {
@@ -108,6 +111,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
         variant: "destructive",
       });
       onError(error.message || "Could not initiate Ziina payment.");
+      window.location.assign("/order-failed?source=ziina&status=exception");
     } finally {
       setIsProcessing(false);
     }
