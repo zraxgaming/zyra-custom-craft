@@ -9,6 +9,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import AdminRoute from "@/components/admin/AdminRoute";
 import MaintenanceBanner from "@/components/layout/MaintenanceBanner";
 import OnlineStatus from "@/components/layout/OnlineStatus";
+import CxgenieChatWidget from "@/components/layout/CxgenieChatWidget";
 
 // Pages
 import Home from "@/pages/Home";
@@ -66,6 +67,8 @@ function App() {
           <CartProvider>
             <WishlistProvider>
               <Router>
+                {/* CXGenie Chat Widget for the appropriate section */}
+                <CxgenieChatWidget />
                 <div className="min-h-screen bg-background page-transition w-full">
                   <MaintenanceBanner />
                   <OnlineStatus />
