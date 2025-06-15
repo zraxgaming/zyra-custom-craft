@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useState,
@@ -73,13 +72,14 @@ const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         .eq("user_id", user?.id);
 
       if (!error && dbCart) {
+        // Provide safe fallback for price, name, image_url!
         setCart(
-          dbCart.map(item => ({
+          dbCart.map((item: any) => ({
             ...item,
-            price: (item as any).price || 0,
-            image_url: (item as any).image_url || "",
-            name: (item as any).name || "",
-            customization: (item as any).customization ?? {},
+            price: item.price || 0,
+            image_url: item.image_url || "",
+            name: item.name || "",
+            customization: item.customization ?? {},
           }))
         );
       }

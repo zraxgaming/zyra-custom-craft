@@ -1,185 +1,149 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Product as ProductType } from "@/types";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Slider } from "@/components/ui/slider";
-import { useCart } from "@/components/cart/CartProvider";
+import { Button } from "@/components/ui/button";
+import { Star, ShoppingCart, CheckCircle, PackageCheck, Truck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { Container } from "@/components/ui/container";
-import { Separator } from "@/components/ui/separator";
-import { Link } from "react-router-dom";
+import AddToCartButton from "@/components/cart/AddToCartButton";
+import ProductReviews from "@/components/reviews/ProductReviews";
+
+interface Product {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  images: string[];
+  description?: string;
+  rating?: number;
+  review_count?: number;
+  is_featured?: boolean;
+  is_customizable?: boolean;
+  stock_quantity?: number;
+  in_stock?: boolean;
+}
 
 const Product = () => {
-  const { id } = useParams<{ id: string }>();
-  const [product, setProduct] = useState<ProductType | null>(null);
-  const [quantity, setQuantity] = useState(1);
-  const [customization, setCustomization] = useState("");
-  const { addItemToCart } = useCart();
+  const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
+  const [product, setProduct] = useState<Product | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (id) {
-      fetchProduct(id);
-    }
-  }, [id]);
+    const fetchProduct = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('slug', slug)
+          .single();
 
-  const fetchProduct = async (id: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("id", id)
-        .single();
+        if (error) throw error;
 
-      if (error) {
-        throw error;
+        // Transform the data to match our Product interface
+        const transformedProduct: Product = {
+          id: data.id,
+          name: data.name,
+          slug: data.slug,
+          price: data.price,
+          images: Array.isArray(data.images)
+            ? data.images.filter(img => typeof img === 'string') as string[]
+            : [],
+          description: data.description || '',
+          rating: data.rating || 0,
+          review_count: data.review_count || 0,
+          is_featured: data.is_featured || false,
+          is_customizable: data.is_customizable || false,
+          stock_quantity: data.stock_quantity || 0,
+          in_stock: data.in_stock || false,
+        };
+
+        setProduct(transformedProduct);
+      } catch (error: any) {
+        console.error('Error fetching product:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load product",
+          variant: "destructive",
+        });
+        setProduct(null); // Ensure product is null in case of error
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      setProduct(data);
-    } catch (error: any) {
-      console.error("Error fetching product:", error.message);
-      toast({
-        title: "Error",
-        description: "Failed to load product",
-        variant: "destructive",
-      });
-    }
-  };
+    fetchProduct();
+  }, [slug, toast]);
 
-  const handleAddToCart = () => {
-    if (!product) {
-      toast({
-        title: "Error",
-        description: "Product not loaded",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    addItemToCart({
-      product_id: product.id,
-      name: product.name,
-      price: product.price,
-      quantity: quantity,
-      image_url: product.images?.[0] || "",
-      customization: customization,
-    });
-
-    toast({
-      title: "Success",
-      description: `${quantity} ${product.name} added to cart`,
-    });
-  };
-
-  if (!product) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        Loading...
-      </div>
-    );
-  }
-
-  // Fix: images should be array of string (was string)
-  const images: string[] = Array.isArray(product.images)
-    ? product.images
-    : product.images ? [product.images] : [];
+  if (isLoading) return <div>Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <Container className="py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Product Image */}
-          <div>
-            <img
-              src={images[0] || "/placeholder.svg"}
-              alt={product.name}
-              className="w-full rounded-lg shadow-md"
-            />
-          </div>
-
-          {/* Product Details */}
-          <div className="space-y-4">
-            <h1 className="text-3xl font-bold text-foreground">{product.name}</h1>
-            <p className="text-muted-foreground">{product.description}</p>
-
-            <div className="flex items-center space-x-2">
-              <span className="text-2xl font-semibold">${product.price}</span>
-              {product.discount && (
-                <Badge variant="secondary">
-                  {product.discount}% off
-                </Badge>
-              )}
-            </div>
-
-            <Separator />
-
-            {/* Quantity Selection */}
-            <div>
-              <Label htmlFor="quantity">Quantity</Label>
-              <div className="flex items-center space-x-4 mt-2">
-                <Slider
-                  id="quantity"
-                  defaultValue={[1]}
-                  max={10}
-                  step={1}
-                  onValueChange={(value) => setQuantity(value[0])}
-                />
-                <Input
-                  type="number"
-                  value={quantity}
-                  onChange={(e) => setQuantity(parseInt(e.target.value))}
-                  className="w-20"
+    <div>
+      {product ? (
+        <div className="container mx-auto py-12">
+          <Card className="w-full max-w-4xl mx-auto">
+            <CardHeader>
+              <CardTitle className="text-2xl font-bold">{product.name}</CardTitle>
+              <CardDescription>{product.description}</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                {product.images && product.images.length > 0 ? (
+                  <img
+                    src={product.images[0]}
+                    alt={product.name}
+                    className="w-full h-64 object-cover rounded-md"
+                  />
+                ) : (
+                  <div className="w-full h-64 bg-gray-200 rounded-md flex items-center justify-center">
+                    No Image
+                  </div>
+                )}
+              </div>
+              <div>
+                <div className="mb-4">
+                  <p className="text-xl font-semibold">${product.price.toFixed(2)}</p>
+                  {product.is_featured && (
+                    <Badge className="ml-2 bg-green-500 text-white">Featured</Badge>
+                  )}
+                </div>
+                <div className="mb-4">
+                  {product.rating && (
+                    <div className="flex items-center">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-5 w-5 ${i < product.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
+                            }`}
+                        />
+                      ))}
+                      <span className="ml-2 text-gray-500">({product.review_count} reviews)</span>
+                    </div>
+                  )}
+                </div>
+                <AddToCartButton
+                  product={{
+                    id: product.id,
+                    name: product.name,
+                    slug: product.slug,
+                    price: product.price,
+                    images: product.images,
+                    is_customizable: product.is_customizable,
+                  }}
                 />
               </div>
-            </div>
-
-            {/* Customization */}
-            <div>
-              <Label htmlFor="customization">Customization</Label>
-              <Input
-                id="customization"
-                value={customization}
-                onChange={(e) => setCustomization(e.target.value)}
-                placeholder="Enter your customization request"
-              />
-            </div>
-
-            {/* Add to Cart Button */}
-            <Button onClick={handleAddToCart} className="w-full flex items-center gap-2">
-              <ShoppingCart className="h-4 w-4" />
-              Add to Cart
-            </Button>
-
-            <Separator />
-
-            {/* Reviews Section */}
-            <div>
-              <h2 className="text-xl font-semibold">Reviews</h2>
-              {/* Implement reviews here */}
-              <p className="text-muted-foreground">No reviews yet.</p>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+          <ProductReviews productId={product?.id || ""} />
         </div>
-      </Container>
-      <Footer />
+      ) : (
+        <div>Product not found</div>
+      )}
     </div>
   );
 };
-
 export default Product;
