@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,12 +18,12 @@ import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
 import Barcode from 'react-barcode';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
 
 interface BarcodeData {
   id: string;
-  product_name: string;
-  barcode: string;
+  barcode_data: string;
+  barcode_type: string;
+  product_id?: string;
 }
 
 interface BarcodeDownloaderProps {
@@ -35,37 +36,14 @@ const BarcodeDownloader: React.FC<BarcodeDownloaderProps> = ({ barcodeData, type
   const handleDownload = () => {
     const doc = new jsPDF();
     doc.text(`Barcode for ${filename}`, 10, 10);
-
-    // Generate barcode as SVG and then render it to Canvas
-    const svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    Barcode(svgElement, barcodeData, { format: type.toUpperCase() });
-
-    const svgString = new XMLSerializer().serializeToString(svgElement);
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-
-    if (!ctx) {
-      console.error('Could not get canvas context');
-      return;
-    }
-
-    const img = new Image();
-    img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-
-      const imgData = canvas.toDataURL('image/png');
-      doc.addImage(imgData, 'PNG', 15, 30, 180, 40); // Adjust position and size as needed
-      doc.save(`${filename}.pdf`);
-    };
-    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+    doc.text(barcodeData, 10, 30);
+    doc.save(`${filename}.pdf`);
   };
 
   return (
     <Button onClick={handleDownload} variant="outline" size="sm">
       <Download className="mr-2 h-4 w-4" />
-      Download
+      Download PDF
     </Button>
   );
 };
@@ -74,7 +52,7 @@ const AdminBarcodes = () => {
   const [barcodeData, setBarcodeData] = useState<BarcodeData[]>([]);
   const [loading, setLoading] = useState(true);
   const [newBarcode, setNewBarcode] = useState('');
-  const [newProductName, setNewProductName] = useState('');
+  const [newBarcodeType, setNewBarcodeType] = useState('CODE128');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -85,7 +63,7 @@ const AdminBarcodes = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('barcodes')
+        .from('barcode_generations')
         .select('*');
 
       if (error) {
@@ -105,10 +83,10 @@ const AdminBarcodes = () => {
   };
 
   const addBarcode = async () => {
-    if (!newBarcode || !newProductName) {
+    if (!newBarcode) {
       toast({
         title: "Error",
-        description: "Please enter both barcode and product name.",
+        description: "Please enter barcode data.",
         variant: "destructive",
       });
       return;
@@ -116,8 +94,11 @@ const AdminBarcodes = () => {
 
     try {
       const { data, error } = await supabase
-        .from('barcodes')
-        .insert([{ barcode: newBarcode, product_name: newProductName }])
+        .from('barcode_generations')
+        .insert([{ 
+          barcode_data: newBarcode, 
+          barcode_type: newBarcodeType 
+        }])
         .select();
 
       if (error) {
@@ -126,7 +107,6 @@ const AdminBarcodes = () => {
 
       setBarcodeData([...barcodeData, ...(data || [])]);
       setNewBarcode('');
-      setNewProductName('');
 
       toast({
         title: "Success",
@@ -154,22 +134,12 @@ const AdminBarcodes = () => {
       <div className="container mx-auto py-10">
         <h1 className="text-3xl font-bold mb-5">Barcode Management</h1>
 
-        {/* Add Barcode Form */}
         <Card className="mb-5">
-          <CardContent>
+          <CardContent className="p-6">
             <h2 className="text-xl font-semibold mb-3">Add New Barcode</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="productName">Product Name</Label>
-                <Input
-                  type="text"
-                  id="productName"
-                  value={newProductName}
-                  onChange={(e) => setNewProductName(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="barcodeValue">Barcode Value</Label>
+                <Label htmlFor="barcodeValue">Barcode Data</Label>
                 <Input
                   type="text"
                   id="barcodeValue"
@@ -177,14 +147,26 @@ const AdminBarcodes = () => {
                   onChange={(e) => setNewBarcode(e.target.value)}
                 />
               </div>
+              <div>
+                <Label htmlFor="barcodeType">Barcode Type</Label>
+                <select 
+                  id="barcodeType"
+                  value={newBarcodeType}
+                  onChange={(e) => setNewBarcodeType(e.target.value)}
+                  className="w-full p-2 border rounded"
+                >
+                  <option value="CODE128">CODE128</option>
+                  <option value="CODE39">CODE39</option>
+                  <option value="EAN13">EAN13</option>
+                </select>
+              </div>
             </div>
             <Button className="mt-4" onClick={addBarcode}>Add Barcode</Button>
           </CardContent>
         </Card>
 
-        {/* Barcode List */}
         <Card>
-          <CardContent>
+          <CardContent className="p-6">
             <h2 className="text-xl font-semibold mb-3">Existing Barcodes</h2>
             {loading ? (
               <p>Loading barcodes...</p>
@@ -193,22 +175,26 @@ const AdminBarcodes = () => {
                 <TableCaption>A list of your barcodes.</TableCaption>
                 <TableHead>
                   <TableRow>
-                    <TableHead>Product Name</TableHead>
-                    <TableHead>Barcode</TableHead>
+                    <TableHead>Barcode Data</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {barcodeData.map((item) => (
                     <TableRow key={item.id}>
-                      <TableCell>{item.product_name}</TableCell>
-                      <TableCell className="font-mono">{item.barcode}</TableCell>
+                      <TableCell className="font-mono">{item.barcode_data}</TableCell>
+                      <TableCell>{item.barcode_type}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => copyBarcode(item.barcode)}>
+                        <Button variant="ghost" size="sm" onClick={() => copyBarcode(item.barcode_data)}>
                           <Copy className="mr-2 h-4 w-4" />
                           Copy
                         </Button>
-                        <BarcodeDownloader barcodeData={item.barcode} type="CODE128" filename={item.product_name} />
+                        <BarcodeDownloader 
+                          barcodeData={item.barcode_data} 
+                          type={item.barcode_type} 
+                          filename={`barcode-${item.id}`} 
+                        />
                       </TableCell>
                     </TableRow>
                   ))}

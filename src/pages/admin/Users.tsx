@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,10 +24,13 @@ const AdminUsers = () => {
     },
   });
 
-  // Role update mutation
   const updateRoleMutation = useMutation({
-    mutationFn: async ({ id, role }) => {
-      await supabase.from("profiles").update({ role }).eq("id", id);
+    mutationFn: async ({ id, role }: { id: string; role: string }) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ role })
+        .eq("id", id);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
@@ -58,14 +62,12 @@ const AdminUsers = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Search bar can be made to work in further improvements */}
             <div className="flex items-center gap-4 mb-6">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search users..."
                   className="pl-10"
-                  // Future: Add search functionality
                 />
               </div>
             </div>
@@ -84,7 +86,7 @@ const AdminUsers = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {users?.map((user) => (
+                {users?.map((user, index) => (
                   <div
                     key={user.id}
                     className="flex items-center justify-between p-4 border border-border/50 rounded-lg hover:shadow-md transition-all duration-200 animate-slide-in-up"
@@ -102,7 +104,7 @@ const AdminUsers = () => {
                           {user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}
                           {user.role === "admin" && (
                             <span className="ml-1 inline-flex">
-                              <Crown className="h-4 w-4 text-yellow-500" title="Admin" />
+                              <Crown className="h-4 w-4 text-yellow-500" />
                             </span>
                           )}
                         </h3>

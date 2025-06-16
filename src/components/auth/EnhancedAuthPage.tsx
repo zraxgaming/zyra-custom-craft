@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,11 +8,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock, User, Sparkles, ArrowRight, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import GoogleSignIn from "./GoogleSignIn";
 
 const EnhancedAuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("signin");
   const [signInData, setSignInData] = useState({ email: "", password: "" });
   const [signUpData, setSignUpData] = useState({ 
     email: "", 
@@ -22,6 +23,8 @@ const EnhancedAuthPage = () => {
     firstName: "",
     lastName: ""
   });
+  const [resetEmail, setResetEmail] = useState("");
+  const [magicLinkEmail, setMagicLinkEmail] = useState("");
   
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
@@ -76,6 +79,79 @@ const EnhancedAuthPage = () => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) {
+      toast({
+        title: "Email Required",
+        description: "Please enter your email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/auth?reset=true`,
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Reset Email Sent",
+        description: "Check your email for password reset instructions.",
+      });
+      setResetEmail("");
+    } catch (error: any) {
+      toast({
+        title: "Reset Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!magicLinkEmail) {
+      toast({
+        title: "Email Required",
+        description: "Please enter your email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: magicLinkEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/dashboard`,
+        }
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Magic Link Sent",
+        description: "Check your email for the magic sign-in link.",
+      });
+      setMagicLinkEmail("");
+    } catch (error: any) {
+      toast({
+        title: "Magic Link Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900/20 flex items-center justify-center p-4">
       <div className="relative z-10 w-full max-w-md">
@@ -105,14 +181,12 @@ const EnhancedAuthPage = () => {
               </div>
             </div>
 
-            <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-8 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
-                <TabsTrigger value="signin" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-md transition-all duration-300">
-                  Sign In
-                </TabsTrigger>
-                <TabsTrigger value="signup" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-md transition-all duration-300">
-                  Sign Up
-                </TabsTrigger>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-4 mb-8 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+                <TabsTrigger value="signin" className="rounded-lg text-xs">Sign In</TabsTrigger>
+                <TabsTrigger value="signup" className="rounded-lg text-xs">Sign Up</TabsTrigger>
+                <TabsTrigger value="reset" className="rounded-lg text-xs">Reset</TabsTrigger>
+                <TabsTrigger value="magic" className="rounded-lg text-xs">Magic Link</TabsTrigger>
               </TabsList>
 
               <TabsContent value="signin" className="space-y-6">
@@ -292,6 +366,62 @@ const EnhancedAuthPage = () => {
                         <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                       </div>
                     )}
+                  </Button>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="reset" className="space-y-6">
+                <form onSubmit={handleForgotPassword} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-email" className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                      <Mail className="h-4 w-4" />
+                      Email Address
+                    </Label>
+                    <Input
+                      id="reset-email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      required
+                      className="h-12 bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-300 rounded-xl"
+                    />
+                  </div>
+                  
+                  <Button 
+                    type="submit" 
+                    className="w-full h-12 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300" 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Sending...' : 'Send Reset Email'}
+                  </Button>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="magic" className="space-y-6">
+                <form onSubmit={handleMagicLink} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="magic-email" className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                      <Mail className="h-4 w-4" />
+                      Email Address
+                    </Label>
+                    <Input
+                      id="magic-email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={magicLinkEmail}
+                      onChange={(e) => setMagicLinkEmail(e.target.value)}
+                      required
+                      className="h-12 bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-300 rounded-xl"
+                    />
+                  </div>
+                  
+                  <Button 
+                    type="submit" 
+                    className="w-full h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300" 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Sending...' : 'Send Magic Link'}
                   </Button>
                 </form>
               </TabsContent>
