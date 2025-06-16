@@ -55,7 +55,15 @@ const SearchBar = () => {
 
         if (error) throw error;
 
-        setResults(data || []);
+        // Transform the data to ensure proper typing
+        const transformedProducts: Product[] = (data || []).map(product => ({
+          ...product,
+          images: Array.isArray(product.images) 
+            ? product.images.filter((img): img is string => typeof img === 'string')
+            : []
+        }));
+
+        setResults(transformedProducts);
         setIsOpen(true);
       } catch (error: any) {
         console.error('Search error:', error);
@@ -144,7 +152,7 @@ const SearchBar = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{product.name}</p>
-                      <p className="text-sm text-muted-foreground">${product.price}</p>
+                      <p className="text-sm text-muted-foreground">AED {product.price}</p>
                     </div>
                   </div>
                 ))}

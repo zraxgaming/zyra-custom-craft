@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { CheckCircle, Mail, X } from 'lucide-react';
+import { CheckCircle, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import Navbar from '@/components/layout/Navbar';
@@ -41,7 +41,7 @@ const NewsletterUnsubscribe = () => {
 
     setLoading(true);
     try {
-      // Add to unsubscribe list
+      // Add to unsubscribe list using direct query
       const { error: unsubError } = await supabase
         .from('newsletter_unsubscribes')
         .upsert({
@@ -85,15 +85,14 @@ const NewsletterUnsubscribe = () => {
   return (
     <>
       <SEOHead 
-        title="Unsubscribe from Newsletter | Zyra"
-        description="Unsubscribe from Zyra newsletter updates and promotional emails."
+        title="Unsubscribe from Newsletter | Zyra Custom Craft"
+        description="Unsubscribe from Zyra Custom Craft newsletter updates and promotional emails."
         url="https://shopzyra.vercel.app/newsletter/unsubscribe"
-        noIndex={true}
       />
       <div className="min-h-screen bg-background">
         <Navbar />
         
-        <div className="container mx-auto px-4 py-16">
+        <div className="container mx-auto px-4 py-12 md:py-16">
           <div className="max-w-md mx-auto">
             <Card>
               <CardHeader className="text-center">

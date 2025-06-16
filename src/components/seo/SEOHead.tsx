@@ -15,6 +15,7 @@ interface SEOHeadProps {
   modifiedTime?: string;
   section?: string;
   tags?: string[];
+  noIndex?: boolean;
 }
 
 const SEOHead: React.FC<SEOHeadProps> = ({
@@ -29,7 +30,8 @@ const SEOHead: React.FC<SEOHeadProps> = ({
   publishedTime,
   modifiedTime,
   section,
-  tags = []
+  tags = [],
+  noIndex = false
 }) => {
   const structuredData = {
     "@context": "https://schema.org",
@@ -73,8 +75,8 @@ const SEOHead: React.FC<SEOHeadProps> = ({
       <meta name="description" content={description} />
       <meta name="keywords" content={keywords} />
       <meta name="author" content={author} />
-      <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-      <meta name="googlebot" content="index, follow" />
+      <meta name="robots" content={noIndex ? "noindex, nofollow" : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"} />
+      <meta name="googlebot" content={noIndex ? "noindex, nofollow" : "index, follow"} />
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
       <link rel="canonical" href={url} />
       

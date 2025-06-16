@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { Link } from "react-router-dom";
 import { useCart } from "@/components/cart/CartProvider";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FeaturedProductsProps {
   category?: string;
@@ -22,16 +24,36 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({ category, limit = 4
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        const url = `/api/products/featured?limit=${limit}${category ? `&category=${category}` : ''}`;
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        let query = supabase
+          .from('products')
+          .select('*')
+          .eq('status', 'published')
+          .eq('is_featured', true)
+          .limit(limit);
+
+        if (category) {
+          query = query.eq('category', category);
         }
-        const data = await response.json();
-        setProducts(data);
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        // Transform the data to ensure proper typing
+        const transformedProducts: Product[] = (data || []).map(product => ({
+          ...product,
+          images: Array.isArray(product.images) 
+            ? product.images.filter((img): img is string => typeof img === 'string')
+            : [],
+          is_featured: product.is_featured || false,
+          is_customizable: product.is_customizable || false,
+          stock_quantity: product.stock_quantity || 0
+        }));
+        
+        setProducts(transformedProducts);
       } catch (error) {
         console.error("Could not fetch featured products:", error);
-        setProducts(null);
+        setProducts([]);
       } finally {
         setLoading(false);
       }
@@ -64,7 +86,7 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({ category, limit = 4
             </CardHeader>
             <CardContent>
               <Skeleton className="h-4 w-1/2" />
-              <Skeleton className="h-24" />
+              <Skeleton className="h-24 w-full mt-2" />
             </CardContent>
             <CardFooter>
               <Skeleton className="h-10 w-full" />
@@ -75,52 +97,72 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({ category, limit = 4
     );
   }
 
-  if (!products) {
-    return <div className="text-red-500">Failed to load featured products.</div>;
+  if (!products || products.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">No featured products available at the moment.</p>
+      </div>
+    );
   }
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {products.map((product) => (
-        <Card key={product.id} className="bg-card text-card-foreground shadow-md transition-shadow duration-300 hover:shadow-lg">
-          <Link to={`/product/${product.slug}`}>
-            <div className="relative">
-              <AspectRatio ratio={4 / 3}>
-                <img
-                  src={product.images[0] || "/placeholder-product.jpg"}
-                  alt={product.name}
-                  className="object-cover rounded-md"
-                />
-              </AspectRatio>
-            </div>
-            <CardHeader className="pt-4">
-              <CardTitle className="text-lg font-semibold line-clamp-1">{product.name}</CardTitle>
-            </CardHeader>
-          </Link>
-          <CardContent className="py-2">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-sm text-muted-foreground line-clamp-2">{product.short_description || product.description}</p>
+      {products.map((product) => {
+        const imageUrl = Array.isArray(product.images) && product.images.length > 0 
+          ? product.images[0] 
+          : '/placeholder-product.jpg';
+
+        return (
+          <Card key={product.id} className="bg-card text-card-foreground shadow-md transition-shadow duration-300 hover:shadow-lg">
+            <Link to={`/product/${product.slug}`}>
+              <div className="relative">
+                <AspectRatio ratio={4 / 3}>
+                  <img
+                    src={imageUrl}
+                    alt={product.name}
+                    className="object-cover rounded-t-md w-full h-full"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/placeholder-product.jpg';
+                    }}
+                  />
+                </AspectRatio>
               </div>
-            </div>
-            <div className="mt-2">
-              {renderStars(product.rating)}
-            </div>
-          </CardContent>
-          <CardFooter className="flex items-center justify-between p-4">
-            <span className="text-xl font-bold text-primary">AED {product.price.toFixed(2)}</span>
-            <Button onClick={(e) => {
-              e.preventDefault();
-              addToCart({
-                product_id: product.id,
-                name: product.name,
-                price: product.price,
-                image_url: product.images[0] || "/placeholder-product.jpg"
-              }, 1);
-            }} variant="outline">Add to Cart</Button>
-          </CardFooter>
-        </Card>
-      ))}
+              <CardHeader className="pt-4">
+                <CardTitle className="text-lg font-semibold line-clamp-1">{product.name}</CardTitle>
+              </CardHeader>
+            </Link>
+            <CardContent className="py-2">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground line-clamp-2">{product.short_description || product.description}</p>
+                </div>
+              </div>
+              <div className="mt-2">
+                {renderStars(product.rating)}
+              </div>
+            </CardContent>
+            <CardFooter className="flex items-center justify-between p-4">
+              <span className="text-xl font-bold text-primary">AED {product.price.toFixed(2)}</span>
+              <Button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  addToCart({
+                    product_id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    image_url: imageUrl
+                  }, 1);
+                }} 
+                variant="outline"
+                disabled={!product.in_stock}
+              >
+                {product.in_stock ? 'Add to Cart' : 'Out of Stock'}
+              </Button>
+            </CardFooter>
+          </Card>
+        );
+      })}
     </div>
   );
 };
