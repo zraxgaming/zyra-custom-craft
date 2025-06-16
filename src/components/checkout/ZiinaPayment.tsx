@@ -20,6 +20,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+  const [testing, setTesting] = useState(false); // Add state for environment flag
 
   const handleInitiatePayment = async () => {
     if (amount <= 0) {
@@ -31,6 +32,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       onError("Invalid Amount");
       return;
     }
+
     setIsProcessing(true);
     try {
       // Get Ziina API key from site_config
@@ -47,23 +49,29 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       const ziinaApiKey = configData.value as string;
       const amountInFils = Math.round(amount * 100);
 
-      // Also get environment flag
+      // Get environment flag
       const { data: envData } = await supabase
         .from('site_config')
         .select('value')
         .eq('key', 'ziina_env')
         .single();
+        
       const ziinaEnv = envData?.value ?? 'test';
+      const isTesting = ziinaEnv !== 'prod';
+      setTesting(isTesting); // Save to state
 
-      // Choose endpoint:
-      const ziinaEndpoint = ziinaEnv === "prod"
-        ? 'https://api-v2.ziina.com/api/payment_intent'
-        : 'https://sandbox-api-v2.ziina.com/api/payment_intent';
+      const ziinaEndpoint = isTesting
+        ? 'https://sandbox-api-v2.ziina.com/api/payment_intent'
+        : 'https://api-v2.ziina.com/api/payment_intent';
 
       const body = {
         amount: amountInFils,
         currency_code: "AED",
-        metadata: orderPayload.metadata || { order_id: orderPayload.orderId || "N/A" },
+        metadata: {
+          ...(orderPayload.metadata || {}),
+          order_id: orderPayload.orderId || "N/A",
+          test_mode: isTesting
+        },
         success_url: `${window.location.origin}/order-success?source=ziina`,
         cancel_url: `${window.location.origin}/order-failed?source=ziina&status=cancelled`,
         failure_url: `${window.location.origin}/order-failed?source=ziina&status=failed`,
@@ -84,25 +92,25 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 
       if (!response.ok) {
         const errorMessage = responseData.message || responseData.error?.message || `Ziina API request failed with status ${response.status}`;
-        // Redirect to failed if error
         window.location.assign("/order-failed?source=ziina");
         throw new Error(errorMessage);
       }
-      // Try all possible redirect fields!
+
       const redirectUrl =
         responseData.next_action_url ||
         responseData.payment_url ||
         responseData.redirect_url;
+
       if (redirectUrl && responseData.id) {
         onSuccess(responseData);
         window.location.assign(redirectUrl);
       } else if (responseData.id && responseData.status === 'succeeded') {
         onSuccess(responseData);
       } else {
-        // If unable to get a redirection URL, go to failure
         window.location.assign("/order-failed?source=ziina&status=nourl");
         throw new Error(responseData.message || "Failed to get payment redirection URL from Ziina.");
       }
+
     } catch (error: any) {
       console.error('Ziina payment initiation error:', error);
       toast({
@@ -125,15 +133,15 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
             <Smartphone className="h-6 w-6" />
             <span className="font-semibold text-lg">Ziina Payment</span>
           </div>
-          
+
           <p className="text-gray-600 dark:text-gray-300">
             Pay securely with Ziina. You will be redirected to complete the payment.
           </p>
-          
+
           <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
             AED {amount.toFixed(2)}
           </div>
-          
+
           <Button
             onClick={handleInitiatePayment}
             disabled={isProcessing || amount <= 0}
@@ -151,10 +159,16 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
               </>
             )}
           </Button>
-          
+
           <p className="text-xs text-gray-500 dark:text-gray-400">
             Secure payment powered by Ziina
           </p>
+
+          {testing && (
+            <p className="text-sm text-yellow-600 font-medium mt-2">
+              ⚠️ Test Mode Active
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>
