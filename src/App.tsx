@@ -10,6 +10,7 @@ import AdminRoute from "@/components/admin/AdminRoute";
 import MaintenanceBanner from "@/components/layout/MaintenanceBanner";
 import OnlineStatus from "@/components/layout/OnlineStatus";
 import CxgenieChatWidget from "@/components/layout/CxgenieChatWidget";
+import PromotionBanner from "@/components/layout/PromotionBanner";
 
 // Pages
 import Home from "@/pages/Home";
@@ -32,6 +33,9 @@ import Newsletter from "@/pages/Newsletter";
 import NotFound from "@/pages/NotFound";
 import AuthCallback from "@/pages/auth/callback"; // <-- enforce lowercase 'callback'
 import Cart from "@/pages/Cart";
+import FAQ from "@/pages/FAQ";
+import NewsletterUnsubscribe from "@/pages/NewsletterUnsubscribe";
+import EnhancedAuthPage from "@/pages/auth/EnhancedAuthPage";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";
@@ -56,6 +60,7 @@ import AdminOrderEdit from "@/pages/admin/ProductEdit";
 import AdminProductDetails from "@/pages/admin/AdminProductDetails";
 import OrderRefunds from "@/pages/admin/OrderRefunds";
 import AdminContact from "@/pages/admin/AdminContact";
+import AdminFAQ from "@/pages/admin/AdminFAQ";
 
 import "./index.css";
 
@@ -70,6 +75,7 @@ function App() {
                 {/* CXGenie Chat Widget for the appropriate section */}
                 <CxgenieChatWidget />
                 <div className="min-h-screen bg-background page-transition w-full">
+                  <PromotionBanner />
                   <MaintenanceBanner />
                   <OnlineStatus />
                   
@@ -87,9 +93,11 @@ function App() {
                     <Route path="/privacy" element={<Privacy />} />
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/newsletter" element={<Newsletter />} />
+                    <Route path="/faq" element={<FAQ />} />
+                    <Route path="/newsletter/unsubscribe" element={<NewsletterUnsubscribe />} />
                     
                     {/* Auth Pages */}
-                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/auth" element={<EnhancedAuthPage />} />
                     <Route path="/auth/callback" element={<AuthCallback />} />
                     
                     {/* User Dashboard - Fixed routing */}
@@ -217,6 +225,11 @@ function App() {
                     <Route path="/admin/barcodes" element={
                       <AdminRoute>
                         <AdminBarcodes />
+                      </AdminRoute>
+                    } />
+                    <Route path="/admin/faq" element={
+                      <AdminRoute>
+                        <AdminFAQ />
                       </AdminRoute>
                     } />
                     

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import {
   LogOut,
   Settings,
   Package,
-  Grid3X3
+  Shield
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/components/cart/CartProvider";
@@ -79,6 +80,12 @@ const Navbar = () => {
                   className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Categories
+                </Link>
+                <Link
+                  to="/faq"
+                  className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  FAQ
                 </Link>
                 <Link
                   to="/about"
@@ -161,14 +168,14 @@ const Navbar = () => {
                       <User className="h-5 w-5" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                  <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuItem onClick={() => navigate('/dashboard')}>
                       <Package className="mr-2 h-4 w-4" />
                       <span>Dashboard</span>
                     </DropdownMenuItem>
                     {isAdmin && (
                       <DropdownMenuItem onClick={() => navigate('/admin')}>
-                        <Settings className="mr-2 h-4 w-4" />
+                        <Shield className="mr-2 h-4 w-4" />
                         <span>Admin Panel</span>
                       </DropdownMenuItem>
                     )}
@@ -230,6 +237,13 @@ const Navbar = () => {
                 onClick={() => setIsOpen(false)}
               >
                 Categories
+              </Link>
+              <Link
+                to="/faq"
+                className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary block px-3 py-2 rounded-md text-base font-medium"
+                onClick={() => setIsOpen(false)}
+              >
+                FAQ
               </Link>
               <Link
                 to="/about"

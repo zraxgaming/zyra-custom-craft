@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,7 +21,6 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
-  const [testing, setTesting] = useState(false); // Add state for environment flag
 
   const handleInitiatePayment = async () => {
     if (amount <= 0) {
@@ -47,37 +47,41 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       }
 
       const ziinaApiKey = configData.value as string;
+      
+      // Convert amount to fils (AED smallest unit)
       const amountInFils = Math.round(amount * 100);
 
-      // Get environment flag
+      // Get environment flag - default to sandbox/test mode
       const { data: envData } = await supabase
         .from('site_config')
         .select('value')
         .eq('key', 'ziina_env')
         .single();
         
-      const ziinaEnv = envData?.value ?? 'test';
-      const isTesting = ziinaEnv !== 'prod';
-      setTesting(isTesting); // Save to state
+      const isTestMode = !envData?.value || envData.value !== 'production';
 
-      const ziinaEndpoint = isTesting
-        ? 'https://sandbox-api-v2.ziina.com/api/payment_intent'
-        : 'https://api-v2.ziina.com/api/payment_intent';
+      // Use sandbox endpoint for testing
+      const ziinaEndpoint = isTestMode
+        ? 'https://sandbox-api-v2.ziina.com/v1/payments'
+        : 'https://api-v2.ziina.com/v1/payments';
 
-      const body = {
+      const paymentPayload = {
         amount: amountInFils,
-        currency_code: "AED",
+        currency: "AED",
+        description: `Order #${orderPayload.orderId || "N/A"}`,
         metadata: {
-          ...(orderPayload.metadata || {}),
           order_id: orderPayload.orderId || "N/A",
-          test_mode: isTesting
+          customer_email: orderPayload.customerEmail || "",
+          test_mode: isTestMode
         },
-        success_url: `${window.location.origin}/order-success?source=ziina`,
-        cancel_url: `${window.location.origin}/order-failed?source=ziina&status=cancelled`,
-        failure_url: `${window.location.origin}/order-failed?source=ziina&status=failed`,
+        success_url: `${window.location.origin}/order-success?source=ziina&order_id=${orderPayload.orderId}`,
+        cancel_url: `${window.location.origin}/checkout?cancelled=true`,
+        webhook_url: `${window.location.origin}/api/ziina-webhook`
       };
 
-      console.log("Initiating Ziina Payment with payload:", body);
+      console.log("Initiating Ziina Payment with payload:", paymentPayload);
+      console.log("Using endpoint:", ziinaEndpoint);
+      console.log("Test mode:", isTestMode);
 
       const response = await fetch(ziinaEndpoint, {
         method: 'POST',
@@ -85,30 +89,48 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
           'Authorization': `Bearer ${ziinaApiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify(paymentPayload)
       });
 
       const responseData = await response.json();
+      console.log("Ziina API Response:", responseData);
 
       if (!response.ok) {
-        const errorMessage = responseData.message || responseData.error?.message || `Ziina API request failed with status ${response.status}`;
-        window.location.assign("/order-failed?source=ziina");
+        const errorMessage = responseData.message || 
+                           responseData.error?.message || 
+                           responseData.detail ||
+                           `Ziina API request failed with status ${response.status}`;
         throw new Error(errorMessage);
       }
 
-      const redirectUrl =
-        responseData.next_action_url ||
-        responseData.payment_url ||
-        responseData.redirect_url;
+      // Handle successful payment intent creation
+      const paymentUrl = responseData.payment_url || 
+                        responseData.checkout_url || 
+                        responseData.hosted_checkout_url ||
+                        responseData.redirect_url;
 
-      if (redirectUrl && responseData.id) {
+      if (paymentUrl && responseData.id) {
+        console.log("Redirecting to Ziina payment page:", paymentUrl);
         onSuccess(responseData);
-        window.location.assign(redirectUrl);
-      } else if (responseData.id && responseData.status === 'succeeded') {
-        onSuccess(responseData);
+        
+        // Store payment intent in order notes for tracking
+        if (orderPayload.orderId) {
+          await supabase
+            .from('orders')
+            .update({
+              notes: JSON.stringify({ 
+                ziina_payment_id: responseData.id,
+                ziina_payment_url: paymentUrl,
+                test_mode: isTestMode
+              })
+            })
+            .eq('id', orderPayload.orderId);
+        }
+
+        // Redirect to Ziina payment page
+        window.location.href = paymentUrl;
       } else {
-        window.location.assign("/order-failed?source=ziina&status=nourl");
-        throw new Error(responseData.message || "Failed to get payment redirection URL from Ziina.");
+        throw new Error("No payment URL received from Ziina API");
       }
 
     } catch (error: any) {
@@ -119,7 +141,6 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
         variant: "destructive",
       });
       onError(error.message || "Could not initiate Ziina payment.");
-      window.location.assign("/order-failed?source=ziina&status=exception");
     } finally {
       setIsProcessing(false);
     }
@@ -161,14 +182,8 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
           </Button>
 
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Secure payment powered by Ziina
+            Secure payment powered by Ziina • Test Mode
           </p>
-
-          {testing && (
-            <p className="text-sm text-yellow-600 font-medium mt-2">
-              ⚠️ Test Mode Active
-            </p>
-          )}
         </div>
       </CardContent>
     </Card>

@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Container } from "@/components/ui/container";
@@ -9,10 +9,41 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Search, HelpCircle, ChevronDown, ChevronRight } from "lucide-react";
 import SEOHead from "@/components/seo/SEOHead";
+import { supabase } from "@/integrations/supabase/client";
+
+interface FAQ {
+  id: string;
+  question: string;
+  answer: string;
+  category: string;
+}
 
 const FAQ = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [openItems, setOpenItems] = useState<number[]>([]);
+  const [faqs, setFaqs] = useState<FAQ[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchFAQs();
+  }, []);
+
+  const fetchFAQs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('faqs')
+        .select('*')
+        .eq('is_published', true)
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+      setFaqs(data || []);
+    } catch (error) {
+      console.error('Error fetching FAQs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleItem = (index: number) => {
     setOpenItems(prev => 
@@ -22,111 +53,58 @@ const FAQ = () => {
     );
   };
 
-  const faqCategories = [
-    {
-      category: "Orders & Shipping",
-      color: "from-blue-600 to-purple-600",
-      questions: [
-        {
-          question: "How long does shipping take?",
-          answer: "Standard shipping takes 3-5 business days within the US. International shipping takes 7-14 business days. Express shipping options are available for faster delivery."
-        },
-        {
-          question: "Can I track my order?",
-          answer: "Yes! Once your order ships, you'll receive a tracking number via email. You can also track your order in your account dashboard."
-        },
-        {
-          question: "What are your shipping costs?",
-          answer: "Shipping costs vary by location and speed. Standard US shipping is $5.99, free on orders over $50. International rates start at $12.99."
-        },
-        {
-          question: "Do you ship internationally?",
-          answer: "Yes, we ship to over 100 countries worldwide. Shipping costs and delivery times vary by destination."
-        }
-      ]
-    },
-    {
-      category: "Customization",
-      color: "from-purple-600 to-pink-600",
-      questions: [
-        {
-          question: "What products can be customized?",
-          answer: "Most of our products offer customization options including phone cases, mugs, t-shirts, hoodies, and accessories. Look for the 'Customizable' badge on product pages."
-        },
-        {
-          question: "What file formats do you accept for custom images?",
-          answer: "We accept JPG, PNG, SVG, and PDF files. For best quality, use high-resolution images (300 DPI or higher)."
-        },
-        {
-          question: "Can I preview my custom design before ordering?",
-          answer: "Absolutely! Our live preview tool shows exactly how your design will look on the product before you add it to cart."
-        },
-        {
-          question: "Are there any restrictions on custom text or images?",
-          answer: "We don't allow copyrighted content, offensive material, or low-quality images. Our team reviews all custom orders to ensure quality standards."
-        }
-      ]
-    },
-    {
-      category: "Returns & Refunds",
-      color: "from-pink-600 to-red-600",
-      questions: [
-        {
-          question: "What's your return policy?",
-          answer: "We offer 30-day returns for non-customized items in original condition. Custom products have a 7-day return window for manufacturing defects only."
-        },
-        {
-          question: "How do I start a return?",
-          answer: "Log into your account, go to 'My Orders', and click 'Return Item' next to the product. Follow the prompts to generate a return label."
-        },
-        {
-          question: "When will I receive my refund?",
-          answer: "Refunds are processed within 3-5 business days after we receive your returned item. The refund will appear on your original payment method within 5-10 business days."
-        },
-        {
-          question: "Who pays for return shipping?",
-          answer: "We provide free return labels for defective items. For other returns, customers are responsible for return shipping costs."
-        }
-      ]
-    },
-    {
-      category: "Account & Payment",
-      color: "from-green-600 to-blue-600",
-      questions: [
-        {
-          question: "What payment methods do you accept?",
-          answer: "We accept all major credit cards, PayPal, Ziina, Apple Pay, and Google Pay. All transactions are secured with SSL encryption."
-        },
-        {
-          question: "Do I need an account to place an order?",
-          answer: "You can checkout as a guest, but creating an account lets you track orders, save designs, and access exclusive member benefits."
-        },
-        {
-          question: "How do I reset my password?",
-          answer: "Click 'Forgot Password' on the login page, enter your email, and we'll send you a reset link. The link expires in 24 hours for security."
-        },
-        {
-          question: "Can I change my order after placing it?",
-          answer: "You can modify or cancel orders within 1 hour of placement. After that, contact our support team and we'll do our best to help."
-        }
-      ]
+  // Group FAQs by category
+  const faqsByCategory = faqs.reduce((acc, faq) => {
+    if (!acc[faq.category]) {
+      acc[faq.category] = [];
     }
-  ];
+    acc[faq.category].push(faq);
+    return acc;
+  }, {} as Record<string, FAQ[]>);
 
-  const filteredFAQs = faqCategories.map(category => ({
-    ...category,
-    questions: category.questions.filter(
+  // Filter FAQs based on search term
+  const filteredFAQs = Object.entries(faqsByCategory).reduce((acc, [category, categoryFaqs]) => {
+    const filtered = categoryFaqs.filter(
       faq => 
         faq.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
         faq.answer.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  })).filter(category => category.questions.length > 0);
+    );
+    if (filtered.length > 0) {
+      acc[category] = filtered;
+    }
+    return acc;
+  }, {} as Record<string, FAQ[]>);
+
+  if (loading) {
+    return (
+      <>
+        <SEOHead 
+          title="FAQ - Frequently Asked Questions | Zyra"
+          description="Find answers to common questions about Zyra's custom products, shipping, returns, and more."
+          keywords="faq, help, support, questions, shipping, returns, customization"
+          url="https://shopzyra.vercel.app/faq"
+        />
+        <div className="min-h-screen bg-background">
+          <Navbar />
+          <Container className="py-12">
+            <div className="text-center">
+              <div className="animate-pulse space-y-4">
+                <div className="h-8 bg-muted rounded w-1/3 mx-auto"></div>
+                <div className="h-4 bg-muted rounded w-2/3 mx-auto"></div>
+              </div>
+            </div>
+          </Container>
+          <Footer />
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
       <SEOHead 
         title="FAQ - Frequently Asked Questions | Zyra"
-        description="Find answers to common questions about Zyra's custom products, shipping, returns, and more. Get help with your order today."
+        description="Find answers to common questions about Zyra's custom products, shipping, returns, and more."
         keywords="faq, help, support, questions, shipping, returns, customization"
         url="https://shopzyra.vercel.app/faq"
       />
@@ -179,23 +157,23 @@ const FAQ = () => {
         <section className="py-16">
           <Container>
             <div className="space-y-12">
-              {filteredFAQs.map((category, categoryIndex) => (
+              {Object.entries(filteredFAQs).map(([category, categoryFaqs], categoryIndex) => (
                 <div key={categoryIndex} className="animate-fade-in" style={{ animationDelay: `${categoryIndex * 100}ms` }}>
                   <div className="text-center mb-8">
-                    <Badge className={`mb-4 bg-gradient-to-r ${category.color} text-white`}>
-                      {category.category}
+                    <Badge className="mb-4 bg-gradient-to-r from-primary to-purple-600 text-white">
+                      {category}
                     </Badge>
-                    <h2 className="text-3xl font-bold text-foreground">{category.category}</h2>
+                    <h2 className="text-3xl font-bold text-foreground">{category}</h2>
                   </div>
                   
                   <div className="max-w-4xl mx-auto space-y-4">
-                    {category.questions.map((faq, index) => {
+                    {categoryFaqs.map((faq, index) => {
                       const globalIndex = categoryIndex * 100 + index;
                       const isOpen = openItems.includes(globalIndex);
                       
                       return (
                         <Card 
-                          key={index} 
+                          key={faq.id} 
                           className="bg-card/50 backdrop-blur-sm border border-border/50 hover:shadow-lg transition-all duration-300 animate-slide-in-right"
                           style={{ animationDelay: `${index * 50}ms` }}
                         >
@@ -234,7 +212,7 @@ const FAQ = () => {
               ))}
             </div>
 
-            {filteredFAQs.length === 0 && (
+            {Object.keys(filteredFAQs).length === 0 && (
               <div className="text-center py-12 animate-fade-in">
                 <HelpCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-2xl font-semibold mb-2 text-foreground">No results found</h3>
