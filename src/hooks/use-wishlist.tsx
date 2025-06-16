@@ -9,6 +9,7 @@ interface WishlistItem {
   product_id: string;
   name: string;
   price: number;
+  image_url?: string;
   images?: string[];
 }
 
@@ -61,6 +62,9 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
         product_id: item.product_id,
         name: item.products?.name || 'Unknown Product',
         price: item.products?.price || 0,
+        image_url: Array.isArray(item.products?.images) && item.products.images.length > 0 
+          ? item.products.images[0] 
+          : '/placeholder-product.jpg',
         images: Array.isArray(item.products?.images) 
           ? item.products.images.filter((img): img is string => typeof img === 'string')
           : []
@@ -69,6 +73,11 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
       setItems(wishlistItems);
     } catch (error) {
       console.error('Error loading wishlist:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load wishlist",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
