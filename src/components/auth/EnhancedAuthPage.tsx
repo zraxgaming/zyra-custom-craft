@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +23,8 @@ const EnhancedAuthPage = () => {
     firstName: "",
     lastName: ""
   });
+  const [resetEmail, setResetEmail] = useState("");
+  const [magicLinkEmail, setMagicLinkEmail] = useState("");
   
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
@@ -78,11 +79,12 @@ const EnhancedAuthPage = () => {
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (!signInData.email) {
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) {
       toast({
         title: "Email Required",
-        description: "Please enter your email address first.",
+        description: "Please enter your email address.",
         variant: "destructive",
       });
       return;
@@ -90,7 +92,7 @@ const EnhancedAuthPage = () => {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(signInData.email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: `${window.location.origin}/auth?reset=true`,
       });
       
@@ -100,6 +102,7 @@ const EnhancedAuthPage = () => {
         title: "Reset Email Sent",
         description: "Check your email for password reset instructions.",
       });
+      setResetEmail("");
     } catch (error: any) {
       toast({
         title: "Reset Failed",
@@ -111,11 +114,12 @@ const EnhancedAuthPage = () => {
     }
   };
 
-  const handleMagicLink = async () => {
-    if (!signInData.email) {
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!magicLinkEmail) {
       toast({
         title: "Email Required",
-        description: "Please enter your email address first.",
+        description: "Please enter your email address.",
         variant: "destructive",
       });
       return;
@@ -124,7 +128,7 @@ const EnhancedAuthPage = () => {
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOtp({
-        email: signInData.email,
+        email: magicLinkEmail,
         options: {
           emailRedirectTo: `${window.location.origin}/dashboard`,
         }
@@ -136,6 +140,7 @@ const EnhancedAuthPage = () => {
         title: "Magic Link Sent",
         description: "Check your email for the magic sign-in link.",
       });
+      setMagicLinkEmail("");
     } catch (error: any) {
       toast({
         title: "Magic Link Failed",
@@ -177,9 +182,11 @@ const EnhancedAuthPage = () => {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-8 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
-                <TabsTrigger value="signin" className="rounded-lg">Sign In</TabsTrigger>
-                <TabsTrigger value="signup" className="rounded-lg">Sign Up</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-4 mb-8 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+                <TabsTrigger value="signin" className="rounded-lg text-xs">Sign In</TabsTrigger>
+                <TabsTrigger value="signup" className="rounded-lg text-xs">Sign Up</TabsTrigger>
+                <TabsTrigger value="reset" className="rounded-lg text-xs">Reset</TabsTrigger>
+                <TabsTrigger value="magic" className="rounded-lg text-xs">Magic Link</TabsTrigger>
               </TabsList>
 
               <TabsContent value="signin" className="space-y-6">
@@ -224,26 +231,6 @@ const EnhancedAuthPage = () => {
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
-                    </div>
-                    
-                    {/* Reset and Magic Link options */}
-                    <div className="flex flex-col gap-2 mt-2">
-                      <button
-                        type="button"
-                        onClick={handleForgotPassword}
-                        className="text-sm text-blue-600 hover:text-blue-800 text-left"
-                        disabled={isLoading}
-                      >
-                        Forgot your password?
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleMagicLink}
-                        className="text-sm text-purple-600 hover:text-purple-800 text-left"
-                        disabled={isLoading}
-                      >
-                        Send magic link instead
-                      </button>
                     </div>
                   </div>
                   
@@ -379,6 +366,62 @@ const EnhancedAuthPage = () => {
                         <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                       </div>
                     )}
+                  </Button>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="reset" className="space-y-6">
+                <form onSubmit={handleForgotPassword} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-email" className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                      <Mail className="h-4 w-4" />
+                      Email Address
+                    </Label>
+                    <Input
+                      id="reset-email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      required
+                      className="h-12 bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-300 rounded-xl"
+                    />
+                  </div>
+                  
+                  <Button 
+                    type="submit" 
+                    className="w-full h-12 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300" 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Sending...' : 'Send Reset Email'}
+                  </Button>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="magic" className="space-y-6">
+                <form onSubmit={handleMagicLink} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="magic-email" className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                      <Mail className="h-4 w-4" />
+                      Email Address
+                    </Label>
+                    <Input
+                      id="magic-email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={magicLinkEmail}
+                      onChange={(e) => setMagicLinkEmail(e.target.value)}
+                      required
+                      className="h-12 bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-300 rounded-xl"
+                    />
+                  </div>
+                  
+                  <Button 
+                    type="submit" 
+                    className="w-full h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300" 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Sending...' : 'Send Magic Link'}
                   </Button>
                 </form>
               </TabsContent>
