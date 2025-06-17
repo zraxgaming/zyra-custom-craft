@@ -9,6 +9,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Container } from "@/components/ui/container";
 import SEOHead from "@/components/seo/SEOHead";
+import { toast } from "@/components/ui/use-toast";
 
 const OrderSuccess = () => {
   const { orderId } = useParams();
@@ -22,6 +23,28 @@ const OrderSuccess = () => {
     }
     localStorage.removeItem('pending_payment');
   }, [orderId]);
+
+  useEffect(() => {
+    if (order && order.profiles?.email) {
+      // Send order confirmation email to user
+      import('@/utils/resend').then(({ sendOrderEmail }) => {
+        sendOrderEmail({
+          to: order.profiles.email,
+          subject: `Order Confirmation - Zyra Custom Craft #${order.id.slice(-8)}`,
+          html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+            <h2 style="color:#7c3aed;">Thank you for your order!</h2>
+            <p>Your order <b>#${order.id.slice(-8)}</b> has been received and is being processed.</p>
+            <p><b>Total:</b> $${order.total_amount.toFixed(2)}</p>
+            <p>We'll notify you when your order ships.</p>
+            <hr />
+            <p style="font-size:13px;color:#888;">Zyra Custom Craft</p>
+          </div>`
+        })
+        .then(() => toast({ title: 'Confirmation email sent', description: 'Check your inbox for order details.' }))
+        .catch((err) => toast({ title: 'Email failed', description: err.message, variant: 'destructive' }));
+      });
+    }
+  }, [order]);
 
   const fetchOrderDetails = async () => {
     try {

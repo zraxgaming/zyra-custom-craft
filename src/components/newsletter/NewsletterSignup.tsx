@@ -47,6 +47,18 @@ const NewsletterSignup = () => {
   </div>
 </div>`
       });
+      // Send confirmation to user
+      await sendOrderEmail({
+        to: email,
+        subject: 'You are subscribed to Zyra Custom Craft!',
+        html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+          <h2 style="color:#7c3aed;">Welcome to the Zyra Newsletter!</h2>
+          <p>Thank you for subscribing, ${name || 'friend'}.</p>
+          <p>You'll now receive updates, offers, and news from us.</p>
+          <hr />
+          <p style="font-size:13px;color:#888;">Zyra Custom Craft</p>
+        </div>`
+      });
       const { error } = await supabase
         .from("newsletter_subscriptions")
         .insert({

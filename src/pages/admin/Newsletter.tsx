@@ -152,11 +152,35 @@ const AdminNewsletter = () => {
 
       // Send newsletter to all subscribers using resend batch
       if (subscribers.length > 0) {
-        await sendBatchNewsletter(subscribers.map(sub => ({
-          to: sub.email,
-          subject: newsletter.subject,
-          html: newsletter.html_content || newsletter.content
-        })));
+        const results = await Promise.allSettled(subscribers.map(sub =>
+          sendOrderEmail({
+            to: sub.email,
+            subject: newsletter.subject,
+            html: newsletter.html_content || newsletter.content
+          })
+        ));
+        let successCount = 0;
+        let failCount = 0;
+        results.forEach((result, idx) => {
+          if (result.status === 'fulfilled') {
+            successCount++;
+            toast({
+              title: `Email sent`,
+              description: `Newsletter sent to ${subscribers[idx].email}`
+            });
+          } else {
+            failCount++;
+            toast({
+              title: `Failed to send`,
+              description: `Could not send to ${subscribers[idx].email}`,
+              variant: 'destructive'
+            });
+          }
+        });
+        toast({
+          title: 'Batch complete',
+          description: `${successCount} sent, ${failCount} failed.`
+        });
       }
 
       await supabase

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,6 @@ const OrderConfirmation = () => {
         navigate("/");
         return;
       }
-
       try {
         const { data, error } = await supabase
           .from("orders")
@@ -46,9 +44,7 @@ const OrderConfirmation = () => {
           `)
           .eq("id", orderId)
           .single();
-
         if (error) throw error;
-
         setOrder(data);
       } catch (error: any) {
         console.error("Error fetching order:", error);
@@ -62,9 +58,29 @@ const OrderConfirmation = () => {
         setIsLoading(false);
       }
     };
-
     fetchOrder();
   }, [orderId, navigate, toast]);
+
+  useEffect(() => {
+    if (order && order.profiles?.email) {
+      import('@/utils/resend').then(({ sendOrderEmail }) => {
+        sendOrderEmail({
+          to: order.profiles.email,
+          subject: `Order Confirmation - Zyra Custom Craft #${order.id.slice(-8)}`,
+          html: `<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;\">
+            <h2 style=\"color:#7c3aed;\">Thank you for your order!</h2>
+            <p>Your order <b>#${order.id.slice(-8)}</b> has been received and is being processed.</p>
+            <p><b>Total:</b> $${order.total_amount.toFixed(2)}</p>
+            <p>We'll notify you when your order ships.</p>
+            <hr />
+            <p style=\"font-size:13px;color:#888;\">Zyra Custom Craft</p>
+          </div>`
+        })
+        .then(() => toast({ title: 'Confirmation email sent', description: 'Check your inbox for order details.' }))
+        .catch((err) => toast({ title: 'Email failed', description: err.message, variant: 'destructive' }));
+      });
+    }
+  }, [order]);
 
   if (isLoading) {
     return (
