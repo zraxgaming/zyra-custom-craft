@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,9 +16,12 @@ const Orders = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      fetchOrders();
+    if (!user) {
+      setLoading(false);
+      setOrders([]);
+      return;
     }
+    fetchOrders();
   }, [user]);
 
   const fetchOrders = async () => {
@@ -93,6 +95,23 @@ const Orders = () => {
       <div className="flex items-center justify-center p-8 animate-fade-in">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Card className="animate-fade-in">
+        <CardContent className="text-center py-12">
+          <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground animate-bounce" />
+          <h3 className="text-lg font-semibold mb-2">Sign in to view your orders</h3>
+          <p className="text-muted-foreground mb-6">
+            Please sign in to your account to view your order history.
+          </p>
+          <Button onClick={() => window.location.href = '/auth'} className="animate-pulse">
+            Sign In
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 

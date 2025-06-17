@@ -22,8 +22,10 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
   const { toast } = useToast();
   const [testing, setTesting] = useState(false); // Add state for environment flag
 
+  const TEST_MODE = true; // Set to false for real payments
+
   const handleInitiatePayment = async () => {
-    if (amount <= 0) {
+    if (amount <= 0 && !TEST_MODE) {
       toast({
         title: "Invalid Amount",
         description: "Payment amount must be greater than zero.",
@@ -47,20 +49,25 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       }
 
       const ziinaApiKey = configData.value as string;
-      const amountInFils = Math.round(amount * 100);
       const ziinaEndpoint = 'https://api-v2.ziina.com/api/payment_intent'; // Always use sandbox for testing
 
-      const body = {
-        amount: amountInFils,
-        currency_code: "AED",
-        metadata: {
-          order_id: orderPayload.orderId || "N/A",
-          test_mode: true
-        },
-        success_url: `${window.location.origin}/order-success?source=ziina`,
-        cancel_url: `${window.location.origin}/order-failed?source=ziina&status=cancelled`,
-        failure_url: `${window.location.origin}/order-failed?source=ziina&status=failed`
-      };
+      let body;
+      if (TEST_MODE) {
+        body = { test: true };
+      } else {
+        const amountInFils = Math.round(amount * 100);
+        const body: any = {
+          amount: amountInFils,
+          currency_code: "AED",
+          success_url: `${window.location.origin}/order-success?source=ziina`,
+          cancel_url: `${window.location.origin}/order-failed?source=ziina&status=cancelled`,
+          failure_url: `${window.location.origin}/order-failed?source=ziina&status=failed`,
+          metadata: {
+            order_id: String(orderPayload.orderId || orderPayload.id || "test-order")
+          },
+          ...(TEST_MODE ? { test: true } : {})
+        };
+      }
 
       console.log("Initiating Ziina Payment with payload:", body);
 
@@ -74,6 +81,14 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
       });
 
       const responseData = await response.json();
+
+      if (TEST_MODE) {
+        toast({
+          title: "Ziina Test Response",
+          description: JSON.stringify(responseData),
+        });
+        // Continue with normal flow for test mode
+      }
 
       if (!response.ok) {
         const errorMessage = responseData.message || responseData.error?.message || `Ziina API request failed with status ${response.status}`;
