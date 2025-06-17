@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { sendEmailDirect } from '@/utils/sendgrid';
+import { sendOrderEmail } from '@/utils/resend';
 
 const Newsletter: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -13,11 +13,24 @@ const Newsletter: React.FC = () => {
   const handleSubscribe = async () => {
     setLoading(true);
     try {
-      // Send notification email to admin
-      await sendEmailDirect({
+      await sendOrderEmail({
         to: 'zainabusal113@gmail.com',
         subject: 'New Newsletter Subscription',
-        html: `<p>New subscriber: <strong>${email}</strong></p>`
+        html: `
+<div style="font-family: 'Segoe UI', sans-serif; background: linear-gradient(to bottom right, #6c4dc1, #b974e6); padding: 24px; color: #ffffff;">
+  <div style="max-width: 600px; margin: auto; background: #ffffff; color: #333333; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);">
+    <div style="background-color: #7c3aed; padding: 20px; text-align: center">
+      <img src="https://shopzyra.vercel.app/favicon.ico" alt="Zyra Logo" style="height: 40px; margin-bottom: 8px" />
+      <h2 style="margin: 0; font-size: 20px; color: #ffffff">📰 New Newsletter Subscriber</h2>
+    </div>
+    <div style="padding: 24px; font-size: 15px">
+      <p><strong>Email:</strong> ${email}</p>
+    </div>
+    <div style="background-color: #f9f9f9; text-align: center; font-size: 13px; color: #888; padding: 16px;">
+      Sent from <a href="mailto:${email}" style="color: #7c3aed">${email}</a>
+    </div>
+  </div>
+</div>`
       });
       const res = await fetch('/api/newsletter', {
         method: 'POST',

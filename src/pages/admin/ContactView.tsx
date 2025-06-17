@@ -26,7 +26,7 @@ const ContactView = () => {
   // Redirect if not admin
   useEffect(() => {
     if (user && !isAdmin) {
-      navigate("/");
+      navigate("/home");
       toast({
         title: "Access denied",
         description: "You don't have permission to access this page.",

@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Mail, Send, Users, Plus, Phone } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import PhoneCallInterface from "@/components/admin/PhoneCallInterface";
-import { sendEmailDirect } from '@/utils/sendgrid';
+import { sendOrderEmail, sendBatchNewsletter } from '@/utils/resend';
 import SEOHead from "@/components/seo/SEOHead";
 
 interface Newsletter {
@@ -129,21 +129,35 @@ const AdminNewsletter = () => {
       if (!newsletter) return;
 
       // Notify admin
-      await sendEmailDirect({
+      await sendOrderEmail({
         to: 'zainabusal113@gmail.com',
         subject: `Newsletter Sent: ${newsletter.subject}`,
-        html: `<p>The following newsletter was sent to all subscribers:</p><p><strong>Subject:</strong> ${newsletter.subject}</p><div>${newsletter.html_content || newsletter.content}</div>`
+        html: `
+<div style="font-family: 'Segoe UI', sans-serif; background: linear-gradient(to bottom right, #6c4dc1, #b974e6); padding: 24px; color: #ffffff;">
+  <div style="max-width: 600px; margin: auto; background: #ffffff; color: #333333; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);">
+    <div style="background-color: #7c3aed; padding: 20px; text-align: center">
+      <img src="https://shopzyra.vercel.app/favicon.ico" alt="Zyra Logo" style="height: 40px; margin-bottom: 8px" />
+      <h2 style="margin: 0; font-size: 20px; color: #ffffff">📰 Newsletter Sent</h2>
+    </div>
+    <div style="padding: 24px; font-size: 15px">
+      <p><strong>Subject:</strong> ${newsletter.subject}</p>
+      <div>${newsletter.html_content || newsletter.content}</div>
+    </div>
+    <div style="background-color: #f9f9f9; text-align: center; font-size: 13px; color: #888; padding: 16px;">
+      Sent to all subscribers • <a href="https://shopzyra.vercel.app" style="color: #7c3aed">shopzyra.com</a>
+    </div>
+  </div>
+</div>`
       });
 
-      const { error } = await supabase.functions.invoke('send-newsletter', {
-        body: {
+      // Send newsletter to all subscribers using resend batch
+      if (subscribers.length > 0) {
+        await sendBatchNewsletter(subscribers.map(sub => ({
+          to: sub.email,
           subject: newsletter.subject,
-          content: newsletter.content,
-          htmlContent: newsletter.html_content
-        }
-      });
-
-      if (error) throw error;
+          html: newsletter.html_content || newsletter.content
+        })));
+      }
 
       await supabase
         .from('email_campaigns')

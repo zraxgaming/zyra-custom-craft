@@ -35,7 +35,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 
     setIsProcessing(true);
     try {
-      // Get Ziina API key from site_config
+      // Always fetch the API key from supabase, but use sandbox endpoint for testing
       const { data: configData, error: configError } = await supabase
         .from('site_config')
         .select('value')
@@ -48,33 +48,18 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 
       const ziinaApiKey = configData.value as string;
       const amountInFils = Math.round(amount * 100);
-
-      // Get environment flag
-      const { data: envData } = await supabase
-        .from('site_config')
-        .select('value')
-        .eq('key', 'ziina_env')
-        .single();
-        
-      const ziinaEnv = envData?.value ?? 'test';
-      const isTesting = ziinaEnv !== 'prod';
-      setTesting(isTesting); // Save to state
-
-      const ziinaEndpoint = isTesting
-        ? 'https://sandbox-api-v2.ziina.com/api/payment_intent'
-        : 'https://api-v2.ziina.com/api/payment_intent';
+      const ziinaEndpoint = 'https://sandbox-api-v2.ziina.com/api/payment_intent'; // Always use sandbox for testing
 
       const body = {
         amount: amountInFils,
         currency_code: "AED",
         metadata: {
-          ...(orderPayload.metadata || {}),
           order_id: orderPayload.orderId || "N/A",
-          test_mode: isTesting
+          test_mode: true
         },
         success_url: `${window.location.origin}/order-success?source=ziina`,
         cancel_url: `${window.location.origin}/order-failed?source=ziina&status=cancelled`,
-        failure_url: `${window.location.origin}/order-failed?source=ziina&status=failed`,
+        failure_url: `${window.location.origin}/order-failed?source=ziina&status=failed`
       };
 
       console.log("Initiating Ziina Payment with payload:", body);
