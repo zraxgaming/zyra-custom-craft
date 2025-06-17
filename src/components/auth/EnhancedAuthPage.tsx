@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -9,20 +8,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-
 const EnhancedAuthPage = () => {
-  const { signIn, signUp } = useAuth();
-  const { toast } = useToast();
+  const {
+    signIn,
+    signUp
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [magicLinkEmail, setMagicLinkEmail] = useState('');
-
   const [signInData, setSignInData] = useState({
     email: '',
     password: ''
   });
-
   const [signUpData, setSignUpData] = useState({
     email: '',
     password: '',
@@ -30,13 +31,15 @@ const EnhancedAuthPage = () => {
     lastName: '',
     phone: ''
   });
-
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       await signIn(signInData.email, signInData.password);
-      toast({ title: "Success", description: "Signed in successfully!" });
+      toast({
+        title: "Success",
+        description: "Signed in successfully!"
+      });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -47,7 +50,6 @@ const EnhancedAuthPage = () => {
       setLoading(false);
     }
   };
-
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -57,9 +59,9 @@ const EnhancedAuthPage = () => {
         last_name: signUpData.lastName,
         phone: signUpData.phone
       });
-      toast({ 
-        title: "Success", 
-        description: "Account created! Please check your email to verify your account." 
+      toast({
+        title: "Success",
+        description: "Account created! Please check your email to verify your account."
       });
     } catch (error: any) {
       toast({
@@ -71,7 +73,6 @@ const EnhancedAuthPage = () => {
       setLoading(false);
     }
   };
-
   const handlePasswordReset = async () => {
     if (!resetEmail) {
       toast({
@@ -81,15 +82,14 @@ const EnhancedAuthPage = () => {
       });
       return;
     }
-
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+      const {
+        error
+      } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: `${window.location.origin}/auth/reset-password`
       });
-
       if (error) throw error;
-
       toast({
         title: "Success",
         description: "Password reset link sent to your email!"
@@ -105,7 +105,6 @@ const EnhancedAuthPage = () => {
       setLoading(false);
     }
   };
-
   const handleMagicLink = async () => {
     if (!magicLinkEmail) {
       toast({
@@ -115,18 +114,17 @@ const EnhancedAuthPage = () => {
       });
       return;
     }
-
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
+      const {
+        error
+      } = await supabase.auth.signInWithOtp({
         email: magicLinkEmail,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`
         }
       });
-
       if (error) throw error;
-
       toast({
         title: "Success",
         description: "Magic link sent to your email!"
@@ -142,9 +140,7 @@ const EnhancedAuthPage = () => {
       setLoading(false);
     }
   };
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background p-4">
+  return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background p-4">
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
@@ -165,15 +161,10 @@ const EnhancedAuthPage = () => {
                   <Label htmlFor="signin-email">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="signin-email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={signInData.email}
-                      onChange={(e) => setSignInData(prev => ({ ...prev, email: e.target.value }))}
-                      className="pl-10"
-                      required
-                    />
+                    <Input id="signin-email" type="email" placeholder="Enter your email" value={signInData.email} onChange={e => setSignInData(prev => ({
+                    ...prev,
+                    email: e.target.value
+                  }))} className="pl-10" required />
                   </div>
                 </div>
 
@@ -181,22 +172,11 @@ const EnhancedAuthPage = () => {
                   <Label htmlFor="signin-password">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="signin-password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
-                      value={signInData.password}
-                      onChange={(e) => setSignInData(prev => ({ ...prev, password: e.target.value }))}
-                      className="pl-10 pr-10"
-                      required
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 h-auto"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
+                    <Input id="signin-password" type={showPassword ? "text" : "password"} placeholder="Enter your password" value={signInData.password} onChange={e => setSignInData(prev => ({
+                    ...prev,
+                    password: e.target.value
+                  }))} className="pl-10 pr-10" required />
+                    <Button type="button" variant="ghost" size="sm" className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 h-auto" onClick={() => setShowPassword(!showPassword)}>
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
@@ -204,24 +184,16 @@ const EnhancedAuthPage = () => {
 
                 <div className="space-y-3">
                   <div className="flex flex-col space-y-2 text-sm">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setResetEmail(signInData.email);
-                        handlePasswordReset();
-                      }}
-                      className="text-primary hover:underline text-left"
-                    >
+                    <button type="button" onClick={() => {
+                    setResetEmail(signInData.email);
+                    handlePasswordReset();
+                  }} className="text-primary hover:underline text-center">
                       Forgot your password?
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMagicLinkEmail(signInData.email);
-                        handleMagicLink();
-                      }}
-                      className="text-primary hover:underline text-left"
-                    >
+                    <button type="button" onClick={() => {
+                    setMagicLinkEmail(signInData.email);
+                    handleMagicLink();
+                  }} className="text-primary hover:underline text-center font-light text-base">
                       Send magic link instead
                     </button>
                   </div>
@@ -240,25 +212,18 @@ const EnhancedAuthPage = () => {
                     <Label htmlFor="signup-firstname">First Name</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-firstname"
-                        placeholder="First name"
-                        value={signUpData.firstName}
-                        onChange={(e) => setSignUpData(prev => ({ ...prev, firstName: e.target.value }))}
-                        className="pl-10"
-                        required
-                      />
+                      <Input id="signup-firstname" placeholder="First name" value={signUpData.firstName} onChange={e => setSignUpData(prev => ({
+                      ...prev,
+                      firstName: e.target.value
+                    }))} className="pl-10" required />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-lastname">Last Name</Label>
-                    <Input
-                      id="signup-lastname"
-                      placeholder="Last name"
-                      value={signUpData.lastName}
-                      onChange={(e) => setSignUpData(prev => ({ ...prev, lastName: e.target.value }))}
-                      required
-                    />
+                    <Input id="signup-lastname" placeholder="Last name" value={signUpData.lastName} onChange={e => setSignUpData(prev => ({
+                    ...prev,
+                    lastName: e.target.value
+                  }))} required />
                   </div>
                 </div>
 
@@ -266,15 +231,10 @@ const EnhancedAuthPage = () => {
                   <Label htmlFor="signup-email">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={signUpData.email}
-                      onChange={(e) => setSignUpData(prev => ({ ...prev, email: e.target.value }))}
-                      className="pl-10"
-                      required
-                    />
+                    <Input id="signup-email" type="email" placeholder="Enter your email" value={signUpData.email} onChange={e => setSignUpData(prev => ({
+                    ...prev,
+                    email: e.target.value
+                  }))} className="pl-10" required />
                   </div>
                 </div>
 
@@ -282,14 +242,10 @@ const EnhancedAuthPage = () => {
                   <Label htmlFor="signup-phone">Phone (Optional)</Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="signup-phone"
-                      type="tel"
-                      placeholder="Enter your phone number"
-                      value={signUpData.phone}
-                      onChange={(e) => setSignUpData(prev => ({ ...prev, phone: e.target.value }))}
-                      className="pl-10"
-                    />
+                    <Input id="signup-phone" type="tel" placeholder="Enter your phone number" value={signUpData.phone} onChange={e => setSignUpData(prev => ({
+                    ...prev,
+                    phone: e.target.value
+                  }))} className="pl-10" />
                   </div>
                 </div>
 
@@ -297,22 +253,11 @@ const EnhancedAuthPage = () => {
                   <Label htmlFor="signup-password">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="signup-password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Create a password"
-                      value={signUpData.password}
-                      onChange={(e) => setSignUpData(prev => ({ ...prev, password: e.target.value }))}
-                      className="pl-10 pr-10"
-                      required
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 h-auto"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
+                    <Input id="signup-password" type={showPassword ? "text" : "password"} placeholder="Create a password" value={signUpData.password} onChange={e => setSignUpData(prev => ({
+                    ...prev,
+                    password: e.target.value
+                  }))} className="pl-10 pr-10" required />
+                    <Button type="button" variant="ghost" size="sm" className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 h-auto" onClick={() => setShowPassword(!showPassword)}>
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
@@ -326,8 +271,6 @@ const EnhancedAuthPage = () => {
           </Tabs>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 };
-
 export default EnhancedAuthPage;
