@@ -145,6 +145,10 @@ const SearchBar = () => {
                           src={product.images[0]}
                           alt={product.name}
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = '/placeholder-product.jpg';
+                          }}
                         />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-500/20" />

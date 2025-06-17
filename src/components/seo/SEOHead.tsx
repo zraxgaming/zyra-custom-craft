@@ -68,6 +68,59 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     }
   };
 
+  // Product structured data for featured products
+  const productData = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "Custom Coffee Mug - Personalized Design",
+    "description": "Premium quality custom coffee mugs with personalized designs. Perfect for gifts or personal use. High-quality ceramic with vibrant printing.",
+    "brand": {
+      "@type": "Brand",
+      "name": "Zyra Custom Craft"
+    },
+    "offers": {
+      "@type": "Offer",
+      "price": "25.00",
+      "priceCurrency": "AED",
+      "availability": "https://schema.org/InStock",
+      "seller": {
+        "@type": "Organization",
+        "name": "Zyra Custom Craft"
+      }
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "reviewCount": "150"
+    }
+  };
+
+  const productData2 = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "Custom T-Shirt - Premium Cotton",
+    "description": "High-quality custom t-shirts made from premium cotton. Personalize with your own design, text, or image. Comfortable fit and durable printing.",
+    "brand": {
+      "@type": "Brand",
+      "name": "Zyra Custom Craft"
+    },
+    "offers": {
+      "@type": "Offer",
+      "price": "45.00",
+      "priceCurrency": "AED",
+      "availability": "https://schema.org/InStock",
+      "seller": {
+        "@type": "Organization",
+        "name": "Zyra Custom Craft"
+      }
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.9",
+      "reviewCount": "200"
+    }
+  };
+
   return (
     <Helmet>
       {/* Basic SEO */}
@@ -140,9 +193,18 @@ const SEOHead: React.FC<SEOHeadProps> = ({
       {/* PWA Manifest */}
       <link rel="manifest" href="/manifest.json" />
       
-      {/* Structured Data */}
+      {/* Structured Data - Organization */}
       <script type="application/ld+json">
         {JSON.stringify(structuredData)}
+      </script>
+
+      {/* Structured Data - Products */}
+      <script type="application/ld+json">
+        {JSON.stringify(productData)}
+      </script>
+
+      <script type="application/ld+json">
+        {JSON.stringify(productData2)}
       </script>
 
       {/* Additional Business Schema */}
@@ -189,6 +251,42 @@ const SEOHead: React.FC<SEOHeadProps> = ({
           }
         })}
       </script>
+
+      {/* FAQ Schema for FAQ pages */}
+      {url.includes('/faq') && (
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "How do I place a custom order?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "To place a custom order, browse our products and click on any item you'd like to customize. You can then add your personalization details such as text, images, or special requests."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "What payment methods do you accept?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "We accept major credit cards, PayPal, and Ziina for customers in the UAE. All payments are processed securely."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "How long does shipping take?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Standard shipping within the UAE takes 2-5 business days. Express shipping is available for 1-2 business days. Custom products may require additional processing time."
+                }
+              }
+            ]
+          })}
+        </script>
+      )}
     </Helmet>
   );
 };

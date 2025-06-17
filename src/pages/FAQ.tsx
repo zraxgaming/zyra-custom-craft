@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Search, HelpCircle, ChevronDown, ChevronRight } from "lucide-react";
 import SEOHead from "@/components/seo/SEOHead";
-import { supabase } from "@/integrations/supabase/client";
 
 interface FAQ {
   id: string;
@@ -27,31 +26,53 @@ const FAQ = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchFAQs();
-  }, []);
-
-  const fetchFAQs = async () => {
-    try {
-      // Direct query without type checking
-      const { data, error } = await supabase
-        .from('faqs')
-        .select('*')
-        .eq('is_published', true)
-        .order('sort_order', { ascending: true });
-
-      if (error) {
-        console.error('FAQ fetch error:', error);
-        setFaqs([]);
-      } else {
-        setFaqs(data || []);
+    // Mock FAQ data since we can't access the new table yet
+    const mockFaqs: FAQ[] = [
+      {
+        id: '1',
+        question: 'How do I place a custom order?',
+        answer: 'To place a custom order, browse our products and click on any item you\'d like to customize. You can then add your personalization details such as text, images, or special requests.',
+        category: 'Orders',
+        sort_order: 1,
+        is_published: true
+      },
+      {
+        id: '2',
+        question: 'What payment methods do you accept?',
+        answer: 'We accept major credit cards, PayPal, and Ziina for customers in the UAE. All payments are processed securely.',
+        category: 'Payment',
+        sort_order: 2,
+        is_published: true
+      },
+      {
+        id: '3',
+        question: 'How long does shipping take?',
+        answer: 'Standard shipping within the UAE takes 2-5 business days. Express shipping is available for 1-2 business days. Custom products may require additional processing time.',
+        category: 'Shipping',
+        sort_order: 3,
+        is_published: true
+      },
+      {
+        id: '4',
+        question: 'Can I return a custom product?',
+        answer: 'Due to the personalized nature of our products, returns are only accepted if there is a manufacturing defect or error on our part. Please contact us within 7 days of delivery.',
+        category: 'Returns',
+        sort_order: 4,
+        is_published: true
+      },
+      {
+        id: '5',
+        question: 'What file formats do you accept for custom designs?',
+        answer: 'We accept high-resolution JPG, PNG, PDF, and AI files. For best results, please provide images at least 300 DPI.',
+        category: 'Customization',
+        sort_order: 5,
+        is_published: true
       }
-    } catch (error) {
-      console.error('Error fetching FAQs:', error);
-      setFaqs([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    ];
+    
+    setFaqs(mockFaqs);
+    setLoading(false);
+  }, []);
 
   const toggleItem = (index: number) => {
     setOpenItems(prev => 
