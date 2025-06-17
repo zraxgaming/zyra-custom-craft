@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -82,25 +81,24 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <SEOHead 
         title="Zyra Custom Craft – Personalized Gifts, Premium Customizable Products & Creative Shop"
-        description="Shop at Zyra Custom Craft for the best customizable products and unique personalized gifts. Explore our premium custom coffee mugs, personalized t-shirts, and creative designs in the UAE with fast delivery and top quality."
-        keywords="personalized gifts, custom products, UAE, unique gifts, premium shop, custom coffee mugs, personalized t-shirts, custom keychains, photo frames"
-        url="https://shopzyra.vercel.app"
+        description="Shop at Zyra Custom Craft for the best customizable products and unique personalized gifts. Explore an amazing variety of custom items in the UAE with fast delivery and top quality."
+        keywords="personalized gifts, custom products, UAE, unique gifts, premium shop"
       />
       <Navbar />
       
       {/* Hero Section */}
-      <section className="relative py-12 md:py-20 bg-gradient-to-br from-purple-600 via-blue-600 to-teal-600 text-white overflow-hidden">
+      <section className="relative py-20 bg-gradient-to-br from-purple-600 via-blue-600 to-teal-600 text-white overflow-hidden">
         <div className="absolute inset-0 bg-black/20"></div>
         <div className="relative container mx-auto px-4 text-center animate-fade-in">
           <div className="max-w-4xl mx-auto">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent animate-slide-in-left">
+            <h1 className="text-5xl md:text-6xl font-extrabold mb-4 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent animate-slide-in-left">
               Zyra Custom Craft: Personalized Gifts & Premium Custom Products
             </h1>
-            <h2 className="text-xl md:text-2xl lg:text-3xl mb-6 font-semibold">
+            <h2 className="text-2xl md:text-3xl mb-6 font-semibold">
               Transform ordinary items into unique, meaningful keepsakes.
             </h2>
-            <p className="text-base md:text-lg lg:text-xl mb-8 text-purple-100 animate-slide-in-right">
-              Discover quality, customization, and creativity in every product. From custom coffee mugs to personalized t-shirts, create something special today.
+            <p className="text-lg md:text-xl mb-8 text-purple-100 animate-slide-in-right">
+              Discover quality, customization, and creativity in every product.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-scale-in">
               <Button asChild size="lg" className="bg-white text-purple-600 hover:bg-purple-50 hover:scale-105 transition-all duration-300" aria-label="Shop Now">
@@ -116,7 +114,8 @@ const Index = () => {
                 </Link>
               </Button>
             </div>
-            <div className="flex flex-wrap justify-center gap-3 mt-8 text-sm md:text-base">
+            {/* New: More internal navigation links below the hero */}
+            <div className="flex flex-wrap justify-center gap-3 mt-10 text-base">
               <Link to="/shop" className="underline underline-offset-4 hover:text-purple-200">Browse All Products</Link>
               <span className="text-gray-400">|</span>
               <Link to="/categories" className="underline underline-offset-4 hover:text-purple-200">Categories</Link>
@@ -129,38 +128,37 @@ const Index = () => {
         </div>
         <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white dark:from-gray-900 to-transparent"></div>
       </section>
+      {/* END hero */}
 
       {/* Featured Products Section */}
-      <section className="py-12 md:py-16 bg-gradient-to-br from-gray-50 to-purple-50 dark:from-gray-900 dark:to-purple-900">
+      <section className="py-16 bg-gradient-to-br from-gray-50 to-purple-50 dark:from-gray-900 dark:to-purple-900">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-8 md:mb-12 animate-fade-in">
+          <div className="text-center mb-12 animate-fade-in">
             <div className="flex items-center justify-center gap-2 mb-4">
-              <Sparkles className="h-6 md:h-8 w-6 md:w-8 text-purple-600 animate-pulse" />
-              <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              <Sparkles className="h-8 w-8 text-purple-600 animate-pulse" />
+              <h2 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                 Featured Products
               </h2>
-              <Sparkles className="h-6 md:h-8 w-6 md:w-8 text-purple-600 animate-pulse" />
+              <Sparkles className="h-8 w-8 text-purple-600 animate-pulse" />
             </div>
-            <p className="text-base md:text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Discover our handpicked selection of premium customizable products including custom coffee mugs and personalized t-shirts.
+            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+              Discover our handpicked selection of premium customizable products.
             </p>
           </div>
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {[...Array(6)].map((_, i) => (
                 <div key={i} className="animate-pulse">
-                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg h-48 md:h-64 mb-4"></div>
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg h-64 mb-4"></div>
                   <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
                   <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {products.map((product, index) => {
                 const isInCart = !!cart.find(item => item.product_id === product.id);
-                const imageUrl = product.image_url || '/placeholder-product.jpg';
-                
                 return (
                   <Card 
                     key={product.id} 
@@ -170,15 +168,17 @@ const Index = () => {
                     <div className="relative overflow-hidden">
                       <Link to={`/product/${product.slug}`}>
                         <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600">
-                          <img
-                            src={imageUrl}
-                            alt={product.name}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.src = '/placeholder-product.jpg';
-                            }}
-                          />
+                          {product.image_url ? (
+                            <img
+                              src={product.image_url}
+                              alt={product.name}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <div className="text-6xl text-gray-400">📦</div>
+                            </div>
+                          )}
                         </div>
                       </Link>
                       
@@ -212,10 +212,10 @@ const Index = () => {
                       </Button>
                     </div>
 
-                    <CardContent className="p-4 md:p-6">
+                    <CardContent className="p-6">
                       <div className="space-y-3">
                         <Link to={`/product/${product.slug}`}>
-                          <h3 className="font-semibold text-base md:text-lg text-gray-900 dark:text-white group-hover:text-purple-600 transition-colors duration-300 line-clamp-2">
+                          <h3 className="font-semibold text-lg text-gray-900 dark:text-white group-hover:text-purple-600 transition-colors duration-300">
                             {product.name}
                           </h3>
                         </Link>
@@ -228,12 +228,12 @@ const Index = () => {
 
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="text-xl md:text-2xl font-bold text-purple-600">
-                              AED {product.price.toFixed(2)}
+                            <span className="text-2xl font-bold text-purple-600">
+                              ${product.price.toFixed(2)}
                             </span>
                             {product.discount_percentage && product.discount_percentage > 0 && (
                               <span className="text-sm text-gray-500 line-through">
-                                AED {(product.price / (1 - product.discount_percentage / 100)).toFixed(2)}
+                                ${(product.price / (1 - product.discount_percentage / 100)).toFixed(2)}
                               </span>
                             )}
                           </div>
@@ -249,7 +249,7 @@ const Index = () => {
 
                         <Button
                           onClick={() => handleAddToCart(product)}
-                          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-2 md:py-3 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                           disabled={!product.in_stock}
                         >
                           <ShoppingCart className="h-4 w-4 mr-2" />
@@ -263,7 +263,7 @@ const Index = () => {
             </div>
           )}
 
-          <div className="text-center mt-8 md:mt-12">
+          <div className="text-center mt-12">
             <Button asChild size="lg" className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white hover:scale-105 transition-all duration-300">
               <Link to="/shop">
                 View All Products
@@ -271,9 +271,13 @@ const Index = () => {
               </Link>
             </Button>
           </div>
-          
-          <div className="flex flex-wrap justify-center gap-3 mt-6 md:mt-8 text-sm text-primary font-semibold">
+          {/* Additional internal navigation links for SEO */}
+          <div className="flex flex-wrap justify-center gap-3 mt-8 text-sm text-primary font-semibold">
             <Link to="/faq" className="hover:underline">FAQs</Link>
+            <span>|</span>
+            <Link to="/giftcards" className="hover:underline">Gift Cards</Link>
+            <span>|</span>
+            <Link to="/referrals" className="hover:underline">Referral Program</Link>
             <span>|</span>
             <Link to="/newsletter" className="hover:underline">Newsletter</Link>
             <span>|</span>

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { CheckCircle, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import SEOHead from '@/components/seo/SEOHead';
@@ -40,10 +41,30 @@ const NewsletterUnsubscribe = () => {
 
     setLoading(true);
     try {
-      // For now, just simulate the unsubscribe process
-      // In a real implementation, this would call the Supabase API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      // Add to unsubscribe list using direct query
+      const { error: unsubError } = await supabase
+        .from('newsletter_unsubscribes')
+        .upsert({
+          email: email.toLowerCase(),
+          reason: reason || null
+        });
+
+      if (unsubError) throw unsubError;
+
+      // Update subscription status
+      const { error: updateError } = await supabase
+        .from('newsletter_subscriptions')
+        .update({
+          is_active: false,
+          unsubscribed_at: new Date().toISOString()
+        })
+        .eq('email', email.toLowerCase());
+
+      // Don't throw error if no subscription exists
+      if (updateError && updateError.code !== 'PGRST116') {
+        console.warn('Update subscription error:', updateError);
+      }
+
       setIsUnsubscribed(true);
       toast({
         title: "Unsubscribed",

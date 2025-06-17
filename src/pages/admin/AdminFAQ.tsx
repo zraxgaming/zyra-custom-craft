@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { Plus, Edit, Trash2, Save, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import AdminLayout from '@/components/admin/AdminLayout';
 
 interface FAQ {
@@ -19,17 +19,14 @@ interface FAQ {
   category: string;
   sort_order: number;
   is_published: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
 const AdminFAQ = () => {
   const { toast } = useToast();
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
-
+  const [editingFaq, setEditingFaq] = useState<FAQ | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({
     question: '',
     answer: '',
@@ -38,61 +35,72 @@ const AdminFAQ = () => {
     is_published: true
   });
 
-  const categories = ['General', 'Orders', 'Payment', 'Shipping', 'Returns', 'Customization', 'Technical'];
+  const categories = ['General', 'Orders', 'Shipping', 'Returns', 'Products', 'Customization', 'Account', 'Payments'];
 
   useEffect(() => {
-    // Mock data for now
-    const mockFaqs: FAQ[] = [
-      {
-        id: '1',
-        question: 'How do I place a custom order?',
-        answer: 'To place a custom order, browse our products and click on any item you\'d like to customize.',
-        category: 'Orders',
-        sort_order: 1,
-        is_published: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      {
-        id: '2',
-        question: 'What payment methods do you accept?',
-        answer: 'We accept major credit cards, PayPal, and Ziina for customers in the UAE.',
-        category: 'Payment',
-        sort_order: 2,
-        is_published: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ];
-    
-    setFaqs(mockFaqs);
-    setLoading(false);
+    fetchFAQs();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const fetchFAQs = async () => {
     try {
-      const faqData = {
-        ...formData,
-        id: editingId || Date.now().toString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+      // Direct query without type checking
+      const { data, error } = await supabase
+        .from('faqs')
+        .select('*')
+        .order('category', { ascending: true })
+        .order('sort_order', { ascending: true });
 
-      if (editingId) {
-        // Update existing FAQ
-        setFaqs(prev => prev.map(faq => 
-          faq.id === editingId ? { ...faq, ...faqData } : faq
-        ));
-        toast({ title: "Success", description: "FAQ updated successfully!" });
+      if (error) {
+        console.error('FAQ fetch error:', error);
+        setFaqs([]);
       } else {
-        // Add new FAQ
-        setFaqs(prev => [...prev, faqData as FAQ]);
-        toast({ title: "Success", description: "FAQ created successfully!" });
+        setFaqs(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching FAQs:', error);
+      setFaqs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      if (editingFaq) {
+        const { error } = await supabase
+          .from('faqs')
+          .update(formData)
+          .eq('id', editingFaq.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Success",
+          description: "FAQ updated successfully!"
+        });
+      } else {
+        const { error } = await supabase
+          .from('faqs')
+          .insert(formData);
+
+        if (error) throw error;
+
+        toast({
+          title: "Success",
+          description: "FAQ created successfully!"
+        });
       }
 
-      resetForm();
+      setEditingFaq(null);
+      setIsAdding(false);
+      setFormData({
+        question: '',
+        answer: '',
+        category: 'General',
+        sort_order: 0,
+        is_published: true
+      });
+      fetchFAQs();
     } catch (error: any) {
       console.error('Error saving FAQ:', error);
       toast({
@@ -103,24 +111,22 @@ const AdminFAQ = () => {
     }
   };
 
-  const handleEdit = (faq: FAQ) => {
-    setFormData({
-      question: faq.question,
-      answer: faq.answer,
-      category: faq.category,
-      sort_order: faq.sort_order,
-      is_published: faq.is_published
-    });
-    setEditingId(faq.id);
-    setShowForm(true);
-  };
-
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this FAQ?')) return;
 
     try {
-      setFaqs(prev => prev.filter(faq => faq.id !== id));
-      toast({ title: "Success", description: "FAQ deleted successfully!" });
+      const { error } = await supabase
+        .from('faqs')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "FAQ deleted successfully!"
+      });
+      fetchFAQs();
     } catch (error: any) {
       console.error('Error deleting FAQ:', error);
       toast({
@@ -131,7 +137,21 @@ const AdminFAQ = () => {
     }
   };
 
-  const resetForm = () => {
+  const startEdit = (faq: FAQ) => {
+    setEditingFaq(faq);
+    setFormData({
+      question: faq.question,
+      answer: faq.answer,
+      category: faq.category,
+      sort_order: faq.sort_order,
+      is_published: faq.is_published
+    });
+    setIsAdding(false);
+  };
+
+  const startAdd = () => {
+    setIsAdding(true);
+    setEditingFaq(null);
     setFormData({
       question: '',
       answer: '',
@@ -139,17 +159,25 @@ const AdminFAQ = () => {
       sort_order: 0,
       is_published: true
     });
-    setEditingId(null);
-    setShowForm(false);
+  };
+
+  const cancelEdit = () => {
+    setEditingFaq(null);
+    setIsAdding(false);
+    setFormData({
+      question: '',
+      answer: '',
+      category: 'General',
+      sort_order: 0,
+      is_published: true
+    });
   };
 
   if (loading) {
     return (
       <AdminLayout>
-        <div className="space-y-4">
-          <div className="h-8 bg-muted rounded w-1/4"></div>
-          <div className="h-32 bg-muted rounded"></div>
-          <div className="h-32 bg-muted rounded"></div>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       </AdminLayout>
     );
@@ -159,125 +187,120 @@ const AdminFAQ = () => {
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">FAQ Management</h1>
-          <Button onClick={() => setShowForm(true)} disabled={showForm}>
+          <h1 className="text-3xl font-bold">Manage FAQs</h1>
+          <Button onClick={startAdd}>
             <Plus className="h-4 w-4 mr-2" />
             Add FAQ
           </Button>
         </div>
 
-        {/* FAQ Form */}
-        {showForm && (
+        {/* Add/Edit Form */}
+        {(isAdding || editingFaq) && (
           <Card>
             <CardHeader>
-              <CardTitle>{editingId ? 'Edit FAQ' : 'Create New FAQ'}</CardTitle>
+              <CardTitle>{editingFaq ? 'Edit FAQ' : 'Add New FAQ'}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="category">Category</Label>
-                    <Select
-                      value={formData.category}
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map(category => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="question">Question</Label>
+                <Input
+                  id="question"
+                  value={formData.question}
+                  onChange={(e) => setFormData(prev => ({ ...prev, question: e.target.value }))}
+                  placeholder="Enter the FAQ question"
+                />
+              </div>
 
-                  <div>
-                    <Label htmlFor="sort_order">Sort Order</Label>
-                    <Input
-                      id="sort_order"
-                      type="number"
-                      value={formData.sort_order}
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        sort_order: parseInt(e.target.value) || 0 
-                      }))}
-                    />
-                  </div>
+              <div>
+                <Label htmlFor="answer">Answer</Label>
+                <Textarea
+                  id="answer"
+                  value={formData.answer}
+                  onChange={(e) => setFormData(prev => ({ ...prev, answer: e.target.value }))}
+                  placeholder="Enter the FAQ answer"
+                  rows={4}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="category">Category</Label>
+                  <Select
+                    value={formData.category}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
-                  <Label htmlFor="question">Question</Label>
+                  <Label htmlFor="sort_order">Sort Order</Label>
                   <Input
-                    id="question"
-                    value={formData.question}
-                    onChange={(e) => setFormData(prev => ({ ...prev, question: e.target.value }))}
-                    required
+                    id="sort_order"
+                    type="number"
+                    value={formData.sort_order}
+                    onChange={(e) => setFormData(prev => ({ ...prev, sort_order: parseInt(e.target.value) || 0 }))}
                   />
                 </div>
+              </div>
 
-                <div>
-                  <Label htmlFor="answer">Answer</Label>
-                  <Textarea
-                    id="answer"
-                    value={formData.answer}
-                    onChange={(e) => setFormData(prev => ({ ...prev, answer: e.target.value }))}
-                    rows={4}
-                    required
-                  />
-                </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is_published"
+                  checked={formData.is_published}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_published: checked }))}
+                />
+                <Label htmlFor="is_published">Published</Label>
+              </div>
 
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="is_published"
-                    checked={formData.is_published}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_published: checked }))}
-                  />
-                  <Label htmlFor="is_published">Published</Label>
-                </div>
-
-                <div className="flex space-x-2">
-                  <Button type="submit">
-                    <Save className="h-4 w-4 mr-2" />
-                    {editingId ? 'Update' : 'Create'} FAQ
-                  </Button>
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    <X className="h-4 w-4 mr-2" />
-                    Cancel
-                  </Button>
-                </div>
-              </form>
+              <div className="flex space-x-2">
+                <Button onClick={handleSave}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save
+                </Button>
+                <Button variant="outline" onClick={cancelEdit}>
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
 
-        {/* FAQ List */}
+        {/* FAQs List */}
         <div className="space-y-4">
           {faqs.map((faq) => (
             <Card key={faq.id}>
-              <CardContent className="pt-6">
+              <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="secondary">{faq.category}</Badge>
-                      <Badge variant={faq.is_published ? "default" : "outline"}>
-                        {faq.is_published ? "Published" : "Draft"}
-                      </Badge>
+                      <span className="text-sm bg-primary/10 text-primary px-2 py-1 rounded">
+                        {faq.category}
+                      </span>
+                      {!faq.is_published && (
+                        <span className="text-sm bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                          Draft
+                        </span>
+                      )}
                     </div>
-                    <h3 className="font-semibold text-lg mb-2">{faq.question}</h3>
-                    <p className="text-muted-foreground mb-4">{faq.answer}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Sort Order: {faq.sort_order} | 
-                      Created: {new Date(faq.created_at).toLocaleDateString()}
-                    </p>
+                    <h3 className="font-semibold mb-2">{faq.question}</h3>
+                    <p className="text-muted-foreground text-sm line-clamp-2">{faq.answer}</p>
                   </div>
-                  <div className="flex space-x-2 ml-4">
+                  <div className="flex space-x-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleEdit(faq)}
+                      onClick={() => startEdit(faq)}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -293,15 +316,15 @@ const AdminFAQ = () => {
               </CardContent>
             </Card>
           ))}
-
-          {faqs.length === 0 && (
-            <Card>
-              <CardContent className="text-center py-8">
-                <p className="text-muted-foreground">No FAQs found. Create your first FAQ to get started.</p>
-              </CardContent>
-            </Card>
-          )}
         </div>
+
+        {faqs.length === 0 && (
+          <Card>
+            <CardContent className="text-center py-8">
+              <p className="text-muted-foreground">No FAQs found. Create your first FAQ to get started.</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AdminLayout>
   );

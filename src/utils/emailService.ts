@@ -1,99 +1,65 @@
 
 import emailjs from '@emailjs/browser';
 
-// EmailJS configuration
-const EMAILJS_SERVICE_ID = 'service_tk4r78b';
-const EMAILJS_PUBLIC_KEY = 'ABHeCMny0fMuzV-pd';
-
-// Template IDs
-const TEMPLATES = {
-  ORDER_CONFIRMATION: 'template_9gawxks',
-  NEWSLETTER: 'template_33t5q6p'
-};
+const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+const orderTemplateId = import.meta.env.VITE_EMAILJS_ORDER_TEMPLATE_ID;
+const newsletterTemplateId = import.meta.env.VITE_EMAILJS_NEWSLETTER_TEMPLATE_ID;
 
 // Initialize EmailJS
-emailjs.init(EMAILJS_PUBLIC_KEY);
+emailjs.init(publicKey);
 
-interface OrderEmailData {
+export const sendOrderEmail = async (orderData: {
   customerName: string;
-  customerEmail: string;
   orderId: string;
-  orderStatus: string;
-}
-
-interface NewsletterEmailData {
-  email: string;
-  content: string;
-  unsubscribeLink: string;
-}
-
-export const sendOrderConfirmationEmail = async (data: OrderEmailData) => {
+  status: string;
+  customerEmail: string;
+}) => {
   try {
     const templateParams = {
-      customer_name: data.customerName,
-      customer_email: data.customerEmail,
-      order_id: data.orderId,
-      order_status: data.orderStatus,
-      to_email: data.customerEmail
+      customer_name: orderData.customerName,
+      order_id: orderData.orderId,
+      status: orderData.status,
+      customer_email: orderData.customerEmail,
+      to_email: orderData.customerEmail
     };
 
     const response = await emailjs.send(
-      EMAILJS_SERVICE_ID,
-      TEMPLATES.ORDER_CONFIRMATION,
+      serviceId,
+      orderTemplateId,
       templateParams
     );
 
-    console.log('Order confirmation email sent successfully:', response);
+    console.log('Order email sent successfully:', response);
     return { success: true, response };
   } catch (error) {
-    console.error('Failed to send order confirmation email:', error);
+    console.error('Error sending order email:', error);
     return { success: false, error };
   }
 };
 
-export const sendNewsletterEmail = async (data: NewsletterEmailData) => {
+export const sendNewsletterEmail = async (emailData: {
+  email: string;
+  content: string;
+  unsubscribeLink?: string;
+}) => {
   try {
     const templateParams = {
-      to_email: data.email,
-      content: data.content,
-      unsubscribe_link: data.unsubscribeLink
+      to_email: emailData.email,
+      content: emailData.content,
+      unsubscribe_link: emailData.unsubscribeLink || `${window.location.origin}/newsletter/unsubscribe?email=${emailData.email}`
     };
 
     const response = await emailjs.send(
-      EMAILJS_SERVICE_ID,
-      TEMPLATES.NEWSLETTER,
+      serviceId,
+      newsletterTemplateId,
       templateParams
     );
 
     console.log('Newsletter email sent successfully:', response);
     return { success: true, response };
   } catch (error) {
-    console.error('Failed to send newsletter email:', error);
+    console.error('Error sending newsletter email:', error);
     return { success: false, error };
   }
-};
-
-// Helper function to send order status update emails
-export const sendOrderStatusUpdateEmail = async (
-  customerName: string,
-  customerEmail: string,
-  orderId: string,
-  newStatus: string
-) => {
-  const statusMessages = {
-    processing: 'Your order is being processed',
-    shipped: 'Your order has been shipped',
-    delivered: 'Your order has been delivered',
-    cancelled: 'Your order has been cancelled',
-    'ready-for-pickup': 'Your order is ready for pickup'
-  };
-
-  const statusMessage = statusMessages[newStatus as keyof typeof statusMessages] || `Order status updated to: ${newStatus}`;
-
-  return sendOrderConfirmationEmail({
-    customerName,
-    customerEmail,
-    orderId,
-    orderStatus: statusMessage
-  });
 };
