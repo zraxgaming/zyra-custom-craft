@@ -48,7 +48,7 @@ const ZiinaPayment: React.FC<ZiinaPaymentProps> = ({
 
       const ziinaApiKey = configData.value as string;
       const amountInFils = Math.round(amount * 100);
-      const ziinaEndpoint = 'https://sandbox-api-v2.ziina.com/api/payment_intent'; // Always use sandbox for testing
+      const ziinaEndpoint = 'https://api-v2.ziina.com/api/payment_intent'; // Always use sandbox for testing
 
       const body = {
         amount: amountInFils,
