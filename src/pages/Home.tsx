@@ -13,12 +13,9 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-background">
       <SEOHead 
-        title="Premium Custom Products & Personalized Gifts | Zyra Custom Craft"
-        description="Discover exceptional custom products and personalized gifts at Zyra Custom Craft. From custom mugs and t-shirts to personalized photo frames and keychains, we create unique items tailored to your vision with premium quality and fast delivery in UAE."
-        keywords="custom products, personalized gifts, custom mugs, custom t-shirts, personalized photo frames, custom keychains, custom printing, bespoke design, unique items, custom craft, personalized products, UAE, Dubai, premium quality"
-        url="https://shopzyra.vercel.app/"
-        image="https://shopzyra.vercel.app/hero-image.jpg"
-        type="website"
+        title="Premium Custom Products & Personalized Gifts"
+        description="Discover exceptional custom products and personalized gifts at Zyra Custom Craft. From custom printing to bespoke designs, we create unique items tailored to your vision."
+        keywords="custom products, personalized gifts, custom printing, bespoke design, unique items, custom craft, personalized products"
       />
       <Navbar />
       

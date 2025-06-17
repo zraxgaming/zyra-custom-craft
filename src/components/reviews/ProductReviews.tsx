@@ -46,6 +46,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
   const fetchReviews = async () => {
     try {
       setIsLoading(true);
+      // Simplified query without the problematic relation
       const { data, error } = await supabase
         .from('reviews')
         .select('*')
@@ -54,7 +55,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
 
       if (error) throw error;
       
-      // Fetch user profiles separately
+      // Fetch user profiles separately if needed
       const reviewsWithProfiles = await Promise.all(
         (data || []).map(async (review) => {
           const { data: profile } = await supabase
