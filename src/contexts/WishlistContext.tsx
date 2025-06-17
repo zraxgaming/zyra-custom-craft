@@ -58,13 +58,15 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (error) throw error;
 
-      const wishlistItems = (data || [])
+      const wishlistItems: WishlistItem[] = (data || [])
         .filter(item => item.products)
         .map(item => ({
           id: item.products.id,
           name: item.products.name,
           price: item.products.price,
-          images: Array.isArray(item.products.images) ? item.products.images : [],
+          images: Array.isArray(item.products.images) 
+            ? item.products.images.filter((img): img is string => typeof img === 'string')
+            : [],
           slug: item.products.slug
         }));
 

@@ -2,27 +2,33 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { useNavigate } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { Link } from 'react-router-dom';
 
-interface Product {
+interface SearchResult {
   id: string;
   name: string;
   slug: string;
   price: number;
   images: string[];
+  category: string;
 }
 
-const SearchBar = () => {
+interface SearchBarProps {
+  className?: string;
+  placeholder?: string;
+}
+
+const SearchBar: React.FC<SearchBarProps> = ({ 
+  className = '', 
+  placeholder = 'Search products...' 
+}) => {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Product[]>([]);
+  const [results, setResults] = useState<SearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
-  const { toast } = useToast();
   const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,7 +44,7 @@ const SearchBar = () => {
 
   useEffect(() => {
     const searchProducts = async () => {
-      if (query.trim().length < 2) {
+      if (query.length < 2) {
         setResults([]);
         setIsOpen(false);
         return;
@@ -48,30 +54,29 @@ const SearchBar = () => {
       try {
         const { data, error } = await supabase
           .from('products')
-          .select('id, name, slug, price, images')
-          .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
+          .select('id, name, slug, price, images, category')
           .eq('status', 'published')
-          .limit(5);
+          .or(`name.ilike.%${query}%, description.ilike.%${query}%, category.ilike.%${query}%`)
+          .limit(8);
 
         if (error) throw error;
 
-        // Transform the data to ensure proper typing
-        const transformedProducts: Product[] = (data || []).map(product => ({
-          ...product,
+        const formattedResults: SearchResult[] = (data || []).map(product => ({
+          id: product.id,
+          name: product.name,
+          slug: product.slug,
+          price: product.price,
           images: Array.isArray(product.images) 
             ? product.images.filter((img): img is string => typeof img === 'string')
-            : []
+            : [],
+          category: product.category || 'Uncategorized'
         }));
 
-        setResults(transformedProducts);
+        setResults(formattedResults);
         setIsOpen(true);
-      } catch (error: any) {
+      } catch (error) {
         console.error('Search error:', error);
-        toast({
-          title: "Search Error",
-          description: "Failed to search products",
-          variant: "destructive"
-        });
+        setResults([]);
       } finally {
         setLoading(false);
       }
@@ -79,87 +84,83 @@ const SearchBar = () => {
 
     const debounceTimer = setTimeout(searchProducts, 300);
     return () => clearTimeout(debounceTimer);
-  }, [query, toast]);
+  }, [query]);
 
-  const handleProductClick = (product: Product) => {
-    navigate(`/product/${product.slug}`);
+  const handleClear = () => {
     setQuery('');
+    setResults([]);
     setIsOpen(false);
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (query.trim()) {
-      navigate(`/shop?search=${encodeURIComponent(query.trim())}`);
-      setQuery('');
-      setIsOpen(false);
-    }
+  const handleResultClick = () => {
+    setIsOpen(false);
+    setQuery('');
+    setResults([]);
   };
 
   return (
-    <div ref={searchRef} className="relative w-full max-w-md">
-      <form onSubmit={handleSearchSubmit} className="relative">
+    <div ref={searchRef} className={`relative ${className}`}>
+      <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           type="text"
-          placeholder="Search products..."
+          placeholder={placeholder}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="pl-10 pr-10 bg-background/80 backdrop-blur-sm"
+          className="pl-10 pr-10"
           onFocus={() => query.length >= 2 && setIsOpen(true)}
         />
         {query && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setQuery('');
-              setIsOpen(false);
-            }}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 h-auto"
+          <button
+            onClick={handleClear}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
           >
             <X className="h-4 w-4" />
-          </Button>
+          </button>
         )}
-      </form>
+      </div>
 
       {isOpen && (
-        <Card className="absolute top-full left-0 right-0 mt-2 z-50 max-h-96 overflow-y-auto shadow-lg">
-          <CardContent className="p-2">
+        <Card className="absolute top-full left-0 right-0 mt-1 z-50 max-h-96 overflow-y-auto">
+          <CardContent className="p-0">
             {loading ? (
-              <div className="text-center py-4 text-muted-foreground">
+              <div className="p-4 text-center text-muted-foreground">
                 Searching...
               </div>
             ) : results.length > 0 ? (
-              <div className="space-y-2">
+              <div className="divide-y">
                 {results.map((product) => (
-                  <div
+                  <Link
                     key={product.id}
-                    onClick={() => handleProductClick(product)}
-                    className="flex items-center space-x-3 p-2 hover:bg-muted rounded-lg cursor-pointer"
+                    to={`/product/${product.slug}`}
+                    onClick={handleResultClick}
+                    className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors"
                   >
-                    <div className="w-10 h-10 bg-muted rounded-md overflow-hidden">
-                      {product.images?.[0] ? (
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-500/20" />
-                      )}
-                    </div>
+                    <img
+                      src={product.images[0] || '/placeholder-product.jpg'}
+                      alt={product.name}
+                      className="w-12 h-12 object-cover rounded"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/placeholder-product.jpg';
+                      }}
+                    />
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{product.name}</p>
-                      <p className="text-sm text-muted-foreground">AED {product.price}</p>
+                      <h4 className="font-medium truncate">{product.name}</h4>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="text-xs">
+                          {product.category}
+                        </Badge>
+                        <span className="text-sm font-semibold text-primary">
+                          ${product.price.toFixed(2)}
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             ) : query.length >= 2 ? (
-              <div className="text-center py-4 text-muted-foreground">
-                No products found
+              <div className="p-4 text-center text-muted-foreground">
+                No products found for "{query}"
               </div>
             ) : null}
           </CardContent>
