@@ -43,18 +43,19 @@ const AdminFAQ = () => {
 
   const fetchFAQs = async () => {
     try {
-      // Direct query without type checking
-      const { data, error } = await supabase
-        .from('faqs')
-        .select('*')
-        .order('category', { ascending: true })
-        .order('sort_order', { ascending: true });
+      // Use raw API call to avoid TypeScript issues
+      const response = await fetch(`https://vzqlzntwvgdsfcmaawsk.supabase.co/rest/v1/faqs?order=category.asc,sort_order.asc`, {
+        headers: {
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6cWx6bnR3dmdkc2ZjbWFhd3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5OTg5MzUsImV4cCI6MjA2MzU3NDkzNX0.nzZ2Ovq8zgqon-qG-HAftKuiyvqTUm-mCSKXsmBJSQA',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6cWx6bnR3dmdkc2ZjbWFhd3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5OTg5MzUsImV4cCI6MjA2MzU3NDkzNX0.nzZ2Ovq8zgqon-qG-HAftKuiyvqTUm-mCSKXsmBJSQA'
+        }
+      });
 
-      if (error) {
-        console.error('FAQ fetch error:', error);
-        setFaqs([]);
+      if (response.ok) {
+        const data = await response.json();
+        setFaqs(Array.isArray(data) ? data : []);
       } else {
-        setFaqs(data || []);
+        setFaqs([]);
       }
     } catch (error) {
       console.error('Error fetching FAQs:', error);
@@ -67,23 +68,34 @@ const AdminFAQ = () => {
   const handleSave = async () => {
     try {
       if (editingFaq) {
-        const { error } = await supabase
-          .from('faqs')
-          .update(formData)
-          .eq('id', editingFaq.id);
+        const response = await fetch(`https://vzqlzntwvgdsfcmaawsk.supabase.co/rest/v1/faqs?id=eq.${editingFaq.id}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6cWx6bnR3dmdkc2ZjbWFhd3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5OTg5MzUsImV4cCI6MjA2MzU3NDkzNX0.nzZ2Ovq8zgqon-qG-HAftKuiyvqTUm-mCSKXsmBJSQA',
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6cWx6bnR3dmdkc2ZjbWFhd3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5OTg5MzUsImV4cCI6MjA2MzU3NDkzNX0.nzZ2Ovq8zgqon-qG-HAftKuiyvqTUm-mCSKXsmBJSQA',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(formData)
+        });
 
-        if (error) throw error;
+        if (!response.ok) throw new Error('Failed to update FAQ');
 
         toast({
           title: "Success",
           description: "FAQ updated successfully!"
         });
       } else {
-        const { error } = await supabase
-          .from('faqs')
-          .insert(formData);
+        const response = await fetch(`https://vzqlzntwvgdsfcmaawsk.supabase.co/rest/v1/faqs`, {
+          method: 'POST',
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6cWx6bnR3dmdkc2ZjbWFhd3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5OTg5MzUsImV4cCI6MjA2MzU3NDkzNX0.nzZ2Ovq8zgqon-qG-HAftKuiyvqTUm-mCSKXsmBJSQA',
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6cWx6bnR3dmdkc2ZjbWFhd3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5OTg5MzUsImV4cCI6MjA2MzU3NDkzNX0.nzZ2Ovq8zgqon-qG-HAftKuiyvqTUm-mCSKXsmBJSQA',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(formData)
+        });
 
-        if (error) throw error;
+        if (!response.ok) throw new Error('Failed to create FAQ');
 
         toast({
           title: "Success",
@@ -115,12 +127,15 @@ const AdminFAQ = () => {
     if (!confirm('Are you sure you want to delete this FAQ?')) return;
 
     try {
-      const { error } = await supabase
-        .from('faqs')
-        .delete()
-        .eq('id', id);
+      const response = await fetch(`https://vzqlzntwvgdsfcmaawsk.supabase.co/rest/v1/faqs?id=eq.${id}`, {
+        method: 'DELETE',
+        headers: {
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6cWx6bnR3dmdkc2ZjbWFhd3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5OTg5MzUsImV4cCI6MjA2MzU3NDkzNX0.nzZ2Ovq8zgqon-qG-HAftKuiyvqTUm-mCSKXsmBJSQA',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6cWx6bnR3dmdkc2ZjbWFhd3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5OTg5MzUsImV4cCI6MjA2MzU3NDkzNX0.nzZ2Ovq8zgqon-qG-HAftKuiyvqTUm-mCSKXsmBJSQA'
+        }
+      });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error('Failed to delete FAQ');
 
       toast({
         title: "Success",

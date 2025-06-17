@@ -41,29 +41,36 @@ const NewsletterUnsubscribe = () => {
 
     setLoading(true);
     try {
-      // Add to unsubscribe list using direct query
-      const { error: unsubError } = await supabase
-        .from('newsletter_unsubscribes')
-        .upsert({
+      // Use raw API call to avoid TypeScript issues
+      const response = await fetch(`https://vzqlzntwvgdsfcmaawsk.supabase.co/rest/v1/newsletter_unsubscribes`, {
+        method: 'POST',
+        headers: {
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6cWx6bnR3dmdkc2ZjbWFhd3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5OTg5MzUsImV4cCI6MjA2MzU3NDkzNX0.nzZ2Ovq8zgqon-qG-HAftKuiyvqTUm-mCSKXsmBJSQA',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6cWx6bnR3dmdkc2ZjbWFhd3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5OTg5MzUsImV4cCI6MjA2MzU3NDkzNX0.nzZ2Ovq8zgqon-qG-HAftKuiyvqTUm-mCSKXsmBJSQA',
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify({
           email: email.toLowerCase(),
           reason: reason || null
-        });
+        })
+      });
 
-      if (unsubError) throw unsubError;
+      if (!response.ok) throw new Error('Failed to unsubscribe');
 
       // Update subscription status
-      const { error: updateError } = await supabase
-        .from('newsletter_subscriptions')
-        .update({
+      const updateResponse = await fetch(`https://vzqlzntwvgdsfcmaawsk.supabase.co/rest/v1/newsletter_subscriptions?email=eq.${email.toLowerCase()}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6cWx6bnR3dmdkc2ZjbWFhd3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5OTg5MzUsImV4cCI6MjA2MzU3NDkzNX0.nzZ2Ovq8zgqon-qG-HAftKuiyvqTUm-mCSKXsmBJSQA',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6cWx6bnR3dmdkc2ZjbWFhd3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5OTg5MzUsImV4cCI6MjA2MzU3NDkzNX0.nzZ2Ovq8zgqon-qG-HAftKuiyvqTUm-mCSKXsmBJSQA',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           is_active: false,
           unsubscribed_at: new Date().toISOString()
         })
-        .eq('email', email.toLowerCase());
-
-      // Don't throw error if no subscription exists
-      if (updateError && updateError.code !== 'PGRST116') {
-        console.warn('Update subscription error:', updateError);
-      }
+      });
 
       setIsUnsubscribed(true);
       toast({

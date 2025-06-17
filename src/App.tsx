@@ -55,8 +55,8 @@ function App() {
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <CartProvider>
-            <WishlistProvider>
+          <WishlistProvider>
+            <CartProvider>
               <Router>
                 <div className="min-h-screen bg-background">
                   <PromotionBanner />
@@ -102,8 +102,8 @@ function App() {
                 </div>
               </Router>
               <Toaster />
-            </WishlistProvider>
-          </CartProvider>
+            </CartProvider>
+          </WishlistProvider>
         </AuthProvider>
       </QueryClientProvider>
     </HelmetProvider>

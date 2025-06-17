@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Star, Edit, Trash2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -51,20 +52,29 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
     try {
       const { data, error } = await supabase
         .from('reviews')
-        .select(`
-          *,
-          profiles:user_id (
-            first_name,
-            last_name,
-            display_name
-          )
-        `)
+        .select('*')
         .eq('product_id', productId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const allReviews = data || [];
+      // Fetch profiles separately
+      const reviewsWithProfiles = await Promise.all(
+        (data || []).map(async (review) => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('first_name, last_name, display_name')
+            .eq('id', review.user_id)
+            .single();
+          
+          return {
+            ...review,
+            profiles: profile || undefined
+          };
+        })
+      );
+
+      const allReviews = reviewsWithProfiles;
       const currentUserReview = user ? allReviews.find(r => r.user_id === user.id) : null;
       const otherReviews = user ? allReviews.filter(r => r.user_id !== user.id) : allReviews;
 

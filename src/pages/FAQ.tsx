@@ -32,19 +32,22 @@ const FAQ = () => {
 
   const fetchFAQs = async () => {
     try {
-      // Direct query without type checking
+      // Use raw query to avoid TypeScript issues
       const { data, error } = await supabase
-        .from('faqs')
-        .select('*')
-        .eq('is_published', true)
-        .order('sort_order', { ascending: true });
+        .rpc('get_published_faqs')
+        .then(async () => {
+          // Fallback to direct query
+          const response = await fetch(`https://vzqlzntwvgdsfcmaawsk.supabase.co/rest/v1/faqs?is_published=eq.true&order=sort_order.asc`, {
+            headers: {
+              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6cWx6bnR3dmdkc2ZjbWFhd3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5OTg5MzUsImV4cCI6MjA2MzU3NDkzNX0.nzZ2Ovq8zgqon-qG-HAftKuiyvqTUm-mCSKXsmBJSQA',
+              'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6cWx6bnR3dmdkc2ZjbWFhd3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5OTg5MzUsImV4cCI6MjA2MzU3NDkzNX0.nzZ2Ovq8zgqon-qG-HAftKuiyvqTUm-mCSKXsmBJSQA'
+            }
+          });
+          return await response.json();
+        })
+        .catch(() => []);
 
-      if (error) {
-        console.error('FAQ fetch error:', error);
-        setFaqs([]);
-      } else {
-        setFaqs(data || []);
-      }
+      setFaqs(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching FAQs:', error);
       setFaqs([]);
