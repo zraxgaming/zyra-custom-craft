@@ -36,11 +36,13 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        return response || fetch(event.request).catch(() => {
-          // Serve offline fallback for navigation requests
+        if (response) return response;
+        return fetch(event.request).catch(() => {
           if (event.request.mode === 'navigate') {
             return caches.match('/offline.html');
           }
+          // Always return a valid Response for non-navigation
+          return new Response('Offline', { status: 503, statusText: 'Offline' });
         });
       })
   );
