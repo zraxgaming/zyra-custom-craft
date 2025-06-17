@@ -1,21 +1,17 @@
-import { Resend } from 'resend';
-
-const resend = new Resend('re_5y517rZC_9KDTPreTXvjjbwwnrVqQ3txF');
-
 export async function sendOrderEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
-  return resend.emails.send({
-    from: 'Zyra <onboarding@resend.dev>',
-    to: [to],
-    subject,
-    html,
+  const res = await fetch('/api/send-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to, subject, html }),
   });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || 'Failed to send email');
+  }
+  return true;
 }
 
 export async function sendBatchNewsletter(emails: { to: string; subject: string; html: string }[]) {
-  return resend.batch.send(
-    emails.map(email => ({
-      from: 'Zyra <onboarding@resend.dev>',
-      ...email,
-    }))
-  );
+  // For batch, call /api/send-email for each email (or implement a batch endpoint if needed)
+  return Promise.all(emails.map(email => sendOrderEmail(email)));
 }
