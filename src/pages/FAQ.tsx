@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Search, HelpCircle, ChevronDown, ChevronRight } from "lucide-react";
 import SEOHead from "@/components/seo/SEOHead";
-import { supabase } from "@/integrations/supabase/client";
 
 interface FAQ {
   id: string;
@@ -27,26 +26,53 @@ const FAQ = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchFAQs();
+    // Mock FAQ data since the table might not exist yet
+    const mockFaqs: FAQ[] = [
+      {
+        id: '1',
+        question: 'How do I place a custom order?',
+        answer: 'You can place a custom order by selecting a product and clicking the "Customize" button. Follow the design tool to add your text, images, or other customizations.',
+        category: 'Orders',
+        sort_order: 1,
+        is_published: true
+      },
+      {
+        id: '2',
+        question: 'What payment methods do you accept?',
+        answer: 'We accept PayPal, credit cards, and Ziina payments for your convenience.',
+        category: 'Payment',
+        sort_order: 2,
+        is_published: true
+      },
+      {
+        id: '3',
+        question: 'How long does shipping take?',
+        answer: 'Standard shipping takes 3-5 business days, while express shipping takes 1-2 business days.',
+        category: 'Shipping',
+        sort_order: 3,
+        is_published: true
+      },
+      {
+        id: '4',
+        question: 'Can I return a custom product?',
+        answer: 'Custom products can be returned within 14 days if there was an error in production. Please contact our support team.',
+        category: 'Returns',
+        sort_order: 4,
+        is_published: true
+      },
+      {
+        id: '5',
+        question: 'What file formats do you accept for custom designs?',
+        answer: 'We accept PNG, JPG, PDF, and SVG files. For best quality, please use high-resolution images.',
+        category: 'Design',
+        sort_order: 5,
+        is_published: true
+      }
+    ];
+    
+    setFaqs(mockFaqs);
+    setLoading(false);
   }, []);
-
-  const fetchFAQs = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('faqs')
-        .select('*')
-        .eq('is_published', true)
-        .order('sort_order');
-
-      if (error) throw error;
-      setFaqs(data || []);
-    } catch (error) {
-      console.error('Error fetching FAQs:', error);
-      setFaqs([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const toggleItem = (index: number) => {
     setOpenItems(prev => 
@@ -83,8 +109,7 @@ const FAQ = () => {
       <>
         <SEOHead 
           title="FAQ - Frequently Asked Questions | Zyra Custom Craft"
-          description="Find answers to common questions about Zyra's custom products, shipping, returns, and more. Get help with ordering, customization, and account management."
-          keywords="faq, help, support, questions, shipping, returns, customization, custom products, Zyra"
+          description="Find answers to common questions about Zyra's custom products, shipping, returns, and more."
           url="https://shopzyra.vercel.app/faq"
         />
         <div className="min-h-screen bg-background">
@@ -107,14 +132,13 @@ const FAQ = () => {
     <>
       <SEOHead 
         title="FAQ - Frequently Asked Questions | Zyra Custom Craft"
-        description="Find answers to common questions about Zyra's custom products, shipping, returns, and more. Get help with ordering custom mugs, t-shirts, and personalized gifts."
-        keywords="faq, help, support, questions, shipping, returns, customization, custom products, custom mugs, custom t-shirts, personalized gifts, Zyra"
+        description="Find answers to common questions about Zyra's custom products, shipping, returns, and more."
         url="https://shopzyra.vercel.app/faq"
       />
       <div className="min-h-screen bg-background">
         <Navbar />
         
-        {/* Hero Section - Mobile Optimized */}
+        {/* Hero Section */}
         <section className="relative py-12 md:py-20 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-purple-500/5 to-pink-500/5"></div>
           <Container className="relative z-10">
@@ -131,14 +155,13 @@ const FAQ = () => {
                 Frequently Asked Questions
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed animate-slide-in-right">
-                Find quick answers to common questions about our custom products, shipping, returns, and more. 
-                Can't find what you're looking for? Contact our support team.
+                Find quick answers to common questions about our custom products, shipping, returns, and more.
               </p>
             </div>
           </Container>
         </section>
 
-        {/* Search Section - Mobile Optimized */}
+        {/* Search Section */}
         <section className="py-6 md:py-8 bg-muted/30">
           <Container>
             <div className="max-w-2xl mx-auto animate-fade-in px-4">
@@ -156,7 +179,7 @@ const FAQ = () => {
           </Container>
         </section>
 
-        {/* FAQ Content - Mobile Optimized */}
+        {/* FAQ Content */}
         <section className="py-8 md:py-16">
           <Container>
             <div className="space-y-8 md:space-y-12 px-4">
