@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Mail } from "lucide-react";
-import { sendOrderEmail } from '@/utils/resend';
+import { sendEmail, getNewsletterTemplate } from '@/utils/sendgrid';
 
 const NewsletterSignup = () => {
   const [email, setEmail] = useState("");
@@ -26,67 +27,94 @@ const NewsletterSignup = () => {
 
     setIsLoading(true);
     try {
-      // Notify admin of new subscriber
-      await sendOrderEmail({
-        to: 'zainabusal113@gmail.com',
-        subject: 'New Newsletter Subscription',
-        html: `
-<div style="font-family: 'Segoe UI', sans-serif; background: linear-gradient(to bottom right, #6c4dc1, #b974e6); padding: 24px; color: #ffffff;">
-  <div style="max-width: 600px; margin: auto; background: #ffffff; color: #333333; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);">
-    <div style="background-color: #7c3aed; padding: 20px; text-align: center">
-      <img src="https://shopzyra.vercel.app/favicon.ico" alt="Zyra Logo" style="height: 40px; margin-bottom: 8px" />
-      <h2 style="margin: 0; font-size: 20px; color: #ffffff">📰 New Newsletter Subscriber</h2>
-    </div>
-    <div style="padding: 24px; font-size: 15px">
-      <p><strong>Email:</strong> ${email}</p>
-      ${name ? `<p><strong>Name:</strong> ${name}</p>` : ''}
-    </div>
-    <div style="background-color: #f9f9f9; text-align: center; font-size: 13px; color: #888; padding: 16px;">
-      Sent from <a href="mailto:${email}" style="color: #7c3aed">${email}</a>
-    </div>
-  </div>
-</div>`
-      });
-      // Send confirmation to user
-      await sendOrderEmail({
-        to: email,
-        subject: 'You are subscribed to Zyra Custom Craft!',
-        html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
-          <h2 style="color:#7c3aed;">Welcome to the Zyra Newsletter!</h2>
-          <p>Thank you for subscribing, ${name || 'friend'}.</p>
-          <p>You'll now receive updates, offers, and news from us.</p>
-          <hr />
-          <p style="font-size:13px;color:#888;">Zyra Custom Craft</p>
-        </div>`
-      });
-      const { error } = await supabase
+      // Check if already subscribed
+      const { data: existing } = await supabase
         .from("newsletter_subscriptions")
-        .insert({
-          email,
-          name: name || null,
-          is_active: true,
-          subscribed_at: new Date().toISOString(),
-        });
+        .select("id, is_active")
+        .eq("email", email)
+        .single();
 
-      if (error) {
-        if (error.code === '23505') {
+      if (existing) {
+        if (existing.is_active) {
           toast({
             title: "Already subscribed",
             description: "This email is already subscribed to our newsletter.",
             variant: "destructive",
           });
+          setIsLoading(false);
+          return;
         } else {
-          throw error;
+          // Reactivate subscription
+          await supabase
+            .from("newsletter_subscriptions")
+            .update({
+              is_active: true,
+              name: name || null,
+              unsubscribed_at: null,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", existing.id);
         }
       } else {
-        toast({
-          title: "Successfully subscribed!",
-          description: "Thank you for subscribing to our newsletter.",
-        });
-        setEmail("");
-        setName("");
+        // Create new subscription
+        const { error } = await supabase
+          .from("newsletter_subscriptions")
+          .insert({
+            email,
+            name: name || null,
+            is_active: true,
+            subscribed_at: new Date().toISOString(),
+          });
+
+        if (error) throw error;
       }
+
+      // Send welcome email
+      const welcomeContent = `
+        <h2 style="color: #7c3aed;">Welcome to the Zyra Newsletter!</h2>
+        <p>Thank you for subscribing, ${name || 'friend'}!</p>
+        <p>You'll now receive updates about our latest products, special offers, and crafting inspiration.</p>
+        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; margin: 20px 0;">
+          <p><strong>What to expect:</strong></p>
+          <ul>
+            <li>🎨 Latest custom craft designs</li>
+            <li>💰 Exclusive subscriber discounts</li>
+            <li>📚 Crafting tips and tutorials</li>
+            <li>🎉 Early access to new products</li>
+          </ul>
+        </div>
+      `;
+
+      await sendEmail({
+        to: email,
+        subject: 'Welcome to Zyra Custom Craft!',
+        html: getNewsletterTemplate(welcomeContent, 'Welcome to Zyra Custom Craft!')
+          .replace('{{email}}', encodeURIComponent(email))
+      });
+
+      // Send admin notification
+      await sendEmail({
+        to: 'zainabusal113@gmail.com',
+        subject: 'New Newsletter Subscription',
+        html: `
+          <div style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2>📰 New Newsletter Subscriber</h2>
+            <p><strong>Email:</strong> ${email}</p>
+            ${name ? `<p><strong>Name:</strong> ${name}</p>` : ''}
+            <p><strong>Subscribed at:</strong> ${new Date().toLocaleString()}</p>
+          </div>
+        `
+      });
+
+      toast({
+        title: "Successfully subscribed!",
+        description: "Welcome to our newsletter! Check your email for confirmation.",
+      });
+      
+      setEmail("");
+      setName("");
     } catch (error: any) {
+      console.error('Newsletter subscription error:', error);
       toast({
         title: "Subscription failed",
         description: error.message || "Failed to subscribe. Please try again.",
@@ -138,6 +166,10 @@ const NewsletterSignup = () => {
           </>
         )}
       </Button>
+      
+      <p className="text-xs text-muted-foreground text-center">
+        By subscribing, you agree to receive marketing emails. You can unsubscribe at any time.
+      </p>
     </form>
   );
 };
